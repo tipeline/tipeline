@@ -10,7 +10,7 @@
     "packages/*"
   ],
   "scripts": {
-    "prepare": "npm run build:packages",
+    "prepare": "node -e \"if (process.env.INIT_CWD === process.cwd()) require('child_process').execSync('npm run build:packages', { stdio: 'inherit' })\"",
     "build": "npm run build:packages && npm run build --workspace=apps/core --workspace=apps/cli --workspace=apps/server",
     "build:packages": "npm run build --workspace=packages/types --workspace=packages/utils --workspace=packages/i18n --workspace=packages/schemas --workspace=packages/agent",
     "test": "npm test --workspaces --if-present && node --test \"scripts/*.test.mjs\"",
