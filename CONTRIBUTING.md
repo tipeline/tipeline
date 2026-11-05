@@ -33,6 +33,19 @@ npm test
 Use Prettier formatting (`npm -w apps/core run format`) and keep each pull request focused
 on one change.
 
+## Branches
+
+**Open your pull request against `dev`, not `main`.** GitHub picks `main` by default, so
+change the base branch when you open it.
+
+- `main` is what's released.
+- `dev` is finished work waiting for the next release.
+- Everything else is a short-lived branch off `dev`, named by the kind of change: `feat/…`,
+  `fix/…`, `docs/…` or `chore/…`.
+
+The one exception is an urgent fix for a released version: branch `hotfix/…` from `main` and
+open the pull request against `main`.
+
 ## License
 
 By contributing, you agree that your contributions are licensed under the

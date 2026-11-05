@@ -105,7 +105,7 @@ const groups = computed<NavGroup[]>(() => [
 
 const bottomItems = computed<NavItem[]>(() => [
   { title: t('nav.settings'), url: '/settings', icon: Settings },
-  { title: t('nav.help'), url: 'https://tipeline.com/docs', icon: CircleHelp, external: true },
+  { title: t('nav.help'), url: 'https://tipeline.com', icon: CircleHelp, external: true },
 ]);
 
 // New approval requests: a toast while Tipeline is in front, a system notification
