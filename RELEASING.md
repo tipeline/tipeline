@@ -10,8 +10,17 @@ Everything ships on one version: Desktop 0.4.0 contains Core 0.4.0, and CLI 0.4.
    - **GitHub Actions:** run the **Release** workflow from the Actions tab. It tests, builds both Mac installers and creates a draft release. Tick **Also publish the packages to npm** if this release includes them.
    - **By hand:** `npm run build`, then `npm run publish:npm` (add `-- --dry-run` to see what would go out), then `npm -w apps/desktop run build` on each kind of Mac. Installers land in `apps/desktop/release/<version>/`.
 4. Check the draft on GitHub, and publish it.
+5. Merge `main` back into `dev`, so `dev` has the version commit.
+
+Use a regular merge for `dev` into `main`, not a squash, or the two branches stop sharing history and the next merge conflicts.
 
 A publish that fails halfway can be rerun: versions already on npm are skipped.
+
+## Fix a released version
+
+1. Branch `hotfix/…` from `main`, and merge it into `main` with a pull request.
+2. Release it as above, starting at step 2.
+3. Merge `main` back into `dev` straight away, or the next release can bring the bug back.
 
 The very first npm publish has to be by hand, since trusted publishing can only be set up on packages that exist. After that, add the Release workflow as a trusted publisher on npmjs.com for each package.
 
