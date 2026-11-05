@@ -1,0 +1,110 @@
+version: 1.0.0
+name: Create Tipeline Server Instance
+description: |
+  Creates a Linode Ubuntu 22.04 instance, waits until it's ready and provisions it to run the Tipeline stack (`tipeline-core` and `tipeline-server` under systemd).
+
+  Replace the `CHANGE_ME` and `yourdomain.com` values in the `options` variable first. Calls `provisioning.yml` for the setup.
+author: Jose Daniel Estrada
+tags: [example, tipeline server, linode, provisioning, ubuntu, deploy]
+pipeline:
+  variables:
+    - type: object
+      name: serverInfo
+      value: {}
+    - type: object
+      name: serverStatus
+      value: { status: "" }
+    - type: object
+      name: options
+      value:
+        label: TipelineServer
+        username: root
+        root_pass: CHANGE_ME_root_password
+        token: CHANGE_ME_linode_token
+        repo_url: "git@github.com:YOUR_ORG/tipeline.git"
+        admin_email: admin@yourdomain.com
+        admin_password: CHANGE_ME_admin_password
+        domain: yourdomain.com
+        db_name: tipeline_server
+        db_user: tipeline
+        db_password: CHANGE_ME_db_password
+  actions:
+
+    # Creates new instance
+    - group: api
+      name: request
+      params:
+        url: https://api.linode.com/v4/linode/instances
+        method: POST
+        headers:
+          Authorization: 'Bearer {{ options.token }}'
+        parameters:
+          label: "{{ options.label }}"
+          root_pass: "{{ options.root_pass }}"
+          booted: true
+          image: linode/ubuntu22.04
+          region: us-east
+          type: g6-standard-1
+      destination: serverInfo
+
+    # Wait until provisioning is finished
+    - group: flow
+      name: conditionalLoop
+      params:
+        compareAs: string
+        operator: neq
+        firstOperand: "{{ serverStatus.status }}"
+        secondOperand: "running"
+        actions:
+          - group: api
+            name: request
+            params:
+              url: https://api.linode.com/v4/linode/instances/{{ serverInfo.id }}
+              method: GET
+              headers:
+                Authorization: 'Bearer {{ options.token }}'
+            destination: serverStatus
+
+          - group: system
+            name: message
+            params:
+              text: |
+                serverStatus.status: {{ serverStatus.status }}
+
+          - group: flow
+            name: wait
+            params:
+              timeout: 5000
+
+    # Wait for SSH to become available
+    - group: network
+      name: waitPort
+      params:
+        host: "{{ serverInfo.ipv4[0] }}"
+        port: 22
+        timeout: 120000
+
+    - group: system
+      name: message
+      params:
+        text: |
+          Instance ready at {{ serverInfo.ipv4[0] }}. Starting provisioning...
+
+    # Provision the new instance
+    - group: subtask
+      name: exec
+      params:
+        host: local
+        path: '{{ _global.examplesDir }}/workflows/tipeline-server/provisioning.yml'
+        props:
+          config:
+            host: "{{ serverInfo.ipv4[0] }}"
+            username: "{{ options.username }}"
+            password: "{{ options.root_pass }}"
+            repo_url: "{{ options.repo_url }}"
+            admin_email: "{{ options.admin_email }}"
+            admin_password: "{{ options.admin_password }}"
+            domain: "{{ options.domain }}"
+            db_name: "{{ options.db_name }}"
+            db_user: "{{ options.db_user }}"
+            db_password: "{{ options.db_password }}"

@@ -1,0 +1,102 @@
+version: 1.0.0
+name: Subtask Actions Test Suite
+description: |
+  Runs a child workflow and waits for it to finish before going on, passing values in with `props` and copying results back with `outputs`.
+
+  **Where the child comes from**
+
+  - `identifier` — a workflow stored in the database
+  - `path` — a YAML or JSON file; absolute, or relative to this file
+
+  **Passing values**
+
+  - `props` — values for the child's named variables, set before it runs. Use `{{ varName }}` for text and `{= varName =}` for objects and lists.
+  - `outputs` — a map of `parentVar: childVar`, copied back when the child ends. Both variables must already be declared; names that don't match are skipped without an error.
+
+  **Run history (`identifier` only)**
+
+  - `persist: true` (default) — keeps a full run record in the database
+  - `persist: false` — runs without touching the database, like a call by file
+
+  **Circular calls**
+
+  Calling a workflow that is already running in the same chain stops with an error right away.
+
+  **Template syntax**
+
+  - `{{ varName }}` — puts a value into text; the result is always a string
+  - `{= varName =}` — passes the value as it is (object, array, number…); it must be the field's whole value
+  - `{{ _env.KEY }}` — an environment variable, no declaration needed
+  - `{{ _global.varName }}` — a global variable, no declaration needed
+
+author: Jose Daniel Estrada
+tags: [example, subtask, sub-workflow, props, outputs]
+
+pipeline:
+  variables:
+    # Input value passed to the child via props
+    - type: string
+      name: inputValue
+      value: Hello from parent
+
+    # Receives the child's 'processedResult' variable via outputs
+    - type: string
+      name: processedResult
+      value: ''
+
+    # Receives the child's 'itemCount' variable via outputs
+    - type: number
+      name: itemCount
+      value: 0
+
+  actions:
+    # ------------------------------------------------------------------
+    # path — run a file-based subtask, inject a prop, pull two outputs
+    # ------------------------------------------------------------------
+
+    # Runs subtask_child.yml; passes 'inputValue' in as 'rawInput' inside the child,
+    # then copies 'processedResult' and 'itemCount' back into this pipeline.
+    - group: subtask
+      name: exec
+      params:
+        path: ./subtask_child.yml
+        props:
+          rawInput: '{{ inputValue }}'
+        outputs:
+          processedResult: processedResult   # parent ← child (same name here, but can differ)
+          itemCount: itemCount
+
+    # Confirm both output variables were propagated back to the parent
+    - group: system
+      name: message
+      params:
+        text: |
+          [parent] processedResult (from child): {{ processedResult }}
+          [parent] itemCount       (from child): {{ itemCount }}
+
+    # ------------------------------------------------------------------
+    # path — no props, no outputs (fire and forget)
+    # ------------------------------------------------------------------
+
+    # Runs the child as a plain side-effect task; results stay inside the child.
+    - group: subtask
+      name: exec
+      params:
+        path: ./subtask_child.yml
+
+    # ------------------------------------------------------------------
+    # identifier — run a database-backed subtask without persisting
+    # ------------------------------------------------------------------
+
+    # Uncomment and set 'identifier' to a task that exists in your database.
+    # persist: false skips creating a pipeline record, behaving like a file-based call.
+    #
+    # - group: subtask
+    #   name: exec
+    #   params:
+    #     identifier: my-registered-task
+    #     persist: false
+    #     props:
+    #       inputValue: '{{ inputValue }}'
+    #     outputs:
+    #       processedResult: processedResult

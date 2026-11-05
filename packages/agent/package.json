@@ -1,0 +1,68 @@
+{
+  "name": "@tipeline/agent",
+  "version": "0.0.0",
+  "description": "Tipeline agent — MCP client + LLM provider adapters that drive Tipeline from a natural-language prompt",
+  "license": "Apache-2.0",
+  "author": "José Daniel Estrada Guzmán",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./provider-names": {
+      "types": "./dist/providerNames.d.ts",
+      "default": "./dist/providerNames.js"
+    },
+    "./choices": {
+      "types": "./dist/choices.d.ts",
+      "default": "./dist/choices.js"
+    },
+    "./instructions": {
+      "types": "./dist/instructions.d.ts",
+      "default": "./dist/instructions.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc && tsc-alias -p tsconfig.json --resolve-full-paths --resolve-full-extension .js",
+    "test": "vitest run",
+    "prepack": "rm -rf dist && npm run build"
+  },
+  "keywords": [
+    "agent",
+    "mcp",
+    "tipeline"
+  ],
+  "files": [
+    "dist",
+    "NOTICE"
+  ],
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0",
+    "@google/genai": "^2.17.1",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "openai": "^7.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.13",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "prettier": "^3.6.2",
+    "tsc-alias": "^1.8.16",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.12"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tipeline/tipeline.git",
+    "directory": "packages/agent"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

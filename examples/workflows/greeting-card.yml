@@ -1,0 +1,60 @@
+version: 1.0.0
+name: Greeting Card
+description: |
+  Writes a hello and a goodbye message for someone, using the Hub Greeting plugin.
+
+  Published to the local hub as an example for the assistant: ask it to "write a greeting card for Ana" and it finds this workflow on the hub, asks you to install the plugin and the workflow, then runs it.
+
+  Needs the Hub Greeting plugin (group `hubGreeting`), which is also on the hub.
+author: Tipeline Hub
+tags: [example, hub, greeting, plugin]
+
+pipeline:
+  variables:
+    - type: string
+      name: person
+      label: Person
+      description: Who the card is for, e.g. Ana
+      required: true
+      value: ''
+      visibility: public
+
+    - type: boolean
+      name: formal
+      label: Formal goodbye
+      description: Say "Farewell" instead of "Goodbye"
+      value: false
+      visibility: public
+
+    - type: string
+      name: greeting
+      label: Greeting
+      description: Filled in by the workflow.
+      value: ''
+      visibility: public
+
+    - type: string
+      name: farewell
+      label: Farewell
+      description: Filled in by the workflow.
+      value: ''
+      visibility: public
+
+  actions:
+    - group: hubGreeting
+      name: sayHello
+      params:
+        name: '{{ person }}'
+      destination: greeting
+
+    - group: hubGreeting
+      name: sayGoodbye
+      params:
+        name: '{{ person }}'
+        formal: '{= formal =}'
+      destination: farewell
+
+    - group: system
+      name: message
+      params:
+        text: '{{ greeting }} … {{ farewell }}'

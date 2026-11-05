@@ -1,0 +1,78 @@
+version: 1.0.0
+name: Search Records
+description: |
+  Finds example records whose name contains the search text (any case) and returns them as select options.
+
+  Used by the Search Select example app's remote search.
+
+  **Inputs**
+
+  - `query` — text typed in the select; empty returns every record
+
+  **Outputs**
+
+  - `options` — `[{ label, value }]` for the select, at most 20
+author: tipeline
+tags: [example, apps, records, search]
+
+pipeline:
+  variables:
+    - type: string
+      name: query
+      value: ''
+      visibility: public
+      description: Text to look for in record names. Set by the app.
+
+    - type: array
+      name: options
+      value: []
+      visibility: public
+      description: Matching records as select options. Returned to the app.
+
+    - type: string
+      name: raw
+      value: ''
+
+    - type: array
+      name: seed
+      value:
+        - { id: 1, name: Acme Corp, status: active, amount: 1200, updatedAt: '2026-09-01T10:00:00Z' }
+        - { id: 2, name: Globex, status: pending, amount: 850, updatedAt: '2026-09-12T15:30:00Z' }
+        - { id: 3, name: Initech, status: active, amount: 3400, updatedAt: '2026-09-20T09:15:00Z' }
+        - { id: 4, name: Umbrella, status: closed, amount: 410, updatedAt: '2026-09-25T18:45:00Z' }
+        - { id: 5, name: Soylent, status: pending, amount: 2300, updatedAt: '2026-09-28T11:05:00Z' }
+        - { id: 6, name: Hooli, status: active, amount: 990, updatedAt: '2026-10-01T08:20:00Z' }
+
+  actions:
+    # The store may not exist yet — keep going with `raw` empty and use the seed.
+    - group: file
+      name: read
+      onError: continue
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-records.json'
+      destination: raw
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          raw: '{= raw =}'
+          seed: '{= seed =}'
+          query: '{{ query }}'
+        code: |
+          const all = raw ? JSON.parse(raw) : seed;
+          const q = query.trim().toLowerCase();
+          return all
+            .filter((r) => !q || r.name.toLowerCase().includes(q))
+            .slice(0, 20)
+            .map((r) => ({ label: `${r.name} (#${r.id})`, value: r.id }));
+      destination: options
+
+    # Visible result when the workflow is run on its own (apps read the outputs instead).
+    - group: system
+      name: message
+      params:
+        text: |
+          {{ options | size }} record(s) match "{{ query }}".
+          {% for o in options %}- {{ o.label }}
+          {% endfor %}

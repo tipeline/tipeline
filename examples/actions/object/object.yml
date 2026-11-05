@@ -1,0 +1,175 @@
+version: 1.0.0
+name: Object Actions Test Suite
+description: |
+  Works with objects: parse JSON, read, set and delete properties, list keys and values, merge, pick, omit and clone.
+author: Jose Daniel Estrada
+tags: [example, object, json]
+pipeline:
+  variables:
+    - type: string
+      name: configJson
+      value: '{"timeout": 30, "format": "json", "retries": 3}'
+
+    - type: object
+      name: config
+      value:
+        timeout: 30
+        format: json
+        retries: 3
+        connection:
+          host: localhost
+          port: 5432
+
+    - type: object
+      name: userProfile
+      value:
+        name: Jose Daniel
+        email: email@test.com
+        role: admin
+        settings:
+          theme: dark
+          notifications: true
+
+    - type: object
+      name: defaultConfig
+      value:
+        timeout: 60
+        format: csv
+        debug: false
+        connection:
+          host: localhost
+          port: 5432
+
+    - type: object
+      name: overrides
+      value:
+        format: json
+        retries: 5
+        debug: true
+
+    - type: object
+      name: pipelineResult
+      value:
+        _id: 'pipeline-00427'
+        _createdAt: '2026-01-15T08:00:00.000Z'
+        task: send-daily-report
+        status: completed
+        duration: 4821
+
+  actions:
+    # -------------------------------------------------------
+    # Parsing
+    # -------------------------------------------------------
+
+    # Deserialize an API response body stored as a string into a workable object
+    - group: object
+      name: parse
+      params:
+        text: '{{ configJson }}'
+
+    # -------------------------------------------------------
+    # Property
+    # -------------------------------------------------------
+
+    # Check whether the config has a nested connection host before opening a DB session
+    - group: object
+      name: hasProperty
+      params:
+        object: '{= config =}'
+        property: 'connection.host'
+
+    # Check for a missing property — returns false without throwing
+    - group: object
+      name: hasProperty
+      params:
+        object: '{= config =}'
+        property: 'auth.token'
+
+    # Read a nested setting from a user profile, falling back to 'light' if unset
+    - group: object
+      name: getProperty
+      params:
+        object: '{= userProfile =}'
+        property: 'settings.theme'
+        defaultValue: light
+
+    # Read a missing property and receive the declared default
+    - group: object
+      name: getProperty
+      params:
+        object: '{= userProfile =}'
+        property: 'settings.language'
+        defaultValue: en
+
+    # Update the connection port inside the nested config object
+    - group: object
+      name: setProperty
+      params:
+        object: '{= config =}'
+        property: 'connection.port'
+        value: 5433
+
+    # Remove a nested auth token from the config before passing it to a logger
+    - group: object
+      name: deleteProperty
+      params:
+        object: '{= config =}'
+        property: 'connection.host'
+
+    # -------------------------------------------------------
+    # Inspection
+    # -------------------------------------------------------
+
+    # List the top-level fields of the config for dynamic iteration
+    - group: object
+      name: keys
+      params:
+        object: '{= config =}'
+
+    # Extract all top-level config values for bulk validation before a pipeline run
+    - group: object
+      name: values
+      params:
+        object: '{= config =}'
+
+    # Get all key-value pairs from the config for dynamic iteration
+    - group: object
+      name: entries
+      params:
+        object: '{= config =}'
+
+    # -------------------------------------------------------
+    # Transform
+    # -------------------------------------------------------
+
+    # Merge default config with environment-specific overrides before running a task
+    - group: object
+      name: merge
+      params:
+        objects:
+          - '{= defaultConfig =}'
+          - '{= overrides =}'
+
+    # Extract only the fields needed before forwarding to an external API
+    - group: object
+      name: pick
+      params:
+        object: '{= userProfile =}'
+        properties:
+          - name
+          - email
+
+    # Strip internal tracking fields before logging a pipeline result
+    - group: object
+      name: omit
+      params:
+        object: '{= pipelineResult =}'
+        properties:
+          - _id
+          - _createdAt
+
+    # Clone the shared config before mutating it for a specific pipeline branch
+    - group: object
+      name: clone
+      params:
+        object: '{= config =}'

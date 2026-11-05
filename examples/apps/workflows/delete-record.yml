@@ -1,0 +1,94 @@
+version: 1.0.0
+name: Delete Record
+description: |
+  Deletes one record from the example record store (a JSON file in `~/Tipeline/output`) and returns what was deleted.
+
+  Used by the Records Manager example app.
+
+  **Inputs**
+
+  - `id` — record id
+
+  **Outputs**
+
+  - `record` — the deleted record
+author: tipeline
+tags: [example, apps, records, delete]
+
+pipeline:
+  variables:
+    - type: number
+      name: id
+      value: 0
+      visibility: public
+      description: Id of the record to delete. Set by the app.
+
+    - type: object
+      name: record
+      value: {}
+      visibility: public
+      description: The deleted record. Returned to the app.
+
+    - type: string
+      name: raw
+      value: ''
+
+    - type: string
+      name: updated
+      value: ''
+
+    - type: array
+      name: seed
+      value:
+        - { id: 1, name: Acme Corp, status: active, amount: 1200, updatedAt: '2026-09-01T10:00:00Z' }
+        - { id: 2, name: Globex, status: pending, amount: 850, updatedAt: '2026-09-12T15:30:00Z' }
+        - { id: 3, name: Initech, status: active, amount: 3400, updatedAt: '2026-09-20T09:15:00Z' }
+        - { id: 4, name: Umbrella, status: closed, amount: 410, updatedAt: '2026-09-25T18:45:00Z' }
+        - { id: 5, name: Soylent, status: pending, amount: 2300, updatedAt: '2026-09-28T11:05:00Z' }
+        - { id: 6, name: Hooli, status: active, amount: 990, updatedAt: '2026-10-01T08:20:00Z' }
+
+  actions:
+    - group: file
+      name: read
+      onError: continue
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-records.json'
+      destination: raw
+
+    # Find the record first — it is returned to the app after the file is rewritten.
+    - group: script
+      name: runScript
+      params:
+        context:
+          raw: '{= raw =}'
+          seed: '{= seed =}'
+          id: '{= id =}'
+        code: |
+          const all = raw ? JSON.parse(raw) : seed;
+          const target = all.find((r) => r.id === Number(id));
+          if (!target) throw new Error(`No record with id ${id}`);
+          return target;
+      destination: record
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          raw: '{= raw =}'
+          seed: '{= seed =}'
+          id: '{= id =}'
+        code: |
+          const all = raw ? JSON.parse(raw) : seed;
+          return JSON.stringify(all.filter((r) => r.id !== Number(id)), null, 2);
+      destination: updated
+
+    - group: file
+      name: write
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-records.json'
+        data: '{= updated =}'
+
+    - group: system
+      name: message
+      params:
+        text: 'Deleted record #{{ record.id }} {{ record.name }}.'

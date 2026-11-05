@@ -1,0 +1,107 @@
+version: 1.0.0
+name: Browser control
+description: |
+  Launches a browser and changes how it presents itself: device emulation, geolocation, timezone, user agent and a JavaScript check.
+author: Jose Daniel Estrada
+tags: [example, browser, device emulation, geolocation, user agent]
+pipeline:
+  variables:
+    - type: browser
+      name: browserInstance
+    - type: boolean
+      name: jsEnabled
+    - type: string
+      name: userAgent
+  actions:
+    # -- launch --
+    # Starts a headless Chrome instance at 1280x720
+    - group: browser
+      name: launch
+      params:
+        headless: true
+        timeout: 30000
+        viewport:
+          width: 1280
+          height: 720
+          isMobile: false
+          isLandscape: false
+      destination: browserInstance
+
+    - group: browser
+      name: goTo
+      params:
+        browser: '{= browserInstance =}'
+        url: 'https://www.wikipedia.org/'
+        waitUntil: domcontentloaded
+
+    - group: browser
+      name: wait
+      params:
+        browser: '{= browserInstance =}'
+        type: timeout
+        timeout: 1000
+
+    # -- emulateDevice --
+    # Overrides the viewport and user agent to match an iPhone 15
+    - group: browser
+      name: emulateDevice
+      params:
+        browser: '{= browserInstance =}'
+        device: 'iPhone 15'
+
+    - group: browser
+      name: wait
+      params:
+        browser: '{= browserInstance =}'
+        type: timeout
+        timeout: 1000
+
+    # -- setGeolocation --
+    # Reports San Francisco coordinates to the Geolocation API
+    - group: browser
+      name: setGeolocation
+      params:
+        browser: '{= browserInstance =}'
+        coordinates:
+          latitude: 37.7749
+          longitude: -122.4194
+          accuracy: 50
+
+    # -- emulateTimezone --
+    # Forces the page's Date API to use the New York timezone
+    - group: browser
+      name: emulateTimezone
+      params:
+        browser: '{= browserInstance =}'
+        timezoneId: 'America/New_York'
+
+    # -- isJavaScriptEnabled --
+    # Returns true if JavaScript is enabled in the page
+    - group: browser
+      name: isJavaScriptEnabled
+      params:
+        browser: '{= browserInstance =}'
+      destination: jsEnabled
+
+    # -- setUserAgent --
+    # Overrides the User-Agent header sent with every request
+    - group: browser
+      name: setUserAgent
+      params:
+        browser: '{= browserInstance =}'
+        userAgent: 'Mozilla/5.0 (compatible; Tipeline/1.0)'
+
+    # -- getUserAgent --
+    # Reads back the current navigator.userAgent from the page
+    - group: browser
+      name: getUserAgent
+      params:
+        browser: '{= browserInstance =}'
+      destination: userAgent
+
+    # -- close --
+    # Closes the browser and frees all associated resources
+    - group: browser
+      name: close
+      params:
+        browser: '{= browserInstance =}'

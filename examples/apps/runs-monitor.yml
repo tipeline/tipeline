@@ -1,0 +1,125 @@
+schemaVersion: 4
+name: Runs Monitor
+description: The Runs component — past and live runs of the app's workflows with status, duration and why they failed; cancel a running one or open it in its own window
+author: tipeline
+
+workflows:
+  slowJob: { file: ./workflows/slow-job.yml }
+  failingJob: { file: ./workflows/failing-job.yml }
+  listRecords: { file: ./workflows/list-records.yml }
+
+pages:
+  - id: monitor
+    name: Monitor
+    icon: History
+
+    # Every runnable keeps history (persist defaults to true): runs with
+    # `persist: false` leave none, so the Runs component can't list them.
+    runnables:
+      slow:
+        mode: run
+        workflow: slowJob
+        inputs: { label: "{{ jobLabel.value | default: 'job' }}" }
+        outputs: [done]
+      failing:
+        mode: run
+        workflow: failingJob
+        inputs: { reason: "Out of coffee" }
+        onError:
+          - { type: toast, variant: error, message: "Failing Job failed, as it should" }
+      records:
+        mode: run
+        workflow: listRecords
+        inputs: { status: all }
+        outputs: [records]
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 9 }
+        props:
+          markdown: true
+          content: "Start some runs, then watch them in the **Runs** list: a running one counts up and can be **canceled** (Slow Job takes about 20 seconds), a failed one says why, and ↗ opens any run in its own window. Click a run to see it on the right."
+
+      - id: jobLabel
+        type: input
+        name: Label
+        frame: none
+        layout: { x: 0, y: 9, w: 3, h: 11 }
+        props:
+          label: Slow job label
+          placeholder: job
+
+      - id: startSlow
+        type: button
+        name: Start slow job
+        frame: none
+        layout: { x: 3, y: 13, w: 3, h: 6 }
+        props:
+          label: Start Slow Job
+        events:
+          click: [{ type: run, runnable: slow }]
+
+      - id: startFailing
+        type: button
+        name: Start failing job
+        frame: none
+        layout: { x: 6, y: 13, w: 3, h: 6 }
+        props:
+          label: Start Failing Job
+          variant: outline
+        events:
+          click: [{ type: run, runnable: failing }]
+
+      - id: startRecords
+        type: button
+        name: List records
+        frame: none
+        layout: { x: 9, y: 13, w: 3, h: 6 }
+        props:
+          label: Run List Records
+          variant: outline
+        events:
+          click: [{ type: run, runnable: records }]
+
+      # All three workflows, newest 15 runs.
+      - id: history
+        type: runs
+        name: Runs
+        layout: { x: 0, y: 20, w: 8, h: 50 }
+        props:
+          title: Recent runs
+          limit: 15
+          emptyText: No runs yet — start one above
+        events:
+          rowClick:
+            - { type: setState, key: picked, value: "{= history.selectedRun =}" }
+
+      - id: picked
+        type: keyValue
+        name: Selected run
+        layout: { x: 8, y: 20, w: 4, h: 28 }
+        props:
+          title: Selected run
+          data: "{= state.picked =}"
+          emptyText: Click a run
+          fields:
+            - { key: workflowName, label: Workflow }
+            - { key: status, label: Status, format: badge }
+            - { key: startedAt, label: Started, format: datetime }
+            - { key: finishedAt, label: Finished, format: datetime }
+            - { key: message, label: Message }
+            - { key: pipelineIdentifier, label: Run id }
+
+      # Only failures, of any workflow.
+      - id: failures
+        type: runs
+        name: Failures
+        layout: { x: 8, y: 48, w: 4, h: 22 }
+        props:
+          title: Failures only
+          statuses: [failed]
+          limit: 5
+          hideOpen: true
+          emptyText: Nothing failed yet

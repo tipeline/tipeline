@@ -1,0 +1,1787 @@
+{
+  "ai": {
+    "label": "IA",
+    "actions": {
+      "prompt": {
+        "label": "Solicitud IA",
+        "description": "Envía un prompt a un proveedor de IA y obtiene una respuesta en texto."
+      }
+    }
+  },
+  "api": {
+    "label": "API",
+    "actions": {
+      "auth": {
+        "label": "Autenticación OAuth2",
+        "description": "Autentica usando el flujo OAuth2 con credenciales de cliente y scopes."
+      },
+      "request": {
+        "label": "Llamada API Directa",
+        "description": "Realiza una llamada directa a una API con token de autenticación y parámetros."
+      },
+      "load": {
+        "label": "Cargar Especificación OpenAPI",
+        "description": "Carga y parsea un esquema OpenAPI desde una URL con filtros opcionales."
+      },
+      "invoke": {
+        "label": "Invocar Endpoint",
+        "description": "Llama a un método de los endpoints OpenAPI previamente cargados."
+      }
+    }
+  },
+  "array": {
+    "label": "Arreglo",
+    "actions": {
+      "parse": {
+        "label": "Parsear",
+        "description": "Convierte una cadena en un arreglo con conversión opcional de tipo de elemento."
+      },
+      "toString": {
+        "label": "A Texto",
+        "description": "Convierte un arreglo a texto en varios formatos."
+      },
+      "join": {
+        "label": "Unir",
+        "description": "Une los elementos de un arreglo en una cadena con separador."
+      },
+      "length": {
+        "label": "Longitud",
+        "description": "Obtiene la longitud de un arreglo."
+      },
+      "contains": {
+        "label": "Contiene",
+        "description": "Verifica si el arreglo contiene un valor específico."
+      },
+      "indexOf": {
+        "label": "Índice De",
+        "description": "Encuentra el índice de la primera ocurrencia de un valor (-1 si no existe)."
+      },
+      "get": {
+        "label": "Obtener Elemento",
+        "description": "Obtiene el elemento en un índice específico (admite índices negativos)."
+      },
+      "push": {
+        "label": "Agregar",
+        "description": "Agrega un elemento al arreglo al inicio o al final."
+      },
+      "remove": {
+        "label": "Eliminar",
+        "description": "Elimina el elemento en un índice específico."
+      },
+      "set": {
+        "label": "Establecer Elemento",
+        "description": "Actualiza el elemento en un índice específico (admite índices negativos)."
+      },
+      "unique": {
+        "label": "Únicos",
+        "description": "Obtiene los valores únicos del arreglo (elimina duplicados)."
+      },
+      "compact": {
+        "label": "Compactar",
+        "description": "Elimina valores falsy del arreglo."
+      },
+      "chunk": {
+        "label": "Dividir en Grupos",
+        "description": "Divide el arreglo en grupos del tamaño especificado."
+      },
+      "flatten": {
+        "label": "Aplanar",
+        "description": "Aplana un arreglo anidado hasta la profundidad indicada."
+      },
+      "intersection": {
+        "label": "Intersección",
+        "description": "Devuelve los valores presentes en todos los arreglos."
+      },
+      "union": {
+        "label": "Unión",
+        "description": "Combina varios arreglos en uno con valores únicos."
+      },
+      "difference": {
+        "label": "Diferencia",
+        "description": "Devuelve los valores del primer arreglo que no están en el segundo."
+      },
+      "sort": {
+        "label": "Ordenar",
+        "description": "Ordena los elementos del arreglo."
+      },
+      "reverse": {
+        "label": "Invertir",
+        "description": "Invierte el orden de los elementos del arreglo."
+      },
+      "slice": {
+        "label": "Cortar",
+        "description": "Extrae una porción del arreglo."
+      },
+      "concat": {
+        "label": "Concatenar",
+        "description": "Combina varios arreglos en uno."
+      }
+    }
+  },
+  "approval": {
+    "label": "Aprobación",
+    "actions": {
+      "request": {
+        "label": "Solicitar aprobación",
+        "description": "Pausa la ejecución hasta que alguien la apruebe o rechace — desde la página Aprobaciones, las ejecuciones del flujo de trabajo o el componente Aprobaciones de una app. Aprobada: la ejecución continúa con la decisión (approved, comment, decidedBy, decidedAt). Rechazada: la ejecución se cancela, salvo que Al rechazar sea continue."
+      }
+    }
+  },
+  "audio": {
+    "label": "Audio",
+    "actions": {
+      "load": {
+        "label": "Cargar Audio",
+        "description": "Carga audio desde una ruta o URL."
+      },
+      "export": {
+        "label": "Exportar Audio",
+        "description": "Escribe el audio en un archivo."
+      },
+      "convertFormat": {
+        "label": "Convertir Formato",
+        "description": "Transcodifica el audio a un formato diferente."
+      },
+      "compress": {
+        "label": "Comprimir",
+        "description": "Reduce el tamaño apuntando a un bitrate objetivo."
+      },
+      "trim": {
+        "label": "Recortar",
+        "description": "Corta un segmento del audio."
+      },
+      "concatenate": {
+        "label": "Concatenar",
+        "description": "Concatena varias fuentes al final del audio base."
+      },
+      "changeVolume": {
+        "label": "Cambiar Volumen",
+        "description": "Ajusta el volumen del audio."
+      },
+      "fadeIn": {
+        "label": "Aparición Gradual",
+        "description": "Aplica un efecto de fade-in."
+      },
+      "fadeOut": {
+        "label": "Desvanecimiento",
+        "description": "Aplica un efecto de fade-out."
+      },
+      "changeSpeed": {
+        "label": "Cambiar Velocidad",
+        "description": "Ajusta la velocidad de reproducción sin cambiar el tono."
+      },
+      "addSilence": {
+        "label": "Agregar Silencio",
+        "description": "Añade silencio al inicio o al final del audio."
+      },
+      "mixAudio": {
+        "label": "Mezclar Audio",
+        "description": "Superpone una segunda pista de audio sobre el audio principal."
+      },
+      "getInfo": {
+        "label": "Obtener Info",
+        "description": "Obtiene metadatos y detalles del stream."
+      },
+      "normalize": {
+        "label": "Normalizar",
+        "description": "Normaliza la loudness o los picos del audio."
+      }
+    }
+  },
+  "browser": {
+    "label": "Navegador",
+    "actions": {
+      "launch": {
+        "label": "Iniciar",
+        "description": "Inicia una instancia del navegador."
+      },
+      "close": {
+        "label": "Cerrar",
+        "description": "Cierra el navegador."
+      },
+      "emulateDevice": {
+        "label": "Emular Dispositivo",
+        "description": "Emula un perfil de dispositivo predefinido."
+      },
+      "setCacheEnabled": {
+        "label": "Activar Caché",
+        "description": "Activa o desactiva la caché HTTP propia del navegador para la página actual."
+      },
+      "setGeolocation": {
+        "label": "Establecer Geolocalización",
+        "description": "Establece las coordenadas de geolocalización."
+      },
+      "emulateTimezone": {
+        "label": "Emular Zona Horaria",
+        "description": "Sobreescribe la zona horaria."
+      },
+      "isJavaScriptEnabled": {
+        "label": "¿JavaScript Habilitado?",
+        "description": "Verifica si JavaScript está habilitado."
+      },
+      "setUserAgent": {
+        "label": "Establecer User Agent",
+        "description": "Establece un user agent personalizado."
+      },
+      "getUserAgent": {
+        "label": "Obtener User Agent",
+        "description": "Obtiene el user agent actual."
+      },
+      "goTo": {
+        "label": "Ir A",
+        "description": "Navega a una URL."
+      },
+      "reload": {
+        "label": "Recargar",
+        "description": "Recarga la página actual."
+      },
+      "goBackPage": {
+        "label": "Ir Atrás",
+        "description": "Retrocede en el historial."
+      },
+      "goForwardPage": {
+        "label": "Ir Adelante",
+        "description": "Avanza en el historial."
+      },
+      "getUrl": {
+        "label": "Obtener URL",
+        "description": "Devuelve la URL actual."
+      },
+      "getPageTitle": {
+        "label": "Obtener Título",
+        "description": "Devuelve el título de la página."
+      },
+      "setContent": {
+        "label": "Establecer Contenido",
+        "description": "Establece el contenido HTML de la página."
+      },
+      "source": {
+        "label": "Obtener Fuente",
+        "description": "Obtiene el código fuente de la página."
+      },
+      "hoverElement": {
+        "label": "Pasar Sobre Elemento",
+        "description": "Pasa el cursor sobre un elemento."
+      },
+      "clickElement": {
+        "label": "Hacer Clic",
+        "description": "Hace clic en un elemento; opcionalmente espera."
+      },
+      "focusElement": {
+        "label": "Enfocar Elemento",
+        "description": "Enfoca un elemento."
+      },
+      "typeInElement": {
+        "label": "Escribir en Elemento",
+        "description": "Escribe texto en un elemento."
+      },
+      "getElement": {
+        "label": "Obtener Elemento",
+        "description": "Obtiene un elemento de la página."
+      },
+      "getElements": {
+        "label": "Obtener Elementos",
+        "description": "Obtiene múltiples elementos de la página."
+      },
+      "extractStructuredData": {
+        "label": "Extraer Datos Estructurados",
+        "description": "Extrae datos estructurados usando un mapa de selectores."
+      },
+      "setCheckState": {
+        "label": "Marcar Casilla",
+        "description": "Establece el estado de una casilla de verificación."
+      },
+      "getCheckState": {
+        "label": "Estado de Casilla",
+        "description": "Obtiene el estado de una casilla de verificación."
+      },
+      "setSelectState": {
+        "label": "Seleccionar Opción",
+        "description": "Establece el valor de un elemento select."
+      },
+      "getSelectState": {
+        "label": "Estado de Selección",
+        "description": "Obtiene el valor de un elemento select."
+      },
+      "contains": {
+        "label": "Contiene Texto",
+        "description": "Verifica si la página contiene un texto o elemento."
+      },
+      "runJavaScript": {
+        "label": "Ejecutar JavaScript",
+        "description": "Ejecuta código JavaScript en el contexto de la página."
+      },
+      "takeScreenshot": {
+        "label": "Capturar Pantalla",
+        "description": "Toma una captura de pantalla de la página."
+      },
+      "takeScreenshotElement": {
+        "label": "Capturar Elemento",
+        "description": "Toma una captura de un elemento específico."
+      },
+      "startScreencast": {
+        "label": "Iniciar Grabación",
+        "description": "Inicia la grabación de pantalla."
+      },
+      "stopScreencast": {
+        "label": "Detener Grabación",
+        "description": "Detiene la grabación de pantalla."
+      },
+      "generatePDF": {
+        "label": "Generar PDF",
+        "description": "Genera un PDF de la página."
+      },
+      "runLighthouseAudit": {
+        "label": "Ejecutar Auditoría Lighthouse",
+        "description": "Ejecuta una auditoría Lighthouse sobre una URL y devuelve las puntuaciones por categoría y los resultados de la auditoría."
+      },
+      "startHarCapture": {
+        "label": "Iniciar Captura HAR",
+        "description": "Comienza a grabar una captura HAR (HTTP Archive) de cada solicitud/respuesta de la página — encabezados, tiempos, estado de caché y cookies. No captura los cuerpos de las respuestas."
+      },
+      "stopHarCapture": {
+        "label": "Detener Captura HAR",
+        "description": "Detiene una captura HAR y devuelve el objeto HAR (log.entries[] contiene un elemento por cada solicitud/respuesta). Opcionalmente también lo escribe en un archivo .har."
+      },
+      "wait": {
+        "label": "Esperar",
+        "description": "Espera a que ocurra una condición o pausa."
+      },
+      "metadata": {
+        "label": "Metadatos",
+        "description": "Obtiene metadatos de la página."
+      },
+      "addStyleTag": {
+        "label": "Agregar Estilo",
+        "description": "Agrega una etiqueta de estilo a la página."
+      },
+      "getCookies": {
+        "label": "Obtener Cookies",
+        "description": "Obtiene las cookies de la página."
+      },
+      "setCookies": {
+        "label": "Establecer Cookies",
+        "description": "Establece cookies en la página."
+      },
+      "deleteCookies": {
+        "label": "Eliminar Cookies",
+        "description": "Elimina cookies de la página."
+      },
+      "getViewport": {
+        "label": "Obtener Ventana",
+        "description": "Obtiene las dimensiones del viewport."
+      },
+      "setViewport": {
+        "label": "Establecer Ventana",
+        "description": "Establece las dimensiones del viewport."
+      },
+      "keyboardType": {
+        "label": "Escribir con Teclado",
+        "description": "Escribe texto usando el teclado."
+      },
+      "keyboardDown": {
+        "label": "Tecla Abajo",
+        "description": "Presiona una tecla sin soltarla."
+      },
+      "keyboardUp": {
+        "label": "Tecla Arriba",
+        "description": "Suelta una tecla presionada."
+      },
+      "keyboardPress": {
+        "label": "Presionar Tecla",
+        "description": "Presiona y suelta una tecla."
+      },
+      "keyboardSendCharacter": {
+        "label": "Enviar Carácter",
+        "description": "Envía un carácter al elemento activo."
+      },
+      "mouseClick": {
+        "label": "Clic del Ratón",
+        "description": "Realiza un clic del ratón en las coordenadas indicadas."
+      },
+      "mouseDown": {
+        "label": "Ratón Abajo",
+        "description": "Presiona el botón del ratón."
+      },
+      "mouseUp": {
+        "label": "Ratón Arriba",
+        "description": "Suelta el botón del ratón."
+      },
+      "mouseMove": {
+        "label": "Mover Ratón",
+        "description": "Mueve el ratón a las coordenadas indicadas."
+      },
+      "mouseWheel": {
+        "label": "Rueda del Ratón",
+        "description": "Desplaza la rueda del ratón."
+      },
+      "dragAndDropByCoordinates": {
+        "label": "Arrastrar por Coordenadas",
+        "description": "Arrastra y suelta usando coordenadas."
+      },
+      "dragAndDropByElements": {
+        "label": "Arrastrar por Elementos",
+        "description": "Arrastra y suelta usando selectores de elementos."
+      },
+      "uploadFile": {
+        "label": "Subir Archivo",
+        "description": "Sube un archivo mediante un input de tipo file."
+      },
+      "downloadFile": {
+        "label": "Descargar Archivo",
+        "description": "Descarga un archivo desde la página."
+      }
+    }
+  },
+  "compression": {
+    "label": "Compresión",
+    "actions": {
+      "archive": {
+        "label": "Archivar",
+        "description": "Crea un archivo comprimido desde las fuentes indicadas."
+      },
+      "unarchive": {
+        "label": "Desarchivar",
+        "description": "Extrae un archivo comprimido en una carpeta."
+      }
+    }
+  },
+  "cryptography": {
+    "label": "Criptografía",
+    "actions": {
+      "base64EncodeText": {
+        "label": "Codificar Texto en Base64",
+        "description": "Codifica texto en Base64."
+      },
+      "base64EncodeFile": {
+        "label": "Codificar Archivo en Base64",
+        "description": "Codifica el contenido de un archivo en Base64."
+      },
+      "base64DecodeText": {
+        "label": "Decodificar Base64 a Texto",
+        "description": "Decodifica una cadena Base64 a texto."
+      },
+      "base64DecodeToFile": {
+        "label": "Decodificar Base64 a Archivo",
+        "description": "Decodifica una cadena Base64 y escribe en un archivo."
+      },
+      "hashText": {
+        "label": "Hash de Texto",
+        "description": "Genera un hash de texto con algoritmos SHA-2."
+      },
+      "hashFile": {
+        "label": "Hash de Archivo",
+        "description": "Genera un hash de un archivo con algoritmos SHA-2."
+      },
+      "hmacText": {
+        "label": "HMAC de Texto",
+        "description": "Calcula el HMAC de un texto."
+      },
+      "hmacFile": {
+        "label": "HMAC de Archivo",
+        "description": "Calcula el HMAC de un archivo."
+      },
+      "encryptText": {
+        "label": "Cifrar Texto",
+        "description": "Cifra una cadena con AES-CBC."
+      },
+      "decryptText": {
+        "label": "Descifrar Texto",
+        "description": "Descifra una cadena con AES-CBC."
+      },
+      "encryptToFile": {
+        "label": "Cifrar a Archivo",
+        "description": "Cifra un archivo y escribe el resultado."
+      },
+      "decryptToFile": {
+        "label": "Descifrar a Archivo",
+        "description": "Descifra un archivo y escribe el resultado."
+      }
+    }
+  },
+  "database": {
+    "label": "Base de Datos",
+    "actions": {
+      "connect": {
+        "label": "Conectar",
+        "description": "Abre una conexión a la base de datos."
+      },
+      "query": {
+        "label": "Consultar",
+        "description": "Ejecuta una sentencia SQL."
+      },
+      "close": {
+        "label": "Cerrar",
+        "description": "Cierra la conexión a la base de datos."
+      }
+    }
+  },
+  "datetime": {
+    "label": "Fecha y Hora",
+    "actions": {
+      "getCurrentDateTime": {
+        "label": "Fecha y Hora Actual",
+        "description": "Devuelve la fecha y hora local actual."
+      },
+      "nowISO": {
+        "label": "Ahora en ISO (UTC)",
+        "description": "Devuelve la fecha y hora UTC actual en formato ISO."
+      },
+      "toTimestamp": {
+        "label": "A Timestamp",
+        "description": "Convierte una cadena de fecha/hora a un timestamp Unix en milisegundos."
+      },
+      "fromTimestamp": {
+        "label": "Desde Timestamp",
+        "description": "Convierte un timestamp Unix (ms) a un objeto Date."
+      },
+      "format": {
+        "label": "Formatear",
+        "description": "Formatea una fecha/hora usando un patrón."
+      },
+      "parseDate": {
+        "label": "Parsear Fecha",
+        "description": "Parsea una cadena de fecha usando un formato."
+      },
+      "add": {
+        "label": "Sumar Duración",
+        "description": "Suma una duración a una fecha/hora."
+      },
+      "subtract": {
+        "label": "Restar Duración",
+        "description": "Resta una duración de una fecha/hora."
+      },
+      "startOf": {
+        "label": "Inicio De",
+        "description": "Devuelve el inicio del día, semana, mes o año para una fecha dada."
+      },
+      "endOf": {
+        "label": "Fin De",
+        "description": "Devuelve el fin del día, semana, mes o año para una fecha dada."
+      },
+      "difference": {
+        "label": "Diferencia",
+        "description": "Calcula la diferencia entre dos fechas/horas en una unidad."
+      },
+      "isAfter": {
+        "label": "Es Posterior",
+        "description": "Verifica si una fecha/hora es posterior a otra."
+      },
+      "isBefore": {
+        "label": "Es Anterior",
+        "description": "Verifica si una fecha/hora es anterior a otra."
+      },
+      "isEqual": {
+        "label": "Son Iguales",
+        "description": "Verifica si dos fechas/horas son iguales."
+      },
+      "isValid": {
+        "label": "Es Válida",
+        "description": "Verifica si una fecha/hora es válida."
+      }
+    }
+  },
+  "email": {
+    "label": "Correo",
+    "actions": {
+      "send": {
+        "label": "Enviar Correo",
+        "description": "Envía un correo electrónico mediante SMTP."
+      }
+    }
+  },
+  "file": {
+    "label": "Archivo",
+    "actions": {
+      "fileExists": {
+        "label": "Archivo Existe",
+        "description": "Verifica si una ruta existe."
+      },
+      "copy": {
+        "label": "Copiar",
+        "description": "Copia un archivo o directorio."
+      },
+      "move": {
+        "label": "Mover",
+        "description": "Mueve/renombra un archivo o directorio."
+      },
+      "remove": {
+        "label": "Eliminar",
+        "description": "Elimina un archivo o directorio."
+      },
+      "rename": {
+        "label": "Renombrar",
+        "description": "Renombra un archivo o directorio."
+      },
+      "read": {
+        "label": "Leer",
+        "description": "Lee un archivo como texto."
+      },
+      "write": {
+        "label": "Escribir",
+        "description": "Escribe texto en un archivo."
+      },
+      "readCSV": {
+        "label": "Leer CSV",
+        "description": "Parsea un archivo CSV en filas."
+      },
+      "writeCSV": {
+        "label": "Escribir CSV",
+        "description": "Escribe filas en un archivo CSV."
+      },
+      "getFilePathPart": {
+        "label": "Parte de Ruta",
+        "description": "Extrae una parte de la ruta de un archivo."
+      },
+      "convertFileToBase64": {
+        "label": "Archivo a Base64",
+        "description": "Codifica un archivo en Base64."
+      },
+      "convertBase64ToFile": {
+        "label": "Base64 a Archivo",
+        "description": "Decodifica Base64 y escribe en un archivo."
+      }
+    }
+  },
+  "flow": {
+    "label": "Flujo",
+    "actions": {
+      "ifConditional": {
+        "label": "Si",
+        "description": "Condicional Si."
+      },
+      "elseIfConditional": {
+        "label": "Si No",
+        "description": "Condicional Si No."
+      },
+      "elseConditional": {
+        "label": "Sino",
+        "description": "Condicional Sino."
+      },
+      "conditionalLoop": {
+        "label": "Bucle Condicional",
+        "description": "Itera mientras una condición sea verdadera."
+      },
+      "switchConditional": {
+        "label": "Selección",
+        "description": "Declara la expresión a comparar contra los casos."
+      },
+      "caseConditional": {
+        "label": "Caso",
+        "description": "Ejecuta acciones cuando la expresión switch coincide con este valor."
+      },
+      "defaultConditional": {
+        "label": "Por Defecto",
+        "description": "Rama de respaldo cuando ningún caso coincidió."
+      },
+      "simpleLoop": {
+        "label": "Bucle Simple",
+        "description": "Bucle for desde inicio hasta fin con incremento."
+      },
+      "forEachLoop": {
+        "label": "Para Cada Uno",
+        "description": "Itera sobre elementos y ejecuta pasos por cada uno."
+      },
+      "wait": {
+        "label": "Esperar",
+        "description": "Pausa la ejecución por una duración."
+      }
+    }
+  },
+  "folder": {
+    "label": "Carpeta",
+    "actions": {
+      "exists": {
+        "label": "Carpeta Existe",
+        "description": "Verifica si una carpeta existe."
+      },
+      "getFiles": {
+        "label": "Obtener Archivos",
+        "description": "Lista los archivos en una carpeta."
+      },
+      "getSubfolders": {
+        "label": "Obtener Subcarpetas",
+        "description": "Lista las subcarpetas en una carpeta."
+      },
+      "create": {
+        "label": "Crear Carpeta",
+        "description": "Crea una carpeta (con los directorios padre necesarios)."
+      },
+      "delete": {
+        "label": "Eliminar Carpeta",
+        "description": "Elimina una carpeta."
+      },
+      "empty": {
+        "label": "Vaciar Carpeta",
+        "description": "Elimina todos los contenidos de una carpeta."
+      },
+      "copy": {
+        "label": "Copiar Carpeta",
+        "description": "Copia una carpeta al destino."
+      },
+      "move": {
+        "label": "Mover Carpeta",
+        "description": "Mueve una carpeta al destino."
+      },
+      "rename": {
+        "label": "Renombrar Carpeta",
+        "description": "Renombra una carpeta."
+      }
+    }
+  },
+  "html": {
+    "label": "HTML",
+    "actions": {
+      "getElement": {
+        "label": "Obtener Elemento",
+        "description": "Lee un atributo/texto de un único elemento."
+      },
+      "getElements": {
+        "label": "Obtener Elementos",
+        "description": "Lee un atributo/texto de múltiples elementos como arreglo."
+      },
+      "elementExists": {
+        "label": "Elemento Existe",
+        "description": "Verifica si un elemento existe en el HTML."
+      },
+      "countElements": {
+        "label": "Contar Elementos",
+        "description": "Cuenta el número de elementos que coinciden con un selector."
+      },
+      "getLinks": {
+        "label": "Obtener Vínculos",
+        "description": "Extrae todos los vínculos (texto y href) del HTML."
+      },
+      "tableToJson": {
+        "label": "Tabla a JSON",
+        "description": "Convierte una tabla HTML en un arreglo de objetos."
+      },
+      "extractData": {
+        "label": "Extraer Datos",
+        "description": "Extrae datos estructurados usando un mapa de selectores."
+      },
+      "removeElements": {
+        "label": "Eliminar Elementos",
+        "description": "Elimina elementos que coinciden con el selector y devuelve el HTML limpio."
+      },
+      "getHtml": {
+        "label": "Obtener HTML",
+        "description": "Obtiene el HTML interno u externo de un elemento."
+      },
+      "findByText": {
+        "label": "Buscar por Texto",
+        "description": "Encuentra elementos que contienen un texto específico."
+      },
+      "fromMarkdown": {
+        "label": "Desde Markdown",
+        "description": "Convierte texto Markdown a HTML."
+      }
+    }
+  },
+  "http": {
+    "label": "HTTP",
+    "actions": {
+      "request": {
+        "label": "Solicitud HTTP",
+        "description": "Realiza una solicitud HTTP (opciones estilo Axios). Devuelve status, headers y data."
+      },
+      "downloadFile": {
+        "label": "Descargar Archivo",
+        "description": "Descarga una URL a una ruta local."
+      }
+    }
+  },
+  "image": {
+    "label": "Imagen",
+    "actions": {
+      "load": {
+        "label": "Cargar Imagen",
+        "description": "Carga una imagen desde el disco."
+      },
+      "resize": {
+        "label": "Redimensionar",
+        "description": "Redimensiona por ancho/alto."
+      },
+      "rotate": {
+        "label": "Rotar",
+        "description": "Rota por ángulo (grados)."
+      },
+      "flip": {
+        "label": "Voltear (Vertical)",
+        "description": "Voltea verticalmente."
+      },
+      "flop": {
+        "label": "Voltear (Horizontal)",
+        "description": "Voltea horizontalmente."
+      },
+      "crop": {
+        "label": "Recortar",
+        "description": "Recorta a un rectángulo."
+      },
+      "grayscale": {
+        "label": "Escala de Grises",
+        "description": "Convierte a escala de grises."
+      },
+      "blur": {
+        "label": "Desenfoque",
+        "description": "Desenfoque gaussiano con sigma."
+      },
+      "sharpen": {
+        "label": "Enfocar",
+        "description": "Enfoca la imagen."
+      },
+      "negate": {
+        "label": "Invertir",
+        "description": "Invierte los colores de la imagen."
+      },
+      "tint": {
+        "label": "Teñir",
+        "description": "Aplica un tinte RGB."
+      },
+      "modulate": {
+        "label": "Modular",
+        "description": "Ajusta brillo, saturación y tono."
+      },
+      "composite": {
+        "label": "Superponer",
+        "description": "Superpone otra imagen en una posición."
+      },
+      "extend": {
+        "label": "Extender Lienzo",
+        "description": "Agrega bordes con un color de fondo."
+      },
+      "metadata": {
+        "label": "Metadatos",
+        "description": "Lee los metadatos de la imagen."
+      },
+      "toFormat": {
+        "label": "Convertir Formato",
+        "description": "Convierte a un formato de imagen diferente."
+      },
+      "toBuffer": {
+        "label": "A Buffer",
+        "description": "Renderiza la imagen en un Buffer."
+      },
+      "toFile": {
+        "label": "A Archivo",
+        "description": "Escribe la imagen en un archivo."
+      }
+    }
+  },
+  "math": {
+    "label": "Matemáticas",
+    "actions": {
+      "abs": {
+        "label": "Valor Absoluto",
+        "description": "Valor absoluto de un número.",
+        "fields": {
+          "number": {
+            "label": "Número",
+            "description": "El número del cual obtener el valor absoluto."
+          }
+        }
+      },
+      "add": {
+        "label": "Suma",
+        "description": "Suma dos números.",
+        "fields": {
+          "augend": {
+            "label": "Primer Número",
+            "description": "El primer número (sumando) a sumar."
+          },
+          "addend": {
+            "label": "Segundo Número",
+            "description": "El segundo número (sumando) a sumar."
+          }
+        }
+      },
+      "subtract": {
+        "label": "Resta",
+        "description": "Diferencia entre dos números.",
+        "fields": {
+          "minuend": {
+            "label": "Minuendo",
+            "description": "El número del cual restar."
+          },
+          "subtrahend": {
+            "label": "Sustraendo",
+            "description": "El número a restar."
+          }
+        }
+      },
+      "multiply": {
+        "label": "Multiplicación",
+        "description": "Producto de dos números.",
+        "fields": {
+          "multiplier": {
+            "label": "Multiplicador",
+            "description": "El primer número (multiplicador)."
+          },
+          "multiplicand": {
+            "label": "Multiplicando",
+            "description": "El segundo número (multiplicando)."
+          }
+        }
+      },
+      "divide": {
+        "label": "División",
+        "description": "Divide un número entre otro.",
+        "fields": {
+          "dividend": {
+            "label": "Dividendo",
+            "description": "El número a dividir."
+          },
+          "divisor": {
+            "label": "Divisor",
+            "description": "El número entre el que se divide (no puede ser cero)."
+          }
+        }
+      },
+      "mod": {
+        "label": "Módulo",
+        "description": "Residuo de la división.",
+        "fields": {
+          "dividend": {
+            "label": "Dividendo",
+            "description": "El número a dividir."
+          },
+          "divisor": {
+            "label": "Divisor",
+            "description": "El divisor (no puede ser cero)."
+          }
+        }
+      },
+      "pow": {
+        "label": "Potencia",
+        "description": "Eleva una base a un exponente.",
+        "fields": {
+          "base": {
+            "label": "Base",
+            "description": "El número base."
+          },
+          "exponent": {
+            "label": "Exponente",
+            "description": "El exponente al que se eleva la base."
+          }
+        }
+      },
+      "ceil": {
+        "label": "Techo",
+        "description": "Redondea hacia arriba al entero más cercano.",
+        "fields": {
+          "number": {
+            "label": "Número",
+            "description": "El número a redondear hacia arriba."
+          }
+        }
+      },
+      "floor": {
+        "label": "Piso",
+        "description": "Redondea hacia abajo al entero más cercano.",
+        "fields": {
+          "number": {
+            "label": "Número",
+            "description": "El número a redondear hacia abajo."
+          }
+        }
+      },
+      "round": {
+        "label": "Redondeo",
+        "description": "Redondea al entero más cercano.",
+        "fields": {
+          "number": {
+            "label": "Número",
+            "description": "El número a redondear."
+          }
+        }
+      },
+      "trunc": {
+        "label": "Truncar",
+        "description": "Trunca hacia cero, eliminando la parte decimal.",
+        "fields": {
+          "number": {
+            "label": "Número",
+            "description": "El número a truncar."
+          }
+        }
+      },
+      "toFixed": {
+        "label": "Fijar Decimales",
+        "description": "Formatea un número con un número fijo de decimales.",
+        "fields": {
+          "number": {
+            "label": "Número",
+            "description": "El número a formatear."
+          },
+          "digits": {
+            "label": "Dígitos",
+            "description": "Número de decimales a mantener (0–20)."
+          }
+        }
+      },
+      "formatNumber": {
+        "label": "Formatear Número",
+        "description": "Formateo de números según la configuración regional.",
+        "fields": {
+          "number": {
+            "label": "Número",
+            "description": "El número a formatear."
+          },
+          "locale": {
+            "label": "Configuración Regional",
+            "description": "Código BCP 47 (ej. \"es-MX\"). Por defecto usa el locale del sistema."
+          },
+          "minimumFractionDigits": {
+            "label": "Mín. Decimales",
+            "description": "Mínimo de dígitos decimales a mostrar."
+          },
+          "maximumFractionDigits": {
+            "label": "Máx. Decimales",
+            "description": "Máximo de dígitos decimales a mostrar."
+          }
+        }
+      },
+      "max": {
+        "label": "Máximo",
+        "description": "Mayor número en un arreglo.",
+        "fields": {
+          "array": {
+            "label": "Arreglo",
+            "description": "Arreglo de números para encontrar el máximo."
+          }
+        }
+      },
+      "mean": {
+        "label": "Media",
+        "description": "Promedio de un arreglo de números.",
+        "fields": {
+          "array": {
+            "label": "Arreglo",
+            "description": "Arreglo de números a promediar."
+          }
+        }
+      },
+      "min": {
+        "label": "Mínimo",
+        "description": "Menor número en un arreglo.",
+        "fields": {
+          "array": {
+            "label": "Arreglo",
+            "description": "Arreglo de números para encontrar el mínimo."
+          }
+        }
+      },
+      "sum": {
+        "label": "Suma Total",
+        "description": "Suma de todos los números en un arreglo.",
+        "fields": {
+          "array": {
+            "label": "Arreglo",
+            "description": "Arreglo de números a sumar."
+          }
+        }
+      },
+      "median": {
+        "label": "Mediana",
+        "description": "Valor central de un arreglo de números.",
+        "fields": {
+          "array": {
+            "label": "Arreglo",
+            "description": "Arreglo de números para encontrar la mediana."
+          }
+        }
+      },
+      "clamp": {
+        "label": "Limitar Rango",
+        "description": "Limita un valor dentro de un rango mínimo y máximo.",
+        "fields": {
+          "value": {
+            "label": "Valor",
+            "description": "El valor a limitar."
+          },
+          "min": {
+            "label": "Mínimo",
+            "description": "El límite inferior."
+          },
+          "max": {
+            "label": "Máximo",
+            "description": "El límite superior."
+          }
+        }
+      },
+      "percentage": {
+        "label": "Porcentaje",
+        "description": "Porcentaje que un valor representa del total.",
+        "fields": {
+          "value": {
+            "label": "Valor",
+            "description": "El valor parcial."
+          },
+          "total": {
+            "label": "Total",
+            "description": "El valor total."
+          }
+        }
+      },
+      "sign": {
+        "label": "Signo",
+        "description": "Retorna -1, 0 o 1 según el signo de un número.",
+        "fields": {
+          "number": {
+            "label": "Número",
+            "description": "El número a evaluar."
+          }
+        }
+      },
+      "increment": {
+        "label": "Incrementar",
+        "description": "Incrementa un número en un paso.",
+        "fields": {
+          "number": {
+            "label": "Número",
+            "description": "El número a incrementar."
+          },
+          "step": {
+            "label": "Paso",
+            "description": "El paso de incremento (por defecto 1)."
+          }
+        }
+      },
+      "decrement": {
+        "label": "Decrementar",
+        "description": "Decrementa un número en un paso.",
+        "fields": {
+          "number": {
+            "label": "Número",
+            "description": "El número a decrementar."
+          },
+          "step": {
+            "label": "Paso",
+            "description": "El paso de decremento (por defecto 1)."
+          }
+        }
+      },
+      "inRange": {
+        "label": "En Rango",
+        "description": "Verifica si un valor está dentro de un rango inclusivo.",
+        "fields": {
+          "value": {
+            "label": "Valor",
+            "description": "El valor a verificar."
+          },
+          "min": {
+            "label": "Mínimo",
+            "description": "El límite inferior del rango (inclusivo)."
+          },
+          "max": {
+            "label": "Máximo",
+            "description": "El límite superior del rango (inclusivo)."
+          }
+        }
+      },
+      "random": {
+        "label": "Aleatorio",
+        "description": "Genera un número decimal aleatorio dentro de un rango opcional.",
+        "fields": {
+          "min": {
+            "label": "Mínimo",
+            "description": "El valor mínimo (por defecto 0)."
+          },
+          "max": {
+            "label": "Máximo",
+            "description": "El valor máximo (por defecto 1)."
+          }
+        }
+      }
+    }
+  },
+  "network": {
+    "label": "Red",
+    "actions": {
+      "waitPort": {
+        "label": "Esperar Puerto",
+        "description": "Espera hasta que un puerto TCP esté abierto."
+      },
+      "resolveDNS": {
+        "label": "Resolver DNS",
+        "description": "Resolución DNS para un nombre de host."
+      },
+      "lookup": {
+        "label": "Búsqueda DNS",
+        "description": "Búsqueda DNS general para un nombre de host."
+      },
+      "reverseDNS": {
+        "label": "DNS Inverso",
+        "description": "Búsqueda inversa de un registro PTR para una IP."
+      },
+      "ping": {
+        "label": "Ping",
+        "description": "Solicitud de eco ICMP a un host."
+      },
+      "checkTlsCertificate": {
+        "label": "Verificar Certificado TLS",
+        "description": "Obtiene e inspecciona el certificado TLS de un servidor."
+      }
+    }
+  },
+  "object": {
+    "label": "Objeto",
+    "actions": {
+      "parse": {
+        "label": "Parsear",
+        "description": "Intenta convertir una cadena en un objeto."
+      },
+      "setProperty": {
+        "label": "Establecer Propiedad",
+        "description": "Establece una propiedad anidada en un objeto usando una ruta de puntos/corchetes."
+      },
+      "hasProperty": {
+        "label": "Tiene Propiedad",
+        "description": "Verifica si existe una propiedad en un objeto (admite rutas anidadas)."
+      },
+      "getProperty": {
+        "label": "Obtener Propiedad",
+        "description": "Obtiene el valor de una propiedad de un objeto (admite rutas anidadas y valores por defecto)."
+      },
+      "keys": {
+        "label": "Claves",
+        "description": "Obtiene todas las claves de un objeto."
+      },
+      "values": {
+        "label": "Valores",
+        "description": "Obtiene todos los valores de un objeto."
+      },
+      "merge": {
+        "label": "Fusionar",
+        "description": "Fusiona múltiples objetos profundamente en uno solo."
+      },
+      "pick": {
+        "label": "Seleccionar",
+        "description": "Selecciona propiedades específicas de un objeto."
+      },
+      "omit": {
+        "label": "Omitir",
+        "description": "Omite propiedades específicas de un objeto."
+      },
+      "clone": {
+        "label": "Clonar",
+        "description": "Crea una copia profunda de un objeto."
+      },
+      "entries": {
+        "label": "Entradas",
+        "description": "Obtiene todos los pares clave-valor de un objeto como arreglo."
+      },
+      "deleteProperty": {
+        "label": "Eliminar Propiedad",
+        "description": "Elimina una propiedad anidada de un objeto usando una ruta de puntos o corchetes."
+      }
+    }
+  },
+  "ocr": {
+    "label": "OCR",
+    "actions": {
+      "recognize": {
+        "label": "Reconocer Texto",
+        "description": "Extrae texto de una imagen o documento."
+      }
+    }
+  },
+  "pdf": {
+    "label": "PDF",
+    "actions": {
+      "extractText": {
+        "label": "Extraer Texto",
+        "description": "Extrae todo el texto de un PDF."
+      },
+      "extractImage": {
+        "label": "Extraer Imágenes",
+        "description": "Extrae imágenes de un PDF a una ruta de salida."
+      },
+      "merge": {
+        "label": "Fusionar PDFs",
+        "description": "Combina múltiples PDFs en uno."
+      },
+      "getPageCount": {
+        "label": "Contar Páginas",
+        "description": "Devuelve el número total de páginas de un PDF."
+      },
+      "splitPages": {
+        "label": "Dividir Páginas",
+        "description": "Divide un PDF en un archivo por página."
+      }
+    }
+  },
+  "qrcode": {
+    "label": "Código QR",
+    "actions": {
+      "generate": {
+        "label": "Generar Código QR",
+        "description": "Crea una imagen de código QR a partir de texto."
+      },
+      "read": {
+        "label": "Leer Código QR",
+        "description": "Decodifica el texto de una imagen de código QR."
+      }
+    }
+  },
+  "script": {
+    "label": "Script",
+    "actions": {
+      "runScript": {
+        "label": "Ejecutar Script",
+        "description": "Ejecuta un script con un contexto opcional."
+      }
+    }
+  },
+  "spreadsheet": {
+    "label": "Hoja de Cálculo",
+    "actions": {
+      "open": {
+        "label": "Abrir",
+        "description": "Abre un archivo de hoja de cálculo existente."
+      },
+      "create": {
+        "label": "Crear",
+        "description": "Crea un nuevo archivo de hoja de cálculo."
+      },
+      "save": {
+        "label": "Guardar",
+        "description": "Guarda el libro en disco."
+      },
+      "delete": {
+        "label": "Eliminar",
+        "description": "Elimina un archivo de hoja de cálculo."
+      },
+      "getSheetNames": {
+        "label": "Obtener Hojas",
+        "description": "Lista todas las hojas del libro."
+      },
+      "addSheet": {
+        "label": "Agregar Hoja",
+        "description": "Agrega una nueva hoja por nombre."
+      },
+      "deleteSheet": {
+        "label": "Eliminar Hoja",
+        "description": "Elimina una hoja por nombre."
+      },
+      "renameSheet": {
+        "label": "Renombrar Hoja",
+        "description": "Renombra una hoja."
+      },
+      "toJson": {
+        "label": "A JSON",
+        "description": "Convierte la hoja en un arreglo de objetos por fila."
+      },
+      "toArray": {
+        "label": "A Arreglo",
+        "description": "Convierte la hoja en un arreglo 2D incluyendo la fila de encabezados."
+      },
+      "appendRow": {
+        "label": "Agregar Fila",
+        "description": "Agrega una nueva fila después de la última fila usada."
+      },
+      "getRowCount": {
+        "label": "Contar Filas",
+        "description": "Devuelve el número de filas usadas en una hoja."
+      },
+      "readCell": {
+        "label": "Leer Celda",
+        "description": "Lee el valor de una celda por índice de fila y columna."
+      },
+      "writeCell": {
+        "label": "Escribir Celda",
+        "description": "Escribe un valor en una celda por índice de fila y columna."
+      },
+      "clearCell": {
+        "label": "Limpiar Celda",
+        "description": "Elimina el valor de una celda por índice de fila y columna."
+      },
+      "getCellAddress": {
+        "label": "Dirección de Celda",
+        "description": "Convierte un par de índices fila/columna a una referencia de celda estilo A1."
+      },
+      "readCellByRef": {
+        "label": "Leer Celda por Referencia",
+        "description": "Lee el valor de una celda por referencia estilo A1 (ej. \"B3\")."
+      },
+      "setCellFormula": {
+        "label": "Establecer Fórmula",
+        "description": "Escribe una fórmula en una celda por referencia estilo A1."
+      },
+      "readRange": {
+        "label": "Leer Rango",
+        "description": "Lee todos los valores de un rango rectangular como arreglo 2D."
+      },
+      "writeRange": {
+        "label": "Escribir Rango",
+        "description": "Escribe un arreglo 2D de valores comenzando desde una referencia de celda."
+      },
+      "clearRange": {
+        "label": "Limpiar Rango",
+        "description": "Limpia todos los valores en un rango."
+      },
+      "getUsedRange": {
+        "label": "Rango Usado",
+        "description": "Devuelve el rango de celdas con datos."
+      },
+      "getSpreadsheetInfo": {
+        "label": "Info de Hoja de Cálculo",
+        "description": "Obtiene información general del libro."
+      }
+    }
+  },
+  "ssh": {
+    "label": "SSH",
+    "actions": {
+      "connect": {
+        "label": "Conectar",
+        "description": "Abre una conexión SSH."
+      },
+      "exec": {
+        "label": "Ejecutar",
+        "description": "Ejecuta un comando por SSH."
+      },
+      "close": {
+        "label": "Cerrar",
+        "description": "Cierra una conexión SSH."
+      }
+    }
+  },
+  "string": {
+    "label": "Texto",
+    "actions": {
+      "camelCase": {
+        "label": "CamelCase",
+        "description": "Convierte a camelCase."
+      },
+      "capitalize": {
+        "label": "Capitalizar",
+        "description": "Pone en mayúscula el primer carácter."
+      },
+      "endsWith": {
+        "label": "Termina Con",
+        "description": "Verifica si una cadena termina con una subcadena."
+      },
+      "encodeHTMLEntities": {
+        "label": "Codificar HTML",
+        "description": "Escapa caracteres especiales HTML."
+      },
+      "decodeHTMLEntities": {
+        "label": "Decodificar HTML",
+        "description": "Desescapa entidades HTML a sus caracteres originales."
+      },
+      "includes": {
+        "label": "Incluye",
+        "description": "Verifica si una subcadena está presente."
+      },
+      "indexOf": {
+        "label": "Índice De",
+        "description": "Índice de la primera ocurrencia."
+      },
+      "kebabCase": {
+        "label": "Kebab-case",
+        "description": "Convierte a kebab-case."
+      },
+      "stringify": {
+        "label": "Convertir a Texto",
+        "description": "Convierte cualquier valor a su representación en cadena."
+      },
+      "lowerFirst": {
+        "label": "Minúscula Inicial",
+        "description": "Pone en minúscula el primer carácter."
+      },
+      "match": {
+        "label": "Coincidir",
+        "description": "Coincidencia de expresión regular contra una cadena."
+      },
+      "replace": {
+        "label": "Reemplazar",
+        "description": "Reemplaza la primera coincidencia."
+      },
+      "replaceAll": {
+        "label": "Reemplazar Todo",
+        "description": "Reemplaza todas las coincidencias."
+      },
+      "search": {
+        "label": "Buscar",
+        "description": "Búsqueda usando regex/cadena."
+      },
+      "slice": {
+        "label": "Extraer Fragmento",
+        "description": "Extrae una subcadena por rango."
+      },
+      "snakeCase": {
+        "label": "Snake_case",
+        "description": "Convierte a snake_case."
+      },
+      "split": {
+        "label": "Dividir",
+        "description": "Divide en partes por separador."
+      },
+      "startCase": {
+        "label": "Caso Inicial",
+        "description": "Capitaliza palabras con espacios."
+      },
+      "startsWith": {
+        "label": "Empieza Con",
+        "description": "Verifica si una cadena comienza con una subcadena."
+      },
+      "toLowerCase": {
+        "label": "A Minúsculas",
+        "description": "Convierte la cadena a minúsculas."
+      },
+      "toUpperCase": {
+        "label": "A Mayúsculas",
+        "description": "Convierte la cadena a mayúsculas."
+      },
+      "upperFirst": {
+        "label": "Mayúscula Inicial",
+        "description": "Pone en mayúscula el primer carácter."
+      },
+      "trim": {
+        "label": "Recortar Espacios",
+        "description": "Elimina espacios en blanco al inicio y al final."
+      },
+      "trimEnd": {
+        "label": "Recortar Final",
+        "description": "Elimina espacios en blanco al final."
+      },
+      "trimStart": {
+        "label": "Recortar Inicio",
+        "description": "Elimina espacios en blanco al inicio."
+      },
+      "words": {
+        "label": "Palabras",
+        "description": "Divide en palabras según el patrón."
+      },
+      "len": {
+        "label": "Longitud",
+        "description": "Obtiene la longitud de una cadena."
+      },
+      "substring": {
+        "label": "Subcadena",
+        "description": "Extrae una subcadena por índices de inicio y fin."
+      },
+      "containsRegex": {
+        "label": "Contiene (Regex)",
+        "description": "Verifica si una cadena coincide con un patrón regex."
+      },
+      "format": {
+        "label": "Formatear",
+        "description": "Aplica un formato de plantilla a una cadena."
+      },
+      "parseQueryString": {
+        "label": "Parsear Query String",
+        "description": "Parsea una query string de URL en un objeto."
+      },
+      "stringifyQueryObject": {
+        "label": "Serializar Objeto a Query",
+        "description": "Convierte un objeto en una query string de URL."
+      },
+      "encodeURIComponent": {
+        "label": "Codificar URI",
+        "description": "Codifica un componente de URI."
+      },
+      "decodeURIComponent": {
+        "label": "Decodificar URI",
+        "description": "Decodifica un componente de URI."
+      },
+      "slugify": {
+        "label": "Convertir a Slug",
+        "description": "Convierte texto a formato slug para URLs."
+      },
+      "renderTemplate": {
+        "label": "Renderizar plantilla",
+        "description": "Renderiza una plantilla Liquid guardada en una variable con los datos que le des.",
+        "fields": {
+          "template": {
+            "label": "Plantilla",
+            "description": "La plantilla, normalmente una variable que la contiene. El texto escrito aquí se completa antes con las variables del flujo de trabajo."
+          },
+          "data": {
+            "label": "Datos",
+            "description": "Lo que la plantilla puede usar, por nombre."
+          }
+        }
+      },
+      "template": {
+        "label": "Plantilla",
+        "description": "Compila y ejecuta una plantilla de cadena."
+      }
+    }
+  },
+  "subtask": {
+    "label": "Subflujo",
+    "actions": {
+      "exec": {
+        "label": "Ejecutar Subflujo",
+        "description": "Ejecuta otro flujo de trabajo como un subflujo."
+      }
+    }
+  },
+  "system": {
+    "label": "Sistema",
+    "actions": {
+      "message": {
+        "label": "Mensaje de Sistema",
+        "description": "Emite un mensaje de sistema."
+      },
+      "runApplication": {
+        "label": "Ejecutar Aplicación",
+        "description": "Ejecuta un comando con argumentos y entorno opcionales."
+      },
+      "terminateProcess": {
+        "label": "Terminar Proceso",
+        "description": "Envía una señal para terminar un proceso."
+      },
+      "setEnvVariable": {
+        "label": "Establecer Variable de Entorno",
+        "description": "Establece una variable de entorno."
+      },
+      "getEnvVariable": {
+        "label": "Obtener Variable de Entorno",
+        "description": "Lee una variable de entorno."
+      },
+      "deleteEnvVariable": {
+        "label": "Eliminar Variable de Entorno",
+        "description": "Elimina una variable de entorno."
+      }
+    }
+  },
+  "variable": {
+    "label": "Variable",
+    "actions": {
+      "set": {
+        "label": "Establecer Variable",
+        "description": "Crea o actualiza una variable del pipeline."
+      }
+    }
+  },
+  "video": {
+    "label": "Video",
+    "actions": {
+      "load": {
+        "label": "Cargar Video",
+        "description": "Carga un video desde una ruta o URL."
+      },
+      "export": {
+        "label": "Exportar Video",
+        "description": "Escribe el video en un archivo."
+      },
+      "trim": {
+        "label": "Recortar",
+        "description": "Corta un segmento del video."
+      },
+      "changeResolution": {
+        "label": "Cambiar Resolución",
+        "description": "Redimensiona el lienzo del video."
+      },
+      "crop": {
+        "label": "Recortar Región",
+        "description": "Recorta a un rectángulo."
+      },
+      "rotate": {
+        "label": "Rotar",
+        "description": "Rota usando el filtro de transposición."
+      },
+      "changeFramerate": {
+        "label": "Cambiar Fotogramas/s",
+        "description": "Ajusta los fotogramas por segundo."
+      },
+      "changeVolume": {
+        "label": "Cambiar Volumen",
+        "description": "Ajusta el volumen del audio."
+      },
+      "mute": {
+        "label": "Silenciar",
+        "description": "Elimina la pista de audio."
+      },
+      "replaceAudio": {
+        "label": "Reemplazar Audio",
+        "description": "Reemplaza el audio con una pista externa."
+      },
+      "addBackgroundMusic": {
+        "label": "Agregar Música de Fondo",
+        "description": "Mezcla música de fondo en el video."
+      },
+      "convertFormat": {
+        "label": "Convertir Formato",
+        "description": "Transcodifica el video a un nuevo formato."
+      },
+      "compress": {
+        "label": "Comprimir",
+        "description": "Reduce el tamaño mediante CRF/preset."
+      },
+      "concatenateVideos": {
+        "label": "Concatenar Videos",
+        "description": "Concatena múltiples videos en secuencia."
+      },
+      "addOverlay": {
+        "label": "Agregar Superposición",
+        "description": "Superpone una imagen/video sobre la base."
+      },
+      "addWatermark": {
+        "label": "Agregar Marca de Agua",
+        "description": "Agrega una marca de agua de imagen."
+      },
+      "addSubtitles": {
+        "label": "Agregar Subtítulos",
+        "description": "Incrusta o adjunta subtítulos."
+      },
+      "getInfo": {
+        "label": "Obtener Info",
+        "description": "Obtiene metadatos y detalles del stream."
+      },
+      "getDuration": {
+        "label": "Obtener Duración",
+        "description": "Obtiene la duración total del video."
+      },
+      "getThumbnail": {
+        "label": "Obtener Miniatura",
+        "description": "Extrae un fotograma como imagen."
+      },
+      "extractFrames": {
+        "label": "Extraer Fotogramas",
+        "description": "Exporta fotogramas como imágenes."
+      },
+      "extractAudio": {
+        "label": "Extraer Audio",
+        "description": "Extrae o transcodifica el audio a un archivo."
+      },
+      "generateGif": {
+        "label": "Generar GIF",
+        "description": "Crea un GIF animado de un segmento."
+      },
+      "blurRegion": {
+        "label": "Difuminar Región",
+        "description": "Difumina regiones rectangulares a lo largo del tiempo."
+      }
+    }
+  },
+  "xml": {
+    "label": "XML",
+    "actions": {
+      "parse": {
+        "label": "Analizar XML",
+        "description": "Analiza una cadena XML y la convierte en un objeto JSON.",
+        "fields": {
+          "xml": {
+            "description": "Cadena XML a analizar."
+          },
+          "ignoreAttributes": {
+            "description": "Si es verdadero, se eliminan los atributos de los elementos del resultado (por defecto, falso)."
+          }
+        }
+      },
+      "parseFeed": {
+        "label": "Analizar Feed (RSS/Atom)",
+        "description": "Analiza un feed RSS 2.0 o Atom y lo convierte en un objeto normalizado con título, enlace, descripción y elementos.",
+        "fields": {
+          "xml": {
+            "description": "Contenido XML sin procesar del feed RSS o Atom a analizar."
+          }
+        }
+      }
+    }
+  }
+}

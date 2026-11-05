@@ -1,0 +1,371 @@
+version: 1.0.0
+name: Array Actions Test Suite
+description: |
+  Tries the array actions on realistic data: parsing, converting, inspecting, changing, filtering, grouping, random picks, set operations, sorting, slicing and combining.
+author: Jose Daniel Estrada
+tags: [example, array, list, filter, sort]
+pipeline:
+  variables:
+    - type: string
+      name: csvData
+      value: 'pdf, invoice, ocr, email'
+
+    - type: string
+      name: jsonData
+      value: '["pipeline","task","action","variable"]'
+
+    - type: string
+      name: linesData
+      value: "extract invoice\nparse pdf\nsend email\nrun script"
+
+    - type: array
+      name: tags
+      value: ['pdf', 'invoice', 'ocr', 'email']
+
+    - type: array
+      name: prices
+      value: [12.5, 99.99, 45.0, 7.25, 60.0]
+
+    - type: array
+      name: extraTags
+      value: ['email', 'smtp', 'pdf', 'report']
+
+    - type: array
+      name: nestedData
+      value: [['extract', 'parse'], ['send', 'run'], ['validate']]
+
+    - type: array
+      name: invoices
+      value:
+        - { id: 1, status: 'pending', amount: 120, address: { city: 'Austin' } }
+        - { id: 2, status: 'paid', amount: 80, address: { city: 'Austin' } }
+        - { id: 3, status: 'pending', amount: 500, address: { city: 'Dallas' } }
+
+  actions:
+    # -------------------------------------------------------
+    # Parsing
+    # -------------------------------------------------------
+
+    # Parse a comma-separated tag list — useful for reading pipeline variables stored as CSV
+    - group: array
+      name: parse
+      params:
+        text: '{{ csvData }}'
+        type: csv
+        trim: true
+
+    # Parse a JSON-encoded array — useful for deserializing API responses stored as strings
+    - group: array
+      name: parse
+      params:
+        text: '{{ jsonData }}'
+        type: json
+
+    # Parse a multi-line block into an array — useful for reading config files line by line
+    - group: array
+      name: parse
+      params:
+        text: '{{ linesData }}'
+        type: lines
+        trim: true
+
+    # -------------------------------------------------------
+    # Conversion
+    # -------------------------------------------------------
+
+    # Serialize a tag array to a JSON string — useful for embedding in HTTP request bodies
+    - group: array
+      name: toString
+      params:
+        array: '{= tags =}'
+        format: json
+
+    # Serialize a tag array to newline-separated text — useful for writing log output
+    - group: array
+      name: toString
+      params:
+        array: '{= tags =}'
+        format: lines
+
+    # Join pipeline tags with a pipe separator — useful for dashboard label formatting
+    - group: array
+      name: join
+      params:
+        array: '{= tags =}'
+        separator: ' | '
+
+    # -------------------------------------------------------
+    # Inspection
+    # -------------------------------------------------------
+
+    # Count pipeline tags — useful for pagination and batch-size checks
+    - group: array
+      name: length
+      params:
+        array: '{= tags =}'
+
+    # Check whether the tag list includes 'pdf' — useful for conditional OCR branching
+    - group: array
+      name: contains
+      params:
+        array: '{= tags =}'
+        value: 'pdf'
+
+    # Find the position of 'ocr' in the tag list — useful for ordered stage lookups
+    - group: array
+      name: indexOf
+      params:
+        array: '{= tags =}'
+        value: 'ocr'
+
+    # Get the first tag — useful for reading the primary processing type
+    - group: array
+      name: get
+      params:
+        array: '{= tags =}'
+        index: 0
+
+    # Get the last tag using a negative index — useful when the tail is the latest entry
+    - group: array
+      name: get
+      params:
+        array: '{= tags =}'
+        index: -1
+
+    # -------------------------------------------------------
+    # Modification
+    # -------------------------------------------------------
+
+    # Append a new processing tag to the end of the existing tag list
+    - group: array
+      name: push
+      params:
+        array: '{= tags =}'
+        value: 'xml'
+        position: end
+
+    # Prepend a priority tag at the start of the list before dispatching
+    - group: array
+      name: push
+      params:
+        array: '{= tags =}'
+        value: 'priority'
+        position: start
+
+    # Replace the second tag with a corrected value
+    - group: array
+      name: set
+      params:
+        array: '{= tags =}'
+        index: 1
+        value: 'invoice-corrected'
+
+    # Drop the third price entry (index 2) from the scraped price list
+    - group: array
+      name: remove
+      params:
+        array: '{= prices =}'
+        index: 2
+
+    # -------------------------------------------------------
+    # Filtering
+    # -------------------------------------------------------
+
+    # Deduplicate a tag list before storing to avoid redundant entries
+    - group: array
+      name: unique
+      params:
+        array: ['pdf', 'invoice', 'pdf', 'ocr', 'invoice']
+
+    # Strip null and empty entries from a scraped result set before processing
+    - group: array
+      name: compact
+      params:
+        array: ['pdf', null, '', false, 'invoice', 0, 'ocr']
+
+    # Find the first line item over the approval threshold
+    - group: array
+      name: find
+      params:
+        array: '{= invoices =}'
+        key: amount
+        compareAs: number
+        operator: gt
+        value: 100
+
+    # Keep only invoices that are still pending
+    - group: array
+      name: filter
+      params:
+        array: '{= invoices =}'
+        key: status
+        compareAs: string
+        operator: eq
+        value: pending
+
+    # Check whether any invoice is still pending before sending a reminder
+    - group: array
+      name: some
+      params:
+        array: '{= invoices =}'
+        key: status
+        compareAs: string
+        operator: eq
+        value: pending
+
+    # Confirm every invoice has a positive amount before totalling them
+    - group: array
+      name: every
+      params:
+        array: '{= invoices =}'
+        key: amount
+        compareAs: number
+        operator: gt
+        value: 0
+
+    # Count how many invoices are still pending
+    - group: array
+      name: count
+      params:
+        array: '{= invoices =}'
+        key: status
+        compareAs: string
+        operator: eq
+        value: pending
+
+    # -------------------------------------------------------
+    # Grouping
+    # -------------------------------------------------------
+
+    # Pull the billing city out of each invoice — useful for building a location report
+    - group: array
+      name: pluck
+      params:
+        array: '{= invoices =}'
+        key: address.city
+
+    # Bucket invoices by status before generating a summary report
+    - group: array
+      name: groupBy
+      params:
+        array: '{= invoices =}'
+        key: status
+
+    # Index invoices by id for quick lookups later in the pipeline
+    - group: array
+      name: keyBy
+      params:
+        array: '{= invoices =}'
+        key: id
+
+    # -------------------------------------------------------
+    # Randomization
+    # -------------------------------------------------------
+
+    # Randomize processing order for a batch of pending tags
+    - group: array
+      name: shuffle
+      params:
+        array: '{= tags =}'
+
+    # Pick a random tag — useful for spot-checking a sample of a larger set
+    - group: array
+      name: sample
+      params:
+        array: '{= tags =}'
+
+    # -------------------------------------------------------
+    # Transformation
+    # -------------------------------------------------------
+
+    # Split a tag list into groups of 2 for batch API requests
+    - group: array
+      name: chunk
+      params:
+        array: '{= tags =}'
+        size: 2
+
+    # Flatten one level of nesting from a grouped stage result set
+    - group: array
+      name: flatten
+      params:
+        array: '{= nestedData =}'
+        depth: 1
+
+    # -------------------------------------------------------
+    # Set Operations
+    # -------------------------------------------------------
+
+    # Find tags shared between the active list and the reference set
+    - group: array
+      name: intersection
+      params:
+        arrays:
+          - '{= tags =}'
+          - '{= extraTags =}'
+
+    # Merge two tag lists and deduplicate — useful for building a combined filter set
+    - group: array
+      name: union
+      params:
+        arrays:
+          - '{= tags =}'
+          - '{= extraTags =}'
+
+    # Find tags in the active list that are not in the exclusion list
+    - group: array
+      name: difference
+      params:
+        array: '{= tags =}'
+        exclude: '{= extraTags =}'
+
+    # -------------------------------------------------------
+    # Sorting
+    # -------------------------------------------------------
+
+    # Sort prices ascending — useful for finding the best offer in a scraped list
+    - group: array
+      name: sort
+      params:
+        array: '{= prices =}'
+
+    # Sort objects by a key — useful for ranking invoice items by size before display
+    - group: array
+      name: sort
+      params:
+        array:
+          - { name: 'invoice', size: 42 }
+          - { name: 'pdf', size: 18 }
+          - { name: 'ocr', size: 75 }
+        keys: ['size']
+        orders: ['asc']
+
+    # Reverse a pipeline stage list to process from last to first
+    - group: array
+      name: reverse
+      params:
+        array: '{= tags =}'
+
+    # -------------------------------------------------------
+    # Extraction
+    # -------------------------------------------------------
+
+    # Extract the middle two tags — useful for paginating a fixed-size result window
+    - group: array
+      name: slice
+      params:
+        array: '{= tags =}'
+        start: 1
+        end: 3
+
+    # -------------------------------------------------------
+    # Combining
+    # -------------------------------------------------------
+
+    # Merge the main tag list with the extra tag list into one combined array
+    - group: array
+      name: concat
+      params:
+        arrays:
+          - '{= tags =}'
+          - '{= extraTags =}'

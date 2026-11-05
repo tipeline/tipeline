@@ -1,0 +1,57 @@
+version: 1.0.0
+name: Caching — Step Demo
+description: |
+  Shows the **step cache**: a slow lookup keeps its result for 2 minutes.
+
+  - Run it once: the lookup takes about 2 seconds.
+  - Run it again: the lookup is reused (marked **Cached**) and the run is instant. `lookedUpAt` stays the same while `checkedAt` moves on.
+  - Run it with another city (`--var city=Quito`): different values, so it runs again.
+  - Run it with `--no-cache` or `--refresh-cache` to skip or replace the stored result.
+author: tipeline
+tags: [example, caching, cache, step cache]
+
+pipeline:
+  variables:
+    - type: string
+      name: city
+      value: Lima
+      visibility: public
+      description: The city to look up. Each city is cached separately.
+
+    - type: object
+      name: report
+      value: {}
+      description: The lookup's result.
+
+    - type: string
+      name: checkedAt
+      value: ''
+      description: When this run happened (never cached).
+
+  actions:
+    # Stands in for a slow API call: busy for ~2 seconds, then answers. Its result is
+    # kept for 2 minutes. The key is the step's params after {{ }} is filled in — here
+    # the code, which holds the city — so each city gets its own entry.
+    - group: script
+      name: runScript
+      params:
+        code: |
+          const until = Date.now() + 2000;
+          while (Date.now() < until) {}
+          const city = '{{ city }}';
+          const temperature = 10 + ([...city].reduce((sum, c) => sum + c.charCodeAt(0), 0) % 20);
+          return { city, temperature, lookedUpAt: new Date().toISOString() };
+      destination: report
+      cache:
+        ttl: 2m
+
+    # Not cached: always the time of this run.
+    - group: datetime
+      name: nowISO
+      params: {}
+      destination: checkedAt
+
+    - group: system
+      name: message
+      params:
+        text: '{{ report.city }}: {{ report.temperature }}°C — looked up at {{ report.lookedUpAt }}, this run at {{ checkedAt }}'

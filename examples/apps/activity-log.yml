@@ -1,0 +1,92 @@
+schemaVersion: 4
+name: Activity Log
+version: "1.0.0"
+description: Log notes, then browse them by period — a Date range component filtering a history runnable
+author: tipeline
+
+# Each note is one run of Log Note, kept in the run history; the list below reads that
+# history back, limited to the picked period.
+workflows:
+  logNote: { file: ./workflows/log-note.yml }
+
+pages:
+  - id: log
+    name: Activity
+    icon: CalendarRange
+
+    runnables:
+      add:
+        mode: run
+        workflow: logNote
+        inputs:
+          note: "{= newNote.values.note =}"
+          category: "{= newNote.values.category =}"
+        onSuccess:
+          - { type: toast, variant: success, message: Note logged }
+          - { type: reset, component: newNote }
+          - { type: run, runnable: notes }
+
+      # Past runs of Log Note in the period: one row per run (its one step's result).
+      # The dates come from the Date range component; an empty range means every run.
+      notes:
+        mode: history
+        workflow: logNote
+        trigger: load
+        source: actionResults
+        filter:
+          mode: dateRange
+          dateFrom: "{= period.from =}"
+          dateTo: "{= period.to =}"
+
+    components:
+      - id: newNote
+        type: form
+        name: New note
+        layout: { x: 0, y: 0, w: 4, h: 42 }
+        props:
+          title: Log a note
+          submitLabel: Log it
+          fields:
+            - { name: note, label: Note, type: textarea, required: true, placeholder: e.g. Deployed v2.3 }
+            - name: category
+              label: Category
+              type: select
+              default: info
+              options:
+                - { value: info, label: Info }
+                - { value: success, label: Success }
+                - { value: issue, label: Issue }
+        events:
+          submit: [{ type: run, runnable: add }]
+
+      # Starts on the last 7 days; picking another period reads the history again.
+      - id: period
+        type: dateRange
+        name: Period
+        layout: { x: 4, y: 0, w: 4, h: 10 }
+        props:
+          label: Period
+          default: last7Days
+          placeholder: All time
+        events:
+          change: [{ type: run, runnable: notes }]
+
+      - id: count
+        type: kpi
+        name: Notes in period
+        layout: { x: 8, y: 0, w: 4, h: 10 }
+        props:
+          label: Notes in period
+          value: "{{ runnables.notes.data | size }}"
+
+      - id: notesTable
+        type: table
+        name: Notes
+        layout: { x: 4, y: 10, w: 8, h: 32 }
+        props:
+          data: "{= runnables.notes.data =}"
+          searchable: true
+          columns:
+            - { key: pipeline_started_at, header: Logged, format: datetime }
+            - { key: category, header: Category }
+            - { key: note, header: Note }

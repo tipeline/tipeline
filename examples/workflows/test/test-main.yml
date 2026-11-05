@@ -1,0 +1,61 @@
+version: 1.0.0
+name: Test Main
+description: |
+  Runs a few simple steps, then calls Test Subtask by file path and passes it `greeting` and `counter`. Use it to check installing and running a workflow that has a sub-workflow.
+
+  Needs the `examplesDir` global variable set to this repo's `examples` folder.
+author: Jose Daniel Estrada
+tags: [example, install, subtask, sub-workflow]
+
+pipeline:
+  variables:
+    - type: string
+      name: greeting
+      value: Hello from Main Task
+
+    - type: number
+      name: counter
+      value: 0
+
+    - type: boolean
+      name: isReady
+      value: true
+
+  actions:
+    - group: system
+      name: message
+      params:
+        text: |
+          Starting main task...
+          greeting: {{ greeting }}
+          isReady: {{ isReady }}
+
+    - group: math
+      name: add
+      params:
+        augend: 10
+        addend: 5
+      destination: counter
+
+    - group: system
+      name: message
+      params:
+        text: 'counter after add: {{ counter }}'
+
+    - group: string
+      name: camelCase
+      params:
+        string: this is the main task running
+
+    - group: subtask
+      name: exec
+      params:
+        path: '{{ _global.examplesDir }}/workflows/test/test-subtask.yml'
+        props:
+          parentGreeting: '{= greeting =}'
+          parentCounter: '{= counter =}'
+
+    - group: system
+      name: message
+      params:
+        text: Main task finished.

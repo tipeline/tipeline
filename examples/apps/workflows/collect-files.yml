@@ -1,0 +1,87 @@
+version: 1.0.0
+name: Collect Files
+description: |
+  Copies the given files into `~/Tipeline/output/inbox` and returns where each one was saved.
+
+  Used by the File Intake example app's dropzone.
+
+  **Inputs**
+
+  - `files` — paths of the files to collect
+
+  **Outputs**
+
+  - `saved` — the paths of the copies, in the same order
+author: tipeline
+tags: [example, apps, files, upload]
+
+pipeline:
+  variables:
+    - type: array
+      name: files
+      value: []
+      visibility: public
+      description: Paths of the files to collect. Set by the app.
+
+    - type: array
+      name: saved
+      value: []
+      visibility: public
+      description: Where each file was copied. Returned to the app.
+
+    - type: array
+      name: targets
+      value: []
+
+    - type: object
+      name: target
+      value: {}
+
+  actions:
+    - group: folder
+      name: create
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/inbox'
+
+    # Each file goes to inbox/<its name>.
+    - group: script
+      name: runScript
+      params:
+        context:
+          files: '{= files =}'
+          home: '{{ _env.HOME }}'
+        code: |
+          return files.map((src) => ({
+            src,
+            dest: `${home}/Tipeline/output/inbox/${String(src).split(/[\\/]/).pop()}`,
+          }));
+      destination: targets
+
+    - group: flow
+      name: forEachLoop
+      params:
+        iterable: '{= targets =}'
+        currentItem: target
+        actions:
+          - group: file
+            name: copy
+            params:
+              src: '{{ target.src }}'
+              dest: '{{ target.dest }}'
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          targets: '{= targets =}'
+        code: return targets.map((t) => t.dest);
+      destination: saved
+
+    # Visible result when the workflow is run on its own (apps read the outputs instead).
+    - group: system
+      name: message
+      params:
+        text: |
+          Collected {{ saved | size }} file(s) into ~/Tipeline/output/inbox:
+          {% for path in saved %}- {{ path }}
+          {% endfor %}

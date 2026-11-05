@@ -1,0 +1,146 @@
+version: 1.0.0
+name: Content actions
+description: |
+  Captures what a page shows: screenshots of the page and of one element, a screencast, a PDF of the page, its metadata, and an added style tag.
+author: Jose Daniel Estrada
+tags: [example, browser, screenshot, pdf, screencast]
+pipeline:
+  variables:
+    - type: browser
+      name: browserInstance
+    - type: object
+      name: recorderInstance
+      value: {}
+    - type: array
+      name: metaDescription
+  actions:
+    - group: browser
+      name: launch
+      # Screencast requires headless: false — the legacy headless GPU compositor
+      # does not render frames, which produces blank recordings
+      params:
+        headless: false
+        timeout: 30000
+        viewport:
+          width: 1280
+          height: 720
+      destination: browserInstance
+
+    - group: browser
+      name: goTo
+      params:
+        browser: '{= browserInstance =}'
+        url: 'https://developer.mozilla.org/en-US/'
+        waitUntil: domcontentloaded
+
+    - group: browser
+      name: wait
+      params:
+        browser: '{= browserInstance =}'
+        type: timeout
+        timeout: 1000
+
+    # -- startScreencast --
+    # Begin recording the viewport; store the recorder handle for stopScreencast
+    - group: browser
+      name: startScreencast
+      params:
+        browser: '{= browserInstance =}'
+        options:
+          path: /tmp/tipeline-content.mp4
+      destination: recorderInstance
+
+    # -- addStyleTag --
+    # Inject CSS before taking screenshots so the green background is visible
+    - group: browser
+      name: addStyleTag
+      params:
+        browser: '{= browserInstance =}'
+        css: 'body { outline: 4px solid green; } a { color: red !important; }'
+
+    - group: browser
+      name: wait
+      params:
+        browser: '{= browserInstance =}'
+        type: timeout
+        timeout: 500
+
+    # -- takeScreenshot: full page --
+    - group: browser
+      name: takeScreenshot
+      params:
+        browser: '{= browserInstance =}'
+        options:
+          path: /tmp/tipeline-fullpage.jpg
+          fullPage: true
+          quality: 85
+          type: jpeg
+
+    # -- takeScreenshot: visible viewport only --
+    - group: browser
+      name: takeScreenshot
+      params:
+        browser: '{= browserInstance =}'
+        options:
+          path: /tmp/tipeline-viewport.png
+          fullPage: false
+          type: png
+
+    # -- takeScreenshotElement --
+    # Capture only the main content area
+    - group: browser
+      name: takeScreenshotElement
+      params:
+        browser: '{= browserInstance =}'
+        selector: '#content'
+        selectorType: css
+        options:
+          path: /tmp/tipeline-element.jpg
+          quality: 80
+          type: jpeg
+
+    # -- metadata --
+    # Read the <meta name="description"> content attribute
+    - group: browser
+      name: metadata
+      params:
+        browser: '{= browserInstance =}'
+        name: description
+      destination: metaDescription
+
+    # -- generatePDF --
+    # Export the page to an A4 PDF with background colors preserved
+    - group: browser
+      name: generatePDF
+      params:
+        browser: '{= browserInstance =}'
+        options:
+          path: /tmp/tipeline-page.pdf
+          format: A4
+          printBackground: true
+          landscape: false
+          margin:
+            top: '1cm'
+            right: '1cm'
+            bottom: '1cm'
+            left: '1cm'
+
+    - group: browser
+      name: wait
+      params:
+        browser: '{= browserInstance =}'
+        type: timeout
+        timeout: 1000
+
+    # -- stopScreencast --
+    # Finalize and write the video file to disk
+    - group: browser
+      name: stopScreencast
+      params:
+        browser: '{= browserInstance =}'
+        recorder: '{= recorderInstance =}'
+
+    - group: browser
+      name: close
+      params:
+        browser: '{= browserInstance =}'

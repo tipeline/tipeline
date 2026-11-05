@@ -1,0 +1,136 @@
+schemaVersion: 4
+name: Records Grid
+version: "1.0.0"
+description: Edit records like a spreadsheet — change cells in place, add and delete rows, save every change with one workflow run, and act on checked rows in bulk
+author: tipeline
+
+# The record store is shared with the other example apps (Records Manager shows the
+# same records).
+workflows:
+  listRecords: { file: ./workflows/list-records.yml }
+  saveChanges: { file: ./workflows/save-record-changes.yml }
+  setStatus: { file: ./workflows/set-records-status.yml }
+
+pages:
+  - id: grid
+    name: Records
+    icon: Sheet
+
+    runnables:
+      records:
+        mode: run
+        workflow: listRecords
+        trigger: load
+        inputs: { status: all }
+        outputs: [records, summary]
+        persist: false
+
+      # Sends the table's changes as one object. On success the list is fetched again,
+      # and the new data clears the table's edits. On failure the edits stay, so they
+      # can be fixed and saved again.
+      save:
+        mode: run
+        workflow: saveChanges
+        inputs: { changes: "{= recordsGrid.changes =}" }
+        outputs: [summary]
+        onSuccess:
+          - type: toast
+            variant: success
+            message: "Saved — {{ result.outputs.summary.added }} added, {{ result.outputs.summary.updated }} updated, {{ result.outputs.summary.deleted }} deleted"
+          - { type: run, runnable: records }
+
+      # Bulk actions: each gets the checked rows. After it, uncheck them and refresh.
+      markActive:
+        mode: run
+        workflow: setStatus
+        inputs: { records: "{= recordsGrid.selectedRows =}", status: active }
+        outputs: [count]
+        onSuccess:
+          - { type: toast, variant: success, message: "{{ result.outputs.count }} record(s) marked active" }
+          - { type: reset, component: recordsGrid }
+          - { type: run, runnable: records }
+
+      closeChecked:
+        mode: run
+        workflow: setStatus
+        inputs: { records: "{= recordsGrid.selectedRows =}", status: closed }
+        outputs: [count]
+        onSuccess:
+          - { type: toast, variant: success, message: "{{ result.outputs.count }} record(s) closed" }
+          - { type: reset, component: recordsGrid }
+          - { type: run, runnable: records }
+
+      # Deleting reuses Save Record Changes: the checked rows go in as `deleted`.
+      deleteChecked:
+        mode: run
+        workflow: saveChanges
+        confirm: "Delete {{ recordsGrid.selectedRows | size }} record(s)? This can't be undone."
+        inputs:
+          changes: { added: [], updated: [], deleted: "{= recordsGrid.selectedRows =}" }
+        outputs: [summary]
+        onSuccess:
+          - { type: toast, variant: success, message: "{{ result.outputs.summary.deleted }} record(s) deleted" }
+          - { type: reset, component: recordsGrid }
+          - { type: run, runnable: records }
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 8, h: 7 }
+        props:
+          content: "Click a cell to change it. Changed cells turn amber; Save sends them all at once. Check rows to act on several at once."
+
+      # Shown while there is something to save.
+      - id: pending
+        type: alert
+        name: Unsaved changes
+        layout: { x: 8, y: 0, w: 4, h: 7 }
+        props:
+          variant: warning
+          message: "{{ recordsGrid.changes.added | size }} new · {{ recordsGrid.changes.updated | size }} edited · {{ recordsGrid.changes.deleted | size }} to delete"
+          visible: "{{ recordsGrid.hasChanges }}"
+
+      - id: saveError
+        type: alert
+        name: Save error
+        layout: { x: 0, y: 7, w: 12, h: 7 }
+        props:
+          variant: error
+          message: "Nothing was saved: {{ runnables.save.error }}"
+          visible: "{% if runnables.save.error %}true{% else %}false{% endif %}"
+
+      - id: recordsGrid
+        type: table
+        name: Records
+        layout: { x: 0, y: 14, w: 12, h: 56 }
+        props:
+          data: "{= runnables.records.outputs.records =}"
+          rowKey: id
+          allowAdd: true
+          allowDelete: true
+          searchable: true
+          saveLabel: Save changes
+          bulkActions:
+            - { id: activate, label: Mark active }
+            - { id: close, label: Close }
+            - { id: remove, label: Delete, variant: destructive }
+          columns:
+            - { key: id, header: ID, sortable: false }
+            - { key: name, header: Name, editable: true, required: true }
+            - key: status
+              header: Status
+              editable: true
+              editor: select
+              default: pending
+              options:
+                - { value: pending, label: Pending }
+                - { value: active, label: Active }
+                - { value: closed, label: Closed }
+            - { key: amount, header: Amount, format: currency, editable: true, required: true, default: 0 }
+            - { key: updatedAt, header: Updated, format: datetime }
+        events:
+          save: [{ type: run, runnable: save }]
+          "bulk:activate": [{ type: run, runnable: markActive }]
+          "bulk:close": [{ type: run, runnable: closeChecked }]
+          "bulk:remove": [{ type: run, runnable: deleteChecked }]

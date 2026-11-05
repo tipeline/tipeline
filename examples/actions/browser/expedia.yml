@@ -1,0 +1,87 @@
+version: 7.0.0
+name: Expedia
+description: |
+  Opens an Expedia hotel page in a visible browser, records the visit as a screencast and keeps the page's source.
+
+  Replace the `url` variable to try another page. Expedia may block automated visits.
+author: Jose Daniel Estrada
+tags: [example, browser, crawl, screencast, expedia]
+pipeline:
+  variables:
+    - type: browser
+      name: browserInstance
+    - type: string
+      name: url
+      value: https://www.expedia.com/La-Fortuna-Hotels-Hotel-Lomas-Del-Volcan.h1521607.Hotel-Information
+    - type: string
+      name: result
+      value: 'test'
+
+    - type: object
+      name: recorderInstance
+      value: {}
+  actions:
+    - group: browser
+      name: launch
+      params:
+        headless: false
+        timeout: 5000
+        viewport:
+          width: 1200
+          height: 720
+          isMobile: false
+          isLandscape: false
+      destination: browserInstance
+
+    - group: browser
+      name: startScreencast
+      params:
+        browser: "{= browserInstance =}"
+
+        options:
+          path: '{{ _global.examplesDir }}/actions/browser/expedia.mp4'
+      destination: recorderInstance
+
+    - group: browser
+      name: goTo
+      params:
+        browser: "{= browserInstance =}"
+
+        url: "{{ url }}"
+
+    - group: browser
+      name: wait
+      params:
+        browser: "{= browserInstance =}"
+
+        type: timeout
+        timeout: 4000
+
+    - group: browser
+      name: source
+      params:
+        browser: "{= browserInstance =}"
+
+      destination: result
+
+    - group: browser
+      name: wait
+      params:
+        browser: "{= browserInstance =}"
+
+        type: timeout
+        timeout: 2000
+
+    - group: browser
+      name: stopScreencast
+      params:
+        browser: "{= browserInstance =}"
+
+        recorder: "{= recorderInstance =}"
+
+
+    - group: browser
+      name: close
+      params:
+        browser: "{= browserInstance =}"
+

@@ -1,0 +1,111 @@
+version: 1.0.0
+name: Test Desktop 2
+description: |
+  Runs a 9-pass simple loop with a for-each over 3 fruits inside it, then an if / else if / else chain. Use it to see how nested loops and branches look on a run's page in Desktop.
+
+  Only the `else` branch should print. The loops have no waits, so they finish quickly; Test Desktop 3 is the slower version.
+author: Jose Daniel Estrada
+tags: [example, desktop, loop, conditions]
+
+pipeline:
+  variables:
+    - type: string
+      name: hello
+      value: This is a hellow message
+    - type: array
+      name: fruits
+      value: [apple, banana, cherry]
+    - type: string
+      name: currentFruit
+      value: ''
+    - type: string
+      name: status
+      value: active
+    - type: number
+      name: score
+      value: 42
+  actions:
+    - group: system
+      name: message
+      params:
+        text: This is message 1. {{ hello }}
+
+    - group: flow
+      name: wait
+      params:
+        timeout: 1000
+
+    - group: flow
+      name: simpleLoop
+      params:
+        indexValue: 1
+        indexEndValue: 10
+        incrementBy: 1
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                Loop - {{ hello }}
+
+          # Walks the fruits array; each item is bound to currentFruit before the body runs
+          - group: flow
+            name: forEachLoop
+            params:
+              iterable: '{= fruits =}'
+              currentItem: currentFruit
+              actions:
+                - group: system
+                  name: message
+                  params:
+                    text: |
+                      forEachLoop → current fruit: {{ currentFruit }}
+
+
+    - group: string
+      name: camelCase
+      params:
+        string: "{{ hello }} is the main task running"
+
+    # Neither condition matches → else runs
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{{ status }}'
+        compareAs: string
+        operator: eq
+        secondOperand: inactive
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                chain 3 → THIS SHOULD NOT PRINT (if)
+
+    - group: flow
+      name: elseIfConditional
+      params:
+        firstOperand: '{= score =}'
+        compareAs: number
+        operator: gt
+        secondOperand: 100
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                chain 3 → THIS SHOULD NOT PRINT (else-if)
+
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                chain 3 → else-branch ran (no condition matched)
+    - group: system
+      name: message
+      params:
+        text: Final ACTION!!!

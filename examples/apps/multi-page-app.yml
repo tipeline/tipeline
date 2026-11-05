@@ -1,0 +1,213 @@
+schemaVersion: 4
+name: Multi-Page App
+version: "2.0.0"
+description: Overview, a filterable explorer, and a detail page that approves or closes a record
+author: tipeline
+
+workflows:
+  listRecords: { file: ./workflows/list-records.yml }
+  setStatus: { file: ./workflows/update-record-status.yml }
+
+# App-wide state survives page changes: read as state.<name>, changed with setState.
+state:
+  statusFilter: all
+  selected: null
+
+pages:
+  # ------------------------------------------------------------------ overview
+  - id: overview
+    name: Overview
+    icon: LayoutDashboard
+    runnables:
+      summary:
+        mode: run
+        workflow: listRecords
+        trigger: load
+        outputs: [summary]
+        persist: false
+    components:
+      - id: pendingKpi
+        type: kpi
+        name: Pending
+        layout: { x: 0, y: 0, w: 4, h: 14 }
+        props:
+          label: Pending approval
+          value: "{= runnables.summary.outputs.summary.pending =}"
+          linkText: Review pending
+        # A click on the card goes to the records, filtered to pending.
+        events:
+          click:
+            - { type: setState, key: statusFilter, value: pending }
+            - { type: navigate, page: explorer }
+      - id: activeKpi
+        type: kpi
+        name: Active
+        layout: { x: 4, y: 0, w: 4, h: 14 }
+        props: { label: Active, value: "{= runnables.summary.outputs.summary.active =}" }
+      - id: openAmountKpi
+        type: kpi
+        name: Open amount
+        layout: { x: 8, y: 0, w: 4, h: 14 }
+        props:
+          label: Open amount
+          value: "{= runnables.summary.outputs.summary.openAmount =}"
+          format: currency
+      - id: reviewButton
+        type: button
+        name: Review pending
+        layout: { x: 0, y: 14, w: 3, h: 7 }
+        props: { label: Review pending }
+        events:
+          click:
+            - { type: setState, key: statusFilter, value: pending }
+            - { type: navigate, page: explorer }
+      - id: exploreButton
+        type: button
+        name: All records
+        layout: { x: 3, y: 14, w: 3, h: 7 }
+        props: { label: All records, variant: outline }
+        events:
+          click:
+            - { type: setState, key: statusFilter, value: all }
+            - { type: navigate, page: explorer }
+
+  # ------------------------------------------------------------------ explorer
+  - id: explorer
+    name: Records
+    icon: Table
+    runnables:
+      records:
+        mode: run
+        workflow: listRecords
+        trigger: load
+        inputs: { status: "{{ state.statusFilter }}" }
+        outputs: [records]
+        persist: false
+    components:
+      - id: filterText
+        type: text
+        name: Filter
+        layout: { x: 0, y: 0, w: 4, h: 7 }
+        props: { content: "Showing: {{ state.statusFilter }}", fontWeight: semibold }
+      - id: allButton
+        type: button
+        name: All
+        layout: { x: 4, y: 0, w: 2, h: 7 }
+        props: { label: All, variant: outline }
+        events:
+          click:
+            - { type: setState, key: statusFilter, value: all }
+            - { type: run, runnable: records }
+      - id: pendingButton
+        type: button
+        name: Pending
+        layout: { x: 6, y: 0, w: 2, h: 7 }
+        props: { label: Pending, variant: outline }
+        events:
+          click:
+            - { type: setState, key: statusFilter, value: pending }
+            - { type: run, runnable: records }
+      - id: activeButton
+        type: button
+        name: Active
+        layout: { x: 8, y: 0, w: 2, h: 7 }
+        props: { label: Active, variant: outline }
+        events:
+          click:
+            - { type: setState, key: statusFilter, value: active }
+            - { type: run, runnable: records }
+      - id: closedButton
+        type: button
+        name: Closed
+        layout: { x: 10, y: 0, w: 2, h: 7 }
+        props: { label: Closed, variant: outline }
+        events:
+          click:
+            - { type: setState, key: statusFilter, value: closed }
+            - { type: run, runnable: records }
+      - id: recordsTable
+        type: table
+        name: Records
+        layout: { x: 0, y: 7, w: 12, h: 42 }
+        props:
+          data: "{= runnables.records.outputs.records =}"
+          columns:
+            - { key: id, header: ID, sortable: false }
+            - { key: name, header: Name }
+            - { key: status, header: Status }
+            - { key: amount, header: Amount, format: currency }
+        events:
+          rowClick:
+            - { type: setState, key: selected, value: "{= recordsTable.selectedRow =}" }
+            - { type: navigate, page: details }
+
+  # ------------------------------------------------------------------ details
+  # Hidden from the page menu — reached by clicking a row.
+  - id: details
+    name: Details
+    showInMenu: false
+    runnables:
+      approve:
+        mode: run
+        workflow: setStatus
+        inputs: { id: "{= state.selected.id =}", status: active }
+        outputs: [record]
+        onSuccess:
+          - { type: setState, key: selected, value: "{= result.outputs.record =}" }
+          - { type: toast, message: "{{ state.selected.name }} approved", variant: success }
+      close:
+        mode: run
+        workflow: setStatus
+        confirm: "Close {{ state.selected.name }}?"
+        inputs: { id: "{= state.selected.id =}", status: closed }
+        outputs: [record]
+        onSuccess:
+          - { type: setState, key: selected, value: "{= result.outputs.record =}" }
+          - { type: toast, message: "{{ state.selected.name }} closed", variant: success }
+    components:
+      - id: titleText
+        type: text
+        name: Title
+        layout: { x: 0, y: 0, w: 12, h: 7 }
+        props: { content: "{{ state.selected.name }}", fontSize: 22, fontWeight: bold }
+      - id: statusKpi
+        type: kpi
+        name: Status
+        layout: { x: 0, y: 7, w: 4, h: 14 }
+        props: { label: Status, value: "{{ state.selected.status }}" }
+      - id: amountKpi
+        type: kpi
+        name: Amount
+        layout: { x: 4, y: 7, w: 4, h: 14 }
+        props: { label: Amount, value: "{= state.selected.amount =}", format: currency }
+      - id: updatedText
+        type: text
+        name: Updated
+        layout: { x: 8, y: 7, w: 4, h: 14 }
+        props: { content: "Last updated {{ state.selected.updatedAt | date: '%Y-%m-%d %H:%M' }}", fontSize: 13 }
+      - id: approveButton
+        type: button
+        name: Approve
+        layout: { x: 0, y: 21, w: 2, h: 7 }
+        props:
+          label: Approve
+          disabled: "{% if state.selected.status == 'pending' %}false{% else %}true{% endif %}"
+        events:
+          click: [{ type: run, runnable: approve }]
+      - id: closeButton
+        type: button
+        name: Close
+        layout: { x: 2, y: 21, w: 2, h: 7 }
+        props:
+          label: Close
+          variant: destructive
+          disabled: "{% if state.selected.status == 'closed' %}true{% else %}false{% endif %}"
+        events:
+          click: [{ type: run, runnable: close }]
+      - id: backButton
+        type: button
+        name: Back
+        layout: { x: 10, y: 21, w: 2, h: 7 }
+        props: { label: Back to records, variant: ghost }
+        events:
+          click: [{ type: navigate, page: explorer }]

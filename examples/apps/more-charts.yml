@@ -1,0 +1,137 @@
+schemaVersion: 4
+name: More Charts
+description: Sideways bars, scatter, funnel and heat map charts, and KPI cards with a sparkline — all from one workflow, filtered by region
+author: tipeline
+
+workflows:
+  salesStats: { file: ./workflows/sales-stats.yml }
+
+pages:
+  - id: charts
+    name: Charts
+    icon: ChartScatter
+
+    runnables:
+      stats:
+        mode: run
+        workflow: salesStats
+        trigger: load
+        inputs: { region: "{= region.value =}" }
+        outputs: [stats]
+        persist: false
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 8, h: 7 }
+        props:
+          markdown: true
+          content: "**More charts** — sparklines, sideways bars, a funnel, a scatter and a heat map. Click one to see its row."
+
+      - id: region
+        type: select
+        name: Region
+        frame: none
+        layout: { x: 8, y: 0, w: 4, h: 7 }
+        props:
+          display: buttons
+          default: all
+          options:
+            - { value: all, label: All }
+            - { value: north, label: North }
+            - { value: south, label: South }
+        events:
+          change: [{ type: run, runnable: stats }]
+
+      - id: revenueKpi
+        type: kpi
+        name: Revenue
+        layout: { x: 0, y: 7, w: 4, h: 15 }
+        props:
+          label: Revenue, last 14 days
+          value: "{= runnables.stats.outputs.stats.totals.revenue =}"
+          format: currency
+          currency: USD
+          spark: "{= runnables.stats.outputs.stats.daily =}"
+          sparkKey: revenue
+
+      - id: ordersKpi
+        type: kpi
+        name: Orders
+        layout: { x: 4, y: 7, w: 4, h: 15 }
+        props:
+          label: Orders
+          value: "{= runnables.stats.outputs.stats.totals.orders =}"
+          format: number
+          spark: "{= runnables.stats.outputs.stats.daily =}"
+          sparkKey: orders
+
+      - id: visitorsKpi
+        type: kpi
+        name: Visitors
+        layout: { x: 8, y: 7, w: 4, h: 15 }
+        props:
+          label: Visitors
+          value: "{= runnables.stats.outputs.stats.totals.visitors =}"
+          format: number
+          spark: "{= runnables.stats.outputs.stats.daily =}"
+          sparkKey: visitors
+
+      - id: funnel
+        type: chart
+        name: Signup funnel
+        layout: { x: 0, y: 22, w: 6, h: 32 }
+        props:
+          chartType: funnel
+          title: Signup funnel
+          data: "{= runnables.stats.outputs.stats.funnel =}"
+          xKey: stage
+          series: [{ key: people, label: People }]
+          format: number
+
+      - id: topDeals
+        type: chart
+        name: Biggest deals
+        layout: { x: 6, y: 22, w: 6, h: 32 }
+        props:
+          chartType: hbar
+          title: Deals by customer
+          data: "{= runnables.stats.outputs.stats.deals =}"
+          xKey: customer
+          series: [{ key: amount, label: Amount }]
+          format: currency
+          currency: USD
+
+      - id: dealsScatter
+        type: chart
+        name: Deal size vs. time to close
+        layout: { x: 0, y: 54, w: 6, h: 34 }
+        props:
+          chartType: scatter
+          title: Deal size vs. days to close
+          data: "{= runnables.stats.outputs.stats.deals =}"
+          xKey: days
+          labelKey: customer
+          series: [{ key: amount, label: Amount }]
+          format: currency
+          currency: USD
+
+      - id: ticketsHeat
+        type: chart
+        name: Support tickets
+        layout: { x: 6, y: 54, w: 6, h: 34 }
+        props:
+          chartType: heatmap
+          title: Support tickets by weekday and hour
+          data: "{= runnables.stats.outputs.stats.tickets =}"
+          xKey: hour
+          yKey: weekday
+          series: [{ key: count, label: Tickets }]
+
+      - id: picked
+        type: text
+        name: Clicked
+        layout: { x: 0, y: 88, w: 12, h: 7 }
+        props:
+          content: "Last clicked — scatter: {{ dealsScatter.selectedPoint.customer | default: '–' }} · heat map: {{ ticketsHeat.selectedPoint.weekday | default: '–' }} {{ ticketsHeat.selectedPoint.hour }} · funnel: {{ funnel.selectedPoint.stage | default: '–' }}"

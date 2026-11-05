@@ -1,0 +1,88 @@
+schemaVersion: 4
+name: PDF Viewer
+description: PDF viewers — an invoice a workflow prints to a PDF file, and a long PDF from the web, with pages, zoom and the page in view
+author: tipeline
+
+workflows:
+  makeInvoice: { file: ./workflows/make-invoice-pdf.yml }
+
+pages:
+  - id: pdfs
+    name: PDFs
+    icon: FileText
+
+    runnables:
+      invoice:
+        mode: run
+        workflow: makeInvoice
+        inputs:
+          customer: "{{ customer.value | default: 'Acme Corp' }}"
+          amount: "{= amount.value =}"
+        outputs: [path]
+        persist: false
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 9 }
+        props:
+          markdown: true
+          content: "**PDF viewer** components. Make the invoice: a workflow prints it to `~/Tipeline/output`, and the viewer on the left shows the file. The one on the right loads a long PDF from the web."
+
+      - id: customer
+        type: input
+        name: Customer
+        frame: none
+        layout: { x: 0, y: 9, w: 3, h: 11 }
+        props:
+          label: Customer
+          placeholder: Acme Corp
+
+      - id: amount
+        type: input
+        name: Amount
+        frame: none
+        layout: { x: 3, y: 9, w: 2, h: 11 }
+        props:
+          label: Amount
+          inputType: number
+          default: 1200
+
+      - id: makeButton
+        type: button
+        name: Make invoice
+        frame: none
+        layout: { x: 5, y: 11, w: 3, h: 6 }
+        props:
+          label: Make the invoice
+          icon: FileOutput
+        events:
+          click: [{ type: run, runnable: invoice }]
+
+      - id: pageInfo
+        type: text
+        name: Page in view
+        frame: none
+        layout: { x: 8, y: 11, w: 4, h: 6 }
+        props:
+          content: "Paper: page {{ paper.page | default: '–' }} of {{ paper.pages | default: '–' }}"
+
+      # A file a workflow wrote — it reloads after each run.
+      - id: invoiceViewer
+        type: pdf
+        name: Invoice
+        layout: { x: 0, y: 20, w: 5, h: 66 }
+        props:
+          title: Invoice
+          src: "{{ runnables.invoice.outputs.path }}"
+          emptyText: Make the invoice to see it here
+
+      # A PDF from the web, fetched by the app (most sites don't let a page read them).
+      - id: paper
+        type: pdf
+        name: Paper
+        layout: { x: 5, y: 20, w: 7, h: 66 }
+        props:
+          title: pdf.js sample paper (14 pages)
+          src: "https://raw.githubusercontent.com/mozilla/pdf.js/master/web/compressed.tracemonkey-pldi-09.pdf"

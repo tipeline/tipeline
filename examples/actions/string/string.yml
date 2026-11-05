@@ -1,0 +1,303 @@
+version: 1.0.0
+name: String Actions Test Suite
+description: |
+  Works with text: change case, search, match with regular expressions, replace, cut and split, encode and decode, format templates and handle query strings.
+author: Jose Daniel Estrada
+tags: [example, string, text, regex, slug]
+pipeline:
+  variables:
+    - type: string
+      name: taskName
+      value: 'Send Daily Report - Sales Pipeline'
+
+    - type: string
+      name: actionLabel
+      value: 'extract invoice data from PDF'
+
+    - type: string
+      name: htmlContent
+      value: '<h1>Pipeline Status: <strong>Running</strong></h1>'
+
+    - type: string
+      name: encodedHtml
+      value: '&lt;h1&gt;Pipeline Status: &lt;strong&gt;Running&lt;/strong&gt;&lt;/h1&gt;'
+
+  actions:
+    # -------------------------------------------------------
+    # Casing
+    # -------------------------------------------------------
+
+    # Convert task name to camelCase — useful for generating variable identifiers
+    - group: string
+      name: camelCase
+      params:
+        string: '{{ taskName }}'
+
+    # Capitalize action label — useful for display in UI headings
+    - group: string
+      name: capitalize
+      params:
+        string: '{{ actionLabel }}'
+
+    # Convert task name to kebab-case — useful for URL slugs and CLI flags
+    - group: string
+      name: kebabCase
+      params:
+        string: '{{ taskName }}'
+
+    # Lowercase only the first character — useful when action class names need camelCase normalization
+    - group: string
+      name: lowerFirst
+      params:
+        string: 'SendDailyReport'
+
+    # Convert task name to snake_case — useful for database column names or file identifiers
+    - group: string
+      name: snakeCase
+      params:
+        string: '{{ taskName }}'
+
+    # Convert to Start Case — useful for rendering task names in report titles
+    - group: string
+      name: startCase
+      params:
+        string: '{{ actionLabel }}'
+
+    # Lowercase the entire string — useful for normalizing status values before comparison
+    - group: string
+      name: toLowerCase
+      params:
+        string: '{{ taskName }}'
+
+    # Uppercase the entire string — useful for log-level labels and status badges
+    - group: string
+      name: toUpperCase
+      params:
+        string: 'running'
+
+    # Uppercase only the first character — useful for sentence-casing dynamic messages
+    - group: string
+      name: upperFirst
+      params:
+        string: '{{ actionLabel }}'
+
+    # -------------------------------------------------------
+    # Search
+    # -------------------------------------------------------
+
+    # Check if a task name ends with a known suffix
+    - group: string
+      name: endsWith
+      params:
+        string: '{{ taskName }}'
+        search: 'Pipeline'
+
+    # Check whether the task name contains a keyword
+    - group: string
+      name: includes
+      params:
+        string: '{{ taskName }}'
+        search: 'Report'
+
+    # Find the position of a keyword inside the task name
+    - group: string
+      name: indexOf
+      params:
+        string: '{{ taskName }}'
+        search: 'Sales'
+
+    # Check if the task name begins with the expected prefix
+    - group: string
+      name: startsWith
+      params:
+        string: '{{ taskName }}'
+        target: 'Send'
+
+    # -------------------------------------------------------
+    # Regex
+    # -------------------------------------------------------
+
+    # Test whether the action label contains only lowercase words
+    - group: string
+      name: containsRegex
+      params:
+        string: '{{ actionLabel }}'
+        pattern: "^[a-z\\s]+"
+
+    # Extract all capitalized words from the task name
+    - group: string
+      name: match
+      params:
+        string: '{{ taskName }}'
+        pattern: '[A-Z][a-z]+'
+        flag: g
+
+    # Return the index of the first digit sequence in a pipeline ID string
+    - group: string
+      name: search
+      params:
+        string: 'pipeline-run-00427-completed'
+        pattern: '\d+'
+
+    # -------------------------------------------------------
+    # Replace
+    # -------------------------------------------------------
+
+    # Replace the first occurrence of a status keyword
+    - group: string
+      name: replace
+      params:
+        string: 'Pipeline status: pending. Retry pending.'
+        pattern: 'pending'
+        replacement: 'running'
+
+    # Replace every occurrence of a placeholder token in a template
+    - group: string
+      name: replaceAll
+      params:
+        string: 'task.name, task.status, task.owner'
+        pattern: 'task.'
+        replacement: 'pipeline.'
+
+    # -------------------------------------------------------
+    # Slice & Tokenize
+    # -------------------------------------------------------
+
+    # Extract the action type from a dot-separated action identifier
+    - group: string
+      name: slice
+      params:
+        string: 'string.camelCase'
+        start: 7
+
+    # Split a comma-separated list of pipeline tags into an array
+    - group: string
+      name: split
+      params:
+        string: 'pdf,invoice,ocr,email'
+        separator: ','
+
+    # Extract a substring by fixed indices — e.g., pull the group prefix from an action ID
+    - group: string
+      name: substring
+      params:
+        string: 'string.camelCase'
+        start: 0
+        end: 6
+
+    # Tokenize a task name into individual words
+    - group: string
+      name: words
+      params:
+        string: '{{ taskName }}'
+
+    # -------------------------------------------------------
+    # Whitespace
+    # -------------------------------------------------------
+
+    # Strip leading and trailing whitespace from user-submitted input
+    - group: string
+      name: trim
+      params:
+        string: '  Send Daily Report  '
+
+    # Remove trailing whitespace only — e.g., after log line formatting
+    - group: string
+      name: trimEnd
+      params:
+        string: 'Pipeline completed   '
+
+    # Remove leading whitespace only — e.g., after YAML indentation read
+    - group: string
+      name: trimStart
+      params:
+        string: '   extract invoice data'
+
+    # -------------------------------------------------------
+    # Utility
+    # -------------------------------------------------------
+
+    # Get the character length of a task name for validation or truncation checks
+    - group: string
+      name: len
+      params:
+        string: '{{ taskName }}'
+
+    # Serialize a pipeline result object for logging or storing as a variable
+    - group: string
+      name: stringify
+      params:
+        value:
+          task: 'send-daily-report'
+          status: 'completed'
+          duration: 4821
+        pretty: true
+
+    # -------------------------------------------------------
+    # Template & Encoding
+    # -------------------------------------------------------
+
+    # Interpolate dynamic values into a notification message template
+    - group: string
+      name: format
+      params:
+        template: 'Task "{task}" finished with status {status} in {duration}ms.'
+        values:
+          task: 'Send Daily Report'
+          status: 'completed'
+          duration: 4821
+
+    # Escape HTML in pipeline output before embedding it in an email body
+    - group: string
+      name: encodeHTMLEntities
+      params:
+        string: '{{ htmlContent }}'
+
+    # Decode HTML entities received from an external API response
+    - group: string
+      name: decodeHTMLEntities
+      params:
+        string: '{{ encodedHtml }}'
+
+    # Encode a task name for safe inclusion in a URL query parameter
+    - group: string
+      name: encodeURIComponent
+      params:
+        string: '{{ taskName }}'
+
+    # Decode a percent-encoded query parameter back to its original value
+    - group: string
+      name: decodeURIComponent
+      params:
+        string: 'Send%20Daily%20Report%20-%20Sales%20Pipeline'
+
+    # -------------------------------------------------------
+    # Query String
+    # -------------------------------------------------------
+
+    # Parse a webhook query string into a structured object
+    - group: string
+      name: parseQueryString
+      params:
+        string: 'status=running&tags[]=pdf&tags[]=invoice&limit=10'
+
+    # Serialize pipeline filter options into a query string for an HTTP request
+    - group: string
+      name: stringifyQueryObject
+      params:
+        object:
+          status: 'completed'
+          tags:
+            - pdf
+            - invoice
+          limit: 10
+
+    # -------------------------------------------------------
+    # Slug
+    # -------------------------------------------------------
+
+    # Generate a URL-friendly slug from a task name (strips accents and special characters)
+    - group: string
+      name: slugify
+      params:
+        string: '{{ taskName }}'

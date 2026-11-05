@@ -1,0 +1,117 @@
+version: 1.0.0
+name: 'CMS: Publish Status'
+description: |
+  Where publishing stands in the CMS store (`~/Tipeline/output/cms/cms.db`): the last export, the last one with HTML (the site to preview and deploy), the Cloudflare deployments and how much changed since the last export.
+
+  **Outputs**
+
+  - `lastExport` — `{ has, at, formats, files, nodes }`
+  - `lastHtml` — `{ has, at, indexPath, folder, files }`
+  - `deployments` — the 10 latest: `[{ at, project, files, url, status }]`
+  - `live` — `{ has, url (the project's address), deployUrl, project }`
+  - `pending` — items changed since the last export
+  - `siteName` — the site name the last export used
+author: tipeline
+tags: [example, apps, cms, publish, deploy]
+
+pipeline:
+  variables:
+    - { type: object, name: lastExport, value: {}, visibility: public, description: The last export. Returned to the app. }
+    - { type: object, name: lastHtml, value: {}, visibility: public, description: The last export with HTML. Returned to the app. }
+    - { type: array, name: deployments, value: [], visibility: public, description: Latest deployments. Returned to the app. }
+    - { type: object, name: live, value: {}, visibility: public, description: The live deployment. Returned to the app. }
+    - { type: number, name: pending, value: 0, visibility: public, description: Items changed since the last export. Returned to the app. }
+    - { type: string, name: siteName, value: '', visibility: public, description: The site name. Returned to the app. }
+    - { type: dbConnection, name: db }
+    - { type: array, name: meta, value: [] }
+    - { type: array, name: rows, value: [] }
+    - { type: array, name: changes, value: [] }
+    - { type: object, name: result, value: {} }
+
+  actions:
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT key, value FROM meta WHERE key IN ('last_export', 'last_html', 'site_name')
+      destination: meta
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT at, project, files, url, status FROM deployment ORDER BY id DESC LIMIT 10
+      destination: rows
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT changed FROM node
+      destination: changes
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      name: runScript
+      params:
+        context: { meta: '{= meta =}', rows: '{= rows =}', changes: '{= changes =}' }
+        code: |
+          const get = (k) => { const m = meta.find((x) => x.key === k); try { return m ? JSON.parse(m.value) : null; } catch (e) { return m ? m.value : null; } };
+          const ex = get('last_export');
+          const html = get('last_html');
+          const siteRow = meta.find((x) => x.key === 'site_name');
+          const live = rows.find((d) => d.status === 'live');
+          const FORMATS = { html: 'HTML', markdown: 'Markdown', json: 'JSON' };
+          return {
+            lastExport: ex ? { has: true, at: ex.at, formats: (ex.formats || []).map((f) => FORMATS[f] || f).join(', '), files: ex.files, nodes: ex.nodes } : { has: false },
+            lastHtml: html ? { has: true, at: html.at, indexPath: html.indexPath, folder: html.folder, files: html.files } : { has: false },
+            deployments: rows.map((d) => ({ ...d, status: d.status === 'live' ? 'Live' : d.status === 'replaced' ? 'Replaced' : d.status })),
+            // The project's own address always shows the newest production deploy.
+            live: live ? { has: true, url: 'https://' + live.project + '.pages.dev', deployUrl: live.url, project: live.project } : { has: false, url: '', project: rows[0] ? rows[0].project : '' },
+            pending: ex ? changes.filter((c) => c.changed > ex.at).length : changes.length,
+            siteName: siteRow ? siteRow.value : '',
+          };
+      destination: result
+
+    - group: script
+      name: runScript
+      params: { context: { result: '{= result =}' }, code: return result.lastExport; }
+      destination: lastExport
+
+    - group: script
+      name: runScript
+      params: { context: { result: '{= result =}' }, code: return result.lastHtml; }
+      destination: lastHtml
+
+    - group: script
+      name: runScript
+      params: { context: { result: '{= result =}' }, code: return result.deployments; }
+      destination: deployments
+
+    - group: script
+      name: runScript
+      params: { context: { result: '{= result =}' }, code: return result.live; }
+      destination: live
+
+    - group: script
+      name: runScript
+      params: { context: { result: '{= result =}' }, code: return result.pending; }
+      destination: pending
+
+    - group: script
+      name: runScript
+      params: { context: { result: '{= result =}' }, code: return result.siteName; }
+      destination: siteName

@@ -1,0 +1,100 @@
+version: 1.0.0
+name: List Orders
+description: |
+  Returns one page of 57 example orders, optionally only those with one status or of one customer, and how many there are in all — so an app can page through them.
+
+  Used by the Orders Browser example app.
+
+  **Inputs**
+
+  - `status` — "all", "paid", "shipped" or "refunded"
+  - `customer` — only this customer's orders; empty for all
+  - `offset` — orders to skip
+  - `limit` — orders per page
+
+  **Outputs**
+
+  - `orders` — `[{ id, customer, total, status, date, items }]`
+  - `total` — how many match the status
+author: tipeline
+tags: [example, apps, orders, pagination]
+
+pipeline:
+  variables:
+    - type: string
+      name: status
+      value: all
+      visibility: public
+      description: Status to keep — all, paid, shipped or refunded. Set by the app.
+
+    - type: string
+      name: customer
+      value: ''
+      visibility: public
+      description: Only this customer's orders (empty for all). Set by the app.
+
+    - type: number
+      name: offset
+      value: 0
+      visibility: public
+      description: Orders to skip. Set by the app.
+
+    - type: number
+      name: limit
+      value: 10
+      visibility: public
+      description: Orders per page. Set by the app.
+
+    - type: array
+      name: orders
+      value: []
+      visibility: public
+      description: The page of orders. Returned to the app.
+
+    - type: number
+      name: total
+      value: 0
+      visibility: public
+      description: How many orders match the status. Returned to the app.
+
+    - type: object
+      name: page
+      value: {}
+
+  actions:
+    - group: script
+      name: runScript
+      params:
+        context:
+          status: '{{ status }}'
+          customer: '{{ customer }}'
+          offset: '{= offset =}'
+          limit: '{= limit =}'
+        code: |
+          const customers = ['Acme', 'Globex', 'Initech', 'Umbrella', 'Hooli', 'Stark', 'Wayne', 'Wonka', 'Tyrell', 'Soylent'];
+          const statuses = ['paid', 'shipped', 'shipped', 'paid', 'refunded'];
+          const all = Array.from({ length: 57 }, (_, i) => ({
+            id: `A-${1001 + i}`,
+            customer: customers[(i * 7) % customers.length],
+            total: 120 + ((i * 1937) % 4800),
+            status: statuses[i % statuses.length],
+            date: new Date(Date.UTC(2026, 8, 1 + (i % 30))).toISOString().slice(0, 10),
+            items: 1 + (i % 6),
+          }));
+          const matching = all.filter((o) => (status === 'all' || o.status === status) && (!customer || o.customer === customer));
+          const from = Math.max(0, Number(offset) || 0);
+          const size = Math.max(1, Number(limit) || 10);
+          return { orders: matching.slice(from, from + size), total: matching.length };
+      destination: page
+
+    - group: variable
+      name: set
+      params:
+        name: orders
+        value: '{= page.orders =}'
+
+    - group: variable
+      name: set
+      params:
+        name: total
+        value: '{= page.total =}'

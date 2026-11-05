@@ -1,0 +1,44 @@
+version: 1.0.0
+name: Make QR Code
+description: |
+  Turns a text or link into a QR code image, saved in your Tipeline folder (`~/Tipeline/output/app-qr-code.png` — the same file every run).
+
+  Used by the QR Code Maker example app, whose Image component shows it.
+
+  **Inputs**
+
+  - `text` — what the QR code holds
+
+  **Outputs**
+
+  - `path` — the image file
+author: tipeline
+tags: [example, apps, qr code, image]
+
+pipeline:
+  variables:
+    - type: string
+      name: text
+      value: https://tipeline.dev
+      visibility: public
+      description: Text or link to encode. Set by the app.
+
+    - type: string
+      name: path
+      value: ''
+      visibility: public
+      description: Where the image was saved. Returned to the app.
+
+  actions:
+    # Inside ~/Tipeline: an app's Image can only show files from there.
+    - group: variable
+      name: set
+      params:
+        name: path
+        value: '{{ _env.HOME }}/Tipeline/output/app-qr-code.png'
+
+    - group: qrcode
+      name: generate
+      params:
+        text: '{{ text }}'
+        path: '{{ path }}'

@@ -1,0 +1,63 @@
+schemaVersion: 4
+name: Chat
+description: Chat components — each message runs a workflow and its reply comes back; one answers without AI, the other with Claude (needs ANTHROPIC_API_KEY)
+author: tipeline
+
+workflows:
+  chatEcho: { file: ./workflows/chat-echo.yml }
+  chatAi: { file: ./workflows/chat-ai.yml }
+
+pages:
+  - id: chat
+    name: Chat
+    icon: MessagesSquare
+
+    # Each chat's runnable gets the text just sent and the whole conversation.
+    # persist: false — chats don't fill the run history.
+    runnables:
+      echo:
+        mode: run
+        workflow: chatEcho
+        inputs:
+          message: "{{ echoChat.message }}"
+          messages: "{= echoChat.messages =}"
+        outputs: [reply]
+        persist: false
+      ai:
+        mode: run
+        workflow: chatAi
+        inputs:
+          message: "{{ aiChat.message }}"
+          messages: "{= aiChat.messages =}"
+        outputs: [reply]
+        persist: false
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 9 }
+        props:
+          markdown: true
+          content: "**Chat** components. On the left a workflow answers without AI — it always works. On the right Claude answers, through the *ai.prompt* action; it needs an Anthropic key in the `ANTHROPIC_API_KEY` environment variable of the Tipeline service."
+
+      - id: echoChat
+        type: chat
+        name: Echo chat
+        layout: { x: 0, y: 9, w: 6, h: 60 }
+        props:
+          title: Echo (no AI)
+          runnable: echo
+          welcome: "Hi! I repeat what you say and keep track of the conversation."
+          suggestions: [Hello, "What did I say first?"]
+
+      - id: aiChat
+        type: chat
+        name: AI chat
+        layout: { x: 6, y: 9, w: 6, h: 60 }
+        props:
+          title: Claude
+          runnable: ai
+          welcome: "Ask me anything. I see the whole conversation."
+          placeholder: Ask Claude…
+          suggestions: ["What can Tipeline apps do?", "Write a haiku about automation"]

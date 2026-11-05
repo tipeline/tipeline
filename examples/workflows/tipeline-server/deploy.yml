@@ -1,0 +1,76 @@
+version: 1.0.0
+name: Deploy Tipeline Update
+description: |
+  Updates a Tipeline server over SSH: pulls the latest code or a specific tag, reinstalls dependencies, rebuilds all packages and restarts both systemd services.
+author: Jose Daniel Estrada
+tags: [example, tipeline server, deploy, update, ssh]
+pipeline:
+  variables:
+    - type: object
+      name: config
+      value:
+        host: "YOUR_SERVER_IP"
+        username: "root"
+        password: ""
+    - type: sshConnection
+      name: connection
+  actions:
+
+    # ---- Connect ----------------------------------------------------------
+    - group: ssh
+      name: connect
+      params:
+        config: "{= config =}"
+      destination: connection
+
+    # ---- 1. Pull latest code ---------------------------------------------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          set -e
+          cd /opt/tipeline
+          sudo -u tipeline git pull
+
+    # ---- 2. Install dependencies ------------------------------------------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          set -e
+          cd /opt/tipeline
+          sudo -u tipeline npm install
+
+    # ---- 3. Build all packages (topological order) -----------------------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          set -e
+          cd /opt/tipeline
+          sudo -u tipeline npm run build
+
+    # ---- 4. Restart services ---------------------------------------------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          sudo systemctl restart tipeline-core tipeline-server
+          sudo systemctl status tipeline-core --no-pager
+          sudo systemctl status tipeline-server --no-pager
+
+    # ---- 5. Verify logs (last 20 lines each) -----------------------------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          echo "=== tipeline-core (last 20 lines) ==="
+          sudo journalctl -u tipeline-core -n 20 --no-pager
+          echo ""
+          echo "=== tipeline-server (last 20 lines) ==="
+          sudo journalctl -u tipeline-server -n 20 --no-pager

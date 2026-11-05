@@ -1,0 +1,36 @@
+name: On Error Example
+description: |
+  Shows what `onError` does when a step fails: `continue` carries on with the next step, and `throw` (the default) stops the run.
+
+  The first step reads a missing file with `onError: continue`, so the run goes on. The last step reads another missing file with the default, so **this run is meant to end as failed**.
+tags: [example, error handling, onerror, continue]
+version: 1.0.0
+pipeline:
+  variables:
+    - type: string
+      name: filePath
+      value: /tmp/tipeline-test.txt
+
+  actions:
+    # This action will fail because the file does not exist.
+    # onError: continue swallows the error and moves to the next action.
+    - group: file
+      name: read
+      onError: continue
+      params:
+        src: /tmp/file-that-does-not-exist.txt
+      destination: filePath
+
+    # This action runs regardless of whether the previous one failed.
+    - group: file
+      name: write
+      params:
+        src: /tmp/tipeline-test.txt
+        data: Pipeline continued after error
+
+    # This action will also fail, but onError defaults to 'throw',
+    # which stops the pipeline and surfaces the error.
+    - group: file
+      name: read
+      params:
+        src: /tmp/another-missing-file.txt

@@ -1,0 +1,101 @@
+version: 1.0.0
+name: Make Palette
+description: |
+  Makes a palette from one color — ten shades from light to dark (500 is the color), its complement, and how readable white or black text is on it.
+
+  Used by the Color Palette example app.
+
+  **Inputs**
+
+  - `base` — a color as "#rrggbb"
+
+  **Outputs**
+
+  - `shades` — `[{ name, hex, rgb, text, contrast }]`
+  - `summary` — `{ base, complement, hue, text, contrast }`
+author: tipeline
+tags: [example, apps, colors, palette]
+
+pipeline:
+  variables:
+    - type: string
+      name: base
+      value: '#3b82f6'
+      visibility: public
+      description: The color to start from, as hex. Set by the app.
+
+    - type: array
+      name: shades
+      value: []
+      visibility: public
+      description: Ten shades, light to dark. Returned to the app.
+
+    - type: object
+      name: summary
+      value: {}
+      visibility: public
+      description: The base color, its complement and its best text color. Returned to the app.
+
+    - type: object
+      name: palette
+      value: {}
+
+  actions:
+    - group: script
+      name: runScript
+      params:
+        context:
+          base: '{{ base }}'
+        code: |
+          const hex = /^#?([0-9a-f]{6})$/i.exec(String(base).trim());
+          if (!hex) throw new Error(`"${base}" is not a color like #3b82f6`);
+          const [r, g, b] = [0, 2, 4].map((i) => parseInt(hex[1].slice(i, i + 2), 16) / 255);
+          // RGB → HSL, to walk the lightness.
+          const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, d = max - min;
+          const s = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+          let h = 0;
+          if (d) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+          h = Math.round((h * 60 + 360) % 360);
+          const toHex = (h, s, l) => {
+            const a = s * Math.min(l, 1 - l);
+            const f = (n) => {
+              const k = (n + h / 30) % 12;
+              return Math.round((l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))) * 255);
+            };
+            return '#' + [f(0), f(8), f(4)].map((v) => v.toString(16).padStart(2, '0')).join('');
+          };
+          // Readability (WCAG contrast) of white and black text on a color.
+          const lum = (x) => {
+            const c = [1, 3, 5].map((i) => parseInt(x.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+            return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+          };
+          const best = (x) => {
+            const L = lum(x), white = 1.05 / (L + 0.05), black = (L + 0.05) / 0.05;
+            return white >= black ? { text: '#ffffff', contrast: Math.round(white * 10) / 10 } : { text: '#000000', contrast: Math.round(black * 10) / 10 };
+          };
+          // 500 is the color itself; lighter shades go toward white, darker toward black.
+          const steps = [[50, 0.95], [100, 0.85], [200, 0.68], [300, 0.5], [400, 0.25], [500, 0], [600, -0.2], [700, -0.4], [800, -0.6], [900, -0.78]];
+          const shades = steps.map(([name, t]) => {
+            const light = t >= 0 ? l + (0.97 - l) * t : l + (l - 0.08) * t;
+            const x = toHex(h, s, light);
+            const rgb = [1, 3, 5].map((i) => parseInt(x.slice(i, i + 2), 16)).join(', ');
+            return { name: String(name), hex: x, rgb: `rgb(${rgb})`, ...best(x) };
+          });
+          const baseHex = '#' + hex[1].toLowerCase();
+          return {
+            shades,
+            summary: { base: baseHex, complement: toHex((h + 180) % 360, s, l), hue: h, ...best(baseHex) },
+          };
+      destination: palette
+
+    - group: variable
+      name: set
+      params:
+        name: shades
+        value: '{= palette.shades =}'
+
+    - group: variable
+      name: set
+      params:
+        name: summary
+        value: '{= palette.summary =}'

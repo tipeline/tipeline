@@ -1,0 +1,30 @@
+{
+  "name": "tipeline",
+  "private": true,
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "prepare": "npm run build:packages",
+    "build": "npm run build:packages && npm run build --workspace=apps/core --workspace=apps/cli --workspace=apps/server",
+    "build:packages": "npm run build --workspace=packages/types --workspace=packages/utils --workspace=packages/i18n --workspace=packages/schemas --workspace=packages/agent",
+    "test": "npm test --workspaces --if-present && node --test \"scripts/*.test.mjs\"",
+    "version:set": "node scripts/set-version.mjs",
+    "publish:npm": "node scripts/publish-npm.mjs",
+    "test-desktop": "npm run build --workspace=packages/types --workspace=packages/utils --workspace=packages/i18n --workspace=packages/agent --workspace=packages/schemas --workspace=apps/core --workspace=apps/cli && tipeline stop --force && npm run dev --workspace=apps/desktop"
+  },
+  "overrides": {
+    "@vee-validate/zod": {
+      "zod": "^3.23.8"
+    }
+  },
+  "devDependencies": {
+    "js-yaml": "^4.3.2",
+    "vite": "^8.0.11"
+  }
+}

@@ -1,0 +1,102 @@
+version: 1.0.0
+name: Test Desktop 1
+description: |
+  Prints 10 messages with a one-second wait after each, about 10 seconds in all. Use it to watch a plain list of steps fill in on a run's page in Desktop.
+author: Jose Daniel Estrada
+tags: [example, desktop, progress]
+
+pipeline:
+  variables:
+    - type: string
+      name: hello
+      value: This is a hellow message
+  actions:
+    - group: system
+      name: message
+      params:
+        text: This is message 1. {{ hello }}
+    - group: flow
+      name: wait
+      params:
+        timeout: 1000
+
+    - group: system
+      name: message
+      params:
+        text: This is message 2. {{ hello }}
+    - group: flow
+      name: wait
+      params:
+        timeout: 1000
+
+    - group: system
+      name: message
+      params:
+        text: This is message 3. {{ hello }}
+    - group: flow
+      name: wait
+      params:
+        timeout: 1000
+
+    - group: system
+      name: message
+      params:
+        text: This is message 4. {{ hello }}
+    - group: flow
+      name: wait
+      params:
+        timeout: 1000
+
+    - group: system
+      name: message
+      params:
+        text: This is message 5. {{ hello }}
+    - group: flow
+      name: wait
+      params:
+        timeout: 1000
+
+    - group: system
+      name: message
+      params:
+        text: This is message 6. {{ hello }}
+    - group: flow
+      name: wait
+      params:
+        timeout: 1000
+
+    - group: system
+      name: message
+      params:
+        text: This is message 7. {{ hello }}
+    - group: flow
+      name: wait
+      params:
+        timeout: 1000
+
+    - group: system
+      name: message
+      params:
+        text: This is message 8. {{ hello }}
+    - group: flow
+      name: wait
+      params:
+        timeout: 1000
+
+    - group: system
+      name: message
+      params:
+        text: This is message 9. {{ hello }}
+    - group: flow
+      name: wait
+      params:
+        timeout: 1000
+
+    - group: system
+      name: message
+      params:
+        text: This is message 10. {{ hello }}
+    - group: flow
+      name: wait
+      params:
+        timeout: 1000

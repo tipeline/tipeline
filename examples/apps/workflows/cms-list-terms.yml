@@ -1,0 +1,102 @@
+version: 1.0.0
+name: 'CMS: List Terms'
+description: |
+  The taxonomy of the CMS store (`~/Tipeline/output/cms/cms.db`): its vocabularies, and the terms of one of them with how much content uses each.
+
+  **Inputs**
+
+  - `vocabulary` — the vocabulary whose terms are listed; empty: the first
+
+  **Outputs**
+
+  - `vocabularies` — `[{ value, label, description, count }]`
+  - `terms` — `[{ id, name, weight, usage }]`
+author: tipeline
+tags: [example, apps, cms, taxonomy, vocabularies]
+
+pipeline:
+  variables:
+    - { type: string, name: vocabulary, value: '', visibility: public, description: Vocabulary to list. }
+    - { type: array, name: vocabularies, value: [], visibility: public, description: Every vocabulary. Returned to the app. }
+    - { type: array, name: terms, value: [], visibility: public, description: Its terms. Returned to the app. }
+    - { type: dbConnection, name: db }
+    - { type: array, name: vocabRows, value: [] }
+    - { type: array, name: termRows, value: [] }
+    - { type: array, name: usage, value: [] }
+    - { type: object, name: result, value: {} }
+
+  actions:
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          SELECT v.id AS value, v.label, v.description, (SELECT COUNT(*) FROM term t WHERE t.vocabulary = v.id) AS count
+          FROM vocabulary v ORDER BY v.label
+      destination: vocabRows
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT id, vocabulary, name, weight FROM term ORDER BY weight, name
+      destination: termRows
+
+    # Every term id held by a term reference field of some content.
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          SELECT j.value AS term, COUNT(DISTINCT n.id) AS uses
+          FROM node n JOIN field f ON f.type_id = n.type AND f.kind = 'term_ref',
+            json_each(n.fields, '$.' || f.name) j
+          GROUP BY j.value
+      destination: usage
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          vocabulary: '{{ vocabulary }}'
+          vocabRows: '{= vocabRows =}'
+          termRows: '{= termRows =}'
+          usage: '{= usage =}'
+        code: |
+          const chosen = vocabRows.find((v) => v.value === vocabulary) || vocabRows[0];
+          const uses = Object.fromEntries(usage.map((u) => [Number(u.term), u.uses]));
+          const terms = chosen
+            ? termRows
+                .filter((t) => t.vocabulary === chosen.value)
+                .map((t) => ({ id: t.id, name: t.name, weight: t.weight, usage: uses[t.id] || 0 }))
+            : [];
+          return { vocabularies: vocabRows, terms };
+      destination: result
+
+    - group: script
+      name: runScript
+      params:
+        context: { result: '{= result =}' }
+        code: return result.vocabularies;
+      destination: vocabularies
+
+    - group: script
+      name: runScript
+      params:
+        context: { result: '{= result =}' }
+        code: return result.terms;
+      destination: terms

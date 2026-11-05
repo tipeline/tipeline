@@ -1,0 +1,71 @@
+version: 1.0.0
+name: List Bookings
+description: |
+  Returns example bookings between two days — the same ones every time for the same days: visits at set hours, all-day deliveries and a few multi-day trips, each with a status.
+
+  Used by the Calendar example app, which asks for the days it shows.
+
+  **Inputs**
+
+  - `from` — first day, YYYY-MM-DD
+  - `to` — last day, YYYY-MM-DD
+
+  **Outputs**
+
+  - `bookings` — `[{ id, title, start, end?, status, customer }]`
+author: tipeline
+tags: [example, apps, bookings, calendar]
+
+pipeline:
+  variables:
+    - type: string
+      name: from
+      value: ''
+      visibility: public
+      description: First day to list, YYYY-MM-DD. Set by the app.
+
+    - type: string
+      name: to
+      value: ''
+      visibility: public
+      description: Last day to list, YYYY-MM-DD. Set by the app.
+
+    - type: array
+      name: bookings
+      value: []
+      visibility: public
+      description: The bookings in those days. Returned to the app.
+
+  actions:
+    - group: script
+      name: runScript
+      params:
+        context:
+          from: '{{ from }}'
+          to: '{{ to }}'
+        code: |
+          const today = new Date().toISOString().slice(0, 10);
+          const first = new Date(`${from || today}T00:00:00`);
+          const last = new Date(`${to || from || today}T00:00:00`);
+          const pad = (n) => String(n).padStart(2, '0');
+          const day = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+          const customers = ['Acme Corp', 'Globex', 'Initech', 'Umbrella', 'Hooli'];
+          const statuses = ['confirmed', 'pending', 'confirmed', 'canceled', 'confirmed'];
+          const out = [];
+          for (let d = new Date(first), n = 0; d <= last && n < 400; d.setDate(d.getDate() + 1), n++) {
+            const seed = d.getDate() + d.getMonth() * 31;
+            const who = customers[seed % customers.length];
+            const status = statuses[seed % statuses.length];
+            const id = day(d).replace(/-/g, '');
+            if (d.getDay() >= 1 && d.getDay() <= 5 && seed % 2 === 0)
+              out.push({ id: `${id}-v`, title: `Visit · ${who}`, start: `${day(d)}T${pad(9 + (seed % 7))}:00:00`, end: `${day(d)}T${pad(10 + (seed % 7))}:30:00`, status, customer: who });
+            if (seed % 5 === 0)
+              out.push({ id: `${id}-d`, title: `Delivery · ${who}`, start: day(d), status, customer: who });
+            if (seed % 13 === 0) {
+              const end = new Date(d);
+              end.setDate(end.getDate() + 3);
+              out.push({ id: `${id}-t`, title: `Trip · ${who}`, start: day(d), end: day(end), status: 'confirmed', customer: who });
+            }
+          }
+          return out;
+      destination: bookings

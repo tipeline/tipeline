@@ -1,0 +1,351 @@
+# NOTE: absolute paths below (Documents, .ssh, database file, etc.) are
+# example values from the original author's machine — replace with your
+# own before running.
+
+version: 1.0.0
+name: Provision Tipeline Server
+description: |
+  Sets up a fresh Ubuntu 22.04 server to run the Tipeline stack over SSH.
+
+  **What it does**
+
+  - Installs Node.js 24, native build dependencies and PostgreSQL
+  - Creates the `tipeline` system user and clones the repo
+  - Builds the packages and creates the data folders
+  - Writes the env file and registers both systemd services
+author: Jose Daniel Estrada
+tags: [example, tipeline server, provisioning, ubuntu, postgresql, ssh]
+pipeline:
+  variables:
+    - type: object
+      name: config
+      value:
+        host: ""
+        username: "root"
+        password: ""
+        repo_url: "git@github.com:YOUR_ORG/tipeline.git"
+        admin_email: admin@yourdomain.com
+        admin_password: CHANGE_ME_admin_password
+        domain: yourdomain.com
+        server_port: "4001"
+        db_name: tipeline_server
+        db_user: tipeline
+        db_password: CHANGE_ME_db_password
+    - type: string
+      name: ssh_public_key
+      value: ""
+    - type: sshConnection
+      name: connection
+  actions:
+
+    # ---- Connect ----------------------------------------------------------
+    - group: ssh
+      name: connect
+      params:
+        config: "{= config =}"
+      destination: connection
+
+    # ---- 1. System update -------------------------------------------------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt update -y
+          sudo apt upgrade -y
+
+    # ---- 2. Install Node.js 24 via NodeSource -----------------------------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
+          sudo apt install -y nodejs
+          node -v
+          npm -v
+
+    # ---- 3. Native build dependencies (better-sqlite3 needs them) --------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          sudo apt install -y build-essential python3 libvips-dev
+
+    # ---- 4. Install other useful tools -----------------------------------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          sudo apt install -y git curl wget nano ufw
+
+    # ---- 5. Configure UFW firewall ----------------------------------------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          sudo ufw allow 22
+          sudo ufw allow 80
+          sudo ufw allow 443
+          sudo ufw --force enable
+          sudo ufw status
+
+    # ---- 6. Install and configure PostgreSQL ------------------------------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          sudo apt install -y postgresql postgresql-contrib
+          sudo systemctl enable --now postgresql
+
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          # Create DB role and database (idempotent)
+          sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='{{ config.db_user }}'" | grep -q 1 || \
+            sudo -u postgres psql -c "CREATE USER {{ config.db_user }} WITH PASSWORD '{{ config.db_password }}';"
+          sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='{{ config.db_name }}'" | grep -q 1 || \
+            sudo -u postgres psql -c "CREATE DATABASE {{ config.db_name }} OWNER {{ config.db_user }};"
+
+    # ---- 7. Create dedicated tipeline system user --------------------------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          if ! id tipeline >/dev/null 2>&1; then
+            sudo useradd --system --no-create-home --shell /usr/sbin/nologin tipeline
+            echo "User 'tipeline' created."
+          else
+            echo "User 'tipeline' already exists."
+          fi
+
+    # ---- 8. Install SSH public key for root (passwordless access) ---------
+    - group: file
+      name: read
+      params:
+        src: /path/to/.ssh/id_rsa.pub
+      destination: ssh_public_key
+
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          set -e
+          sudo mkdir -p /root/.ssh
+          echo "{{ ssh_public_key }}" | sudo tee -a /root/.ssh/authorized_keys > /dev/null
+          sudo chmod 700 /root/.ssh
+          sudo chmod 600 /root/.ssh/authorized_keys
+          sudo chown -R root:root /root/.ssh
+
+    # ---- 9. Generate deploy key for git operations -----------------------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          set -e
+          if [ ! -f /root/.ssh/id_ed25519 ]; then
+            sudo ssh-keygen -t ed25519 -N "" -f /root/.ssh/id_ed25519 -C "deploy@$(hostname)"
+          fi
+          sudo ssh-keyscan -t ed25519,rsa github.com | sudo tee /root/.ssh/known_hosts > /dev/null
+          sudo chmod 600 /root/.ssh/id_ed25519 /root/.ssh/known_hosts
+          sudo chmod 644 /root/.ssh/id_ed25519.pub
+          echo ""
+          echo "============================================================"
+          echo "  ADD THIS DEPLOY KEY TO YOUR GITHUB REPO:"
+          echo "  Settings → Deploy keys → Add deploy key (read-only)"
+          echo "============================================================"
+          sudo cat /root/.ssh/id_ed25519.pub
+          echo "============================================================"
+
+    # ---- 10. Clone the repository ------------------------------------------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          set -e
+          if [ ! -d /opt/tipeline/.git ]; then
+            sudo mkdir -p /opt/tipeline
+            sudo git clone {{ config.repo_url }} /opt/tipeline
+            sudo chown -R tipeline:tipeline /opt/tipeline
+          else
+            echo "Repo already cloned at /opt/tipeline. Skipping."
+          fi
+
+    # ---- 11. Install dependencies and build --------------------------------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          set -e
+          cd /opt/tipeline
+          sudo -u tipeline npm install
+          sudo -u tipeline npm run build
+
+    # ---- 12. Create data directories ---------------------------------------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          sudo mkdir -p /var/lib/tipeline /tmp/tipeline
+          sudo chown tipeline:tipeline /var/lib/tipeline /tmp/tipeline
+
+    # ---- 13. Write environment file ---------------------------------------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          sudo mkdir -p /etc/tipeline
+          sudo tee /etc/tipeline/server.env > /dev/null <<EOF
+          TIPELINE_IPC_SOCKET_ROOT=/tmp/tipeline/
+          TIPELINE_SERVER_PORT={{ config.server_port }}
+          TIPELINE_DB_CLIENT=pg
+          TIPELINE_DB_HOST=127.0.0.1
+          TIPELINE_DB_PORT=5432
+          TIPELINE_DB_NAME={{ config.db_name }}
+          TIPELINE_DB_USER={{ config.db_user }}
+          TIPELINE_DB_PASSWORD={{ config.db_password }}
+          TIPELINE_ADMIN_EMAIL={{ config.admin_email }}
+          TIPELINE_ADMIN_PASSWORD={{ config.admin_password }}
+          EOF
+          sudo chmod 600 /etc/tipeline/server.env
+          sudo chown root:root /etc/tipeline/server.env
+
+    # ---- 14. Create systemd service: tipeline-core ------------------------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          sudo tee /etc/systemd/system/tipeline-core.service > /dev/null <<EOF
+          [Unit]
+          Description=Tipeline Core Engine
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=tipeline
+          WorkingDirectory=/opt/tipeline
+          Environment=TIPELINE_IPC_SOCKET_ROOT=/tmp/tipeline/
+          ExecStartPre=/bin/mkdir -p /tmp/tipeline
+          ExecStart=/usr/bin/node apps/core/dist/engine/Server.js
+          Restart=on-failure
+          RestartSec=5
+          StandardOutput=journal
+          StandardError=journal
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+    # ---- 15. Create systemd service: tipeline-server ----------------------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          sudo tee /etc/systemd/system/tipeline-server.service > /dev/null <<EOF
+          [Unit]
+          Description=Tipeline HTTP Server
+          After=tipeline-core.service postgresql.service
+          Requires=tipeline-core.service
+
+          [Service]
+          Type=simple
+          User=tipeline
+          WorkingDirectory=/opt/tipeline
+          EnvironmentFile=/etc/tipeline/server.env
+          ExecStart=/usr/bin/node apps/server/dist/index.js
+          Restart=on-failure
+          RestartSec=5
+          StandardOutput=journal
+          StandardError=journal
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+    # ---- 16. Enable and start services ------------------------------------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          sudo systemctl daemon-reload
+          sudo systemctl enable tipeline-core tipeline-server
+          sudo systemctl start tipeline-core
+          sudo systemctl start tipeline-server
+          sudo systemctl status tipeline-core --no-pager
+          sudo systemctl status tipeline-server --no-pager
+
+    # ---- 17. Install Nginx ------------------------------------------------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          sudo apt install -y nginx certbot python3-certbot-nginx
+
+    # ---- 18. Configure Nginx reverse proxy --------------------------------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          DOMAIN="{{ config.domain }}"
+          PORT="{{ config.server_port }}"
+          sudo tee /etc/nginx/sites-available/tipeline > /dev/null <<EOF
+          server {
+              server_name $DOMAIN;
+
+              location / {
+                  proxy_pass http://127.0.0.1:$PORT;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade \$http_upgrade;
+                  proxy_set_header Connection "upgrade";
+                  proxy_set_header Host \$host;
+                  proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                  proxy_set_header X-Real-IP \$remote_addr;
+              }
+          }
+          EOF
+          sudo ln -sf /etc/nginx/sites-available/tipeline /etc/nginx/sites-enabled/tipeline
+          sudo rm -f /etc/nginx/sites-enabled/default
+          sudo nginx -t
+          sudo systemctl enable nginx
+          sudo systemctl restart nginx
+
+    # ---- 19. Obtain TLS certificate (DNS must point to server first) ------
+    - group: ssh
+      name: exec
+      params:
+        connection: "{= connection =}"
+        command: |
+          sudo certbot --nginx -d {{ config.domain }} --non-interactive --agree-tos \
+            --email {{ config.admin_email }} || \
+            echo "Certbot failed — ensure DNS for {{ config.domain }} points to this server, then run: sudo certbot --nginx -d {{ config.domain }}"
+
+    - group: system
+      name: message
+      params:
+        text: |
+          ============================================================
+            Tipeline provisioning complete!
+            Core:   systemctl status tipeline-core
+            Server: systemctl status tipeline-server
+            Logs:   journalctl -u tipeline-core -u tipeline-server -f
+            URL:    https://{{ config.domain }}
+          ============================================================

@@ -1,0 +1,505 @@
+version: 1.0.0
+name: 'CMS: Install'
+description: |
+  Sets up the CMS store, a SQLite database at `~/Tipeline/output/cms/cms.db`, the way Drupal's standard install profile does: the tables, then (only the first time) the Article and Basic page content types, a Tags vocabulary, three cover images in the media library and some sample content with revisions.
+
+  It also adds the site templates (Liquid) when there are none: Article, Feature article, Basic page, Home page, Site layout and Stylesheet.
+
+  Safe to run again: it never changes content once the store exists, and brings an older store up to date (the templates table and a node's template). The CMS app runs it when the Dashboard opens.
+
+  **Outputs**
+
+  - `installed` — true when this run created the sample content
+author: tipeline
+tags: [example, apps, cms, setup, sqlite]
+
+pipeline:
+  variables:
+    - type: boolean
+      name: installed
+      value: false
+      visibility: public
+      description: True when this run set the store up for the first time.
+
+    - type: dbConnection
+      name: db
+
+    - type: array
+      name: done
+      value: []
+
+    # One item on the first run, none after: the seed steps run in a loop over it.
+    - type: array
+      name: firstRun
+      value: []
+
+    - type: number
+      name: once
+      value: 0
+
+    # Upgrades of an older store: one item when needed, none otherwise.
+    - type: array
+      name: checks
+      value: []
+
+    - type: array
+      name: addTemplateColumn
+      value: []
+
+    - type: array
+      name: addTemplates
+      value: []
+
+  actions:
+    # better-sqlite3 creates the database file, not its folder.
+    - group: folder
+      name: create
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/cms/media'
+
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    # ------------------------------------------------------------------ tables
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          CREATE TABLE IF NOT EXISTS content_type (
+            id TEXT PRIMARY KEY, label TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
+            alias_pattern TEXT NOT NULL DEFAULT '', template TEXT NOT NULL DEFAULT '',
+            created TEXT NOT NULL)
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          CREATE TABLE IF NOT EXISTS field (
+            type_id TEXT NOT NULL, name TEXT NOT NULL, label TEXT NOT NULL, kind TEXT NOT NULL,
+            required INTEGER NOT NULL DEFAULT 0, settings TEXT NOT NULL DEFAULT '{}',
+            weight INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (type_id, name))
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          CREATE TABLE IF NOT EXISTS node (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, title TEXT NOT NULL,
+            status INTEGER NOT NULL DEFAULT 0, alias TEXT UNIQUE, fields TEXT NOT NULL DEFAULT '{}',
+            created TEXT NOT NULL, changed TEXT NOT NULL, revision_id INTEGER, template TEXT)
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          CREATE TABLE IF NOT EXISTS node_revision (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, node_id INTEGER NOT NULL, title TEXT NOT NULL,
+            status INTEGER NOT NULL, alias TEXT, fields TEXT NOT NULL DEFAULT '{}',
+            log TEXT NOT NULL DEFAULT '', created TEXT NOT NULL)
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: CREATE INDEX IF NOT EXISTS node_revision_node ON node_revision (node_id)
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          CREATE TABLE IF NOT EXISTS vocabulary (
+            id TEXT PRIMARY KEY, label TEXT NOT NULL, description TEXT NOT NULL DEFAULT '')
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          CREATE TABLE IF NOT EXISTS term (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, vocabulary TEXT NOT NULL, name TEXT NOT NULL,
+            weight INTEGER NOT NULL DEFAULT 0, UNIQUE (vocabulary, name))
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          CREATE TABLE IF NOT EXISTS media (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, file TEXT NOT NULL,
+            mime TEXT NOT NULL DEFAULT '', size INTEGER NOT NULL DEFAULT 0, created TEXT NOT NULL)
+
+    # The site templates (Liquid). kind: content (one content type; one default per
+    # type, others picked per item), listing (the home page), layout (wraps every page),
+    # stylesheet (style.css).
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          CREATE TABLE IF NOT EXISTS template (
+            id TEXT PRIMARY KEY, name TEXT NOT NULL, kind TEXT NOT NULL, type_id TEXT,
+            html TEXT NOT NULL DEFAULT '', is_default INTEGER NOT NULL DEFAULT 0,
+            created TEXT NOT NULL, changed TEXT NOT NULL)
+
+    # Cloudflare deployments of the exported site.
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          CREATE TABLE IF NOT EXISTS deployment (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, project TEXT NOT NULL,
+            files INTEGER NOT NULL DEFAULT 0, url TEXT NOT NULL DEFAULT '', status TEXT NOT NULL)
+
+    # ------------------------------------------------------------------ first run only
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT value FROM meta WHERE key = 'installed'
+      destination: done
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          done: '{= done =}'
+        code: "return done.length === 0 ? [1] : [];"
+      destination: firstRun
+
+    # A loop rather than an If: an If's steps get their params resolved before they
+    # run, which turns '{= db =}' into the connection object its check rejects.
+    - group: flow
+      name: forEachLoop
+      params:
+        iterable: '{= firstRun =}'
+        currentItem: once
+        actions:
+          # Content types, as in Drupal's standard profile. URL alias patterns use
+          # Drupal tokens: [node:title]… (the templates are in the template table).
+          - group: database
+            name: query
+            params:
+              connection: '{= db =}'
+              sql: >-
+                INSERT INTO content_type (id, label, description, alias_pattern, template, created) VALUES
+                ('article', 'Article', 'Use articles for time-sensitive content like news, press releases or blog posts.', '/blog/[node:title]', '', strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-60 days')),
+                ('page', 'Basic page', 'Use basic pages for your static content, such as an ''About us'' page.', '/[node:title]', '', strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-60 days'))
+
+          - group: database
+            name: query
+            params:
+              connection: '{= db =}'
+              sql: >-
+                INSERT INTO field (type_id, name, label, kind, required, settings, weight) VALUES
+                ('article', 'body', 'Body', 'long_text', 0, '{}', 0),
+                ('article', 'field_image', 'Image', 'media_ref', 0, '{}', 1),
+                ('article', 'field_tags', 'Tags', 'term_ref', 0, '{"vocabulary":"tags"}', 2),
+                ('page', 'body', 'Body', 'long_text', 0, '{}', 0)
+
+          - group: database
+            name: query
+            params:
+              connection: '{= db =}'
+              sql: >-
+                INSERT INTO vocabulary (id, label, description) VALUES
+                ('tags', 'Tags', 'Use tags to group articles on similar topics into categories.')
+
+          - group: database
+            name: query
+            params:
+              connection: '{= db =}'
+              sql: >-
+                INSERT INTO term (id, vocabulary, name, weight) VALUES
+                (1, 'tags', 'Drupal', 0), (2, 'tags', 'Tipeline', 1),
+                (3, 'tags', 'Automation', 2), (4, 'tags', 'Release notes', 3)
+
+          # Three cover images: SVG files in the media folder, and their media rows.
+          - group: file
+            name: write
+            params:
+              src: '{{ _env.HOME }}/Tipeline/output/cms/media/1-welcome-cover.svg'
+              data: |-
+                <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+                  <rect width="1200" height="630" fill="#0f4c81"/>
+                  <circle cx="1010" cy="120" r="260" fill="#2b74b8"/>
+                  <circle cx="160" cy="560" r="200" fill="#1c5f9c"/>
+                  <text x="80" y="300" font-family="Helvetica, Arial, sans-serif" font-size="76" font-weight="700" fill="#ffffff">Welcome</text>
+                  <text x="80" y="380" font-family="Helvetica, Arial, sans-serif" font-size="36" fill="#cfe2f6">Tipeline CMS</text>
+                </svg>
+
+          - group: file
+            name: write
+            params:
+              src: '{{ _env.HOME }}/Tipeline/output/cms/media/2-content-model.svg'
+              data: |-
+                <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+                  <rect width="1200" height="630" fill="#1e6b52"/>
+                  <rect x="700" y="110" width="380" height="110" rx="16" fill="#2f8a6c"/>
+                  <rect x="700" y="260" width="380" height="110" rx="16" fill="#2f8a6c"/>
+                  <rect x="700" y="410" width="380" height="110" rx="16" fill="#2f8a6c"/>
+                  <text x="80" y="300" font-family="Helvetica, Arial, sans-serif" font-size="72" font-weight="700" fill="#ffffff">Content model</text>
+                  <text x="80" y="380" font-family="Helvetica, Arial, sans-serif" font-size="36" fill="#d3efe4">Types, fields, terms</text>
+                </svg>
+
+          - group: file
+            name: write
+            params:
+              src: '{{ _env.HOME }}/Tipeline/output/cms/media/3-automation.svg'
+              data: |-
+                <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+                  <rect width="1200" height="630" fill="#5b3f99"/>
+                  <path d="M720 470 L860 330 L960 430 L1120 220" stroke="#c9b8f0" stroke-width="22" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                  <text x="80" y="300" font-family="Helvetica, Arial, sans-serif" font-size="72" font-weight="700" fill="#ffffff">Automation</text>
+                  <text x="80" y="380" font-family="Helvetica, Arial, sans-serif" font-size="36" fill="#e2d8f7">Editorial workflows</text>
+                </svg>
+
+          - group: database
+            name: query
+            params:
+              connection: '{= db =}'
+              sql: >-
+                INSERT INTO media (id, name, file, mime, size, created) VALUES
+                (1, 'Welcome cover', ?, 'image/svg+xml', 640, strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-56 days')),
+                (2, 'Content model', ?, 'image/svg+xml', 760, strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-49 days')),
+                (3, 'Automation', ?, 'image/svg+xml', 700, strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-35 days'))
+              bindings:
+                - '{{ _env.HOME }}/Tipeline/output/cms/media/1-welcome-cover.svg'
+                - '{{ _env.HOME }}/Tipeline/output/cms/media/2-content-model.svg'
+                - '{{ _env.HOME }}/Tipeline/output/cms/media/3-automation.svg'
+
+          # Sample content, spread over the last two months.
+          - group: database
+            name: query
+            params:
+              connection: '{= db =}'
+              sql: >-
+                INSERT INTO node (id, type, title, status, alias, fields, created, changed) VALUES
+                (1, 'page', 'About us', 1, '/about-us', ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-58 days'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-30 days')),
+                (2, 'page', 'Contact', 1, '/contact', ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-57 days'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-57 days')),
+                (3, 'article', 'Welcome to Tipeline CMS', 1, '/blog/welcome-to-tipeline-cms', ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-55 days'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-55 days')),
+                (4, 'article', 'Why we model content like Drupal', 1, '/blog/why-we-model-content-like-drupal', ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-47 days'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-40 days')),
+                (5, 'article', 'Automating editorial workflows', 1, '/blog/automating-editorial-workflows', ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-34 days'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-34 days')),
+                (6, 'article', 'Release notes: September', 1, '/blog/release-notes-september', ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-20 days'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-19 days')),
+                (7, 'article', 'Five tips for better content types', 1, '/blog/five-tips-for-better-content-types', ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-12 days'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-6 days')),
+                (8, 'page', 'Privacy policy', 0, '/privacy-policy', ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-9 days'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-9 days')),
+                (9, 'article', 'Q4 roadmap', 0, '/blog/q4-roadmap', ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-5 days'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-1 days')),
+                (10, 'article', 'Exporting a static site', 0, '/blog/exporting-a-static-site', ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-2 days'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-2 days'))
+              bindings:
+                - '{"body":"We are a small team that writes about content, automation and the tools in between.\n\nThis site is managed with **Tipeline CMS**, a content manager built as a Tipeline app."}'
+                - '{"body":"Write to us at hello@example.com, or find us on the usual networks.\n\nWe answer within two working days."}'
+                - '{"body":"Tipeline CMS keeps your content in **content types** with their own fields, tags it with **taxonomy terms** and keeps a **revision** every time you save.\n\n## What you can do\n\n- Write articles and pages in rich text\n- Tag them and give them a cover image\n- Publish, then export the site as HTML, Markdown or JSON","field_image":1,"field_tags":[2]}'
+                - '{"body":"Drupal separates *what* content is from *how* it looks. A content type lists its fields; a template decides how they show.\n\nThe same idea works for a desktop app: the store only knows nodes and their field values.","field_image":2,"field_tags":[1,2]}'
+                - '{"body":"Every save becomes a revision, with a log message saying what changed. Reverting copies an old revision forward, so nothing is ever lost.","field_image":3,"field_tags":[3]}'
+                - '{"body":"## New\n\n- Content types can have list, link and date fields\n- The Publish page previews the exported site\n\n## Fixed\n\n- URL aliases no longer end in a dash","field_tags":[4]}'
+                - '{"body":"1. Name types after what editors write, not where it shows.\n2. Keep the body field: most content needs one.\n3. Prefer a term reference over a list when the choices grow.\n4. Give every type a URL alias pattern.\n5. Keep templates small; let Liquid do the rest.","field_tags":[1]}'
+                - '{"body":"We only keep what you send us through the contact form, and only for as long as we need it to answer you."}'
+                - '{"body":"Draft. Themes for the next quarter:\n\n- Scheduled publishing\n- Media captions\n- Menus","field_tags":[2]}'
+                - '{"body":"The Publish page writes every published node as HTML (through its content type template), as Markdown with front matter, and as JSON.","field_tags":[3,2]}'
+
+          # One revision per node, then a few edits so the history has something in it.
+          - group: database
+            name: query
+            params:
+              connection: '{= db =}'
+              sql: >-
+                INSERT INTO node_revision (node_id, title, status, alias, fields, log, created)
+                SELECT id, title, status, alias, fields, 'Created', created FROM node ORDER BY id
+
+          - group: database
+            name: query
+            params:
+              connection: '{= db =}'
+              sql: >-
+                INSERT INTO node_revision (node_id, title, status, alias, fields, log, created)
+                SELECT id, title, status, alias, fields,
+                  CASE id WHEN 1 THEN 'Updated the team description' WHEN 4 THEN 'Added the second paragraph'
+                    WHEN 6 THEN 'Fixed a typo' WHEN 7 THEN 'Reordered the tips' ELSE 'Edited the draft' END,
+                  changed
+                FROM node WHERE id IN (1, 4, 6, 7, 9) ORDER BY id
+
+          - group: database
+            name: query
+            params:
+              connection: '{= db =}'
+              sql: >-
+                UPDATE node SET revision_id = (SELECT MAX(r.id) FROM node_revision r WHERE r.node_id = node.id)
+
+          - group: database
+            name: query
+            params:
+              connection: '{= db =}'
+              sql: >-
+                INSERT INTO meta (key, value) VALUES ('installed', strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+
+          - group: script
+            name: runScript
+            params:
+              code: return true;
+            destination: installed
+
+    # ------------------------------------------------------------------ upgrades
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          SELECT (SELECT COUNT(*) FROM pragma_table_info('node') WHERE name = 'template') AS hasColumn,
+            (SELECT COUNT(*) FROM template) AS templates
+      destination: checks
+
+    - group: script
+      name: runScript
+      params:
+        context: { checks: '{= checks =}' }
+        code: |
+          return checks[0].hasColumn ? [] : [1];
+      destination: addTemplateColumn
+
+    - group: script
+      name: runScript
+      params:
+        context: { checks: '{= checks =}' }
+        code: |
+          return checks[0].templates ? [] : [1];
+      destination: addTemplates
+
+    - group: flow
+      name: forEachLoop
+      params:
+        iterable: '{= addTemplateColumn =}'
+        currentItem: once
+        actions:
+          - group: database
+            name: query
+            params:
+              connection: '{= db =}'
+              sql: ALTER TABLE node ADD COLUMN template TEXT
+
+    # The starter templates. {% raw %} keeps their Liquid as written: without it, this
+    # step would fill in the {{ }} itself.
+    - group: flow
+      name: forEachLoop
+      params:
+        iterable: '{= addTemplates =}'
+        currentItem: once
+        actions:
+          - group: database
+            name: query
+            params:
+              connection: '{= db =}'
+              sql: >-
+                INSERT INTO template (id, name, kind, type_id, html, is_default, created, changed) VALUES
+                ('article', 'Article', 'content', 'article', ?, 1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+                ('feature', 'Feature article', 'content', 'article', ?, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+                ('page', 'Basic page', 'content', 'page', ?, 1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+                ('home', 'Home page', 'listing', NULL, ?, 1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+                ('layout', 'Site layout', 'layout', NULL, ?, 1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+                ('stylesheet', 'Stylesheet', 'stylesheet', NULL, ?, 1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+              bindings:
+                - |-
+                  {% raw %}<article class="node node--article">
+                    <h1>{{ node.title }}</h1>
+                    <p class="meta">
+                      {{ node.created | date: "%B %d, %Y" }}
+                      {% if node.tags.size > 0 %}· {{ node.tags | map: "name" | join: ", " }}{% endif %}
+                    </p>
+                    {% if node.image %}
+                      <img src="{{ node.image.url }}" alt="{{ node.image.alt }}">
+                    {% endif %}
+                    {{ node.body }}
+                  </article>{% endraw %}
+                - |-
+                  {% raw %}<article class="node node--feature">
+                    {% if node.image %}<img src="{{ node.image.url }}" alt="{{ node.image.alt }}">{% endif %}
+                    <p class="kicker">{{ node.tags | map: "name" | join: " · " }}</p>
+                    <h1>{{ node.title }}</h1>
+                    <p class="lead">{{ node.summary }}</p>
+                    {{ node.body }}
+                    <p class="meta">Published {{ node.created | date: "%B %d, %Y" }}
+                      {% if node.changed != node.created %}· Updated {{ node.changed | date: "%B %d, %Y" }}{% endif %}</p>
+                  </article>{% endraw %}
+                - |-
+                  {% raw %}<article class="node node--page">
+                    <h1>{{ node.title }}</h1>
+                    {{ node.body }}
+                  </article>{% endraw %}
+                - |-
+                  {% raw %}<h1>{{ site.name }}</h1>
+                  {% for item in items limit: 20 %}
+                    <article class="teaser">
+                      <h2><a href="{{ item.url }}">{{ item.title }}</a></h2>
+                      <p class="meta">{{ item.created | date: "%b %d, %Y" }} · {{ item.type }}</p>
+                      <p>{{ item.summary | truncate: 160 }}</p>
+                    </article>
+                  {% else %}
+                    <p>Nothing published yet.</p>
+                  {% endfor %}{% endraw %}
+                - |-
+                  {% raw %}<!doctype html>
+                  <html lang="en">
+                  <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    <title>{% if page.title %}{{ page.title }} | {% endif %}{{ site.name }}</title>
+                    <link rel="stylesheet" href="{{ site.stylesheet }}">
+                  </head>
+                  <body>
+                    <header class="site-header">
+                      <a class="site-name" href="{{ site.url }}index.html">{{ site.name }}</a>
+                      <nav>{% for link in site.menu %}<a href="{{ link.url }}">{{ link.title }}</a>{% endfor %}</nav>
+                    </header>
+                    <main>
+                      {{ content }}
+                    </main>
+                    <footer>© {{ site.year }} {{ site.name }}</footer>
+                  </body>
+                  </html>{% endraw %}
+                - |-
+                  :root { color-scheme: light dark; --fg: #1d2330; --muted: #5f6b7a; --line: #dfe3ea; --accent: #0f5ea8; }
+                  @media (prefers-color-scheme: dark) { :root { --fg: #e6e9ef; --muted: #9aa4b2; --line: #333b47; --accent: #79b0ef; } }
+                  body { margin: 0; font: 17px/1.6 Georgia, "Times New Roman", serif; color: var(--fg); }
+                  .site-header { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline; padding: 20px max(16px, calc(50% - 360px)); border-bottom: 1px solid var(--line); font-family: system-ui, sans-serif; }
+                  .site-name { font-weight: 700; font-size: 20px; color: var(--fg); text-decoration: none; }
+                  nav { display: flex; gap: 16px; }
+                  nav a { color: var(--muted); text-decoration: none; }
+                  nav a:hover { color: var(--accent); }
+                  main { max-width: 720px; margin: 0 auto; padding: 32px 16px 48px; }
+                  a { color: var(--accent); }
+                  img { max-width: 100%; height: auto; border-radius: 6px; }
+                  .meta { color: var(--muted); font: 14px system-ui, sans-serif; }
+                  .kicker { color: var(--accent); font: 600 12px system-ui, sans-serif; text-transform: uppercase; letter-spacing: .08em; margin: 16px 0 0; }
+                  .node--feature h1 { font-size: 2.3em; line-height: 1.15; margin: .2em 0; }
+                  .lead { font-size: 1.15em; color: var(--muted); }
+                  .teaser { padding: 16px 0; border-bottom: 1px solid var(--line); }
+                  .teaser h2 { margin: 0; }
+                  footer { max-width: 720px; margin: 0 auto; padding: 24px 16px; color: var(--muted); font: 13px system-ui, sans-serif; border-top: 1px solid var(--line); }
+
+          # The sample "Welcome" article uses the Feature article template.
+          - group: database
+            name: query
+            params:
+              connection: '{= db =}'
+              sql: UPDATE node SET template = 'feature' WHERE id = 3 AND type = 'article' AND template IS NULL
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'

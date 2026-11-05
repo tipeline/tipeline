@@ -1,0 +1,33 @@
+version: 1.0.0
+name: Test Async Subtask Invalid
+description: |
+  Should fail: it combines an async `subtask.exec` with `outputs`, which must be rejected before the child runs, because the parent goes on before the child has a result.
+
+  Running it should stop right away with an error that names both `outputs` and `async`.
+author: Jose Daniel Estrada
+tags: [example, subtask, async, validation]
+
+pipeline:
+  variables:
+    - type: string
+      name: childResult
+      value: ''
+
+  actions:
+    - group: system
+      name: message
+      params:
+        text: 'About to call an async subtask with outputs — this should fail before the child runs.'
+
+    - group: subtask
+      name: exec
+      params:
+        path: ./test-async-subtask-child.yml
+        async: true
+        outputs:
+          childResult: childResult
+
+    - group: system
+      name: message
+      params:
+        text: 'This message should never run.'

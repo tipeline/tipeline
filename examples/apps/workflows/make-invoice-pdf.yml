@@ -1,0 +1,113 @@
+version: 1.0.0
+name: Make Invoice PDF
+description: |
+  Renders a small two-page invoice in a headless browser and prints it to `~/Tipeline/output/app-example-invoice.pdf`.
+
+  Used by the PDF Viewer example app.
+
+  **Inputs**
+
+  - `customer` — who the invoice is for
+  - `amount` — the total
+
+  **Outputs**
+
+  - `path` — where the PDF was written
+author: tipeline
+tags: [example, apps, invoice, pdf, browser]
+
+pipeline:
+  variables:
+    - type: string
+      name: customer
+      value: Acme Corp
+      visibility: public
+      description: Who the invoice is for. Set by the app.
+
+    - type: number
+      name: amount
+      value: 1200
+      visibility: public
+      description: The invoice total. Set by the app.
+
+    - type: string
+      name: path
+      value: ''
+      visibility: public
+      description: Where the PDF was written. Returned to the app.
+
+    - type: browser
+      name: browserInstance
+
+  actions:
+    - group: browser
+      name: launch
+      params:
+        headless: true
+        timeout: 30000
+      destination: browserInstance
+
+    - group: browser
+      name: setContent
+      params:
+        browser: '{= browserInstance =}'
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <style>
+              body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: #1f2937; }
+              h1 { margin: 0 0 4px; font-size: 28px; }
+              .muted { color: #6b7280; }
+              table { width: 100%; border-collapse: collapse; margin-top: 32px; }
+              th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #e5e7eb; }
+              td.num, th.num { text-align: right; }
+              .total { font-size: 20px; font-weight: 700; text-align: right; margin-top: 24px; }
+              .band { background: #2563eb; color: white; padding: 16px 20px; border-radius: 8px; margin-bottom: 32px; }
+              .page { page-break-after: always; }
+            </style>
+          </head>
+          <body>
+            <div class="page">
+              <div class="band"><h1>Invoice</h1><div>Tipeline example</div></div>
+              <p><strong>Billed to</strong><br>{{ customer }}</p>
+              <p class="muted">Due within 30 days</p>
+              <table>
+                <tr><th>Item</th><th class="num">Amount</th></tr>
+                <tr><td>Automation services</td><td class="num">{{ amount }}</td></tr>
+              </table>
+              <div class="total">Total: {{ amount }}</div>
+            </div>
+            <div>
+              <h1>Terms</h1>
+              <p class="muted">Page two, so there is something to scroll to.</p>
+              <p>Payment is due within 30 days of the invoice date. Thank you for your business.</p>
+            </div>
+          </body>
+          </html>
+
+    - group: browser
+      name: generatePDF
+      params:
+        browser: '{= browserInstance =}'
+        options:
+          path: '{{ _env.HOME }}/Tipeline/output/app-example-invoice.pdf'
+          format: A4
+          printBackground: true
+          margin: { top: '1.5cm', right: '1.5cm', bottom: '1.5cm', left: '1.5cm' }
+
+    - group: browser
+      name: close
+      params:
+        browser: '{= browserInstance =}'
+
+    - group: variable
+      name: set
+      params:
+        name: path
+        value: '{{ _env.HOME }}/Tipeline/output/app-example-invoice.pdf'
+
+    - group: system
+      name: message
+      params:
+        text: 'Invoice for {{ customer }} written to {{ path }}'

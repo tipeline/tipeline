@@ -1,0 +1,110 @@
+version: 1.0.0
+name: Make Tone
+description: |
+  Writes a short melody as a WAV file to `~/Tipeline/output/app-example-tone.wav` (built note by note, no other software needed) and returns its path, its length and the notes.
+
+  Used by the Media example app.
+
+  **Inputs**
+
+  - `melody` — "rising", "falling" or "chime"
+
+  **Outputs**
+
+  - `path` — where the WAV file was written
+  - `seconds` — its length
+  - `notes` — the notes played, e.g. "C5 E5 G5 C6"
+author: tipeline
+tags: [example, apps, audio, wav]
+
+pipeline:
+  variables:
+    - type: string
+      name: melody
+      value: rising
+      visibility: public
+      description: Which melody — rising, falling or chime. Set by the app.
+
+    - type: string
+      name: path
+      value: ''
+      visibility: public
+      description: Where the WAV file was written. Returned to the app.
+
+    - type: number
+      name: seconds
+      value: 0
+      visibility: public
+      description: The melody's length in seconds. Returned to the app.
+
+    - type: string
+      name: notes
+      value: ''
+      visibility: public
+      description: The notes played. Returned to the app.
+
+    - type: object
+      name: tone
+      value: {}
+
+  actions:
+    - group: script
+      name: runScript
+      params:
+        context:
+          melody: '{{ melody }}'
+        code: |
+          const scales = {
+            rising: [['C5', 523.25], ['E5', 659.25], ['G5', 783.99], ['C6', 1046.5]],
+            falling: [['C6', 1046.5], ['G5', 783.99], ['E5', 659.25], ['C5', 523.25]],
+            chime: [['E6', 1318.5], ['C6', 1046.5], ['D6', 1174.66], ['G5', 783.99]],
+          };
+          const notes = scales[melody];
+          if (!notes) throw new Error(`Unknown melody "${melody}" — use rising, falling or chime`);
+          const rate = 22050, noteSeconds = 0.6;
+          const perNote = Math.round(rate * noteSeconds);
+          // The 16-bit mono samples, written straight into a Buffer.
+          const data = Buffer.alloc(perNote * notes.length * 2);
+          notes.forEach(([, hz], n) => {
+            for (let i = 0; i < perNote; i++) {
+              const t = i / rate;
+              const fade = Math.min(1, i / 400) * Math.exp(-3 * t); // a soft bell
+              data.writeInt16LE(Math.round(Math.sin(2 * Math.PI * hz * t) * fade * 0.6 * 32767), (n * perNote + i) * 2);
+            }
+          });
+          // A WAV file: a 44-byte header, then the samples.
+          const header = Buffer.alloc(44);
+          header.write('RIFF', 0); header.writeUInt32LE(36 + data.length, 4); header.write('WAVE', 8);
+          header.write('fmt ', 12); header.writeUInt32LE(16, 16); header.writeUInt16LE(1, 20); header.writeUInt16LE(1, 22);
+          header.writeUInt32LE(rate, 24); header.writeUInt32LE(rate * 2, 28); header.writeUInt16LE(2, 32); header.writeUInt16LE(16, 34);
+          header.write('data', 36); header.writeUInt32LE(data.length, 40);
+          return {
+            base64: Buffer.concat([header, data]).toString('base64'),
+            seconds: noteSeconds * notes.length,
+            notes: notes.map(([name]) => name).join(' '),
+          };
+      destination: tone
+
+    - group: file
+      name: convertBase64ToFile
+      params:
+        dest: '{{ _env.HOME }}/Tipeline/output/app-example-tone.wav'
+        base64: '{{ tone.base64 }}'
+
+    - group: variable
+      name: set
+      params:
+        name: path
+        value: '{{ _env.HOME }}/Tipeline/output/app-example-tone.wav'
+
+    - group: variable
+      name: set
+      params:
+        name: seconds
+        value: '{= tone.seconds =}'
+
+    - group: variable
+      name: set
+      params:
+        name: notes
+        value: '{{ tone.notes }}'

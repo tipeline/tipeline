@@ -1,0 +1,132 @@
+schemaVersion: 4
+name: Custom Component
+description: A component written in HTML and JavaScript — a seat picker that gets the taken seats from a workflow (tipeline.data), tells the app what was picked (tipeline.emit, tipeline.setValue) and follows the app's colors
+author: tipeline
+
+workflows:
+  listSeats: { file: ./workflows/list-seats.yml }
+  bookSeats: { file: ./workflows/book-seats.yml }
+
+pages:
+  - id: seats
+    name: Seats
+    icon: Code2
+
+    runnables:
+      seats:
+        mode: run
+        workflow: listSeats
+        trigger: load
+        outputs: [hall]
+        persist: false
+      book:
+        mode: run
+        workflow: bookSeats
+        inputs: { seats: "{= seatPicker.value =}" }
+        outputs: [booked]
+        onSuccess:
+          - { type: toast, variant: success, message: "Booked {{ result.outputs.booked | join: ', ' }}" }
+          - { type: run, runnable: seats }
+        onError:
+          - { type: toast, variant: error, message: "{{ error.message }}" }
+          - { type: run, runnable: seats }
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 9 }
+        props:
+          markdown: true
+          content: "A **Custom** component is your own HTML, CSS and JavaScript. This seat picker gets the taken seats from a workflow as `tipeline.data`, fires **On pick** with `tipeline.emit`, and hands the chosen seats to the app with `tipeline.setValue` (`seatPicker.value`)."
+
+      - id: seatPicker
+        type: custom
+        name: Seat picker
+        layout: { x: 0, y: 9, w: 8, h: 40 }
+        props:
+          title: Pick your seats
+          data: "{= runnables.seats.outputs.hall =}"
+          eventNames: [pick]
+          code: |
+            <style>
+              .screen { margin: 4px auto 18px; width: 70%; height: 6px; border-radius: 6px;
+                background: var(--tl-muted-foreground); opacity: .35; }
+              .row { display: flex; gap: 8px; justify-content: center; margin-bottom: 8px; align-items: center; }
+              .label { width: 18px; color: var(--tl-muted-foreground); font-size: 12px; }
+              button { width: 34px; height: 30px; border-radius: 7px 7px 4px 4px; font: inherit; font-size: 11px;
+                border: 1px solid var(--tl-border); background: var(--tl-background); color: var(--tl-foreground); cursor: pointer; }
+              button:hover:not(:disabled) { border-color: var(--tl-primary); }
+              button.picked { background: var(--tl-primary); color: var(--tl-primary-foreground); border-color: var(--tl-primary); }
+              button:disabled { background: var(--tl-muted); color: var(--tl-muted-foreground); cursor: not-allowed; text-decoration: line-through; }
+              .gap { width: 14px; }
+              .legend { display: flex; gap: 16px; justify-content: center; color: var(--tl-muted-foreground); font-size: 12px; margin-top: 14px; }
+              .legend span::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 3px;
+                margin-right: 5px; vertical-align: -1px; border: 1px solid var(--tl-border); }
+              .legend .p::before { background: var(--tl-primary); } .legend .t::before { background: var(--tl-muted); }
+            </style>
+            <div class="screen" title="Screen"></div>
+            <div id="hall"></div>
+            <div class="legend"><span>Free</span><span class="p">Yours</span><span class="t">Taken</span></div>
+            <script>
+              let picked = [];
+              const hall = document.getElementById('hall');
+
+              function draw(data) {
+                if (!data || !data.rows) { hall.textContent = 'Loading seats…'; return; }
+                // Seats someone else booked since can't stay picked.
+                const before = picked.length;
+                picked = picked.filter((seat) => !data.taken.includes(seat));
+                if (picked.length !== before) tipeline.setValue(picked);
+                hall.innerHTML = '';
+                for (const row of data.rows) {
+                  const line = document.createElement('div');
+                  line.className = 'row';
+                  line.innerHTML = '<span class="label">' + row + '</span>';
+                  for (let n = 1; n <= data.perRow; n++) {
+                    if (n === data.perRow / 2 + 1) line.appendChild(Object.assign(document.createElement('span'), { className: 'gap' }));
+                    const seat = row + n;
+                    const button = document.createElement('button');
+                    button.textContent = n;
+                    button.title = seat;
+                    button.disabled = data.taken.includes(seat);
+                    button.classList.toggle('picked', picked.includes(seat));
+                    button.onclick = () => {
+                      picked = picked.includes(seat) ? picked.filter((s) => s !== seat) : [...picked, seat];
+                      button.classList.toggle('picked');
+                      tipeline.setValue(picked);
+                      tipeline.emit('pick', { seat, picked });
+                    };
+                    line.appendChild(button);
+                  }
+                  hall.appendChild(line);
+                }
+              }
+
+              tipeline.onData(draw);
+            </script>
+        events:
+          event:pick:
+            - { type: toast, message: "{% if seatPicker.lastEvent.payload.picked contains seatPicker.lastEvent.payload.seat %}Picked{% else %}Let go of{% endif %} {{ seatPicker.lastEvent.payload.seat }}" }
+
+      - id: summary
+        type: keyValue
+        name: Your seats
+        layout: { x: 8, y: 9, w: 4, h: 22 }
+        props:
+          title: Your seats
+          data:
+            seats: "{{ seatPicker.value | join: ', ' | default: 'none yet' }}"
+            count: "{{ seatPicker.value | size }}"
+            lastPick: "{{ seatPicker.lastEvent.payload.seat | default: '—' }}"
+
+      - id: bookButton
+        type: button
+        name: Book
+        frame: none
+        layout: { x: 8, y: 31, w: 4, h: 6 }
+        props:
+          label: "Book {{ seatPicker.value | size }} seat(s)"
+          disabled: "{% if seatPicker.value == blank %}true{% else %}false{% endif %}"
+        events:
+          click: [{ type: run, runnable: book }]

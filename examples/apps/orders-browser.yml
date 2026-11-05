@@ -1,0 +1,159 @@
+schemaVersion: 4
+name: Orders Browser
+description: Pagination and breadcrumbs — order cards a workflow returns one page at a time (with a page-size choice and a status filter), and an order page whose breadcrumb trail leads back
+author: tipeline
+
+workflows:
+  listOrders: { file: ./workflows/list-orders.yml }
+
+pages:
+  # ------------------------------------------------------------------ the list
+  - id: orders
+    name: Orders
+    icon: ShoppingBag
+
+    runnables:
+      orders:
+        mode: run
+        workflow: listOrders
+        trigger: load
+        # Only the page shown: the pager's offset and page size.
+        inputs:
+          status: "{{ statusFilter.value }}"
+          # Set when an order's breadcrumbs lead here: that customer's orders.
+          customer: "{{ page.params.customer }}"
+          offset: "{= pager.offset =}"
+          limit: "{= pager.pageSize =}"
+        outputs: [orders, total]
+        persist: false
+
+    components:
+      - id: trail
+        type: breadcrumbs
+        name: Trail
+        layout: { x: 0, y: 0, w: 6, h: 5 }
+        props:
+          homeIcon: true
+          # "Orders" clears the customer (the page without params).
+          items:
+            - { label: Orders, page: orders }
+            - { label: "{{ page.params.customer | default: 'All customers' }}" }
+
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 5, w: 12, h: 10 }
+        props:
+          markdown: true
+          content: "The workflow returns **one page** of orders and how many there are; the **pagination** below asks for the next one (`pager.offset`, `pager.pageSize`). A new filter goes back to page 1. Click an order: its page has **breadcrumbs** back here — to all orders, or to that customer's."
+
+      - id: statusFilter
+        type: select
+        name: Status
+        frame: none
+        layout: { x: 0, y: 15, w: 8, h: 9 }
+        props:
+          display: buttons
+          default: all
+          options:
+            - { value: all, label: All }
+            - { value: paid, label: Paid }
+            - { value: shipped, label: Shipped }
+            - { value: refunded, label: Refunded }
+        events:
+          # Back to page 1, then the first page of the new filter.
+          change:
+            - { type: reset, component: pager }
+            - { type: run, runnable: orders }
+
+      - id: orderCards
+        type: listView
+        name: Order cards
+        layout: { x: 0, y: 24, w: 12, h: 46 }
+        props:
+          data: "{= runnables.orders.outputs.orders =}"
+          itemName: order
+          itemsPerRow: 5
+          emptyText: No orders
+        events:
+          itemClick:
+            - type: navigate
+              page: order
+              params:
+                id: "{{ orderCards.selectedItem.id }}"
+                customer: "{{ orderCards.selectedItem.customer }}"
+                total: "{= orderCards.selectedItem.total =}"
+                status: "{{ orderCards.selectedItem.status }}"
+                date: "{{ orderCards.selectedItem.date }}"
+                items: "{= orderCards.selectedItem.items =}"
+
+      - id: cardTitle
+        type: text
+        name: Card title
+        frame: none
+        parent: { id: orderCards }
+        layout: { x: 0, y: 0, w: 12, h: 6 }
+        props:
+          content: "#{{ order.id }} · {{ order.customer }}"
+          fontWeight: semibold
+
+      - id: cardStatus
+        type: badge
+        name: Card status
+        frame: none
+        parent: { id: orderCards }
+        layout: { x: 0, y: 6, w: 6, h: 6 }
+        props:
+          value: "{= order.status =}"
+          colors: { paid: green, shipped: blue, refunded: red }
+
+      - id: cardTotal
+        type: text
+        name: Card total
+        frame: none
+        parent: { id: orderCards }
+        layout: { x: 6, y: 6, w: 6, h: 6 }
+        props:
+          content: "${{ order.total }}"
+
+      - id: pager
+        type: pagination
+        name: Pages
+        layout: { x: 0, y: 70, w: 12, h: 6 }
+        props:
+          total: "{= runnables.orders.outputs.total =}"
+          pageSize: 10
+          pageSizes: [10, 20, 50]
+        events:
+          change: [{ type: run, runnable: orders }]
+
+  # ------------------------------------------------------------------ one order
+  - id: order
+    name: Order
+    showInMenu: false
+
+    components:
+      - id: orderTrail
+        type: breadcrumbs
+        name: Trail
+        layout: { x: 0, y: 0, w: 8, h: 5 }
+        props:
+          homeIcon: true
+          items:
+            - { label: Orders, page: orders }
+            - { label: "{{ page.params.customer }}", page: orders, params: { customer: "{{ page.params.customer }}" } }
+            - { label: "#{{ page.params.id }}" }
+
+      - id: orderDetails
+        type: keyValue
+        name: Order
+        layout: { x: 0, y: 5, w: 6, h: 26 }
+        props:
+          title: "Order #{{ page.params.id }}"
+          data: "{= page.params =}"
+          fields:
+            - { key: customer, label: Customer }
+            - { key: date, label: Date, format: date }
+            - { key: items, label: Items }
+            - { key: total, label: Total, format: currency }
+            - { key: status, label: Status, format: badge, colors: { paid: green, shipped: blue, refunded: red } }

@@ -1,0 +1,117 @@
+version: 1.0.0
+name: Add Record
+description: |
+  Adds a record to the example record store (a JSON file in `~/Tipeline/output`) and returns it.
+
+  Used by the Records Manager example app's "New record" form.
+
+  **Inputs**
+
+  - `name` — record name, required
+  - `status` — active or pending
+  - `amount` — zero or more
+
+  **Outputs**
+
+  - `record` — the new record, with its id
+author: tipeline
+tags: [example, apps, records, create]
+
+pipeline:
+  variables:
+    - type: string
+      name: name
+      value: ''
+      visibility: public
+      required: true
+      description: Name of the new record.
+
+    - type: string
+      name: status
+      value: pending
+      visibility: public
+      description: Starting status — active or pending.
+
+    - type: number
+      name: amount
+      value: 0
+      visibility: public
+      description: Amount, zero or more.
+
+    - type: object
+      name: record
+      value: {}
+      visibility: public
+      description: The record that was added. Returned to the app.
+
+    - type: string
+      name: raw
+      value: ''
+
+    - type: string
+      name: updated
+      value: ''
+
+    - type: array
+      name: seed
+      value:
+        - { id: 1, name: Acme Corp, status: active, amount: 1200, updatedAt: '2026-09-01T10:00:00Z' }
+        - { id: 2, name: Globex, status: pending, amount: 850, updatedAt: '2026-09-12T15:30:00Z' }
+        - { id: 3, name: Initech, status: active, amount: 3400, updatedAt: '2026-09-20T09:15:00Z' }
+        - { id: 4, name: Umbrella, status: closed, amount: 410, updatedAt: '2026-09-25T18:45:00Z' }
+        - { id: 5, name: Soylent, status: pending, amount: 2300, updatedAt: '2026-09-28T11:05:00Z' }
+        - { id: 6, name: Hooli, status: active, amount: 990, updatedAt: '2026-10-01T08:20:00Z' }
+
+  actions:
+    # The store may not exist yet — start from the seed records.
+    - group: file
+      name: read
+      onError: continue
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-records.json'
+      destination: raw
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          raw: '{= raw =}'
+          seed: '{= seed =}'
+          name: '{{ name }}'
+          status: '{{ status }}'
+          amount: '{= amount =}'
+        code: |
+          const cleanName = String(name).trim();
+          if (!cleanName) throw new Error('A name is required');
+          if (!['active', 'pending'].includes(status)) throw new Error(`New records must be active or pending, not "${status}"`);
+          const value = Number(amount);
+          if (!Number.isFinite(value) || value < 0) throw new Error('Amount must be zero or more');
+          const all = raw ? JSON.parse(raw) : seed;
+          if (all.some((r) => r.name.toLowerCase() === cleanName.toLowerCase())) {
+            throw new Error(`A record named "${cleanName}" already exists`);
+          }
+          const id = all.reduce((max, r) => Math.max(max, r.id), 0) + 1;
+          all.push({ id, name: cleanName, status, amount: value, updatedAt: new Date().toISOString() });
+          return JSON.stringify(all, null, 2);
+      destination: updated
+
+    - group: file
+      name: write
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-records.json'
+        data: '{= updated =}'
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          updated: '{= updated =}'
+        code: |
+          const all = JSON.parse(updated);
+          return all[all.length - 1];
+      destination: record
+
+    - group: system
+      name: message
+      params:
+        text: 'Added record #{{ record.id }} {{ record.name }} ({{ record.status }}, {{ record.amount }}).'

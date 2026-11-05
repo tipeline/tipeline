@@ -1,0 +1,128 @@
+version: 1.0.0
+name: 'Traffic: Top paths and IP addresses for a customer application'
+description: |
+  The most viewed paths and the IP addresses sending the most requests to a customer application between two dates, from the traffic API. Returns both lists, how many of the top IP addresses look like bots and a short summary.
+
+  Gets the lists from "Data: Traffic API for a customer application", which keeps the API call in one place and caches it. Installing this workflow installs that one with it.
+author: tipeline
+tags: [traffic, paths, pages, ip-addresses, bots, crawlers, requests]
+
+pipeline:
+  variables:
+    # Inputs
+    - type: string
+      name: customerId
+      label: Customer id
+      description: The customer's id in the traffic API, e.g. 4821.
+      value: '4821'
+      required: true
+      visibility: public
+    - type: string
+      name: applicationId
+      label: Application id
+      description: The application's id in the traffic API, e.g. www.
+      value: www
+      required: true
+      visibility: public
+    - type: date
+      name: dateFrom
+      label: From
+      description: First day included. Empty = today.
+      visibility: public
+    - type: date
+      name: dateTo
+      label: To
+      description: Last day included. Empty = today.
+      visibility: public
+
+    # Outputs
+    - type: string
+      name: summary
+      label: Summary
+      description: One or two sentences with the top path, the top IP address and how many top IPs look like bots.
+      value: ''
+      visibility: public
+      output: true
+    - type: string
+      name: period
+      label: Period
+      description: The days the figures cover, e.g. 2026-09-01 to 2026-09-30.
+      value: ''
+      visibility: public
+      output: true
+    - type: array
+      name: topPaths
+      label: Top paths
+      description: The 10 most viewed paths, most views first. Each has path and views.
+      value: []
+      visibility: public
+      output: true
+    - type: array
+      name: topIps
+      label: Top IP addresses
+      description: >
+        The 10 IP addresses with the most requests, most first. Each has ip, requests,
+        share (percent of all requests) and bot (true when it looks like a crawler).
+      value: []
+      visibility: public
+      output: true
+    - type: number
+      name: botCount
+      label: Bots in the top 10
+      description: How many of the top 10 IP addresses look like bots.
+      value: 0
+      visibility: public
+      output: true
+
+    # Working data
+    - type: object
+      name: result
+      value: {}
+      visibility: private
+
+  actions:
+    - group: subtask
+      name: exec
+      label: Get the top paths and IP addresses
+      params:
+        path: ./data-traffic-api.yml
+        props:
+          customerId: '{{ customerId }}'
+          applicationId: '{{ applicationId }}'
+          dateFrom: '{= dateFrom =}'
+          dateTo: '{= dateTo =}'
+        outputs:
+          topPaths: topPaths # this workflow ← the helper
+          topIps: topIps
+          period: period
+
+    - group: script
+      name: runScript
+      label: Write the summary
+      params:
+        code: |
+          const n = (x) => x.toLocaleString('en-US');
+          const botCount = topIps.filter((ip) => ip.bot).length;
+          const [path] = topPaths;
+          const [ip] = topIps;
+          const summary =
+            `From ${period}, the most viewed path was ${path.path} (${n(path.views)} views). ` +
+            `Top IP ${ip.ip}: ${ip.share}% of requests${ip.bot ? ' (likely a bot)' : ''}. ` +
+            `${botCount} of the top ${topIps.length} IP addresses look like bots.`;
+          return { botCount, summary };
+        context:
+          topPaths: '{= topPaths =}'
+          topIps: '{= topIps =}'
+          period: '{{ period }}'
+      destination: result
+
+    - group: variable
+      name: set
+      params:
+        name: botCount
+        value: '{= result.botCount =}'
+    - group: variable
+      name: set
+      params:
+        name: summary
+        value: '{{ result.summary }}'

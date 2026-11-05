@@ -1,0 +1,68 @@
+<script setup lang="ts">
+import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { SEND } from '@/ipc-channels';
+import { invokeCore } from '@/utils/invoke';
+import { Switch } from '@/components/ui/switch';
+import { toast } from '@/components/ui/sonner';
+
+const { t } = useI18n();
+
+const desktopVersion = ref('');
+const coreVersion = ref<string | null>(null);
+const coreUnavailable = ref(false);
+
+const autoStart = ref<{ available: boolean; restartsOnCrash: boolean; enabled: boolean } | null>(null);
+
+async function setAutoStart(enabled: boolean) {
+  try {
+    autoStart.value = await window.ipcRenderer.invoke(SEND.AUTO_START_SET, enabled);
+  } catch {
+    toast.error(t('settings.about.autoStartFailed'));
+  }
+}
+
+onMounted(async () => {
+  autoStart.value = await window.ipcRenderer.invoke(SEND.AUTO_START_GET);
+  desktopVersion.value = await window.ipcRenderer.invoke(SEND.APP_VERSION);
+
+  try {
+    const status = await invokeCore<{ version?: string }>(SEND.STATUS);
+    coreVersion.value = status?.version ?? null;
+  } catch {
+    coreUnavailable.value = true;
+  }
+});
+</script>
+
+<template>
+  <section class="space-y-6">
+    <div>
+      <div class="text-sm font-medium">{{ t('settings.about.title') }}</div>
+      <div class="text-xs text-muted-foreground mt-0.5">{{ t('settings.about.description') }}</div>
+    </div>
+
+    <div class="rounded-lg border divide-y">
+      <div class="flex items-center justify-between px-4 py-3">
+        <span class="text-sm">{{ t('settings.about.desktopVersion') }}</span>
+        <span class="text-sm text-muted-foreground">{{ desktopVersion || t('settings.about.unknown') }}</span>
+      </div>
+      <div class="flex items-center justify-between px-4 py-3">
+        <span class="text-sm">{{ t('settings.about.coreVersion') }}</span>
+        <span class="text-sm text-muted-foreground">
+          {{ coreUnavailable ? t('settings.about.unavailable') : coreVersion || t('settings.about.unknown') }}
+        </span>
+      </div>
+    </div>
+
+    <div v-if="autoStart?.available" class="rounded-lg border flex items-center justify-between gap-4 px-4 py-3">
+      <div>
+        <label for="auto-start" class="text-sm">{{ t('settings.about.autoStart') }}</label>
+        <div class="text-xs text-muted-foreground mt-0.5">
+          {{ t(autoStart.restartsOnCrash ? 'settings.about.autoStartHint' : 'settings.about.autoStartHintLogin') }}
+        </div>
+      </div>
+      <Switch id="auto-start" :model-value="autoStart.enabled" class="shrink-0" @update:model-value="setAutoStart" />
+    </div>
+  </section>
+</template>

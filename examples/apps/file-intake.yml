@@ -1,0 +1,105 @@
+schemaVersion: 4
+name: File Intake
+description: File dropzones — drag files in (or browse), with kinds, sizes and counts checked, then hand their paths to a workflow that collects them into ~/Tipeline/output/inbox
+author: tipeline
+
+workflows:
+  collectFiles: { file: ./workflows/collect-files.yml }
+
+state:
+  saved: []
+
+pages:
+  - id: intake
+    name: Intake
+    icon: Upload
+
+    runnables:
+      collect:
+        mode: run
+        workflow: collectFiles
+        inputs: { files: "{= documents.value =}" }
+        outputs: [saved]
+        persist: false
+        onSuccess:
+          - { type: setState, key: saved, value: "{= result.outputs.saved =}" }
+          - { type: toast, variant: success, message: "Collected {{ result.outputs.saved | size }} file(s)" }
+          - { type: reset, component: documents }
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 9 }
+        props:
+          markdown: true
+          content: "**File dropzone** components. Drop files on them or click to browse. Files of the wrong kind, too big or over the limit are listed with the reason. The dropzone's value is the files' **paths**, so a workflow can read them where they are."
+
+      # Several files, checked: PDFs and images, up to 10 MB each, at most 5.
+      - id: documents
+        type: fileDrop
+        name: Documents
+        layout: { x: 0, y: 9, w: 7, h: 40 }
+        props:
+          label: Documents
+          accept: ".pdf, image/*"
+          maxSizeMb: 10
+          maxFiles: 5
+          description: "PDFs and images. Collect copies them into ~/Tipeline/output/inbox."
+
+      - id: collectButton
+        type: button
+        name: Collect
+        frame: none
+        layout: { x: 0, y: 49, w: 3, h: 6 }
+        props:
+          label: Collect files
+        events:
+          click:
+            - { type: run, runnable: collect }
+
+      # One file: a new one replaces it.
+      - id: avatar
+        type: fileDrop
+        name: Avatar
+        layout: { x: 7, y: 9, w: 5, h: 26 }
+        props:
+          label: Profile picture
+          multiple: false
+          accept: "image/*"
+          maxSizeMb: 2
+          placeholder: Drop a picture or click to choose one
+
+      # A picture you dropped shows here even from outside ~/Tipeline: files you pick
+      # yourself are always allowed (an installed app can't reach other files there).
+      - id: avatarPreview
+        type: image
+        name: Avatar preview
+        layout: { x: 0, y: 55, w: 7, h: 24 }
+        props:
+          src: "{{ avatar.value }}"
+          caption: Profile picture preview
+
+      - id: values
+        type: text
+        name: Values
+        layout: { x: 7, y: 35, w: 5, h: 34 }
+        props:
+          markdown: true
+          content: |
+            ### Values right now
+            **documents.value**
+            {% for path in documents.value %}
+            - `{{ path }}`
+            {% else %}
+            - (none)
+            {% endfor %}
+
+            **avatar.value** `{{ avatar.value | default: "(none)" }}`
+
+            **Last collected**
+            {% for path in state.saved %}
+            - `{{ path }}`
+            {% else %}
+            - (nothing yet)
+            {% endfor %}

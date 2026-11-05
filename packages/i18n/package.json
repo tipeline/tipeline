@@ -1,0 +1,48 @@
+{
+  "name": "@tipeline/i18n",
+  "version": "0.0.0",
+  "description": "Tipeline translation",
+  "license": "Apache-2.0",
+  "author": "José Daniel Estrada Guzmán",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc && tsc-alias -p tsconfig.json --resolve-full-paths --resolve-full-extension .js",
+    "prepack": "rm -rf dist && npm run build"
+  },
+  "keywords": [
+    "i18n",
+    "tipeline",
+    "translation"
+  ],
+  "files": [
+    "dist",
+    "locales",
+    "NOTICE"
+  ],
+  "dependencies": {
+    "i18next": "^25.3.2",
+    "i18next-fs-backend": "^2.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.13",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "prettier": "^3.6.2",
+    "prettier-plugin-tailwindcss": "^0.6.14",
+    "tsc-alias": "^1.8.16",
+    "typescript": "^5.8.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tipeline/tipeline.git",
+    "directory": "packages/i18n"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

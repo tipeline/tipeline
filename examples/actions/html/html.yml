@@ -1,0 +1,160 @@
+version: 1.0.0
+name: HTML Actions Test Suite
+description: |
+  Reads and changes HTML text without a browser: get elements, count them, find links and text, turn tables into JSON, extract structured data and remove elements.
+
+  **Parameter notes**
+
+  - `html` — use `{{ varName }}` to pass the HTML string
+  - `schema` — write it inline as a YAML object of text values, not as a string
+  - `outer` — in `getHtml`, chooses `outerHTML` over `innerHTML`
+
+author: Jose Daniel Estrada
+tags: [example, html, scraping, parsing, tables]
+
+pipeline:
+  variables:
+    # Full page HTML used across most extraction and search actions
+    - type: string
+      name: pageHtml
+      value: |
+        <html>
+          <head><title>Tipeline Dashboard</title></head>
+          <body>
+            <nav>
+              <a href="/tasks">Tasks</a>
+              <a href="/pipelines">Pipelines</a>
+              <a href="/settings">Settings</a>
+            </nav>
+            <h1>Pipeline Status</h1>
+            <p class="status">Running</p>
+            <p class="status">Completed</p>
+            <p class="status">completed — export finished</p>
+            <ul id="log">
+              <li>Task started</li>
+              <li>Step 1 completed</li>
+              <li>Step 2 completed</li>
+              <li>Export completed</li>
+            </ul>
+            <div id="main-content">
+              <article>
+                <h2 class="article-title">Automating Daily Reports</h2>
+                <span class="article-author">Jose Daniel Estrada</span>
+                <time class="article-date">2026-04-29</time>
+              </article>
+            </div>
+            <script>console.log("tracker");</script>
+            <table id="pricing-table">
+              <thead>
+                <tr><th>Plan</th><th>Price</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Free</td><td>$0</td><td>5</td></tr>
+                <tr><td>Pro</td><td>$29</td><td>Unlimited</td></tr>
+                <tr><td>Enterprise</td><td>$99</td><td>Unlimited</td></tr>
+              </tbody>
+            </table>
+            <form id="login">
+              <input type="text" name="user" />
+              <input type="password" name="pass" />
+            </form>
+          </body>
+        </html>
+
+  actions:
+    # -------------------------------------------------------
+    # Element Extraction
+    # -------------------------------------------------------
+
+    # Read the trimmed text of the first <h1> on the page
+    - group: html
+      name: getElement
+      params:
+        html: '{{ pageHtml }}'
+        selector: h1
+        attribute: text
+
+    # Collect the text of all status paragraphs into an array
+    - group: html
+      name: getElements
+      params:
+        html: '{{ pageHtml }}'
+        selector: .status
+        attribute: text
+
+    # Verify that the login form exists before attempting interaction
+    - group: html
+      name: elementExists
+      params:
+        html: '{{ pageHtml }}'
+        selector: 'form#login'
+
+    # Count how many table rows are in the pricing table body
+    - group: html
+      name: countElements
+      params:
+        html: '{{ pageHtml }}'
+        selector: '#pricing-table tbody tr'
+
+    # -------------------------------------------------------
+    # Links & Tables
+    # -------------------------------------------------------
+
+    # Extract all navigation links (text + href) scoped to the <nav> element
+    - group: html
+      name: getLinks
+      params:
+        html: '{{ pageHtml }}'
+        selector: nav
+
+    # Parse the pricing table into an array of row objects keyed by header
+    - group: html
+      name: tableToJson
+      params:
+        html: '{{ pageHtml }}'
+        selector: '#pricing-table'
+
+    # -------------------------------------------------------
+    # Structured Data
+    # -------------------------------------------------------
+
+    # Scrape article metadata using an inline selector schema
+    - group: html
+      name: extractData
+      params:
+        html: '{{ pageHtml }}'
+        schema:
+          title: .article-title
+          author: .article-author
+          date: .article-date
+
+    # -------------------------------------------------------
+    # HTML Manipulation
+    # -------------------------------------------------------
+
+    # Remove all <script> tags before storing or forwarding the HTML
+    - group: html
+      name: removeElements
+      params:
+        html: '{{ pageHtml }}'
+        selector: script
+
+    # Return the outerHTML of the main content block for downstream processing
+    - group: html
+      name: getHtml
+      params:
+        html: '{{ pageHtml }}'
+        selector: '#main-content'
+        outer: true
+
+    # -------------------------------------------------------
+    # Search
+    # -------------------------------------------------------
+
+    # Find all <li> items whose text contains the word "completed"
+    - group: html
+      name: findByText
+      params:
+        html: '{{ pageHtml }}'
+        selector: li
+        text: completed

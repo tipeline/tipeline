@@ -1,0 +1,14 @@
+{
+  "math": {
+    "divide": {
+      "dividend": {
+        "required": "Dividend is requerid",
+        "invalid": "Dividend is invalid"
+      },
+      "divisor": {
+        "required": "Divisor is requerid",
+        "invalid": "Divisor is invalid"
+      }
+    }
+  }
+}

@@ -1,0 +1,103 @@
+schemaVersion: 4
+name: Order Tracking
+description: Timelines — an order's history by day with icons and status colors, the same events as a compact "time ago" list, and the clicked event's details
+author: tipeline
+
+workflows:
+  orderHistory: { file: ./workflows/order-history.yml }
+
+pages:
+  - id: tracking
+    name: Tracking
+    icon: GitCommitVertical
+
+    runnables:
+      history:
+        mode: run
+        workflow: orderHistory
+        trigger: load
+        inputs: { orderId: "{{ orderPick.value }}" }
+        outputs: [order, events]
+        persist: false
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 7, h: 11 }
+        props:
+          markdown: true
+          content: "A **Timeline** shows what happened, in order. Pick an order: its history appears by day (newest first), with an icon and a status color per event. Click an event for its details."
+
+      - id: orderPick
+        type: select
+        name: Order
+        frame: none
+        layout: { x: 7, y: 0, w: 5, h: 11 }
+        props:
+          label: Order
+          display: buttons
+          default: A-1001
+          options:
+            - { value: A-1001, label: "A-1001 · Acme" }
+            - { value: A-1002, label: "A-1002 · Globex" }
+            - { value: A-1003, label: "A-1003 · Initech" }
+        events:
+          change: [{ type: run, runnable: history }]
+
+      - id: history
+        type: timeline
+        name: History
+        layout: { x: 0, y: 11, w: 6, h: 68 }
+        props:
+          title: "History of {{ runnables.history.outputs.order.id }}"
+          data: "{= runnables.history.outputs.events =}"
+          timeKey: at
+          sort: newest
+          groupByDay: true
+          iconKey: icon
+          colorKey: status
+          colors: { done: green, active: blue, warning: amber, pending: gray }
+          fields:
+            - { key: by, label: By }
+
+      - id: order
+        type: keyValue
+        name: Order
+        layout: { x: 6, y: 11, w: 6, h: 20 }
+        props:
+          title: Order
+          data: "{= runnables.history.outputs.order =}"
+          display: grid
+          fields:
+            - { key: id, label: Order }
+            - { key: customer, label: Customer }
+            - { key: total, label: Total, format: currency }
+            - { key: status, label: Status, format: badge, colors: { delivered: green, delayed: amber, pending: gray } }
+
+      - id: picked
+        type: keyValue
+        name: Event
+        layout: { x: 6, y: 31, w: 6, h: 20 }
+        props:
+          title: "{{ history.selectedItem.title | default: 'Event' }}"
+          data: "{= history.selectedItem =}"
+          emptyText: Click an event in the history
+          fields:
+            - { key: at, label: When, format: datetime }
+            - { key: description, label: Details }
+            - { key: by, label: By }
+            - { key: status, label: Status, format: badge, colors: { done: green, active: blue, warning: amber, pending: gray } }
+
+      - id: compact
+        type: timeline
+        name: Compact
+        layout: { x: 6, y: 51, w: 6, h: 28 }
+        props:
+          title: The same events, oldest first, as "time ago"
+          data: "{= runnables.history.outputs.events =}"
+          timeKey: at
+          sort: oldest
+          timeFormat: relative
+          colorKey: status
+          colors: { done: green, active: blue, warning: amber, pending: gray }

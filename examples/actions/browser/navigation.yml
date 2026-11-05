@@ -1,0 +1,156 @@
+version: 1.0.0
+name: Page navigation
+description: |
+  Moves around in a browser: go to a page, reload, back and forward, read the URL, title and source, set the page's content, and wait in different ways.
+author: Jose Daniel Estrada
+tags: [example, browser, navigation]
+pipeline:
+  variables:
+    - type: browser
+      name: browserInstance
+    - type: string
+      name: currentUrl
+    - type: string
+      name: pageTitle
+    - type: string
+      name: pageHtml
+    - type: object
+      name: navigationResponse
+  actions:
+    - group: browser
+      name: launch
+      params:
+        headless: true
+        timeout: 30000
+        viewport:
+          width: 1280
+          height: 720
+      destination: browserInstance
+
+    # -- goTo --
+    # Navigate to a URL and wait for the DOM to be ready; returns the full response
+    # details (status, statusText, ok, headers, remoteAddress, fromCache, timing, ...)
+    - group: browser
+      name: goTo
+      params:
+        browser: '{= browserInstance =}'
+        url: 'https://www.wikipedia.org/'
+        waitUntil: domcontentloaded
+        timeout: 30000
+      destination: navigationResponse
+
+    # -- wait: timeout --
+    # Pause for a fixed number of milliseconds
+    - group: browser
+      name: wait
+      params:
+        browser: '{= browserInstance =}'
+        type: timeout
+        timeout: 1000
+
+    # -- getUrl --
+    # Returns the current page URL
+    - group: browser
+      name: getUrl
+      params:
+        browser: '{= browserInstance =}'
+      destination: currentUrl
+
+    # -- getPageTitle --
+    # Returns the content of the <title> tag
+    - group: browser
+      name: getPageTitle
+      params:
+        browser: '{= browserInstance =}'
+      destination: pageTitle
+
+    # -- wait: selector --
+    # Block until a specific element appears in the DOM
+    - group: browser
+      name: wait
+      params:
+        browser: '{= browserInstance =}'
+        type: selector
+        selector: '#js-link-box-en'
+        selectorType: css
+
+    # -- goTo (second page) --
+    # Navigate to the English Wikipedia main page
+    - group: browser
+      name: goTo
+      params:
+        browser: '{= browserInstance =}'
+        url: 'https://en.wikipedia.org/wiki/Main_Page'
+        waitUntil: domcontentloaded
+
+    # -- wait: networkidle --
+    # Wait until all pending network requests have settled
+    - group: browser
+      name: wait
+      params:
+        browser: '{= browserInstance =}'
+        type: networkidle
+
+    # -- goBackPage --
+    # Navigate back one step in browser history (returns to wikipedia.org)
+    - group: browser
+      name: goBackPage
+      params:
+        browser: '{= browserInstance =}'
+
+    - group: browser
+      name: wait
+      params:
+        browser: '{= browserInstance =}'
+        type: timeout
+        timeout: 500
+
+    # -- goForwardPage --
+    # Navigate forward one step (back to en.wikipedia.org/wiki/Main_Page)
+    - group: browser
+      name: goForwardPage
+      params:
+        browser: '{= browserInstance =}'
+
+    - group: browser
+      name: wait
+      params:
+        browser: '{= browserInstance =}'
+        type: timeout
+        timeout: 500
+
+    # -- reload --
+    # Reload the current page
+    - group: browser
+      name: reload
+      params:
+        browser: '{= browserInstance =}'
+
+    # -- wait: navigation --
+    # Used after actions that trigger a page load — here paired with reload
+    - group: browser
+      name: wait
+      params:
+        browser: '{= browserInstance =}'
+        type: navigation
+
+    # -- setContent --
+    # Replace the entire page with custom HTML
+    - group: browser
+      name: setContent
+      params:
+        browser: '{= browserInstance =}'
+        content: '<h1 id="heading">Hello from Tipeline</h1><p id="body">setContent works.</p>'
+
+    # -- source --
+    # Returns the full outer HTML of the current page
+    - group: browser
+      name: source
+      params:
+        browser: '{= browserInstance =}'
+      destination: pageHtml
+
+    - group: browser
+      name: close
+      params:
+        browser: '{= browserInstance =}'

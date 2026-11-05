@@ -1,0 +1,145 @@
+schemaVersion: 4
+name: Open Links & Files
+description: Link and download buttons — the Open link and Open / save file actions open a web page, open a file a workflow wrote, show it in its folder or save a copy
+author: tipeline
+
+workflows:
+  writeReport: { file: ./workflows/write-report.yml }
+
+# Empty until the report is written. In Liquid an empty text is still "true", so the
+# buttons check `== blank` (empty or missing), not `{% if state.reportPath %}`.
+state:
+  reportPath: ""
+
+pages:
+  - id: files
+    name: Files
+    icon: FileDown
+
+    runnables:
+      report:
+        mode: run
+        workflow: writeReport
+        inputs: { title: "{{ reportTitle.value | default: 'Records report' }}" }
+        outputs: [path]
+        persist: false
+        onSuccess:
+          - { type: setState, key: reportPath, value: "{= result.outputs.path =}" }
+          - { type: toast, variant: success, message: "Report written" }
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 9 }
+        props:
+          markdown: true
+          content: "Buttons with the **Open link** and **Open / save file** actions. *Open* uses the file's usual app (only files inside ~/Tipeline, never programs); *Show in folder* and *Save as…* work for any file."
+
+      # ------------------------------------------------------------ links
+      - id: docsLink
+        type: button
+        name: Docs link
+        frame: none
+        layout: { x: 0, y: 9, w: 3, h: 6 }
+        props:
+          label: Open example.com
+          icon: ExternalLink
+          variant: link
+        events:
+          click: [{ type: openUrl, url: "https://example.com" }]
+
+      - id: mailLink
+        type: button
+        name: Mail link
+        frame: none
+        layout: { x: 3, y: 9, w: 3, h: 6 }
+        props:
+          label: Write an email
+          icon: Mail
+          variant: link
+        events:
+          click: [{ type: openUrl, url: "mailto:someone@example.com?subject=Tipeline%20report" }]
+
+      # ------------------------------------------------------------ a file a workflow writes
+      - id: reportTitle
+        type: input
+        name: Report title
+        frame: none
+        layout: { x: 0, y: 15, w: 6, h: 11 }
+        props:
+          label: Report title
+          placeholder: Records report
+
+      - id: writeButton
+        type: button
+        name: Write report
+        frame: none
+        layout: { x: 6, y: 17, w: 3, h: 6 }
+        props:
+          label: Write the report
+          icon: FilePen
+        events:
+          click: [{ type: run, runnable: report }]
+
+      - id: reportInfo
+        type: text
+        name: Report path
+        layout: { x: 0, y: 26, w: 12, h: 7 }
+        props:
+          markdown: true
+          content: "{% if state.reportPath != blank %}Report: `{{ state.reportPath }}`{% else %}Write the report first — then open it, show it or save a copy.{% endif %}"
+
+      - id: openReport
+        type: button
+        name: Open report
+        frame: none
+        layout: { x: 0, y: 33, w: 3, h: 6 }
+        props:
+          label: Open
+          icon: FileText
+          disabled: "{% if state.reportPath == blank %}true{% else %}false{% endif %}"
+        events:
+          click: [{ type: openFile, path: "{{ state.reportPath }}", mode: open }]
+
+      - id: revealReport
+        type: button
+        name: Show report
+        frame: none
+        layout: { x: 3, y: 33, w: 3, h: 6 }
+        props:
+          label: Show in folder
+          icon: FolderOpen
+          variant: outline
+          disabled: "{% if state.reportPath == blank %}true{% else %}false{% endif %}"
+        events:
+          click: [{ type: openFile, path: "{{ state.reportPath }}", mode: reveal }]
+
+      - id: saveReport
+        type: button
+        name: Download report
+        frame: none
+        layout: { x: 6, y: 33, w: 3, h: 6 }
+        props:
+          label: Download…
+          icon: Download
+          variant: outline
+          disabled: "{% if state.reportPath == blank %}true{% else %}false{% endif %}"
+        events:
+          # Runs only if a copy was saved (dismissing "Save as…" stops the list).
+          click:
+            - { type: openFile, path: "{{ state.reportPath }}", mode: save }
+            - { type: toast, message: "Copy saved" }
+
+      # ------------------------------------------------------------ refused on purpose
+      - id: refused
+        type: button
+        name: Refused
+        frame: none
+        layout: { x: 9, y: 33, w: 3, h: 6 }
+        props:
+          label: Try opening a program
+          icon: ShieldAlert
+          variant: ghost
+        events:
+          click: [{ type: openFile, path: "/System/Applications/Calculator.app", mode: open }]

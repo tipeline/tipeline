@@ -1,0 +1,68 @@
+version: 1.0.0
+name: Make Email Draft
+description: |
+  Writes an email draft — a subject and an HTML body — as a page in `~/Tipeline/output/app-example-email.html` and returns its path.
+
+  Used by the Rich Text example app.
+
+  **Inputs**
+
+  - `subject` — the email's subject
+  - `body` — the body, HTML
+
+  **Outputs**
+
+  - `path` — where the draft was written
+author: tipeline
+tags: [example, apps, email, draft, html]
+
+pipeline:
+  variables:
+    - type: string
+      name: subject
+      value: Hello
+      visibility: public
+      description: The email's subject. Set by the app.
+
+    - type: string
+      name: body
+      value: '<p>Hi!</p>'
+      visibility: public
+      description: The body, as HTML. Set by the app.
+
+    - type: string
+      name: path
+      value: ''
+      visibility: public
+      description: Where the draft was written. Returned to the app.
+
+    - type: string
+      name: page
+      value: ''
+
+  actions:
+    - group: script
+      name: runScript
+      params:
+        context:
+          subject: '{{ subject }}'
+          body: '{= body =}'
+        code: |
+          const escape = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+          return `<!doctype html><html><head><meta charset="utf-8"><title>${escape(subject)}</title>
+          <style>body{font-family:-apple-system,Helvetica,Arial,sans-serif;max-width:640px;margin:40px auto;color:#1f2937;line-height:1.55}
+          .subject{font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb;padding-bottom:12px;margin-bottom:20px}</style></head>
+          <body><div class="subject"><strong>Subject:</strong> ${escape(subject)}</div>${body}</body></html>`;
+      destination: page
+
+    - group: file
+      name: write
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-email.html'
+        data: '{= page =}'
+
+    - group: variable
+      name: set
+      params:
+        name: path
+        value: '{{ _env.HOME }}/Tipeline/output/app-example-email.html'

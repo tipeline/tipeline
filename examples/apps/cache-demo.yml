@@ -1,0 +1,85 @@
+schemaVersion: 4
+name: Cache Demo
+description: A report that takes 2 seconds to build, cached for 2 minutes — open it again, switch regions and come back, or press Refresh to skip the cache
+author: tipeline
+
+workflows:
+  slowReport: { file: ./workflows/slow-report.yml }
+
+pages:
+  - id: report
+    name: Report
+    icon: Zap
+
+    runnables:
+      report:
+        mode: run
+        workflow: slowReport
+        trigger: load
+        inputs:
+          region: "{{ region.value }}"
+        outputs: [rows, total, generatedAt]
+        persist: false
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 9 }
+        props:
+          markdown: true
+          content: "The **Slow Report** workflow takes about 2 seconds and keeps its outputs for **2 minutes** (`cache: { ttl: 2m }`). The first load of a region waits; loading it again — reopening the app, or switching away and back — is instant, and *Built at* doesn't change. **Refresh** runs it anyway and stores the new report."
+
+      - id: region
+        type: select
+        name: Region
+        layout: { x: 0, y: 9, w: 4, h: 12 }
+        props:
+          label: Region
+          default: north
+          options:
+            - { value: north, label: North }
+            - { value: south, label: South }
+            - { value: east, label: East }
+            - { value: west, label: West }
+        events:
+          change: [{ type: run, runnable: report }]
+
+      - id: refresh
+        type: button
+        name: Refresh
+        layout: { x: 4, y: 9, w: 4, h: 12 }
+        props:
+          label: Refresh (skip the cache)
+          icon: RefreshCw
+          variant: outline
+        events:
+          click: [{ type: run, runnable: report, refresh: true }]
+
+      - id: source
+        type: text
+        name: Where it came from
+        layout: { x: 8, y: 9, w: 4, h: 12 }
+        props:
+          markdown: true
+          content: "{% if runnables.report.isRunning %}Building the report…{% elsif runnables.report.cachedAt %}**From the cache** — no run happened.{% else %}**Freshly built** by a run.{% endif %}\n\nBuilt at {{ runnables.report.outputs.generatedAt }}"
+
+      - id: total
+        type: kpi
+        name: Revenue
+        layout: { x: 0, y: 21, w: 4, h: 14 }
+        props:
+          label: Revenue
+          value: "{= runnables.report.outputs.total =}"
+          format: currency
+
+      - id: rows
+        type: table
+        name: Sales
+        layout: { x: 4, y: 21, w: 8, h: 30 }
+        props:
+          data: "{= runnables.report.outputs.rows =}"
+          columns:
+            - { key: product, header: Product }
+            - { key: units, header: Units, format: number }
+            - { key: revenue, header: Revenue, format: currency }

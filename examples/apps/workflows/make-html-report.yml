@@ -1,0 +1,99 @@
+version: 1.0.0
+name: Make HTML Report
+description: |
+  Builds a small HTML report of the example records — a styled table whose rows tell the app which one was clicked — returns it, and also writes it to `~/Tipeline/output/app-example-report.html`.
+
+  Used by the Embed example app.
+
+  **Inputs**
+
+  - `title` — the report's heading
+
+  **Outputs**
+
+  - `html` — the report as HTML text
+  - `path` — where the HTML file was written
+author: tipeline
+tags: [example, apps, report, html]
+
+pipeline:
+  variables:
+    - type: string
+      name: title
+      value: Records report
+      visibility: public
+      description: The report's heading. Set by the app.
+
+    - type: string
+      name: html
+      value: ''
+      visibility: public
+      description: The report as HTML. Returned to the app.
+
+    - type: string
+      name: path
+      value: ''
+      visibility: public
+      description: Where the HTML file was written. Returned to the app.
+
+    - type: array
+      name: records
+      value:
+        - { id: 1, name: Acme Corp, status: active, amount: 1200 }
+        - { id: 2, name: Globex, status: pending, amount: 850 }
+        - { id: 3, name: Initech, status: active, amount: 3400 }
+        - { id: 4, name: Umbrella, status: closed, amount: 410 }
+        - { id: 5, name: Soylent, status: pending, amount: 2300 }
+
+  actions:
+    - group: script
+      name: runScript
+      params:
+        context:
+          records: '{= records =}'
+          title: '{{ title }}'
+        code: |
+          const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+          const money = (n) => '$' + n.toLocaleString('en-US');
+          const colors = { active: '#15803d', pending: '#b45309', closed: '#6b7280' };
+          const total = records.reduce((sum, r) => sum + r.amount, 0);
+          const rows = records.map((r) =>
+            `<tr data-id="${r.id}"><td>#${r.id}</td><td>${esc(r.name)}</td>` +
+            `<td><span class="pill" style="color:${colors[r.status] ?? '#333'}">${esc(r.status)}</span></td>` +
+            `<td class="num">${money(r.amount)}</td></tr>`).join('');
+          return `<!doctype html><html><head><meta charset="utf-8"><style>
+            body { font: 14px/1.4 system-ui, sans-serif; margin: 20px; color: #1f2937; }
+            h1 { font-size: 18px; margin: 0 0 4px; } p { color: #6b7280; margin: 0 0 14px; }
+            table { border-collapse: collapse; width: 100%; }
+            th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e5e7eb; }
+            tbody tr { cursor: pointer; } tbody tr:hover { background: #f3f4f6; }
+            .num { text-align: right; } .pill { font-weight: 600; }
+            tfoot td { font-weight: 600; }
+          </style></head><body>
+            <h1>${esc(title)}</h1>
+            <p>Written ${new Date().toLocaleString('en-US')} · click a row to send it to the app</p>
+            <table><thead><tr><th>ID</th><th>Name</th><th>Status</th><th class="num">Amount</th></tr></thead>
+            <tbody>${rows}</tbody><tfoot><tr><td colspan="3">Total</td><td class="num">${money(total)}</td></tr></tfoot></table>
+            <script>
+              const records = ${JSON.stringify(records)};
+              document.querySelectorAll('tbody tr').forEach((tr) =>
+                tr.addEventListener('click', () => {
+                  const record = records.find((r) => String(r.id) === tr.dataset.id);
+                  parent.postMessage({ type: 'recordClick', record }, '*');
+                })
+              );
+            </script>
+          </body></html>`;
+      destination: html
+
+    - group: file
+      name: write
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-report.html'
+        data: '{{ html }}'
+
+    - group: variable
+      name: set
+      params:
+        name: path
+        value: '{{ _env.HOME }}/Tipeline/output/app-example-report.html'

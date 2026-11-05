@@ -1,0 +1,100 @@
+schemaVersion: 4
+name: Document Library
+description: Tree view — a folder tree a workflow returns (with icons, file counts and a search box) that picks which files a table shows, and a tick-box tree of teams to share them with
+author: tipeline
+
+workflows:
+  listDocuments: { file: ./workflows/list-documents.yml }
+
+pages:
+  - id: library
+    name: Library
+    icon: FolderTree
+
+    runnables:
+      documents:
+        mode: run
+        workflow: listDocuments
+        trigger: load
+        # The folder clicked in the tree; nothing clicked: every file.
+        inputs:
+          folder: "{{ folders.selectedId }}"
+        outputs: [folders, files]
+        persist: false
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 8 }
+        props:
+          markdown: true
+          content: "Click a folder in the **tree**: the table shows its files (`folders.selectedId`). Type in the box to find a folder. On the right, **tick** the teams to share with — a department ticks all its teams (`share.checked`, `share.checkedLeaves`)."
+
+      - id: folders
+        type: tree
+        name: Folders
+        layout: { x: 0, y: 8, w: 3, h: 52 }
+        props:
+          title: Folders
+          data: "{= runnables.documents.outputs.folders =}"
+          labelKey: name
+          iconKey: icon
+          countKey: files
+          search: true
+          searchPlaceholder: Find a folder…
+          expandDepth: 1
+          emptyText: Loading folders…
+        events:
+          itemClick: [{ type: run, runnable: documents }]
+
+      - id: filesHeading
+        type: text
+        name: Files heading
+        frame: none
+        layout: { x: 3, y: 8, w: 5, h: 6 }
+        props:
+          content: "{{ folders.selectedNode.name | default: 'All files' }} · {{ runnables.documents.outputs.files | size }} files"
+          fontWeight: semibold
+
+      - id: files
+        type: table
+        name: Files
+        layout: { x: 3, y: 14, w: 5, h: 46 }
+        props:
+          data: "{= runnables.documents.outputs.files =}"
+          columns:
+            - { key: name, header: File }
+            - { key: size, header: Size }
+            - { key: modified, header: Modified, format: date }
+
+      - id: share
+        type: tree
+        name: Share with
+        layout: { x: 8, y: 8, w: 4, h: 37 }
+        props:
+          title: Share with
+          selection: multiple
+          # A flat list: each team names its department (parent).
+          parentKey: department
+          defaultChecked: [design]
+          expandDepth: 1
+          data:
+            - { id: eng, label: Engineering }
+            - { id: backend, label: Backend, department: eng }
+            - { id: frontend, label: Frontend, department: eng }
+            - { id: qa, label: QA, department: eng }
+            - { id: product, label: Product }
+            - { id: design, label: Design, department: product }
+            - { id: research, label: Research, department: product }
+            - { id: ops, label: Operations }
+            - { id: finance-team, label: Finance, department: ops }
+            - { id: legal-team, label: Legal, department: ops }
+
+      - id: shareSummary
+        type: text
+        name: Share summary
+        layout: { x: 8, y: 45, w: 4, h: 15 }
+        props:
+          markdown: true
+          content: "Teams ticked (**{{ share.checkedLeaves | size }}**): {{ share.checkedLeaves | map: 'label' | join: ', ' | default: 'none' }}\n\nTicked ids (departments when all their teams are): `{{ share.checked | join: ', ' }}`"

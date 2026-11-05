@@ -1,0 +1,83 @@
+schemaVersion: 4
+name: JSON Viewer
+description: Workflow outputs and nested data as collapsible trees — expand and collapse, raw text, and copy any value
+author: tipeline
+
+workflows:
+  listRecords: { file: ./workflows/list-records.yml }
+
+pages:
+  - id: viewer
+    name: Viewer
+    icon: Braces
+
+    runnables:
+      records:
+        mode: run
+        workflow: listRecords
+        trigger: load
+        inputs: { status: all }
+        outputs: [records, summary]
+        persist: false
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 9, h: 9 }
+        props:
+          markdown: true
+          content: "**JSON viewer** components. Click a key or the arrow to open it, use the toolbar to expand or collapse everything, switch to **Raw**, or copy. Hover a row to see its path and copy just that value."
+
+      - id: reload
+        type: button
+        name: Reload
+        frame: none
+        layout: { x: 9, y: 0, w: 3, h: 9 }
+        props:
+          label: Run the workflow again
+          variant: outline
+        events:
+          click:
+            - { type: run, runnable: records }
+
+      # Everything the workflow returned, two levels open.
+      - id: output
+        type: json
+        name: Workflow output
+        layout: { x: 0, y: 9, w: 6, h: 52 }
+        props:
+          title: "List Records — outputs"
+          data: "{= runnables.records.outputs =}"
+          expandDepth: 2
+          emptyText: Waiting for the workflow…
+
+      # Written in the app: nested objects and arrays, one level open.
+      - id: order
+        type: json
+        name: Order
+        layout: { x: 6, y: 9, w: 6, h: 30 }
+        props:
+          title: A nested order
+          data:
+            id: SO-1042
+            "customer name": Ada Lovelace
+            paid: true
+            coupon: null
+            total: 1289.5
+            lines:
+              - { sku: ENG-1, qty: 1, price: 999 }
+              - { sku: CARD-50, qty: 10, price: 29.05 }
+            shipping:
+              method: express
+              address: { city: London, country: GB }
+
+      # A string holding JSON (as many APIs and scripts return it) is parsed.
+      - id: fromText
+        type: json
+        name: From text
+        layout: { x: 6, y: 39, w: 6, h: 22 }
+        props:
+          title: Parsed from a JSON string
+          expandDepth: 0
+          data: '{"status":"ok","took":42,"hits":[{"id":7,"score":0.93},{"id":3,"score":0.71}]}'

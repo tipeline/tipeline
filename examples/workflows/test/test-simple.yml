@@ -1,0 +1,21 @@
+version: 1.0.0
+name: Test Simple
+description: |
+  The smallest test workflow: prints a message, then multiplies 7 by 2. Use it to check that runs work at all.
+author: Jose Daniel Estrada
+tags: [example, smoke test]
+pipeline:
+  variables:
+    - type: string
+      name: greeting
+      value: Hello world
+  actions:
+    - group: system
+      name: message
+      params:
+        text: 'This is the message: {{ greeting }}'
+    - group: math
+      name: multiply
+      params:
+        multiplier: 2
+        multiplicand: 7

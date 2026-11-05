@@ -1,0 +1,230 @@
+schemaVersion: 4
+name: Expense Approvals
+version: "1.0.0"
+description: Submit expenses and approve the big ones — approvals, a chart, a run console and paged tables, each backed by a workflow
+author: tipeline
+
+# Expenses of 500 or less are approved by the workflow itself. Larger ones stop at an
+# approval step and wait on the Overview page's Approvals inbox (or the workflow's Runs
+# tab); approving or rejecting continues that same run.
+#
+# Tip: "Open in window" on the app's page runs it on its own, without the builder.
+workflows:
+  listExpenses: { file: ./workflows/list-expenses.yml }
+  submitExpense: { file: ./workflows/submit-expense.yml }
+
+# The category picked by clicking a bar in the chart; empty means all categories.
+state:
+  category: ""
+
+pages:
+  # ------------------------------------------------------------------ overview
+  - id: overview
+    name: Overview
+    icon: LayoutDashboard
+
+    runnables:
+      # Read-only lookup: page load, filter changes, and after every decision.
+      expenses:
+        mode: run
+        workflow: listExpenses
+        trigger: load
+        inputs:
+          status: "{= statusFilter.value =}"
+          category: "{{ state.category }}"
+        outputs: [expenses, summary, byCategory]
+        persist: false
+
+    components:
+      - id: waitingKpi
+        type: kpi
+        name: Waiting
+        layout: { x: 0, y: 0, w: 3, h: 14 }
+        props: { label: Waiting for approval, value: "{= runnables.expenses.outputs.summary.pending =}" }
+
+      - id: waitingAmountKpi
+        type: kpi
+        name: Waiting amount
+        layout: { x: 3, y: 0, w: 3, h: 14 }
+        props:
+          label: Amount waiting
+          value: "{= runnables.expenses.outputs.summary.pendingAmount =}"
+          format: currency
+
+      - id: approvedKpi
+        type: kpi
+        name: Approved amount
+        layout: { x: 6, y: 0, w: 3, h: 14 }
+        props:
+          label: Approved
+          value: "{= runnables.expenses.outputs.summary.approvedAmount =}"
+          format: currency
+
+      - id: rejectedKpi
+        type: kpi
+        name: Rejected
+        layout: { x: 9, y: 0, w: 3, h: 14 }
+        props: { label: Rejected, value: "{= runnables.expenses.outputs.summary.rejected =}" }
+
+      # Pending approvals of this app's Submit Expense runs. Deciding continues the run,
+      # which records the decision; the list is then reloaded.
+      - id: inbox
+        type: approvals
+        name: Approvals
+        layout: { x: 0, y: 14, w: 5, h: 56 }
+        props:
+          title: Waiting for your approval
+          workflows: [submitExpense]
+        events:
+          decided:
+            - type: toast
+              message: "{% if inbox.lastDecision.approved %}Approved{% else %}Rejected{% endif %}: {{ inbox.lastDecision.title }}"
+              variant: success
+            - { type: run, runnable: expenses }
+
+      # Click a bar to show only that category in the table below.
+      - id: categoryChart
+        type: chart
+        name: By category
+        layout: { x: 5, y: 14, w: 7, h: 56 }
+        props:
+          chartType: bar
+          title: Amount by category
+          data: "{= runnables.expenses.outputs.byCategory =}"
+          xKey: category
+          series:
+            - { key: approved, label: Approved }
+            - { key: pending, label: Waiting }
+          stacked: true
+          format: currency
+        events:
+          pointClick:
+            - { type: setState, key: category, value: "{= categoryChart.selectedPoint.category =}" }
+            - { type: run, runnable: expenses }
+
+      - id: statusFilter
+        type: select
+        name: Status filter
+        layout: { x: 0, y: 70, w: 4, h: 14 }
+        props:
+          label: Show
+          default: all
+          options:
+            - { value: all, label: All expenses }
+            - { value: pending, label: Waiting for approval }
+            - { value: approved, label: Approved }
+            - { value: rejected, label: Rejected }
+        events:
+          change: [{ type: run, runnable: expenses }]
+
+      - id: categoryNote
+        type: text
+        name: Category filter
+        layout: { x: 4, y: 70, w: 5, h: 14 }
+        props:
+          content: "{% if state.category != '' %}Showing {{ state.category }} only — click another bar, or show all.{% else %}All categories — click a bar in the chart to filter.{% endif %}"
+          color: "#6b7280"
+
+      - id: allCategories
+        type: button
+        name: All categories
+        layout: { x: 9, y: 70, w: 3, h: 7 }
+        props:
+          label: Show all categories
+          variant: outline
+          disabled: "{% if state.category == '' %}true{% else %}false{% endif %}"
+        events:
+          click:
+            - { type: setState, key: category, value: "" }
+            - { type: run, runnable: expenses }
+
+      - id: expensesTable
+        type: table
+        name: Expenses
+        layout: { x: 0, y: 84, w: 12, h: 49 }
+        props:
+          data: "{= runnables.expenses.outputs.expenses =}"
+          searchable: true
+          exportable: true
+          pageSize: 8
+          columns:
+            - { key: id, header: "#", sortable: false }
+            - { key: description, header: Description }
+            - { key: category, header: Category }
+            - { key: amount, header: Amount, format: currency }
+            - { key: status, header: Status }
+            - { key: submittedAt, header: Submitted, format: datetime }
+            - { key: decidedBy, header: Decided by }
+            - { key: comment, header: Comment }
+
+  # ------------------------------------------------------------------ submit
+  - id: submit
+    name: Submit expense
+    icon: Receipt
+
+    runnables:
+      # Kept in run history (persist defaults to true) — the approval step needs it.
+      # onSuccess runs for expenses approved straight away; a large expense stops at
+      # its approval step and runs onPaused instead (it continues once decided).
+      submit:
+        mode: run
+        workflow: submitExpense
+        inputs:
+          description: "{= expenseForm.values.description =}"
+          category: "{= expenseForm.values.category =}"
+          amount: "{= expenseForm.values.amount =}"
+        outputs: [expense]
+        onSuccess:
+          - { type: toast, message: "{{ result.outputs.expense.description }} was approved automatically", variant: success }
+          - { type: reset, component: expenseForm }
+        onPaused:
+          - { type: toast, message: "Submitted — {{ expenseForm.values.description }} is waiting for approval on the Overview page" }
+          - { type: reset, component: expenseForm }
+
+    components:
+      - id: intro
+        type: alert
+        name: How it works
+        layout: { x: 0, y: 0, w: 12, h: 14 }
+        props:
+          title: Approval rule
+          message: Expenses of 500 or less are approved automatically. Larger ones wait for approval on the Overview page — watch the run log on the right.
+          variant: info
+
+      - id: expenseForm
+        type: form
+        name: Expense
+        layout: { x: 0, y: 14, w: 5, h: 49 }
+        props:
+          title: New expense
+          submitLabel: Submit
+          resetLabel: Clear
+          fields:
+            - { name: description, label: Description, type: text, required: true, placeholder: e.g. Train to Lisbon }
+            - name: category
+              label: Category
+              type: select
+              required: true
+              default: Travel
+              options: [Travel, Meals, Software, Equipment, Other]
+            - { name: amount, label: Amount, type: number, required: true, placeholder: "0" }
+        events:
+          submit: [{ type: run, runnable: submit }]
+
+      # Each workflow step as it runs, and whether it finished or is waiting for approval.
+      - id: submitLog
+        type: runConsole
+        name: Run log
+        layout: { x: 5, y: 14, w: 7, h: 49 }
+        props:
+          runnable: submit
+          title: Submit Expense — run log
+
+      - id: submitError
+        type: alert
+        name: Submit error
+        layout: { x: 0, y: 63, w: 12, h: 7 }
+        props:
+          message: "Couldn't submit the expense: {{ runnables.submit.error }}"
+          variant: error
+          visible: "{% if runnables.submit.error %}true{% else %}false{% endif %}"

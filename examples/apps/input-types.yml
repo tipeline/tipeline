@@ -1,0 +1,96 @@
+schemaVersion: 4
+name: Input Types
+description: Email, password, phone, currency, time and date & time — as standalone inputs and as form fields, with their checks and live values
+author: tipeline
+
+workflows: {}
+
+pages:
+  - id: inputs
+    name: Inputs
+    icon: TextCursorInput
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 7 }
+        props:
+          markdown: true
+          content: "The new **Input** types. A badly formatted email or phone says so when you leave the field, and blocks a form's submit. Currency gives back a number."
+
+      # ------------------------------------------------------------ standalone
+      - id: email
+        type: input
+        name: Email
+        layout: { x: 0, y: 7, w: 4, h: 13 }
+        props: { inputType: email, label: Email, placeholder: ana@example.com }
+
+      - id: phone
+        type: input
+        name: Phone
+        layout: { x: 4, y: 7, w: 4, h: 13 }
+        props: { inputType: phone, label: Phone, placeholder: +506 8888 1234 }
+
+      - id: password
+        type: input
+        name: Password
+        layout: { x: 8, y: 7, w: 4, h: 13 }
+        props:
+          inputType: password
+          label: Password
+          description: Mark the workflow variable it fills as secret
+
+      - id: price
+        type: input
+        name: Price
+        layout: { x: 0, y: 20, w: 4, h: 12 }
+        props: { inputType: currency, currency: EUR, label: Price, default: 19.9 }
+
+      - id: meetingTime
+        type: input
+        name: Time
+        layout: { x: 4, y: 20, w: 4, h: 12 }
+        props: { inputType: time, label: Meeting time, default: "09:30" }
+
+      - id: deliveryAt
+        type: input
+        name: Date & time
+        layout: { x: 8, y: 20, w: 4, h: 12 }
+        props: { inputType: datetime, label: Delivery }
+
+      # ------------------------------------------------------------ in a form
+      - id: signup
+        type: form
+        name: Sign up
+        layout: { x: 0, y: 32, w: 6, h: 70 }
+        props:
+          title: The same types in a form
+          submitLabel: Create account
+          fields:
+            - { name: email, label: Email, type: email, required: true }
+            - { name: password, label: Password, type: password, required: true }
+            - { name: phone, label: Phone, type: phone }
+            - { name: budget, label: Monthly budget, type: currency, currency: USD, default: 500 }
+            - { name: callAt, label: Best time to call, type: time }
+            - { name: startAt, label: Start, type: datetime }
+        events:
+          submit:
+            - { type: toast, variant: success, message: "Account for {{ signup.values.email }}" }
+
+      - id: values
+        type: text
+        name: Values
+        layout: { x: 6, y: 32, w: 6, h: 70 }
+        props:
+          markdown: true
+          content: |
+            ### Values right now
+            - **email**: `{{ email.value }}`
+            - **phone**: `{{ phone.value }}`
+            - **password**: {% if password.value != blank %}{{ password.value | size }} characters (never shown){% else %}empty{% endif %}
+            - **price**: `{{ price.value }}` — a number
+            - **meetingTime**: `{{ meetingTime.value }}`
+            - **deliveryAt**: `{{ deliveryAt.value }}`
+
+            **The form** — email `{{ signup.values.email }}`, phone `{{ signup.values.phone }}`, budget `{{ signup.values.budget }}`, call at `{{ signup.values.callAt }}`, start `{{ signup.values.startAt }}`

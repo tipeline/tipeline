@@ -1,0 +1,113 @@
+version: 1.0.0
+name: 'CMS: Revert Revision'
+description: |
+  Reverts a node of the CMS store (`~/Tipeline/output/cms/cms.db`) to one of its revisions. As in Drupal, nothing is lost: the old revision is copied forward as a new current revision, logged "Copy of the revision from `<date>`."
+
+  **Inputs**
+
+  - `revisionId` — the revision to go back to
+
+  **Outputs**
+
+  - `node` — `{ id, title, revertedTo }`
+author: tipeline
+tags: [example, apps, cms, revisions, history]
+
+pipeline:
+  variables:
+    - type: number
+      name: revisionId
+      value: 0
+      visibility: public
+      required: true
+      description: The revision to revert to.
+
+    - type: object
+      name: node
+      value: {}
+      visibility: public
+      description: The reverted node. Returned to the app.
+
+    - type: dbConnection
+      name: db
+
+    - type: array
+      name: found
+      value: []
+
+    - type: object
+      name: plan
+      value: {}
+
+  actions:
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          SELECT r.*, n.revision_id AS current,
+            (SELECT COUNT(*) FROM node o WHERE o.alias = r.alias AND o.id != r.node_id) AS aliasTaken
+          FROM node_revision r JOIN node n ON n.id = r.node_id WHERE r.id = ?
+        bindings: ['{= revisionId =}']
+      destination: found
+
+    - group: script
+      name: runScript
+      params:
+        context: { found: '{= found =}' }
+        code: |
+          const r = found[0];
+          if (!r) throw new Error('That revision was not found. Its content may have been deleted.');
+          if (r.current === r.id) throw new Error('This is already the current revision.');
+          if (r.aliasTaken > 0) throw new Error('Its URL alias ' + r.alias + ' is now used by other content. Change that content first.');
+          const date = new Date(r.created).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' });
+          return { nodeId: r.node_id, title: r.title, log: 'Copy of the revision from ' + date + ' UTC.', date };
+      destination: plan
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          UPDATE node SET title = r.title, status = r.status, alias = r.alias, fields = r.fields,
+            changed = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+          FROM (SELECT * FROM node_revision WHERE id = ?) AS r WHERE node.id = r.node_id
+        bindings: ['{= revisionId =}']
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          INSERT INTO node_revision (node_id, title, status, alias, fields, log, created)
+          SELECT id, title, status, alias, fields, ?, changed FROM node WHERE id = ?
+        bindings: ['{{ plan.log }}', '{= plan.nodeId =}']
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: UPDATE node SET revision_id = (SELECT MAX(id) FROM node_revision WHERE node_id = ?) WHERE id = ?
+        bindings: ['{= plan.nodeId =}', '{= plan.nodeId =}']
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      name: runScript
+      params:
+        context: { plan: '{= plan =}' }
+        code: |
+          return { id: plan.nodeId, title: plan.title, revertedTo: plan.date };
+      destination: node

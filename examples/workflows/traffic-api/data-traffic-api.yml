@@ -1,0 +1,194 @@
+version: 1.0.0
+name: 'Data: Traffic API for a customer application'
+description: |
+  Helper: calls the traffic API once for a customer application between two dates and returns views, visits, top paths and top IP addresses. Used by other workflows.
+
+  Each call is cached for an hour per customer, application and dates, so several workflows asking about the same period make one request between them.
+
+  This example answers with made-up figures so it runs anywhere. To use your own API, replace the "Call the traffic API (stand-in)" step with the HTTP request in the comment above it.
+author: tipeline
+tags: [helper, traffic, api]
+# Other workflows run it for its data; the assistant never offers it as an answer.
+helper: true
+
+pipeline:
+  variables:
+    # Inputs
+    - type: string
+      name: customerId
+      label: Customer id
+      description: The customer's id in the traffic API, e.g. 4821.
+      value: '4821'
+      required: true
+      visibility: public
+    - type: string
+      name: applicationId
+      label: Application id
+      description: The application's id in the traffic API, e.g. www.
+      value: www
+      required: true
+      visibility: public
+    - type: date
+      name: dateFrom
+      label: From
+      description: First day included. Empty = today.
+      visibility: public
+    - type: date
+      name: dateTo
+      label: To
+      description: Last day included. Empty = today.
+      visibility: public
+
+    # Outputs: the only values a calling workflow gets back
+    - type: string
+      name: period
+      label: Period
+      description: The days the figures cover, e.g. 2026-09-01 to 2026-09-30.
+      value: ''
+      visibility: public
+      output: true
+    - type: number
+      name: views
+      label: Views
+      description: Page views in the period.
+      value: 0
+      visibility: public
+      output: true
+    - type: number
+      name: visits
+      label: Visits
+      description: Visits (sessions) in the period.
+      value: 0
+      visibility: public
+      output: true
+    - type: array
+      name: topPaths
+      label: Top paths
+      description: The 10 most viewed paths, most views first. Each has path and views.
+      value: []
+      visibility: public
+      output: true
+    - type: array
+      name: topIps
+      label: Top IP addresses
+      description: >
+        The 10 IP addresses with the most requests, most first. Each has ip, requests,
+        share (percent of all requests) and bot (true when it looks like a crawler).
+      value: []
+      visibility: public
+      output: true
+
+    # Working data
+    - type: object
+      name: dates
+      description: The period as plain days, e.g. 2026-09-01.
+      value: {}
+      visibility: private
+    - type: object
+      name: response
+      description: The API's answer, as it came back.
+      value: {}
+      visibility: private
+
+  actions:
+    # Date inputs hold a date and time; the API takes plain days such as 2026-09-01.
+    - group: script
+      name: runScript
+      label: Work out the dates
+      params:
+        code: |
+          const day = (d) => new Date(d).toISOString().slice(0, 10);
+          return { from: day(dateFrom), to: day(dateTo) };
+        context:
+          dateFrom: '{= dateFrom =}'
+          dateTo: '{= dateTo =}'
+      destination: dates
+
+    # The real call. Replace the stand-in step below with it; the cache works the same way.
+    #
+    # - group: http
+    #   name: request
+    #   label: Call the traffic API
+    #   params:
+    #     url: 'https://traffic.example.com/v1/customers/{{ customerId }}/applications/{{ applicationId }}/traffic'
+    #     method: get
+    #     params:
+    #       from: '{{ dates.from }}'
+    #       to: '{{ dates.to }}'
+    #     headers:
+    #       Authorization: 'Bearer {{ _global.trafficApiToken }}'
+    #   destination: apiResponse
+    #   cache:
+    #     ttl: 1h
+    #
+    # http.request returns { status, headers, data }. Copy apiResponse.data into response so the
+    # steps below stay the same.
+
+    # Stand-in for the API: the same customer, application and dates always give the same figures.
+    # The cache key is the step's params after {{ }} is filled in, so each customer, application
+    # and period gets its own entry.
+    - group: script
+      name: runScript
+      label: Call the traffic API (stand-in)
+      params:
+        code: |
+          let seed = [...`${customerId}/${applicationId}/${dateFrom}/${dateTo}`].reduce(
+            (sum, c) => (sum * 31 + c.charCodeAt(0)) % 2147483647, 7);
+          const next = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+          const days = Math.max(1, Math.round((new Date(dateTo) - new Date(dateFrom)) / 86400000) + 1);
+          const views = Math.round(days * (40000 + next() * 30000));
+          const paths = ['/', '/admissions', '/programs', '/news', '/events', '/library',
+            '/contact', '/apply', '/about', '/search'];
+          const topPaths = paths
+            .map((path, i) => ({ path, views: Math.round(views * (0.3 / (i + 1)) * (0.8 + next() * 0.4)) }))
+            .sort((a, b) => b.views - a.views);
+          const requests = views * 3;
+          const topIps = Array.from({ length: 10 }, (_, i) => {
+            const count = Math.round(requests * (0.08 / (i + 1)) * (0.8 + next() * 0.4));
+            return {
+              ip: `203.0.113.${Math.floor(next() * 254) + 1}`,
+              requests: count,
+              share: Math.round((count / requests) * 1000) / 10,
+              bot: next() < 0.4,
+            };
+          }).sort((a, b) => b.requests - a.requests);
+          return { views, visits: Math.round(views / (2.2 + next())), topPaths, topIps };
+        context:
+          customerId: '{{ customerId }}'
+          applicationId: '{{ applicationId }}'
+          dateFrom: '{{ dates.from }}'
+          dateTo: '{{ dates.to }}'
+      destination: response
+      cache:
+        ttl: 1h
+
+    - group: variable
+      name: set
+      label: Save the period
+      params:
+        name: period
+        value: '{{ dates.from }} to {{ dates.to }}'
+    - group: variable
+      name: set
+      label: Save views
+      params:
+        name: views
+        value: '{= response.views =}'
+    - group: variable
+      name: set
+      label: Save visits
+      params:
+        name: visits
+        value: '{= response.visits =}'
+    - group: variable
+      name: set
+      label: Save top paths
+      params:
+        name: topPaths
+        value: '{= response.topPaths =}'
+    - group: variable
+      name: set
+      label: Save top IP addresses
+      params:
+        name: topIps
+        value: '{= response.topIps =}'

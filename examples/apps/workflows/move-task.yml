@@ -1,0 +1,116 @@
+version: 1.0.0
+name: Move Task
+description: |
+  Moves one example task to a column (status) and a place in it, and saves the board in the task store (a JSON file in `~/Tipeline/output`). A task without an owner can't start: moving it to "doing" fails — the app shows why and the card goes back.
+
+  Used by the Task Board example app.
+
+  **Inputs**
+
+  - `id` — task id
+  - `status` — the column it goes to, one of the board's column values
+  - `index` — its place in that column, from 0
+
+  **Outputs**
+
+  - `task` — the moved task
+author: tipeline
+tags: [example, apps, tasks, kanban]
+
+pipeline:
+  variables:
+    - type: number
+      name: id
+      value: 0
+      visibility: public
+      description: Id of the task to move. Set by the app.
+
+    - type: string
+      name: status
+      value: todo
+      visibility: public
+      description: The column it goes to. Set by the app.
+
+    - type: number
+      name: index
+      value: 0
+      visibility: public
+      description: Its place in that column, from 0. Set by the app.
+
+    - type: object
+      name: task
+      value: {}
+      visibility: public
+      description: The task after the move. Returned to the app.
+
+    - type: string
+      name: raw
+      value: ''
+
+    - type: string
+      name: saved
+      value: ''
+
+    - type: array
+      name: seed
+      value:
+        - { id: 1, title: Collect requirements, status: done, owner: Ana, due: "2026-10-02", priority: high }
+        - { id: 2, title: Design the signup form, status: doing, owner: Luis, due: "2026-10-09", priority: high }
+        - { id: 3, title: Write the welcome email, status: doing, owner: Ana, due: "2026-10-10", priority: medium }
+        - { id: 4, title: Set up the payment provider, status: todo, owner: Sam, due: "2026-10-14", priority: high }
+        - { id: 5, title: Translate the pages, status: todo, due: "2026-10-16", priority: low }
+        - { id: 6, title: Plan the launch, status: backlog, owner: Luis, priority: medium }
+        - { id: 7, title: Customer interviews, status: backlog, priority: low }
+
+  actions:
+    - group: file
+      name: read
+      onError: continue
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-tasks.json'
+      destination: raw
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          raw: '{= raw =}'
+          seed: '{= seed =}'
+          id: '{= id =}'
+          status: '{{ status }}'
+          index: '{= index =}'
+        code: |
+          // The columns are whatever the app's board defines — any value is a valid status.
+          if (!status) throw new Error('No column given');
+          const all = raw ? JSON.parse(raw) : seed;
+          const at = all.findIndex((t) => t.id === Number(id));
+          if (at < 0) throw new Error(`No task with id ${id}`);
+          const [task] = all.splice(at, 1);
+          if (status === 'doing' && !task.owner) {
+            throw new Error(`"${task.title}" has no owner yet — give it one before it starts`);
+          }
+          task.status = status;
+          // Its place: before the task now at `index` in that column, else after the column's last.
+          const column = all.filter((t) => t.status === status);
+          const before = column[Number(index)];
+          const after = column[column.length - 1];
+          const where = before ? all.indexOf(before) : after ? all.indexOf(after) + 1 : all.length;
+          all.splice(where, 0, task);
+          return JSON.stringify(all, null, 2);
+      destination: saved
+
+    - group: file
+      name: write
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-tasks.json'
+        data: '{= saved =}'
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          saved: '{= saved =}'
+          id: '{= id =}'
+        code: |
+          return JSON.parse(saved).find((t) => t.id === Number(id));
+      destination: task

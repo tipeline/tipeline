@@ -1,0 +1,37 @@
+version: 1.0.0
+name: Get PHP Version
+description: >
+  Returns the PHP version installed on this computer, or "not installed" when PHP
+  can't be found. Change the command to check another machine, e.g.
+  `ssh web1 php -r "echo PHP_VERSION;"`.
+author: Tipeline Examples
+tags:
+  - php
+  - version
+  - server
+
+pipeline:
+  variables:
+    - type: string
+      name: command
+      label: Command
+      description: The command that prints the PHP version, e.g. php -r "echo PHP_VERSION;"
+      value: php -r "echo PHP_VERSION;"
+      visibility: public
+
+    - type: string
+      name: version
+      label: PHP version
+      description: The PHP version, e.g. 8.3.12, or "not installed".
+      value: not installed
+      visibility: public
+      output: true
+
+  actions:
+    - group: system
+      name: runApplication
+      label: Read PHP version
+      onError: continue
+      params:
+        command: '{{ command }}'
+      destination: version

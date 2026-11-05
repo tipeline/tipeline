@@ -1,0 +1,133 @@
+schemaVersion: 4
+name: Record Cards
+version: "1.0.0"
+description: A List view — every record as a card with its own buttons, and the clicked card in a Details panel
+author: tipeline
+
+# The record store is shared with the other example apps.
+workflows:
+  listRecords: { file: ./workflows/list-records.yml }
+  setStatus: { file: ./workflows/set-records-status.yml }
+
+pages:
+  - id: cards
+    name: Cards
+    icon: LayoutList
+
+    runnables:
+      records:
+        mode: run
+        workflow: listRecords
+        trigger: load
+        inputs: { status: all }
+        outputs: [records]
+        persist: false
+
+      # Started by a card's buttons: `record` (the list's item name) is that card's record.
+      activate:
+        mode: run
+        workflow: setStatus
+        inputs: { records: ["{= record =}"], status: active }
+        onSuccess:
+          - { type: toast, variant: success, message: "{{ record.name }} is active" }
+          - { type: run, runnable: records }
+
+      close:
+        mode: run
+        workflow: setStatus
+        confirm: "Close {{ record.name }}?"
+        inputs: { records: ["{= record =}"], status: closed }
+        onSuccess:
+          - { type: toast, variant: success, message: "{{ record.name }} is closed" }
+          - { type: run, runnable: records }
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 7 }
+        props:
+          content: "Each card is the same template, repeated for every record. Its buttons act on that card's record; clicking a card shows it on the right."
+
+      # The list: its children below (parent: recordCards) are one card's template, and
+      # they call the current record `record` (itemName; without it, `item`).
+      - id: recordCards
+        type: listView
+        name: Record cards
+        layout: { x: 0, y: 7, w: 8, h: 70 }
+        props:
+          data: "{= runnables.records.outputs.records =}"
+          itemName: record
+          # The clicked card is found again by id after the records reload (e.g. after
+          # Activate), so the Details panel shows its new status right away.
+          itemKey: id
+          itemsPerRow: 2
+          emptyText: No records
+
+      - id: cardName
+        type: text
+        name: Card name
+        parent: { id: recordCards }
+        layout: { x: 0, y: 0, w: 8, h: 6 }
+        props:
+          content: "#{{ record.id }} · {{ record.name }}"
+          fontWeight: semibold
+
+      # The record's status as a colored badge (green active, amber pending, gray closed).
+      - id: cardStatus
+        type: badge
+        name: Card status
+        parent: { id: recordCards }
+        layout: { x: 8, y: 0, w: 4, h: 6 }
+        props:
+          value: "{= record.status =}"
+
+      - id: cardAmount
+        type: kpi
+        name: Card amount
+        parent: { id: recordCards }
+        layout: { x: 0, y: 6, w: 6, h: 13 }
+        props:
+          label: Amount
+          value: "{= record.amount =}"
+          format: currency
+
+      - id: cardActivate
+        type: button
+        name: Activate
+        parent: { id: recordCards }
+        layout: { x: 6, y: 6, w: 6, h: 6 }
+        props:
+          label: Activate
+          variant: outline
+          disabled: "{% if record.status == 'active' %}true{% else %}false{% endif %}"
+        events:
+          click: [{ type: run, runnable: activate }]
+
+      - id: cardClose
+        type: button
+        name: Close
+        parent: { id: recordCards }
+        layout: { x: 6, y: 12, w: 6, h: 7 }
+        props:
+          label: Close
+          variant: destructive
+          disabled: "{% if record.status == 'closed' %}true{% else %}false{% endif %}"
+        events:
+          click: [{ type: run, runnable: close }]
+
+      # The clicked card, in full.
+      - id: picked
+        type: keyValue
+        name: Selected card
+        layout: { x: 8, y: 7, w: 4, h: 35 }
+        props:
+          title: Selected card
+          data: "{= recordCards.selectedItem =}"
+          emptyText: Click a card
+          fields:
+            - { key: id, label: ID }
+            - { key: name, label: Name }
+            - { key: status, label: Status }
+            - { key: amount, label: Amount, format: currency }
+            - { key: updatedAt, label: Last updated, format: datetime }

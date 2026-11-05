@@ -1,0 +1,229 @@
+version: 1.0.0
+name: Spreadsheet test
+description: |
+  Runs the spreadsheet actions in order on one file: create it, manage sheets, read and write cells and ranges, set formulas and save. It starts with a new file on every run.
+
+author: Jose Daniel Estrada
+tags: [example, spreadsheet, excel, xlsx]
+
+pipeline:
+  variables:
+    - type: string
+      name: spreadsheetPath
+      value: '{{ _global.examplesDir }}/actions/spreadsheet/spreadsheet.xlsx'
+
+    - type: string
+      name: sheetName
+      value: Sales
+
+    - type: workbook
+      name: workbook
+
+  actions:
+    # ------------------------------------------------------------------
+    # File-level Actions
+    # ------------------------------------------------------------------
+
+    - group: spreadsheet
+      name: create
+      params:
+        path: '{{ spreadsheetPath }}'
+      destination: workbook
+
+    - group: spreadsheet
+      name: getSheetNames
+      params:
+        workbook: '{= workbook =}'
+
+    # ------------------------------------------------------------------
+    # Sheet Management
+    # ------------------------------------------------------------------
+
+    # Rename the default Sheet1 to our target sheet name
+    - group: spreadsheet
+      name: renameSheet
+      params:
+        workbook: '{= workbook =}'
+        name: Sheet1
+        newName: Sales
+      destination: workbook
+
+    # Add a temporary staging sheet
+    - group: spreadsheet
+      name: addSheet
+      params:
+        workbook: '{= workbook =}'
+        name: Staging
+      destination: workbook
+
+    # Verify both sheets exist
+    - group: spreadsheet
+      name: getSheetNames
+      params:
+        workbook: '{= workbook =}'
+
+    # Remove the staging sheet — it was just for testing
+    - group: spreadsheet
+      name: deleteSheet
+      params:
+        workbook: '{= workbook =}'
+        name: Staging
+      destination: workbook
+
+    # ------------------------------------------------------------------
+    # Seed data with writeRange
+    # ------------------------------------------------------------------
+
+    - group: spreadsheet
+      name: writeRange
+      params:
+        workbook: '{= workbook =}'
+        sheet: '{{ sheetName }}'
+        startCell: A1
+        values:
+          - [Name, Age, Score]
+          - [Alice, 30, 95]
+          - [Bob, 25, 87]
+          - [Charlie, 35, 72]
+      destination: workbook
+
+    # ------------------------------------------------------------------
+    # Sheet reading
+    # ------------------------------------------------------------------
+
+    # Convert sheet to array of objects keyed by headers
+    - group: spreadsheet
+      name: toJson
+      params:
+        workbook: '{= workbook =}'
+        sheet: '{{ sheetName }}'
+
+    # Convert sheet to a raw 2D array (header row included)
+    - group: spreadsheet
+      name: toArray
+      params:
+        workbook: '{= workbook =}'
+        sheet: '{{ sheetName }}'
+
+    # Return the A1:XN reference of the used range
+    - group: spreadsheet
+      name: getUsedRange
+      params:
+        workbook: '{= workbook =}'
+        sheet: '{{ sheetName }}'
+
+    # ------------------------------------------------------------------
+    # Row Operations
+    # ------------------------------------------------------------------
+
+    # Append a new row after the last used row
+    - group: spreadsheet
+      name: appendRow
+      params:
+        workbook: '{= workbook =}'
+        sheet: '{{ sheetName }}'
+        values: [Dave, 28, 88]
+      destination: workbook
+
+    - group: spreadsheet
+      name: getRowCount
+      params:
+        workbook: '{= workbook =}'
+        sheet: '{{ sheetName }}'
+
+    # ------------------------------------------------------------------
+    # Cell Operations
+    # ------------------------------------------------------------------
+
+    # Read row 1, col 1 — Alice's Age
+    - group: spreadsheet
+      name: readCell
+      params:
+        workbook: '{= workbook =}'
+        sheet: '{{ sheetName }}'
+        row: 1
+        col: 1
+
+    # Write a new value to row 0, col 4 (column E)
+    - group: spreadsheet
+      name: writeCell
+      params:
+        workbook: '{= workbook =}'
+        sheet: '{{ sheetName }}'
+        row: 0
+        col: 4
+        value: Avg
+      destination: workbook
+
+    # Convert (row 0, col 4) to an A1-style reference
+    - group: spreadsheet
+      name: getCellAddress
+      params:
+        row: 0
+        col: 4
+
+    # Read the same cell by its A1 reference
+    - group: spreadsheet
+      name: readCellByRef
+      params:
+        workbook: '{= workbook =}'
+        sheet: '{{ sheetName }}'
+        cellRef: E1
+
+    # Write a formula to E2 — average of the Score column (Alice through Dave)
+    - group: spreadsheet
+      name: setCellFormula
+      params:
+        workbook: '{= workbook =}'
+        sheet: '{{ sheetName }}'
+        cellRef: E2
+        formula: 'AVERAGE(C2:C5)'
+      destination: workbook
+
+    # Clear the Avg header cell (row 0, col 4)
+    - group: spreadsheet
+      name: clearCell
+      params:
+        workbook: '{= workbook =}'
+        sheet: '{{ sheetName }}'
+        row: 0
+        col: 4
+      destination: workbook
+
+    # ------------------------------------------------------------------
+    # Range Operations
+    # ------------------------------------------------------------------
+
+    # Read the data block A1:C5
+    - group: spreadsheet
+      name: readRange
+      params:
+        workbook: '{= workbook =}'
+        sheet: '{{ sheetName }}'
+        startCell: A1
+        endCell: C5
+
+    # Clear the leftover formula cell at E2
+    - group: spreadsheet
+      name: clearRange
+      params:
+        workbook: '{= workbook =}'
+        sheet: '{{ sheetName }}'
+        startCell: E1
+        endCell: E5
+      destination: workbook
+
+    # ------------------------------------------------------------------
+    # Save and verify on disk
+    # ------------------------------------------------------------------
+
+    - group: spreadsheet
+      name: save
+      params:
+        workbook: '{= workbook =}'
+        path: '{{ spreadsheetPath }}'
+
+    - group: spreadsheet
+      name: getSpreadsheetInfo
+      params:
+        path: '{{ spreadsheetPath }}'

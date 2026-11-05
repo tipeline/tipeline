@@ -1,0 +1,290 @@
+version: 1.0.0
+name: Element actions
+description: |
+  Works with the elements of a page: hover, focus, type, click, read, extract structured data, set checkboxes and selects, check for content and run JavaScript.
+author: Jose Daniel Estrada
+tags: [example, browser, scraping, forms]
+pipeline:
+  variables:
+    - type: browser
+      name: browserInstance
+    - type: string
+      name: headingText
+    - type: string
+      name: inputValue
+    - type: array
+      name: itemTexts
+    - type: array
+      name: itemLinks
+    - type: array
+      name: productRows
+    - type: boolean
+      name: isChecked
+    - type: array
+      name: selectedValues
+    - type: boolean
+      name: pageHasText
+    - type: boolean
+      name: pageHasElement
+    - type: boolean
+      name: pageLacksElement
+    - type: any
+      name: jsResult
+  actions:
+    - group: browser
+      name: launch
+      params:
+        headless: true
+        timeout: 30000
+        viewport:
+          width: 1280
+          height: 720
+      destination: browserInstance
+
+    # Inject a self-contained test page so all selectors are under our control
+    - group: browser
+      name: setContent
+      params:
+        browser: '{= browserInstance =}'
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <body>
+            <h1 id="heading">Welcome to Tipeline Test</h1>
+            <nav id="nav">
+              <a id="nav-link" href="#section1">Go to Section 1</a>
+            </nav>
+            <section id="section1">
+              <p id="paragraph">Browser automation with Tipeline</p>
+              <ul id="item-list">
+                <li class="item"><a class="item-link" href="/products/1">Product Alpha</a></li>
+                <li class="item"><a class="item-link" href="/products/2">Product Beta</a></li>
+                <li class="item"><a class="item-link" href="/products/3">Product Gamma</a></li>
+              </ul>
+            </section>
+            <form id="test-form">
+              <input id="text-input" type="text" placeholder="Type here..." />
+              <input id="checkbox-input" type="checkbox" />
+              <select id="country-select">
+                <option value="">Select country</option>
+                <option value="US">United States</option>
+                <option value="CR">Costa Rica</option>
+                <option value="MX">Mexico</option>
+              </select>
+              <button id="submit-btn" type="button">Submit</button>
+            </form>
+          </body>
+          </html>
+
+    # -- hoverElement --
+    # Move the cursor over the nav link
+    - group: browser
+      name: hoverElement
+      params:
+        browser: '{= browserInstance =}'
+        selector: '#nav-link'
+        selectorType: css
+
+    # -- focusElement --
+    # Give keyboard focus to the text input
+    - group: browser
+      name: focusElement
+      params:
+        browser: '{= browserInstance =}'
+        selector: '#text-input'
+        selectorType: css
+
+    # -- typeInElement --
+    # Type a string into the focused text input
+    - group: browser
+      name: typeInElement
+      params:
+        browser: '{= browserInstance =}'
+        selector: '#text-input'
+        selectorType: css
+        text: 'Hello Tipeline'
+
+    # -- clickElement: basic click --
+    - group: browser
+      name: clickElement
+      params:
+        browser: '{= browserInstance =}'
+        selector: '#submit-btn'
+        selectorType: css
+
+    # -- clickElement: wait for a selector to appear after click --
+    - group: browser
+      name: clickElement
+      params:
+        browser: '{= browserInstance =}'
+        selector: '#nav-link'
+        selectorType: css
+        waitFor:
+          type: selector
+          selector: '#section1'
+          selectorType: css
+
+    # -- getElement: read text content from an element --
+    - group: browser
+      name: getElement
+      params:
+        browser: '{= browserInstance =}'
+        selector: '#heading'
+        selectorType: css
+        attribute: text
+      destination: headingText
+
+    # -- getElement: read an attribute --
+    - group: browser
+      name: getElement
+      params:
+        browser: '{= browserInstance =}'
+        selector: '#nav-link'
+        selectorType: css
+        attribute: href
+      destination: inputValue
+
+    # -- getElements: collect text from all matching elements --
+    - group: browser
+      name: getElements
+      params:
+        browser: '{= browserInstance =}'
+        selector: '.item-link'
+        selectorType: css
+        attribute: text
+      destination: itemTexts
+
+    # -- getElements: collect href from all matching elements --
+    - group: browser
+      name: getElements
+      params:
+        browser: '{= browserInstance =}'
+        selector: '.item-link'
+        selectorType: css
+        attribute: href
+      destination: itemLinks
+
+    # -- extractStructuredData --
+    # Scrape the item list into rows of [name, link]
+    - group: browser
+      name: extractStructuredData
+      params:
+        browser: '{= browserInstance =}'
+        itemSelector: '#item-list .item'
+        selectorType: css
+        fieldSelectors:
+          - selector: '.item-link'
+            selectorType: css
+            attribute: text
+          - selector: '.item-link'
+            selectorType: css
+            attribute: href
+      destination: productRows
+
+    # -- setCheckState --
+    # Check the checkbox
+    - group: browser
+      name: setCheckState
+      params:
+        browser: '{= browserInstance =}'
+        selector: '#checkbox-input'
+        selectorType: css
+        checked: true
+
+    # -- getCheckState --
+    # Read the checkbox state (should be true)
+    - group: browser
+      name: getCheckState
+      params:
+        browser: '{= browserInstance =}'
+        selector: '#checkbox-input'
+        selectorType: css
+      destination: isChecked
+
+    # -- setSelectState --
+    # Select Costa Rica from the dropdown
+    - group: browser
+      name: setSelectState
+      params:
+        browser: '{= browserInstance =}'
+        selector: '#country-select'
+        selectorType: css
+        value: 'CR'
+
+    # -- getSelectState --
+    # Read back the currently selected options
+    - group: browser
+      name: getSelectState
+      params:
+        browser: '{= browserInstance =}'
+        selector: '#country-select'
+        selectorType: css
+      destination: selectedValues
+
+    # -- contains: contain-text --
+    - group: browser
+      name: contains
+      params:
+        browser: '{= browserInstance =}'
+        mode: contain-text
+        value: 'Browser automation with Tipeline'
+      destination: pageHasText
+
+    # -- contains: not-contain-text --
+    - group: browser
+      name: contains
+      params:
+        browser: '{= browserInstance =}'
+        mode: not-contain-text
+        value: 'This string does not exist'
+
+    # -- contains: contain-element --
+    - group: browser
+      name: contains
+      params:
+        browser: '{= browserInstance =}'
+        mode: contain-element
+        value: '#heading'
+        selectorType: css
+      destination: pageHasElement
+
+    # -- contains: not-contain-element --
+    - group: browser
+      name: contains
+      params:
+        browser: '{= browserInstance =}'
+        mode: not-contain-element
+        value: '#nonexistent-id'
+        selectorType: css
+      destination: pageLacksElement
+
+    # -- runJavaScript: no context --
+    # Count the number of list items in the page
+    - group: browser
+      name: runJavaScript
+      params:
+        browser: '{= browserInstance =}'
+        script: |
+          const items = document.querySelectorAll('.item');
+          return items.length;
+      destination: jsResult
+
+    # -- runJavaScript: with context --
+    # Collect all hrefs that start with the given prefix
+    - group: browser
+      name: runJavaScript
+      params:
+        browser: '{= browserInstance =}'
+        script: |
+          const links = document.querySelectorAll('a[href]');
+          return Array.from(links)
+            .map(a => a.getAttribute('href'))
+            .filter(h => h.startsWith(prefix));
+        context:
+          prefix: '/products'
+      destination: itemLinks
+
+    - group: browser
+      name: close
+      params:
+        browser: '{= browserInstance =}'

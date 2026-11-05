@@ -1,0 +1,114 @@
+schemaVersion: 4
+name: Color Palette
+description: Color picker — pick a base color (palette, hue, swatches, eyedropper or hex) and a workflow makes its shades; a form with see-through colors for a label; colors shown as swatches in a table and details
+author: tipeline
+
+workflows:
+  makePalette: { file: ./workflows/make-palette.yml }
+
+state:
+  label: null
+
+pages:
+  - id: palette
+    name: Palette
+    icon: Palette
+
+    runnables:
+      palette:
+        mode: run
+        workflow: makePalette
+        trigger: load
+        inputs:
+          base: "{{ base.value }}"
+        outputs: [shades, summary]
+        persist: false
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 8 }
+        props:
+          markdown: true
+          content: "Pick a **color**: click the swatch for the palette (drag the square and the hue strip, pick a swatch, or take a color from the screen with the eyedropper), or type its hex. The workflow makes ten shades once you let go (`base.value`, **On change**). Tables and details show colors with `format: color`."
+
+      - id: base
+        type: input
+        name: Base color
+        layout: { x: 0, y: 8, w: 4, h: 13 }
+        props:
+          inputType: color
+          label: Base color
+          default: "#3b82f6"
+          required: true
+          description: The palette is made from this color
+          swatches: ["#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#3b82f6", "#6366f1", "#a855f7", "#ec4899", "#64748b"]
+        events:
+          change: [{ type: run, runnable: palette }]
+
+      - id: summary
+        type: keyValue
+        name: Summary
+        layout: { x: 0, y: 21, w: 4, h: 29 }
+        props:
+          title: Base color
+          data: "{= runnables.palette.outputs.summary =}"
+          fields:
+            - { key: base, label: Color, format: color }
+            - { key: complement, label: Complement, format: color }
+            - { key: hue, label: Hue (°) }
+            - { key: text, label: Best text color, format: color }
+            - { key: contrast, label: Contrast (4.5+ reads well) }
+
+      - id: shades
+        type: table
+        name: Shades
+        layout: { x: 4, y: 8, w: 8, h: 42 }
+        props:
+          data: "{= runnables.palette.outputs.shades =}"
+          searchable: false
+          columns:
+            - { key: name, header: Shade }
+            - { key: hex, header: Color, format: color }
+            - { key: rgb, header: RGB }
+            - { key: text, header: Text on it, format: color }
+            - { key: contrast, header: Contrast, format: number }
+
+      - id: labelStyle
+        type: form
+        name: Label style
+        layout: { x: 0, y: 50, w: 6, h: 38 }
+        props:
+          title: A label's colors
+          submitLabel: Save
+          fields:
+            - { name: name, label: Label, default: Urgent, required: true }
+            - name: background
+              label: Background (see-through allowed)
+              type: color
+              alpha: true
+              default: "#ef444433"
+              swatches: ["#ef444433", "#f59e0b33", "#22c55e33", "#3b82f633"]
+            - name: text
+              label: Text
+              type: color
+              default: "#b91c1c"
+              swatches: ["#b91c1c", "#b45309", "#15803d", "#1d4ed8", "#0f172a"]
+        events:
+          submit:
+            - { type: setState, key: label, value: "{= labelStyle.values =}" }
+            - { type: toast, variant: success, message: "Saved {{ labelStyle.values.name }}: {{ labelStyle.values.background }} on {{ labelStyle.values.text }}" }
+
+      - id: saved
+        type: keyValue
+        name: Saved label
+        layout: { x: 6, y: 50, w: 6, h: 38 }
+        props:
+          title: Saved label
+          data: "{= state.label =}"
+          emptyText: Nothing saved yet
+          fields:
+            - { key: name, label: Label }
+            - { key: background, label: Background, format: color }
+            - { key: text, label: Text, format: color }

@@ -1,0 +1,51 @@
+version: 1.0.0
+name: Chat Echo
+description: |
+  Answers a chat without any AI: repeats the message back and says what it knows about the conversation so far. Shows how a chat's workflow gets the message and the history.
+
+  Used by the Chat example app.
+
+  **Inputs**
+
+  - `message` — the text just sent
+  - `messages` — the conversation: `[{ role, text, at }]`
+
+  **Outputs**
+
+  - `reply` — the answer, Markdown
+author: tipeline
+tags: [example, apps, chat]
+
+pipeline:
+  variables:
+    - type: string
+      name: message
+      value: ''
+      visibility: public
+      description: The text just sent. Set by the app.
+
+    - type: array
+      name: messages
+      value: []
+      visibility: public
+      description: The conversation so far, this message included. Set by the app.
+
+    - type: string
+      name: reply
+      value: ''
+      visibility: public
+      description: The answer, in Markdown. Returned to the app.
+
+  actions:
+    - group: script
+      name: runScript
+      params:
+        context:
+          message: '{{ message }}'
+          messages: '{= messages =}'
+        code: |
+          const mine = messages.filter((m) => m.role === 'user');
+          const words = message.trim().split(/\s+/).filter(Boolean).length;
+          const first = mine.length > 1 ? `\n\nYour first message was: *${mine[0].text}*` : '';
+          return `You said: **${message}**\n\n- ${words} word(s)\n- message ${mine.length} of yours in this chat${first}`;
+      destination: reply

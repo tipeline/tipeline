@@ -1,0 +1,90 @@
+version: 1.0.0
+name: Test Resume
+description: |
+  Fails on purpose inside a nested loop, to test resuming a failed run. The script step throws while `flag` is `"false"`, which is its starting value.
+
+  **To try it**
+
+  1. Run it and let it fail.
+  2. Resume it with the flag changed: `tipeline pipeline resume <pipelineIdentifier> --var flag=true`
+
+  The first message should not print again on resume, and the last message only prints once the script step gets through.
+author: Jose Daniel Estrada
+tags: [example, resume, retry, failure]
+
+pipeline:
+  variables:
+    - type: string
+      name: greeting
+      value: Hello from Main Task
+
+    - type: number
+      name: counter
+      value: 0
+
+    - type: boolean
+      name: isReady
+      value: true
+
+    - type: array
+      name: fruits
+      value: [apple, banana, cherry]
+
+    - type: string
+      name: currentFruit
+      value: ''
+
+    - name: flag
+      type: string
+      value: 'false'
+  actions:
+    - group: system
+      name: message
+      params:
+        text: |
+          Action 1 — completed. On resume this action will be SKIPPED.
+
+    # Walks the fruits array; each item is bound to currentFruit before the body runs
+    - group: flow
+      name: forEachLoop
+      params:
+        iterable: '{= fruits =}'
+        currentItem: currentFruit
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                forEachLoop → current fruit: {{ currentFruit }}
+          # Runs the body 4 times: i = 1, 3, 5, 7 (step 2, stop before 8)
+          - group: flow
+            name: simpleLoop
+            params:
+              indexValue: 1
+              indexEndValue: 8
+              incrementBy: 2
+              actions:
+                - group: system
+                  name: message
+                  params:
+                    text: |
+                      simpleLoop → iteration
+
+                # This action always throws. On resume it will be retried.
+                # To test a successful resume: change the code to `return 'fixed';` after the first run.
+                - group: script
+                  name: runScript
+                  params:
+                    code: |
+                      if(flag == "false"){
+                        throw new Error('Action 2 deliberately fails — edit this script and resume to continue');
+                      }
+                      return "Fixed";
+                    context:
+                      flag: '{= flag =}'
+
+    - group: system
+      name: message
+      params:
+        text: |
+          Action 3 — completed. This only runs after a successful resume.

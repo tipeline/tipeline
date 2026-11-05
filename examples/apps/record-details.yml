@@ -1,0 +1,120 @@
+schemaVersion: 4
+name: Record Details
+version: "1.0.0"
+description: The Details component — click a record in the table and see it as labeled fields, in each of the ways Details can show it
+author: tipeline
+
+# Read-only: it only lists the example records (shared with the other example apps).
+workflows:
+  listRecords: { file: ./workflows/list-records.yml }
+
+pages:
+  - id: details
+    name: Details
+    icon: TableProperties
+
+    runnables:
+      records:
+        mode: run
+        workflow: listRecords
+        trigger: load
+        inputs: { status: all }
+        outputs: [records]
+        persist: false
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 7 }
+        props:
+          content: "Click a record in the table. The panels on the right show it with a Details component — each one set up differently."
+          fontWeight: medium
+
+      - id: recordsTable
+        type: table
+        name: Records
+        layout: { x: 0, y: 7, w: 7, h: 49 }
+        props:
+          data: "{= runnables.records.outputs.records =}"
+          searchable: true
+          columns:
+            - { key: id, header: ID }
+            - { key: name, header: Name }
+            - { key: status, header: Status, format: badge }
+            - { key: amount, header: Amount, format: currency }
+
+      # 1. Chosen fields, with labels and formats, plus copy buttons (hover a value).
+      - id: selectedDetails
+        type: keyValue
+        name: Selected record
+        layout: { x: 7, y: 7, w: 5, h: 28 }
+        props:
+          title: Selected record
+          data: "{= recordsTable.selectedRow =}"
+          emptyText: Click a record in the table
+          copyable: true
+          fields:
+            - { key: id, label: ID }
+            - { key: name, label: Name }
+            - { key: status, label: Status, format: badge }
+            - { key: amount, label: Amount, format: currency }
+            - { key: updatedAt, label: Last updated, format: datetime }
+
+      # 2. No fields: every key of the record, as it comes from the workflow.
+      - id: rawDetails
+        type: keyValue
+        name: All fields
+        layout: { x: 7, y: 35, w: 5, h: 21 }
+        props:
+          title: All fields (no field list)
+          data: "{= recordsTable.selectedRow =}"
+          emptyText: Nothing selected yet
+
+      # 3. Grid display: label above value, several fields per line.
+      - id: gridDetails
+        type: keyValue
+        name: Grid display
+        layout: { x: 0, y: 56, w: 12, h: 14 }
+        props:
+          title: "Grid display — {{ recordsTable.selectedRow.name | default: 'no record selected' }}"
+          data: "{= recordsTable.selectedRow =}"
+          display: grid
+          emptyText: Click a record in the table
+          fields:
+            - { key: id, label: ID }
+            - { key: name, label: Name }
+            - { key: status, label: Status, format: badge }
+            - { key: amount, label: Amount, format: currency }
+            - { key: updatedAt, label: Last updated, format: date }
+
+      # 4. Fixed data (no table needed): nested paths, an empty field left out, and a
+      #    nested object shown as JSON.
+      - id: staticDetails
+        type: keyValue
+        name: Fixed data
+        layout: { x: 0, y: 70, w: 12, h: 25 }
+        props:
+          title: Fixed data — paths into nested objects
+          display: grid
+          hideEmpty: true
+          copyable: true
+          data:
+            invoice: INV-2026-0042
+            total: 1234.5
+            paidShare: 0.75
+            dueDate: "2026-11-15"
+            notes: ""
+            customer:
+              name: Wile E. Coyote
+              email: wile@acme.example
+              address: { city: Desert, country: US }
+          fields:
+            - { key: invoice, label: Invoice }
+            - { key: customer.name, label: Customer }
+            - { key: customer.email, label: Email }
+            - { key: total, label: Total, format: currency, currency: EUR }
+            - { key: paidShare, label: Paid, format: percent }
+            - { key: dueDate, label: Due, format: date }
+            - { key: notes, label: Notes }
+            - { key: customer.address, label: Address }

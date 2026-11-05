@@ -1,0 +1,126 @@
+version: 1.0.0
+name: List Expenses
+description: |
+  Reads the example expense store (a JSON file in `~/Tipeline/output`) and returns the expenses matching a status and category, plus totals for KPI cards and a chart.
+
+  Used by the Expense Approvals example app.
+
+  **Inputs**
+
+  - `status` — "all", "pending", "approved" or "rejected"
+  - `category` — a category, or empty for all
+
+  **Outputs**
+
+  - `expenses` — matching rows, newest first
+  - `summary` — `{ pending, pendingAmount, approvedAmount, rejected }`
+  - `byCategory` — `[{ category, approved, pending }]` amounts for the chart
+
+  Until the first expense is submitted, the seed expenses in the workflow are returned.
+author: tipeline
+tags: [example, apps, expenses, finance]
+
+pipeline:
+  variables:
+    - type: string
+      name: status
+      value: all
+      visibility: public
+      description: Status to keep — all, pending, approved or rejected. Set by the app.
+
+    - type: string
+      name: category
+      value: ''
+      visibility: public
+      description: Category to keep; empty keeps every category. Set by the app.
+
+    - type: array
+      name: expenses
+      value: []
+      visibility: public
+      description: Expenses matching the filters. Returned to the app.
+
+    - type: object
+      name: summary
+      value: {}
+      visibility: public
+      description: Waiting count and amount, approved amount, rejected count. Returned to the app.
+
+    - type: array
+      name: byCategory
+      value: []
+      visibility: public
+      description: Approved and pending amounts per category, for a chart. Returned to the app.
+
+    - type: string
+      name: raw
+      value: ''
+
+    - type: array
+      name: seed
+      value:
+        - { id: 1, description: Flight to Madrid, category: Travel, amount: 640, status: approved, submittedAt: '2026-09-02T09:10:00Z', decidedBy: 'app:Expense Approvals', comment: Client visit }
+        - { id: 2, description: Team lunch, category: Meals, amount: 180, status: approved, submittedAt: '2026-09-05T13:20:00Z', decidedBy: policy, comment: Auto-approved (500 or less) }
+        - { id: 3, description: Design tool licence, category: Software, amount: 360, status: approved, submittedAt: '2026-09-11T08:00:00Z', decidedBy: policy, comment: Auto-approved (500 or less) }
+        - { id: 4, description: 4K monitor, category: Equipment, amount: 890, status: rejected, submittedAt: '2026-09-15T16:45:00Z', decidedBy: desktop, comment: Use the spare one in storage }
+        - { id: 5, description: 'Hotel, 2 nights', category: Travel, amount: 420, status: approved, submittedAt: '2026-09-19T19:30:00Z', decidedBy: policy, comment: Auto-approved (500 or less) }
+        - { id: 6, description: Laptop, category: Equipment, amount: 1850, status: approved, submittedAt: '2026-09-24T10:05:00Z', decidedBy: 'app:Expense Approvals', comment: Replacement }
+
+  actions:
+    # The store may not exist yet — keep going with `raw` empty and use the seed.
+    - group: file
+      name: read
+      onError: continue
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-expenses.json'
+      destination: raw
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          raw: '{= raw =}'
+          seed: '{= seed =}'
+          status: '{{ status }}'
+          category: '{{ category }}'
+        code: |
+          const all = raw ? JSON.parse(raw) : seed;
+          return all
+            .filter((e) => status === 'all' || e.status === status)
+            .filter((e) => !category || e.category === category)
+            .sort((a, b) => b.id - a.id);
+      destination: expenses
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          raw: '{= raw =}'
+          seed: '{= seed =}'
+        code: |
+          const all = raw ? JSON.parse(raw) : seed;
+          const sum = (rows) => rows.reduce((total, e) => total + e.amount, 0);
+          const pending = all.filter((e) => e.status === 'pending');
+          return {
+            pending: pending.length,
+            pendingAmount: sum(pending),
+            approvedAmount: sum(all.filter((e) => e.status === 'approved')),
+            rejected: all.filter((e) => e.status === 'rejected').length,
+          };
+      destination: summary
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          raw: '{= raw =}'
+          seed: '{= seed =}'
+        code: |
+          const all = raw ? JSON.parse(raw) : seed;
+          const categories = ['Travel', 'Meals', 'Software', 'Equipment', 'Other'];
+          return categories.map((category) => {
+            const rows = all.filter((e) => e.category === category);
+            const sum = (status) => rows.filter((e) => e.status === status).reduce((t, e) => t + e.amount, 0);
+            return { category, approved: sum('approved'), pending: sum('pending') };
+          });
+      destination: byCategory

@@ -1,0 +1,109 @@
+schemaVersion: 4
+name: Team Directory
+description: Avatars — a person with their name and status, the team as a stack with "+N" and as a list to pick from, and project owners as avatars in a table; pictures where there are some, initials where not
+author: tipeline
+
+workflows:
+  listPeople: { file: ./workflows/list-people.yml }
+
+pages:
+  - id: team
+    name: Team
+    icon: Users
+
+    runnables:
+      people:
+        mode: run
+        workflow: listPeople
+        trigger: load
+        outputs: [people, projects]
+        persist: false
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 8 }
+        props:
+          markdown: true
+          content: "**Avatars** show a person's picture — or, without one, their initials on a color of their own — with a status dot. One person, a **stack** with \"+N\", a **list** to pick from (`directory.selectedItem`), and a table column with `format: avatar`."
+
+      - id: lead
+        type: avatar
+        name: Team lead
+        layout: { x: 0, y: 8, w: 4, h: 11 }
+        props:
+          name: "{{ runnables.people.outputs.people[0].name }}"
+          src: "{{ runnables.people.outputs.people[0].photo }}"
+          subtitle: Team lead · on call this week
+          status: "{{ runnables.people.outputs.people[0].status }}"
+          showName: true
+          size: lg
+        events:
+          click:
+            - { type: toast, message: "{{ runnables.people.outputs.people[0].email }}" }
+
+      - id: everyone
+        type: avatar
+        name: Everyone
+        frame: card
+        layout: { x: 4, y: 8, w: 4, h: 11 }
+        props:
+          title: Everyone
+          data: "{= runnables.people.outputs.people =}"
+          srcKey: photo
+          max: 5
+        events:
+          itemClick:
+            - { type: toast, message: "{{ everyone.selectedItem.name }} — {{ everyone.selectedItem.role }}" }
+
+      - id: square
+        type: avatar
+        name: Initials only
+        layout: { x: 8, y: 8, w: 4, h: 11 }
+        props:
+          name: Build Bot
+          subtitle: "square, a chosen color, no picture"
+          shape: square
+          color: purple
+          showName: true
+          size: lg
+
+      - id: directory
+        type: avatar
+        name: Directory
+        frame: card
+        layout: { x: 0, y: 19, w: 4, h: 56 }
+        props:
+          title: Directory
+          display: list
+          data: "{= runnables.people.outputs.people =}"
+          srcKey: photo
+          subtitleKey: role
+          size: sm
+          emptyText: Loading the team…
+
+      - id: person
+        type: keyValue
+        name: Person
+        layout: { x: 4, y: 19, w: 8, h: 18 }
+        props:
+          title: "{{ directory.selectedItem.name | default: 'Pick someone in the directory' }}"
+          data: "{= directory.selectedItem =}"
+          fields:
+            - { key: role, label: Role }
+            - { key: email, label: Email }
+            - { key: status, label: Status, format: badge, colors: { online: green, away: amber, busy: red, offline: gray } }
+
+      - id: projects
+        type: table
+        name: Projects
+        layout: { x: 4, y: 37, w: 8, h: 38 }
+        props:
+          data: "{= runnables.people.outputs.projects =}"
+          searchable: false
+          columns:
+            - { key: project, header: Project }
+            - { key: owner, header: Owner, format: avatar, srcKey: ownerPhoto }
+            - { key: due, header: Due, format: date }
+            - { key: status, header: Status, format: badge }

@@ -1,0 +1,104 @@
+schemaVersion: 4
+name: Button Groups
+description: |
+  Button groups — a row of buttons acting on the selected record, and a menu button with more actions; each button fires its own `action:<id>` event
+author: tipeline
+
+workflows:
+  listRecords: { file: ./workflows/list-records.yml }
+  setStatus: { file: ./workflows/update-record-status.yml }
+
+state:
+  nextStatus: ""
+
+pages:
+  - id: records
+    name: Records
+    icon: Rows3
+
+    runnables:
+      records:
+        mode: run
+        workflow: listRecords
+        trigger: load
+        inputs: { status: all }
+        outputs: [records]
+        persist: false
+      setStatus:
+        mode: run
+        workflow: setStatus
+        inputs:
+          id: "{= recordsTable.selectedRow.id =}"
+          status: "{= state.nextStatus =}"
+        outputs: [record]
+        onSuccess:
+          - { type: toast, variant: success, message: "{{ result.outputs.record.name }} is now {{ result.outputs.record.status }}" }
+          - { type: run, runnable: records }
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 7 }
+        props:
+          markdown: true
+          content: "Select a record, then use the **row** of buttons to change its status. **More** is the same component shown as a **menu**. Every button has its own `action:<id>` event."
+
+      # A row: one button per status, greyed out until a record is selected.
+      - id: statusButtons
+        type: buttonGroup
+        name: Status buttons
+        layout: { x: 0, y: 7, w: 9, h: 6 }
+        props:
+          items:
+            - { id: activate, label: Activate, icon: CircleCheck, disabled: "{% if recordsTable.selectedRow == blank %}true{% else %}false{% endif %}" }
+            - { id: pending, label: Back to pending, icon: Clock, variant: outline, disabled: "{% if recordsTable.selectedRow == blank %}true{% else %}false{% endif %}" }
+            - { id: close, label: Close, icon: CircleX, variant: destructive, disabled: "{% if recordsTable.selectedRow == blank %}true{% else %}false{% endif %}" }
+        events:
+          "action:activate":
+            - { type: setState, key: nextStatus, value: active }
+            - { type: run, runnable: setStatus }
+          "action:pending":
+            - { type: setState, key: nextStatus, value: pending }
+            - { type: run, runnable: setStatus }
+          "action:close":
+            - { type: setState, key: nextStatus, value: closed }
+            - { type: run, runnable: setStatus }
+
+      # A menu: one button, the actions in a list.
+      - id: more
+        type: buttonGroup
+        name: More
+        layout: { x: 9, y: 7, w: 3, h: 6 }
+        props:
+          display: menu
+          label: More
+          icon: Ellipsis
+          items:
+            - { id: refresh, label: Reload the list, icon: RefreshCw }
+            - { id: folder, label: Show the records file, icon: FolderOpen }
+            - { id: docs, label: About button groups, icon: ExternalLink }
+        events:
+          "action:refresh": [{ type: run, runnable: records }]
+          "action:folder": [{ type: openFile, path: "~/Tipeline/output/app-example-records.json", mode: reveal }]
+          "action:docs": [{ type: openUrl, url: "https://example.com" }]
+
+      - id: recordsTable
+        type: table
+        name: Records
+        layout: { x: 0, y: 13, w: 12, h: 42 }
+        props:
+          data: "{= runnables.records.outputs.records =}"
+          columns:
+            - { key: id, header: ID }
+            - { key: name, header: Name }
+            - { key: status, header: Status, format: badge }
+            - { key: amount, header: Amount, format: currency }
+
+      - id: lastClicked
+        type: text
+        name: Last clicked
+        frame: none
+        layout: { x: 0, y: 55, w: 12, h: 6 }
+        props:
+          content: "Last button: {{ statusButtons.clicked | default: '—' }} · last menu entry: {{ more.clicked | default: '—' }}"

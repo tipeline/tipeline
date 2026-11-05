@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "../../",
+    "noEmit": true,
+    "paths": {
+      "@/*": ["src/*"],
+      "@step/*": ["src/step/*"],
+      "@variable/*": ["src/variable/*"],
+      "@pipeline/*": ["src/pipeline/*"],
+      "@action/*": ["src/action/*"],
+      "@task/*": ["src/task/*"],
+      "@engine/*": ["src/engine/*"],
+      "@utils/*": ["src/utils/*"],
+      "@database/*": ["src/database/*"],
+      "@validation/*": ["src/validation/*"],
+      "@translation/*": ["src/translation/*"],
+      "@tipeline/schemas": ["../../packages/schemas/src/index.ts"],
+      "@tipeline/schemas/*": ["../../packages/schemas/src/*"],
+      "@tipeline/types": ["../../packages/types/src/index.ts"],
+      "@tipeline/utils": ["../../packages/utils/src/index.ts"]
+    }
+  }
+}

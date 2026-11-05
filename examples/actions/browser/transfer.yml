@@ -1,0 +1,100 @@
+version: 1.0.0
+name: Transfer actions
+description: |
+  Downloads a file and uploads one from a browser page.
+author: Jose Daniel Estrada
+tags: [example, browser, download, upload]
+pipeline:
+  variables:
+    - type: browser
+      name: browserInstance
+  actions:
+    - group: browser
+      name: launch
+      params:
+        headless: false
+        timeout: 30000
+        viewport:
+          width: 1280
+          height: 720
+      destination: browserInstance
+
+    # --------------------------------------------------
+    # downloadFile
+    # --------------------------------------------------
+
+    # Navigate to a page with a downloadable asset
+    - group: browser
+      name: goTo
+      params:
+        browser: '{= browserInstance =}'
+        url: 'https://github.com/drush-ops/drush/releases'
+        waitUntil: domcontentloaded
+
+    - group: browser
+      name: wait
+      params:
+        browser: '{= browserInstance =}'
+        type: timeout
+        timeout: 2000
+
+    # -- downloadFile --
+    # Click the first release download link and save to /tmp/downloads/
+    # The browser uses the server-suggested filename; path must be a directory
+    - group: browser
+      name: downloadFile
+      params:
+        browser: '{= browserInstance =}'
+        path: /tmp/tipeline-downloads/
+        selector: 'div.Box-footer > div:nth-child(2) > details-toggle > details > div > div > ul > li:nth-child(1) > div.d-flex.flex-justify-start.col-12.col-lg-6 > a'
+        selectorType: css
+
+    - group: browser
+      name: wait
+      params:
+        browser: '{= browserInstance =}'
+        type: timeout
+        timeout: 1000
+
+    # --------------------------------------------------
+    # uploadFile
+    # --------------------------------------------------
+
+    # Navigate to a page that has a file input element
+    - group: browser
+      name: goTo
+      params:
+        browser: '{= browserInstance =}'
+        url: 'https://getbootstrap.com/docs/5.0/forms/form-control/#file-input'
+        waitUntil: domcontentloaded
+
+    - group: browser
+      name: wait
+      params:
+        browser: '{= browserInstance =}'
+        type: timeout
+        timeout: 1500
+
+    # -- uploadFile --
+    # Attach one or more local files to a <input type="file"> element
+    # Paths must be absolute and point to existing files
+    - group: browser
+      name: uploadFile
+      params:
+        browser: '{= browserInstance =}'
+        selector: '#formFile'
+        selectorType: css
+        filePaths:
+          - /tmp/tipeline-downloads/drush.phar
+
+    - group: browser
+      name: wait
+      params:
+        browser: '{= browserInstance =}'
+        type: timeout
+        timeout: 1000
+
+    - group: browser
+      name: close
+      params:
+        browser: '{= browserInstance =}'

@@ -1,0 +1,21 @@
+version: 1.0.0
+name: Test Tags Duplicate
+description: |
+  Checks that repeated tags in different cases are merged into one when the workflow is installed. Its tags are repeated on purpose, so don't clean them up.
+author: Jose Daniel Estrada
+tags:
+  - Example
+  - example
+  - Database
+  - database
+  - Networking
+pipeline:
+  variables:
+    - type: string
+      name: greeting
+      value: Hello world
+  actions:
+    - group: system
+      name: message
+      params:
+        text: 'This is the message: {{ greeting }}'

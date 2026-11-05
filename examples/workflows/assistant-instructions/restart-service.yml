@@ -1,0 +1,37 @@
+version: 1.0.0
+name: Restart Service
+description: >
+  Restarts a systemd service on a server over SSH, e.g. nginx or php-fpm.
+author: Tipeline Examples
+tags:
+  - server
+  - service
+  - ssh
+
+pipeline:
+  variables:
+    - type: string
+      name: server
+      label: Server
+      description: The server's SSH host name, e.g. web-01
+      required: true
+      value: ''
+      visibility: public
+
+    - type: string
+      name: service
+      label: Service
+      description: The systemd service to restart, e.g. nginx
+      required: true
+      value: ''
+      visibility: public
+
+  actions:
+    - group: system
+      name: runApplication
+      label: Restart service
+      params:
+        command: ssh
+        args:
+          - '{{ server }}'
+          - sudo systemctl restart {{ service }}

@@ -1,0 +1,459 @@
+version: 1.0.0
+name: Video Actions Test Suite
+description: |
+  Edits video with FFmpeg: trim, crop, rotate, resize, change audio, add overlays, watermarks and subtitles, blur a region, and pull out frames, audio or a GIF.
+
+  **How the actions work**
+
+  - Queued — `trim`, `changeResolution`, `crop`, `rotate`, `changeFramerate`, `changeVolume`, `mute`, `addSubtitles`, `convertFormat` and `compress` collect on the video object and are only written to disk by `export`.
+  - Right away — `replaceAudio`, `addBackgroundMusic`, `addOverlay`, `addWatermark` and `blurRegion` run FFmpeg at once, write a temporary file and continue from it.
+  - Direct output — `getThumbnail`, `extractFrames`, `extractAudio` and `generateGif` write straight to a path and don't return a video.
+
+  **Template syntax**
+
+  - `{{ varName }}` — puts a value into text; the result is always a string
+  - `{= varName =}` — passes the value as it is (object, array, number…); it must be the field's whole value
+
+  Don't put `{{ }}` inside another variable's `value`: LiquidJS resolves one pass only, so the inner template stays as literal text. Use `{{ videoFolder }}` directly in the step's parameters instead.
+
+author: Jose Daniel Estrada
+tags: [example, video, ffmpeg, trim, watermark]
+
+pipeline:
+  variables:
+    # ------------------------------------------------------------------
+    # Paths — adjust videoFolder to match your environment.
+    # Use {{ videoFolder }} directly in params; do not nest {{ }} inside
+    # another variable value (LiquidJS resolves only one pass).
+    # ------------------------------------------------------------------
+    - type: string
+      name: videoFolder
+      value: '{{ _global.examplesDir }}/actions/video/'
+
+    # ------------------------------------------------------------------
+    # Placeholder paths: change these to files of your own before running.
+    # inputVideo should be at least 20 seconds long.
+    # ------------------------------------------------------------------
+    - type: string
+      name: inputVideo
+      value: '/path/to/your/input.mp4'
+
+    - type: string
+      name: overlayVideo
+      value: '/path/to/your/overlay.mp4'
+
+    - type: string
+      name: replacementAudio
+      value: '/path/to/your/voiceover.mp3'
+
+    - type: string
+      name: backgroundMusic
+      value: '/path/to/your/music.mp3'
+
+    - type: string
+      name: watermarkImage
+      value: '/path/to/your/watermark.png'
+
+    # ------------------------------------------------------------------
+    # Video object — holds the mutable state across chained actions
+    # ------------------------------------------------------------------
+    - type: video
+      name: videoObject
+
+    # ------------------------------------------------------------------
+    # Output slots for analysis actions
+    # ------------------------------------------------------------------
+    - type: object
+      name: videoInfo
+
+    - type: number
+      name: videoDuration
+
+  actions:
+    # ------------------------------------------------------------------
+    # I/O
+    # ------------------------------------------------------------------
+
+    # Load a video file — must be the first step before any transformation
+    - group: video
+      name: load
+      params:
+        input: '{{ inputVideo }}'
+      destination: videoObject
+
+    # ------------------------------------------------------------------
+    # Editing & Transformation  (lazy — accumulate until export)
+    # ------------------------------------------------------------------
+
+    # Cut a 30-second segment starting at 00:00:00 — useful for isolating a clip
+    - group: video
+      name: trim
+      params:
+        video: '{= videoObject =}'
+        start: '00:00:00'
+        duration: '00:00:30'
+      destination: videoObject
+
+    # Resize to 1280×720 — useful for standardizing resolution before encoding
+    - group: video
+      name: changeResolution
+      params:
+        video: '{= videoObject =}'
+        width: 1280
+        height: 720
+      destination: videoObject
+
+    # Crop a 960×540 region at offset (160, 90) — useful for removing letterboxing
+    - group: video
+      name: crop
+      params:
+        video: '{= videoObject =}'
+        width: 960
+        height: 540
+        x: 160
+        y: 90
+      destination: videoObject
+
+    # Rotate 90° clockwise (transpose=1) — useful for portrait-mode recordings
+    - group: video
+      name: rotate
+      params:
+        video: '{= videoObject =}'
+        transpose: '1'
+      destination: videoObject
+
+    # Reduce framerate to 24 fps — useful for lowering file size before distribution
+    - group: video
+      name: changeFramerate
+      params:
+        video: '{= videoObject =}'
+        fps: 24
+      destination: videoObject
+
+    # Write accumulated lazy filters to disk
+    - group: video
+      name: export
+      params:
+        video: '{= videoObject =}'
+        output: '{{ videoFolder }}output_editing.mp4'
+
+    # ------------------------------------------------------------------
+    # Audio  (lazy — accumulate until export)
+    # ------------------------------------------------------------------
+
+    # Fresh load for audio demonstration
+    - group: video
+      name: load
+      params:
+        input: '{{ inputVideo }}'
+      destination: videoObject
+
+    # Scale the audio to 70% volume — useful for background narration
+    - group: video
+      name: changeVolume
+      params:
+        video: '{= videoObject =}'
+        volume: 0.7
+      destination: videoObject
+
+    - group: video
+      name: export
+      params:
+        video: '{= videoObject =}'
+        output: '{{ videoFolder }}output_volume.mp4'
+
+    # Fresh load — mute removes all audio before adding replacement track
+    - group: video
+      name: load
+      params:
+        input: '{{ inputVideo }}'
+      destination: videoObject
+
+    # Silence all audio — useful before replaceAudio or addBackgroundMusic
+    - group: video
+      name: mute
+      params:
+        video: '{= videoObject =}'
+      destination: videoObject
+
+    - group: video
+      name: export
+      params:
+        video: '{= videoObject =}'
+        output: '{{ videoFolder }}output_muted.mp4'
+
+    # ------------------------------------------------------------------
+    # Audio  (eager — FFmpeg runs immediately)
+    # ------------------------------------------------------------------
+
+    # Fresh load for eager audio operations
+    - group: video
+      name: load
+      params:
+        input: '{{ inputVideo }}'
+      destination: videoObject
+
+    # Replace the original audio track with an external file — useful for dubbing
+    - group: video
+      name: replaceAudio
+      params:
+        video: '{= videoObject =}'
+        audio: '{{ replacementAudio }}'
+      destination: videoObject
+
+    - group: video
+      name: export
+      params:
+        video: '{= videoObject =}'
+        output: '{{ videoFolder }}output_replaced_audio.mp4'
+
+    # Fresh load for background music
+    - group: video
+      name: load
+      params:
+        input: '{{ inputVideo }}'
+      destination: videoObject
+
+    # Mix background music at 50% volume into the existing audio — useful for promos
+    - group: video
+      name: addBackgroundMusic
+      params:
+        video: '{= videoObject =}'
+        music: '{{ backgroundMusic }}'
+        musicVolume: 0.5
+      destination: videoObject
+
+    - group: video
+      name: export
+      params:
+        video: '{= videoObject =}'
+        output: '{{ videoFolder }}output_bgm.mp4'
+
+    # ------------------------------------------------------------------
+    # Conversion & Compression  (lazy — accumulate until export)
+    # ------------------------------------------------------------------
+
+    - group: video
+      name: load
+      params:
+        input: '{{ inputVideo }}'
+      destination: videoObject
+
+    # Compress with CRF 28 at medium preset — good balance of quality and file size
+    - group: video
+      name: compress
+      params:
+        video: '{= videoObject =}'
+        crf: 28
+        preset: medium
+      destination: videoObject
+
+    - group: video
+      name: export
+      params:
+        video: '{= videoObject =}'
+        output: '{{ videoFolder }}output_compressed.mp4'
+
+    # Fresh load for format conversion
+    - group: video
+      name: load
+      params:
+        input: '{{ inputVideo }}'
+      destination: videoObject
+
+    # Transcode to mp4 container — useful when the source is mkv or webm
+    - group: video
+      name: convertFormat
+      params:
+        video: '{= videoObject =}'
+        format: mp4
+      destination: videoObject
+
+    - group: video
+      name: export
+      params:
+        video: '{= videoObject =}'
+        output: '{{ videoFolder }}output_converted.mp4'
+
+    # ------------------------------------------------------------------
+    # Composition & Overlay  (eager — FFmpeg runs immediately)
+    # ------------------------------------------------------------------
+
+    - group: video
+      name: load
+      params:
+        input: '{{ inputVideo }}'
+      destination: videoObject
+
+    # Overlay a scaled video/image at position (20, 20) — useful for picture-in-picture
+    - group: video
+      name: addOverlay
+      params:
+        video: '{= videoObject =}'
+        overlay: '{{ overlayVideo }}'
+        x: 20
+        y: 20
+        width: 400
+        height: 300
+      destination: videoObject
+
+    - group: video
+      name: export
+      params:
+        video: '{= videoObject =}'
+        output: '{{ videoFolder }}output_overlay.mp4'
+
+    # Fresh load for watermark
+    - group: video
+      name: load
+      params:
+        input: '{{ inputVideo }}'
+      destination: videoObject
+
+    # Burn a 120×40 watermark at the top-left corner — useful for branding
+    - group: video
+      name: addWatermark
+      params:
+        video: '{= videoObject =}'
+        image: '{{ watermarkImage }}'
+        x: 10
+        y: 10
+        width: 120
+        height: 40
+      destination: videoObject
+
+    - group: video
+      name: export
+      params:
+        video: '{= videoObject =}'
+        output: '{{ videoFolder }}output_watermark.mp4'
+
+    # Fresh load for subtitles
+    - group: video
+      name: load
+      params:
+        input: '{{ inputVideo }}'
+      destination: videoObject
+
+    # Burn in SRT subtitles — useful for accessibility or social media exports
+    - group: video
+      name: addSubtitles
+      params:
+        video: '{= videoObject =}'
+        subtitle: '{{ videoFolder }}captions.srt'
+      destination: videoObject
+
+    - group: video
+      name: export
+      params:
+        video: '{= videoObject =}'
+        output: '{{ videoFolder }}output_subtitles.mp4'
+
+    # ------------------------------------------------------------------
+    # Analysis & Metadata
+    # ------------------------------------------------------------------
+
+    - group: video
+      name: load
+      params:
+        input: '{{ inputVideo }}'
+      destination: videoObject
+
+    # Retrieve codec, resolution, bitrate, and container info
+    - group: video
+      name: getInfo
+      params:
+        video: '{= videoObject =}'
+      destination: videoInfo
+
+    # Get duration in seconds — useful for calculating segment counts
+    - group: video
+      name: getDuration
+      params:
+        video: '{= videoObject =}'
+      destination: videoDuration
+
+    # Extract a thumbnail at the 5-second mark — useful for preview images
+    - group: video
+      name: getThumbnail
+      params:
+        video: '{= videoObject =}'
+        output: '{{ videoFolder }}thumbnail.jpg'
+        timestamp: '00:00:05'
+
+    # ------------------------------------------------------------------
+    # Extraction & Output
+    # ------------------------------------------------------------------
+
+    - group: video
+      name: load
+      params:
+        input: '{{ inputVideo }}'
+      destination: videoObject
+
+    # Export 1 frame per second as JPG between 5 s and 20 s
+    - group: video
+      name: extractFrames
+      params:
+        video: '{= videoObject =}'
+        outputDir: '{{ videoFolder }}frames'
+        fps: 1
+        format: jpg
+        start: '00:00:05'
+        end: '00:00:20'
+
+    # Extract the audio track as MP3 — useful for podcast or transcript workflows
+    - group: video
+      name: extractAudio
+      params:
+        video: '{= videoObject =}'
+        output: '{{ videoFolder }}audio3.mp3'
+
+    # Generate a 320px-wide GIF at 10 fps from a 3-second segment starting at 2 s
+    - group: video
+      name: generateGif
+      params:
+        video: '{= videoObject =}'
+        output: '{{ videoFolder }}output.gif'
+        start: '00:00:02'
+        duration: '3'
+        fps: 10
+        width: 320
+
+    # ------------------------------------------------------------------
+    # Privacy & Compliance  (eager — FFmpeg runs immediately)
+    # ------------------------------------------------------------------
+
+    - group: video
+      name: load
+      params:
+        input: '{{ inputVideo }}'
+      destination: videoObject
+
+    # Blur a face region from 1–7 s and a screen region from 8–14 s
+    - group: video
+      name: blurRegion
+      params:
+        video: '{= videoObject =}'
+        regions:
+          - x: 20
+            y: 20
+            width: 100
+            height: 100
+            blurStrength: 15
+            start: 1
+            end: 7
+          - x: 160
+            y: 60
+            width: 120
+            height: 100
+            blurStrength: 20
+            start: 8
+            end: 14
+      destination: videoObject
+
+    - group: video
+      name: export
+      params:
+        video: '{= videoObject =}'
+        output: '{{ videoFolder }}output_blurred.mp4'

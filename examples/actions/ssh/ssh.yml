@@ -1,0 +1,103 @@
+version: 1.0.0
+name: SSH example
+description: |
+  Opens an SSH connection, runs commands on the remote server and closes the session.
+
+  **Connection**
+
+  `connect` returns a live connection object. Store it with `destination` and always pass it with `{= =}`, never `{{ }}`, because it's an object and not text.
+
+  **What `exec` returns**
+
+  - `stdout` — standard output
+  - `stderr` — standard error
+  - `code` — exit code; 0 means success
+  - `signal` — the signal that ended the process, if there was one
+
+  **Sign-in options, under `config`**
+
+  - `password` — plain-text password (less secure)
+  - `privateKeyPath` — path to a private key file (recommended)
+  - `passphrase` — unlocks an encrypted private key
+
+  **Template syntax**
+
+  - `{{ varName }}` — puts a value into text; the result is always a string
+  - `{= varName =}` — passes the value as it is (object, array, number…); it must be the field's whole value
+  - `{{ _env.KEY }}` — an environment variable, no declaration needed
+
+author: Jose Daniel Estrada
+tags: [example, ssh, remote, server, command]
+
+pipeline:
+  variables:
+    - type: object
+      name: uptimeResult
+
+    - type: object
+      name: lsResult
+
+    # sshConnection is a placeholder type — the actual NodeSSH object is assigned at runtime
+    # via `destination` on the connect action. Declare it here so downstream actions can
+    # reference the variable name in their schemas.
+    - type: sshConnection
+      name: connection
+
+    - type: string
+      name: command
+      value: 'ls -lsa /var/log'
+
+  actions:
+    # ------------------------------------------------------------------
+    # connect — open an SSH session and store the live connection object
+    # ------------------------------------------------------------------
+
+    # Authenticate with a private key (recommended)
+    - group: ssh
+      name: connect
+      params:
+        config:
+          host: '{{ _env.SSH_HOST }}'
+          username: '{{ _env.SSH_USER }}'
+          privateKeyPath: '{{ _env.SSH_KEY_PATH }}'
+          passphrase: '{{ _env.SSH_PASSPHRASE }}'
+      destination: connection
+
+    # ------------------------------------------------------------------
+    # exec — run a remote command over the open connection
+    # Use {= =} for the connection param — it is a live object, not a string
+    # ------------------------------------------------------------------
+
+    # Execute a static command string
+    - group: ssh
+      name: exec
+      params:
+        connection: '{= connection =}'
+        command: 'uptime'
+      destination: uptimeResult
+
+    # Execute a command stored in a variable — use {= =} to preserve type
+    - group: ssh
+      name: exec
+      params:
+        connection: '{= connection =}'
+        command: '{= command =}'
+      destination: lsResult
+
+    # Show exec result fields — stdout, stderr, code
+    - group: system
+      name: message
+      params:
+        text: |
+          uptime stdout : {{ uptimeResult.stdout }}
+          uptime code   : {{ uptimeResult.code }}
+          ls stdout     : {{ lsResult.stdout }}
+          ls stderr     : {{ lsResult.stderr }}
+
+    # ------------------------------------------------------------------
+    # close — always close the connection when finished
+    # ------------------------------------------------------------------
+    - group: ssh
+      name: close
+      params:
+        connection: '{= connection =}'

@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: tipeline_server
+      POSTGRES_USER: tipeline
+      POSTGRES_PASSWORD: tipeline
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tipeline -d tipeline_server"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  core:
+    build:
+      context: ../../..
+      dockerfile: apps/core/Dockerfile
+    environment:
+      TIPELINE_IPC_SOCKET_ROOT: /tmp/tipeline/
+    volumes:
+      - ipc-socket:/tmp/tipeline
+      - tipeline-data:/root/Tipeline
+    restart: unless-stopped
+
+  server:
+    build:
+      context: ../../..
+      dockerfile: apps/server/resources/Dockerfile
+    ports:
+      - "4001:4001"
+    environment:
+      TIPELINE_IPC_SOCKET_ROOT: /tmp/tipeline/
+      TIPELINE_SERVER_PORT: 4001
+      TIPELINE_ADMIN_EMAIL: ${TIPELINE_ADMIN_EMAIL:-admin@example.com}
+      TIPELINE_ADMIN_PASSWORD: ${TIPELINE_ADMIN_PASSWORD:-changeme}
+      TIPELINE_DB_HOST: postgres
+      TIPELINE_DB_PORT: 5432
+      TIPELINE_DB_NAME: tipeline_server
+      TIPELINE_DB_USER: tipeline
+      TIPELINE_DB_PASSWORD: tipeline
+    volumes:
+      - ipc-socket:/tmp/tipeline
+    depends_on:
+      postgres:
+        condition: service_healthy
+      core:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  ipc-socket:
+  tipeline-data:
+  postgres-data:

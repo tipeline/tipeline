@@ -1,0 +1,59 @@
+version: 1.0.0
+name: 'CMS: List Revisions'
+description: |
+  A node's revisions in the CMS store (`~/Tipeline/output/cms/cms.db`), newest first, as Drupal's Revisions tab lists them.
+
+  **Inputs**
+
+  - `id` — the node
+
+  **Outputs**
+
+  - `revisions` — `[{ id, created, title, status, log, current }]`; current is "Current revision" on the node's own one
+author: tipeline
+tags: [example, apps, cms, revisions, history]
+
+pipeline:
+  variables:
+    - type: number
+      name: id
+      value: 0
+      visibility: public
+      description: The node whose revisions are listed.
+
+    - type: array
+      name: revisions
+      value: []
+      visibility: public
+      description: Its revisions. Returned to the app.
+
+    - type: dbConnection
+      name: db
+
+  actions:
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          SELECT r.id, r.created, r.title, CASE r.status WHEN 1 THEN 'Published' ELSE 'Unpublished' END AS status,
+            CASE WHEN r.log = '' THEN '—' ELSE r.log END AS log,
+            CASE WHEN n.revision_id = r.id THEN 'Current revision' ELSE '' END AS current
+          FROM node_revision r JOIN node n ON n.id = r.node_id
+          WHERE r.node_id = ? ORDER BY r.id DESC
+        bindings: ['{= id =}']
+      destination: revisions
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'

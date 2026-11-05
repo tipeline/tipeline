@@ -1,0 +1,1947 @@
+schemaVersion: 4
+name: Tipeline CMS
+version: "2.0.0"
+description: |
+  A small content manager built the way Drupal is: content types with their own fields, content with a revision on every save, taxonomy and a media library. The site is made from Liquid templates and exported as static HTML (plus Markdown and JSON if you want them), then deployed to Cloudflare Pages.
+
+  Everything is kept in one SQLite file, `~/Tipeline/output/cms/cms.db`, set up with sample content the first time the Dashboard opens. The app only shows things and asks; every rule and every page it renders comes from its workflows.
+author: tipeline
+
+workflows:
+  install: { file: ./workflows/cms-install.yml }
+  dashboard: { file: ./workflows/cms-dashboard.yml }
+  listContent: { file: ./workflows/cms-list-content.yml }
+  setStatus: { file: ./workflows/cms-set-status.yml }
+  deleteNode: { file: ./workflows/cms-delete-node.yml }
+  getNode: { file: ./workflows/cms-get-node.yml }
+  saveNode: { file: ./workflows/cms-save-node.yml }
+  listRevisions: { file: ./workflows/cms-list-revisions.yml }
+  revertRevision: { file: ./workflows/cms-revert-revision.yml }
+  listTypes: { file: ./workflows/cms-list-types.yml }
+  saveType: { file: ./workflows/cms-save-type.yml }
+  deleteType: { file: ./workflows/cms-delete-type.yml }
+  saveField: { file: ./workflows/cms-save-field.yml }
+  deleteField: { file: ./workflows/cms-delete-field.yml }
+  listTerms: { file: ./workflows/cms-list-terms.yml }
+  saveTerm: { file: ./workflows/cms-save-term.yml }
+  deleteTerm: { file: ./workflows/cms-delete-term.yml }
+  saveVocabulary: { file: ./workflows/cms-save-vocabulary.yml }
+  listMedia: { file: ./workflows/cms-list-media.yml }
+  importMedia: { file: ./workflows/cms-import-media.yml }
+  deleteMedia: { file: ./workflows/cms-delete-media.yml }
+  listTemplates: { file: ./workflows/cms-list-templates.yml }
+  saveTemplate: { file: ./workflows/cms-save-template.yml }
+  renderPreview: { file: ./workflows/cms-render-preview.yml }
+  exportSite: { file: ./workflows/cms-export-site.yml }
+  publishStatus: { file: ./workflows/cms-publish-status.yml }
+  deployCloudflare: { file: ./workflows/cms-deploy-cloudflare.yml }
+
+state:
+  # The content type picked in the "Other content type" dialog.
+  newType: ''
+  # Content types page: the type whose fields are shown, and the type / field being edited.
+  typeId: ''
+  typeEdit: null
+  fieldEdit: null
+  # Taxonomy page: the term being renamed.
+  termEdit: null
+  # Templates page: the template open in the editor.
+  templateId: ''
+
+pages:
+  # ================================================================== dashboard
+  - id: dashboard
+    name: Dashboard
+    icon: LayoutDashboard
+
+    runnables:
+      # Sets the store up (only does something the first time), then reads it.
+      install:
+        mode: run
+        workflow: install
+        trigger: load
+        outputs: [installed]
+        persist: false
+        onSuccess:
+          - { type: run, runnable: stats }
+
+      stats:
+        mode: run
+        workflow: dashboard
+        outputs: [stats, drafts, pending, recent]
+        persist: false
+
+      publishDraft:
+        mode: run
+        workflow: setStatus
+        inputs: { ids: ["{= draftsTable.selectedRow.id =}"], published: true }
+        outputs: [count]
+        onSuccess:
+          - { type: toast, message: "{{ draftsTable.selectedRow.title }} has been published.", variant: success }
+          - { type: run, runnable: stats }
+
+    components:
+      - id: dashTitle
+        type: text
+        name: Title
+        frame: none
+        layout: { x: 0, y: 0, w: 8, h: 9 }
+        props:
+          markdown: true
+          content: "## Dashboard\nWhat needs doing, and what changed."
+
+      # Article and Basic page open the editor; other types are picked in a dialog;
+      # Quick draft is a small dialog for a title and a few notes.
+      - id: createMenu
+        type: buttonGroup
+        name: Create
+        frame: none
+        layout: { x: 10, y: 2, w: 2, h: 6 }
+        props:
+          display: menu
+          label: Create
+          icon: Plus
+          variant: default
+          items:
+            - { id: article, label: Article, icon: FileText }
+            - { id: page, label: Basic page, icon: File }
+            - { id: other, label: Other content type…, icon: Shapes }
+            - { id: quick, label: Quick draft…, icon: PenLine }
+        events:
+          "action:article": [{ type: navigate, page: nodeEdit, params: { id: 0, type: article } }]
+          "action:page": [{ type: navigate, page: nodeEdit, params: { id: 0, type: page } }]
+          "action:other":
+            - { type: openModal, page: addContent, size: md }
+            - { type: navigate, page: nodeEdit, params: { id: 0, type: "{{ state.newType }}" } }
+          "action:quick":
+            - { type: openModal, page: quickDraft, size: md }
+            - { type: run, runnable: stats }
+
+      - id: statusLine
+        type: text
+        name: Status
+        layout: { x: 0, y: 9, w: 9, h: 7 }
+        props:
+          markdown: true
+          content: "**{{ runnables.stats.outputs.stats.published }}** published · **{{ runnables.stats.outputs.stats.drafts }}** drafts · **{{ runnables.stats.outputs.stats.media }}** images · last export {% if runnables.stats.outputs.stats.lastExport %}{{ runnables.stats.outputs.stats.lastExport | date: '%b %d, %Y %H:%M' }}{% else %}never{% endif %}"
+
+      - id: dashPreview
+        type: button
+        name: Preview site
+        frame: none
+        layout: { x: 9, y: 10, w: 3, h: 6 }
+        props:
+          label: Preview site
+          icon: Eye
+          variant: outline
+          disabled: "{% if runnables.stats.outputs.stats.hasHtml %}false{% else %}true{% endif %}"
+        events:
+          click: [{ type: openModal, page: sitePreview, size: xl }]
+
+      - id: pendingAlert
+        type: alert
+        name: Not live yet
+        layout: { x: 0, y: 16, w: 9, h: 7 }
+        props:
+          variant: warning
+          message: "{{ runnables.stats.outputs.stats.pending }} change(s) not on the live site yet. Export and deploy them on the Publish page."
+          visible: "{% if runnables.stats.outputs.stats.pending > 0 %}true{% else %}false{% endif %}"
+
+      - id: goPublish
+        type: button
+        name: Go to Publish
+        frame: none
+        layout: { x: 9, y: 17, w: 3, h: 6 }
+        props: { label: Go to Publish, icon: Upload, variant: outline }
+        events:
+          click: [{ type: navigate, page: publish }]
+
+      - id: draftsLabel
+        type: text
+        name: Drafts label
+        frame: none
+        layout: { x: 0, y: 24, w: 6, h: 5 }
+        props: { content: "**Drafts** · unpublished, newest change first", markdown: true }
+
+      - id: draftsTable
+        type: table
+        name: Drafts
+        layout: { x: 0, y: 29, w: 6, h: 38 }
+        props:
+          data: "{= runnables.stats.outputs.drafts =}"
+          rowKey: id
+          fit: truncate
+          columns:
+            - { key: title, header: Title }
+            - { key: type, header: Type }
+            - { key: changed, header: Changed, format: datetime }
+          rowActions:
+            - { id: publish, label: Publish, variant: outline }
+        events:
+          rowClick: [{ type: navigate, page: nodeEdit, params: { id: "{= draftsTable.selectedRow.id =}" } }]
+          "action:publish": [{ type: run, runnable: publishDraft }]
+
+      - id: pendingLabel
+        type: text
+        name: Pending label
+        frame: none
+        layout: { x: 6, y: 24, w: 6, h: 5 }
+        props: { content: "**Not on the live site yet** · changed since the last export", markdown: true }
+
+      - id: pendingTable
+        type: table
+        name: Not on the live site yet
+        layout: { x: 6, y: 29, w: 6, h: 38 }
+        props:
+          data: "{= runnables.stats.outputs.pending =}"
+          rowKey: id
+          fit: truncate
+          columns:
+            - { key: title, header: Title }
+            - { key: change, header: Change, format: badge, colors: { New: blue, Edited: amber, Unpublished: gray } }
+            - { key: changed, header: When, format: datetime }
+        events:
+          rowClick: [{ type: navigate, page: nodeEdit, params: { id: "{= pendingTable.selectedRow.id =}" } }]
+
+      - id: recentLabel
+        type: text
+        name: Recent label
+        frame: none
+        layout: { x: 0, y: 68, w: 12, h: 5 }
+        props: { content: "**Recently changed** · with the revision log message · click to edit", markdown: true }
+
+      - id: recentTable
+        type: table
+        name: Recently changed
+        layout: { x: 0, y: 73, w: 12, h: 44 }
+        props:
+          data: "{= runnables.stats.outputs.recent =}"
+          rowKey: id
+          fit: truncate
+          columns:
+            - { key: title, header: Title }
+            - { key: type, header: Type }
+            - { key: status, header: Status, format: badge, colors: { Published: green, Unpublished: gray } }
+            - { key: log, header: Log message }
+            - { key: changed, header: When, format: datetime }
+        events:
+          rowClick: [{ type: navigate, page: nodeEdit, params: { id: "{= recentTable.selectedRow.id =}" } }]
+
+  # ================================================================== content
+  - id: content
+    name: Content
+    icon: FileText
+
+    runnables:
+      list:
+        mode: run
+        workflow: listContent
+        trigger: load
+        inputs:
+          type: "{{ typeFilter.value }}"
+          status: "{{ statusFilter.value }}"
+        outputs: [rows, typeOptions]
+        persist: false
+
+      publishOne:
+        mode: run
+        workflow: setStatus
+        inputs: { ids: ["{= contentTable.selectedRow.id =}"], published: true }
+        outputs: [count]
+        onSuccess:
+          - { type: toast, message: "{{ contentTable.selectedRow.title }} has been published.", variant: success }
+          - { type: run, runnable: list }
+
+      unpublishOne:
+        mode: run
+        workflow: setStatus
+        inputs: { ids: ["{= contentTable.selectedRow.id =}"], published: false }
+        outputs: [count]
+        onSuccess:
+          - { type: toast, message: "{{ contentTable.selectedRow.title }} has been unpublished.", variant: success }
+          - { type: run, runnable: list }
+
+      deleteOne:
+        mode: run
+        workflow: deleteNode
+        confirm: "Delete {{ contentTable.selectedRow.title }} and all its revisions? This can't be undone."
+        inputs: { ids: ["{= contentTable.selectedRow.id =}"] }
+        outputs: [count, titles]
+        onSuccess:
+          - { type: toast, message: "{{ result.outputs.titles }} has been deleted.", variant: success }
+          - { type: run, runnable: list }
+
+      publishMany:
+        mode: run
+        workflow: setStatus
+        inputs: { ids: "{= contentTable.selectedRows =}", published: true }
+        outputs: [count]
+        onSuccess:
+          - { type: toast, message: "Published {{ result.outputs.count }} item(s).", variant: success }
+          - { type: reset, component: contentTable }
+          - { type: run, runnable: list }
+
+      unpublishMany:
+        mode: run
+        workflow: setStatus
+        inputs: { ids: "{= contentTable.selectedRows =}", published: false }
+        outputs: [count]
+        onSuccess:
+          - { type: toast, message: "Unpublished {{ result.outputs.count }} item(s).", variant: success }
+          - { type: reset, component: contentTable }
+          - { type: run, runnable: list }
+
+      deleteMany:
+        mode: run
+        workflow: deleteNode
+        confirm: "Delete {{ contentTable.selectedRows | size }} item(s) and all their revisions? This can't be undone."
+        inputs: { ids: "{= contentTable.selectedRows =}" }
+        outputs: [count, titles]
+        onSuccess:
+          - { type: toast, message: "Deleted {{ result.outputs.count }} item(s).", variant: success }
+          - { type: reset, component: contentTable }
+          - { type: run, runnable: list }
+
+    components:
+      - id: contentTitle
+        type: text
+        name: Title
+        frame: none
+        layout: { x: 0, y: 0, w: 8, h: 9 }
+        props:
+          markdown: true
+          content: "## Content\nEverything on the site, newest change first. Tick rows to publish, unpublish or delete them together."
+
+      - id: contentCreate
+        type: buttonGroup
+        name: Create
+        frame: none
+        layout: { x: 10, y: 2, w: 2, h: 6 }
+        props:
+          display: menu
+          label: Create
+          icon: Plus
+          variant: default
+          items:
+            - { id: article, label: Article, icon: FileText }
+            - { id: page, label: Basic page, icon: File }
+            - { id: other, label: Other content type…, icon: Shapes }
+            - { id: quick, label: Quick draft…, icon: PenLine }
+        events:
+          "action:article": [{ type: navigate, page: nodeEdit, params: { id: 0, type: article } }]
+          "action:page": [{ type: navigate, page: nodeEdit, params: { id: 0, type: page } }]
+          "action:other":
+            - { type: openModal, page: addContent, size: md }
+            - { type: navigate, page: nodeEdit, params: { id: 0, type: "{{ state.newType }}" } }
+          "action:quick":
+            - { type: openModal, page: quickDraft, size: md }
+            - { type: run, runnable: list }
+
+      - id: typeFilter
+        type: select
+        name: Content type filter
+        layout: { x: 0, y: 9, w: 4, h: 14 }
+        props:
+          label: Content type
+          default: all
+          options: "{= runnables.list.outputs.typeOptions =}"
+        events:
+          change: [{ type: run, runnable: list }]
+
+      - id: statusFilter
+        type: select
+        name: Status filter
+        layout: { x: 4, y: 9, w: 5, h: 14 }
+        props:
+          label: Published status
+          display: buttons
+          default: all
+          options:
+            - { value: all, label: Any }
+            - { value: published, label: Published }
+            - { value: unpublished, label: Unpublished }
+        events:
+          change: [{ type: run, runnable: list }]
+
+      - id: contentTable
+        type: table
+        name: Content
+        layout: { x: 0, y: 23, w: 12, h: 72 }
+        fill: true
+        props:
+          data: "{= runnables.list.outputs.rows =}"
+          rowKey: id
+          searchable: true
+          exportable: true
+          pageSize: 25
+          fit: truncate
+          columns:
+            - { key: title, header: Title }
+            - { key: type, header: Content type }
+            - { key: template, header: Template }
+            - { key: status, header: Status, format: badge, colors: { Published: green, Unpublished: gray } }
+            - { key: alias, header: URL alias, copy: true }
+            - { key: changed, header: Updated, format: datetime }
+          rowActions:
+            - { id: edit, label: Edit, variant: outline }
+            - { id: publish, label: Publish, variant: ghost }
+            - { id: unpublish, label: Unpublish, variant: ghost }
+            - { id: delete, label: Delete, variant: destructive }
+          bulkActions:
+            - { id: publish, label: Publish }
+            - { id: unpublish, label: Unpublish, variant: outline }
+            - { id: delete, label: Delete, variant: destructive }
+        events:
+          rowClick: [{ type: navigate, page: nodeEdit, params: { id: "{= contentTable.selectedRow.id =}" } }]
+          "action:edit": [{ type: navigate, page: nodeEdit, params: { id: "{= contentTable.selectedRow.id =}" } }]
+          "action:publish": [{ type: run, runnable: publishOne }]
+          "action:unpublish": [{ type: run, runnable: unpublishOne }]
+          "action:delete": [{ type: run, runnable: deleteOne }]
+          "bulk:publish": [{ type: run, runnable: publishMany }]
+          "bulk:unpublish": [{ type: run, runnable: unpublishMany }]
+          "bulk:delete": [{ type: run, runnable: deleteMany }]
+
+  # the page that opened it goes on to the editor.
+  - id: addContent
+    name: Add content
+    showInMenu: false
+
+    runnables:
+      types:
+        mode: run
+        workflow: listTypes
+        trigger: load
+        outputs: [types]
+        persist: false
+
+    components:
+      - id: addTitle
+        type: text
+        name: Title
+        frame: none
+        layout: { x: 0, y: 0, w: 12, h: 7 }
+        props: { content: "### Add content\nChoose what kind of content to write.", markdown: true }
+
+      - id: typeCards
+        type: listView
+        name: Content types
+        frame: none
+        layout: { x: 0, y: 7, w: 12, h: 40 }
+        props:
+          data: "{= runnables.types.outputs.types =}"
+          itemName: contentType
+          itemsPerRow: 1
+          itemKey: id
+          emptyText: There are no content types yet. Add one on the Content types page.
+        events:
+          itemClick:
+            - { type: setState, key: newType, value: "{{ typeCards.selectedItem.id }}" }
+            - { type: closeModal }
+
+      - id: typeCardName
+        type: text
+        name: Type name
+        frame: none
+        parent: { id: typeCards }
+        layout: { x: 0, y: 0, w: 12, h: 5 }
+        props: { content: "{{ contentType.label }}", fontWeight: semibold }
+
+      - id: typeCardDescription
+        type: text
+        name: Type description
+        frame: none
+        parent: { id: typeCards }
+        layout: { x: 0, y: 5, w: 12, h: 5 }
+        props: { content: "{{ contentType.description }}" }
+
+  # ================================================================== node editor (drawer)
+  # ================================================================== quick draft (dialog)
+  # A title and a few notes, saved as unpublished content of a type — or carried into
+  # the editor to finish now.
+  - id: quickDraft
+    name: Quick draft
+    showInMenu: false
+
+    runnables:
+      types:
+        mode: run
+        workflow: listTypes
+        trigger: load
+        outputs: [typeOptions]
+        persist: false
+
+      save:
+        mode: run
+        workflow: saveNode
+        inputs:
+          id: 0
+          type: "{{ quickForm.values.type }}"
+          values:
+            title: "{{ quickForm.values.title }}"
+            body: "{= quickForm.values.notes =}"
+          published: false
+          log: Quick draft
+        outputs: [node]
+        onSuccess:
+          - { type: toast, message: "Draft {{ result.outputs.node.title }} has been saved.", variant: success }
+          - { type: closeModal }
+
+    components:
+      - id: quickForm
+        type: form
+        name: Quick draft
+        frame: none
+        layout: { x: 0, y: 0, w: 12, h: 44 }
+        props:
+          title: Quick draft
+          submitLabel: Save draft
+          fields:
+            - name: type
+              label: Content type
+              type: select
+              required: true
+              default: article
+              options: "{= runnables.types.outputs.typeOptions =}"
+            - { name: title, label: Title, type: text, required: true, placeholder: "What's it about?" }
+            - { name: notes, label: Notes, type: textarea, placeholder: A few lines to start from }
+        events:
+          submit: [{ type: run, runnable: save }]
+
+      # Navigating from a dialog closes it.
+      - id: continueEditing
+        type: button
+        name: Continue in the editor
+        frame: none
+        layout: { x: 0, y: 44, w: 6, h: 6 }
+        props: { label: Continue in the editor, variant: outline, icon: SquarePen }
+        events:
+          click:
+            - type: navigate
+              page: nodeEdit
+              params:
+                id: 0
+                type: "{{ quickForm.values.type }}"
+                title: "{{ quickForm.values.title }}"
+                body: "{= quickForm.values.notes =}"
+
+      - id: quickError
+        type: alert
+        name: Save error
+        layout: { x: 0, y: 50, w: 12, h: 7 }
+        props:
+          message: "{{ runnables.save.error }}"
+          variant: error
+          visible: "{% if runnables.save.error %}true{% else %}false{% endif %}"
+
+  # ================================================================== node editor (page)
+  # Opened with params { id } (or { id: 0, type } for new content, optionally with a
+  # title and body from a quick draft). The writing on the left — its fields come from
+  # the content type — and the settings on the right, as Drupal's node form.
+  - id: nodeEdit
+    name: Edit content
+    showInMenu: false
+
+    runnables:
+      node:
+        mode: run
+        workflow: getNode
+        trigger: load
+        inputs:
+          id: "{= page.params.id =}"
+          type: "{{ page.params.type }}"
+          title: "{{ page.params.title }}"
+          body: "{{ page.params.body }}"
+        outputs: [form, node]
+        persist: false
+        # The settings start at the node's values once they've arrived.
+        onSuccess:
+          - { type: reset, component: publishedSwitch }
+          - { type: reset, component: templateSelect }
+          - { type: reset, component: aliasInput }
+          - { type: reset, component: logInput }
+
+      save:
+        mode: run
+        workflow: saveNode
+        inputs:
+          id: "{= runnables.node.outputs.node.id =}"
+          type: "{{ runnables.node.outputs.node.type }}"
+          values: "{= nodeForm.values =}"
+          published: "{= publishedSwitch.value =}"
+          alias: "{{ aliasInput.value }}"
+          template: "{{ templateSelect.value }}"
+          log: "{{ logInput.value }}"
+        outputs: [node]
+        onSuccess:
+          - { type: toast, message: "{{ runnables.node.outputs.node.typeLabel }} {{ result.outputs.node.title }} has been saved.", variant: success }
+          - { type: navigate, page: content }
+
+      delete:
+        mode: run
+        workflow: deleteNode
+        confirm: "Delete {{ runnables.node.outputs.node.title }} and all its revisions? This can't be undone."
+        inputs: { ids: ["{= runnables.node.outputs.node.id =}"] }
+        outputs: [titles]
+        onSuccess:
+          - { type: toast, message: "{{ result.outputs.titles }} has been deleted.", variant: success }
+          - { type: navigate, page: content }
+
+      # The Preview tab: the unsaved values, rendered with the chosen template.
+      preview:
+        mode: run
+        workflow: renderPreview
+        inputs:
+          nodeId: "{= runnables.node.outputs.node.id =}"
+          nodeType: "{{ runnables.node.outputs.node.type }}"
+          values: "{= nodeForm.values =}"
+          nodeTemplate: "{{ templateSelect.value }}"
+        outputs: [result]
+        persist: false
+
+      revisions:
+        mode: run
+        workflow: listRevisions
+        trigger: load
+        inputs: { id: "{= page.params.id =}" }
+        outputs: [revisions]
+        persist: false
+
+      revert:
+        mode: run
+        workflow: revertRevision
+        confirm: "Revert to the revision from {{ revisionsTable.selectedRow.created | date: '%b %d, %Y %H:%M' }}? It's copied forward as a new revision, so nothing is lost."
+        inputs: { revisionId: "{= revisionsTable.selectedRow.id =}" }
+        outputs: [node]
+        onSuccess:
+          - { type: toast, message: "{{ result.outputs.node.title }} has been reverted to the revision from {{ result.outputs.node.revertedTo }}.", variant: success }
+          - { type: run, runnable: node }
+          - { type: run, runnable: revisions }
+
+    components:
+      - id: editorCrumbs
+        type: breadcrumbs
+        name: Breadcrumbs
+        frame: none
+        layout: { x: 0, y: 0, w: 12, h: 5 }
+        props:
+          items:
+            - { label: Content, page: content }
+            - { label: "{{ runnables.node.outputs.node.heading }}" }
+
+      - id: editorHeading
+        type: text
+        name: Heading
+        frame: none
+        layout: { x: 0, y: 5, w: 9, h: 7 }
+        props:
+          markdown: true
+          content: "## {{ runnables.node.outputs.node.heading }}"
+
+      - id: editorStatus
+        type: badge
+        name: Status
+        frame: none
+        layout: { x: 9, y: 6, w: 3, h: 5 }
+        props:
+          value: "{{ runnables.node.outputs.node.status }}"
+          colors: { Published: green, Unpublished: gray, New: blue }
+
+      - id: loadError
+        type: alert
+        name: Load error
+        layout: { x: 0, y: 12, w: 12, h: 7 }
+        props:
+          message: "{{ runnables.node.error }}"
+          variant: error
+          visible: "{% if runnables.node.error %}true{% else %}false{% endif %}"
+
+      - id: editorTabs
+        type: tabs
+        name: Editor sections
+        frame: none
+        layout: { x: 0, y: 19, w: 8, h: 126 }
+        props:
+          tabs:
+            - { id: edit, label: Edit }
+            - { id: preview, label: Preview }
+            - { id: history, label: Revisions }
+        events:
+          change: [{ type: run, runnable: preview }]
+
+      # The fields are whatever the content type has (see CMS: Get Content).
+      - id: nodeForm
+        type: form
+        name: Node form
+        frame: none
+        parent: { id: editorTabs, tab: edit }
+        layout: { x: 0, y: 0, w: 12, h: 108 }
+        props:
+          fields: "{= runnables.node.outputs.form =}"
+          submitLabel: Save
+        events:
+          submit: [{ type: run, runnable: save }]
+
+      - id: saveError
+        type: alert
+        name: Save error
+        parent: { id: editorTabs, tab: edit }
+        layout: { x: 0, y: 108, w: 12, h: 7 }
+        props:
+          message: "{{ runnables.save.error }}"
+          variant: error
+          visible: "{% if runnables.save.error %}true{% else %}false{% endif %}"
+
+      - id: previewFrame
+        type: embed
+        name: Preview
+        parent: { id: editorTabs, tab: preview }
+        layout: { x: 0, y: 0, w: 12, h: 108 }
+        props:
+          title: Preview with the chosen template
+          html: "{= runnables.preview.outputs.result =}"
+          blockScripts: true
+          emptyText: Rendering the preview…
+
+      - id: previewError
+        type: alert
+        name: Preview error
+        parent: { id: editorTabs, tab: preview }
+        layout: { x: 0, y: 108, w: 12, h: 7 }
+        props:
+          message: "{{ runnables.preview.error }}"
+          variant: error
+          visible: "{% if runnables.preview.error %}true{% else %}false{% endif %}"
+
+      - id: revisionsTable
+        type: table
+        name: Revisions
+        parent: { id: editorTabs, tab: history }
+        layout: { x: 0, y: 0, w: 12, h: 100 }
+        props:
+          data: "{= runnables.revisions.outputs.revisions =}"
+          rowKey: id
+          fit: wrap
+          columns:
+            - { key: created, header: Date, format: datetime }
+            - { key: log, header: Log message }
+            - { key: title, header: Title }
+            - { key: status, header: Status, format: badge, colors: { Published: green, Unpublished: gray } }
+            - { key: current, header: '', format: badge, colors: { Current revision: blue } }
+          rowActions:
+            - { id: revert, label: Revert, variant: outline }
+        events:
+          "action:revert": [{ type: run, runnable: revert }]
+
+      # ---- the settings, on the right
+      - id: settingsBox
+        type: container
+        name: Settings
+        layout: { x: 8, y: 19, w: 4, h: 84 }
+        props:
+          title: Settings
+
+      - id: publishedSwitch
+        type: checkbox
+        name: Published
+        frame: none
+        parent: { id: settingsBox }
+        layout: { x: 0, y: 0, w: 12, h: 7 }
+        props:
+          label: Published
+          default: "{= runnables.node.outputs.node.published =}"
+
+      - id: templateSelect
+        type: select
+        name: Template
+        frame: none
+        parent: { id: settingsBox }
+        layout: { x: 0, y: 7, w: 12, h: 16 }
+        props:
+          label: Template
+          description: How the site shows it. Manage templates on the Templates page.
+          default: "{{ runnables.node.outputs.node.template }}"
+          options: "{= runnables.node.outputs.node.templateOptions =}"
+
+      - id: aliasInput
+        type: input
+        name: URL alias
+        frame: none
+        parent: { id: settingsBox }
+        layout: { x: 0, y: 23, w: 12, h: 16 }
+        props:
+          inputType: text
+          label: URL alias
+          placeholder: "Empty: {{ runnables.node.outputs.node.aliasPattern }}"
+          description: For example /about for an About page.
+          default: "{{ runnables.node.outputs.node.alias }}"
+
+      - id: logInput
+        type: input
+        name: Revision log message
+        frame: none
+        parent: { id: settingsBox }
+        layout: { x: 0, y: 39, w: 12, h: 20 }
+        props:
+          inputType: textarea
+          label: Revision log message
+          placeholder: Briefly describe the changes you have made.
+
+      - id: nodeDates
+        type: keyValue
+        name: Dates
+        frame: none
+        parent: { id: settingsBox }
+        layout: { x: 0, y: 59, w: 12, h: 13 }
+        props:
+          data: "{= runnables.node.outputs.node =}"
+          hideEmpty: true
+          fields:
+            - { key: created, label: Created, format: datetime }
+            - { key: changed, label: Last saved, format: datetime }
+
+      - id: deleteButton
+        type: button
+        name: Delete
+        frame: none
+        parent: { id: settingsBox }
+        layout: { x: 0, y: 73, w: 12, h: 6 }
+        props:
+          label: Delete
+          icon: Trash2
+          variant: destructive
+          disabled: "{% if runnables.node.outputs.node.isNew %}true{% else %}false{% endif %}"
+        events:
+          click: [{ type: run, runnable: delete }]
+
+  # ================================================================== templates
+  - id: templates
+    name: Templates
+    icon: LayoutTemplate
+
+    runnables:
+      list:
+        mode: run
+        workflow: listTemplates
+        trigger: load
+        inputs: { selected: "{{ state.templateId }}" }
+        outputs: [options, template, samples, variables, legend]
+        persist: false
+        # The picker, the editor and the preview item start at what was loaded.
+        onSuccess:
+          - { type: reset, component: templatePick }
+          - { type: reset, component: sampleSelect }
+          - { type: reset, component: templateCode }
+
+      save:
+        mode: run
+        workflow: saveTemplate
+        inputs:
+          op: save
+          id: "{{ runnables.list.outputs.template.id }}"
+          html: "{= templateCode.value =}"
+        outputs: [template]
+        onSuccess:
+          - { type: toast, message: "Template {{ result.outputs.template.name }} has been saved.", variant: success }
+
+      # The editor's Preview: the unsaved text, rendered by the workflow.
+      preview:
+        mode: run
+        workflow: renderPreview
+        inputs:
+          templateId: "{{ runnables.list.outputs.template.id }}"
+          html: "{= templateCode.value =}"
+          sampleId: "{= sampleSelect.value =}"
+        outputs: [result]
+        persist: false
+
+      makeDefault:
+        mode: run
+        workflow: saveTemplate
+        inputs: { op: default, id: "{{ runnables.list.outputs.template.id }}" }
+        outputs: [template]
+        onSuccess:
+          - { type: toast, message: "{{ result.outputs.template.name }} is now the default for {{ runnables.list.outputs.template.typeLabel }}.", variant: success }
+          - { type: run, runnable: list }
+
+      delete:
+        mode: run
+        workflow: saveTemplate
+        confirm: "Delete the template {{ runnables.list.outputs.template.name }}? Content that uses it goes back to its type's default."
+        inputs: { op: delete, id: "{{ runnables.list.outputs.template.id }}" }
+        outputs: [template]
+        onSuccess:
+          - { type: toast, message: "Template {{ result.outputs.template.name }} has been deleted.", variant: success }
+          - { type: setState, key: templateId, value: '' }
+          - { type: run, runnable: list }
+
+    components:
+      - id: templatesTitle
+        type: text
+        name: Title
+        frame: none
+        layout: { x: 0, y: 0, w: 7, h: 9 }
+        props:
+          markdown: true
+          content: "## Templates\nHow the exported HTML site shows your content. Templates are Liquid."
+
+      - id: templateMore
+        type: buttonGroup
+        name: More
+        frame: none
+        layout: { x: 7, y: 2, w: 2, h: 6 }
+        props:
+          display: menu
+          label: More
+          icon: Ellipsis
+          variant: outline
+          items:
+            - { id: create, label: New template…, icon: Plus }
+            - id: makeDefault
+              label: Make it the default
+              icon: Star
+              disabled: "{% if runnables.list.outputs.template.canMakeDefault %}false{% else %}true{% endif %}"
+            - id: delete
+              label: Delete template
+              icon: Trash2
+              variant: destructive
+              disabled: "{% if runnables.list.outputs.template.canDelete %}false{% else %}true{% endif %}"
+        events:
+          "action:create":
+            - { type: openModal, page: newTemplate, size: sm }
+            - { type: run, runnable: list }
+          "action:makeDefault": [{ type: run, runnable: makeDefault }]
+          "action:delete": [{ type: run, runnable: delete }]
+
+      - id: saveTemplateButton
+        type: button
+        name: Save
+        frame: none
+        layout: { x: 10, y: 2, w: 2, h: 6 }
+        props: { label: Save, icon: Save }
+        events:
+          click: [{ type: run, runnable: save }]
+
+      - id: templatePick
+        type: select
+        name: Template
+        layout: { x: 0, y: 9, w: 5, h: 14 }
+        props:
+          label: Template
+          default: "{{ runnables.list.outputs.template.id }}"
+          options: "{= runnables.list.outputs.options =}"
+        events:
+          change:
+            - { type: setState, key: templateId, value: "{{ templatePick.value }}" }
+            - { type: run, runnable: list }
+
+      - id: sampleSelect
+        type: select
+        name: Preview with
+        layout: { x: 5, y: 9, w: 3, h: 14 }
+        props:
+          label: Preview with
+          placeholder: The newest item
+          default: "{= runnables.list.outputs.samples[0].value =}"
+          options: "{= runnables.list.outputs.samples =}"
+        events:
+          change: [{ type: run, runnable: preview }]
+
+      - id: templateAbout
+        type: text
+        name: About
+        frame: none
+        layout: { x: 8, y: 13, w: 4, h: 8 }
+        props:
+          content: "{{ runnables.list.outputs.template.about }}"
+          color: "var(--muted-foreground)"
+
+      # One big editor, like a String template step: Code | Preview, { } and full
+      # screen. Preview asks the workflow to render the text as it stands.
+      - id: templateCode
+        type: input
+        name: Template HTML
+        layout: { x: 0, y: 23, w: 8, h: 82 }
+        props:
+          inputType: code
+          language: html
+          default: "{= runnables.list.outputs.template.html =}"
+          preview: true
+          previewHtml: "{= runnables.preview.outputs.result =}"
+          variables: "{= runnables.list.outputs.variables =}"
+        events:
+          preview: [{ type: run, runnable: preview }]
+
+      - id: previewProblem
+        type: alert
+        name: Preview error
+        layout: { x: 0, y: 105, w: 8, h: 7 }
+        props:
+          message: "{{ runnables.preview.error }}"
+          variant: error
+          visible: "{% if runnables.preview.error %}true{% else %}false{% endif %}"
+
+      - id: templateLegend
+        type: text
+        name: Legend
+        layout: { x: 8, y: 23, w: 4, h: 89 }
+        props:
+          markdown: true
+          content: "{= runnables.list.outputs.legend =}"
+
+  # ------------------------------------------------------------------ new template (dialog)
+  - id: newTemplate
+    name: New template
+    showInMenu: false
+
+    runnables:
+      types:
+        mode: run
+        workflow: listTypes
+        trigger: load
+        outputs: [typeOptions]
+        persist: false
+
+      create:
+        mode: run
+        workflow: saveTemplate
+        inputs:
+          op: create
+          name: "{{ newTemplateForm.values.name }}"
+          type: "{{ newTemplateForm.values.type }}"
+        outputs: [template]
+        onSuccess:
+          - { type: toast, message: "Template {{ result.outputs.template.name }} has been created.", variant: success }
+          - { type: setState, key: templateId, value: "{{ result.outputs.template.id }}" }
+          - { type: closeModal }
+
+    components:
+      - id: newTemplateForm
+        type: form
+        name: New template
+        frame: none
+        layout: { x: 0, y: 0, w: 12, h: 34 }
+        props:
+          title: New template
+          submitLabel: Create template
+          fields:
+            - { name: name, label: Name, type: text, required: true, placeholder: e.g. Feature article }
+            - name: type
+              label: For
+              type: select
+              required: true
+              default: article
+              description: It starts as a copy of that type's default template.
+              options: "{= runnables.types.outputs.typeOptions =}"
+        events:
+          submit: [{ type: run, runnable: create }]
+
+      - id: newTemplateError
+        type: alert
+        name: Create error
+        layout: { x: 0, y: 34, w: 12, h: 7 }
+        props:
+          message: "{{ runnables.create.error }}"
+          variant: error
+          visible: "{% if runnables.create.error %}true{% else %}false{% endif %}"
+
+  # ================================================================== content types
+  - id: contentTypes
+    name: Content types
+    icon: Shapes
+
+    runnables:
+      types:
+        mode: run
+        workflow: listTypes
+        trigger: load
+        inputs: { selected: "{{ state.typeId }}" }
+        outputs: [types, type, fields, kinds]
+        persist: false
+
+      deleteType:
+        mode: run
+        workflow: deleteType
+        confirm: "Delete the content type {{ typesTable.selectedRow.label }} and its fields? This can't be undone."
+        inputs: { id: "{{ typesTable.selectedRow.id }}" }
+        outputs: [type]
+        onSuccess:
+          - { type: toast, message: "The content type {{ result.outputs.type.label }} has been deleted.", variant: success }
+          - { type: setState, key: typeId, value: '' }
+          - { type: run, runnable: types }
+
+      deleteField:
+        mode: run
+        workflow: deleteField
+        confirm: "Delete the field {{ fieldsTable.selectedRow.label }}? Its values are deleted from all {{ runnables.types.outputs.type.label }} content. This can't be undone."
+        inputs:
+          type: "{{ runnables.types.outputs.type.id }}"
+          name: "{{ fieldsTable.selectedRow.name }}"
+        outputs: [field]
+        onSuccess:
+          - { type: toast, message: "The field {{ result.outputs.field.label }} has been deleted.", variant: success }
+          - { type: run, runnable: types }
+
+    components:
+      - id: typesTitle
+        type: text
+        name: Title
+        frame: none
+        layout: { x: 0, y: 0, w: 8, h: 9 }
+        props:
+          markdown: true
+          content: "## Content types\nEach type has its own fields, URL alias pattern and HTML template. Click a type to manage its fields."
+
+      - id: addType
+        type: button
+        name: Add content type
+        frame: none
+        layout: { x: 9, y: 2, w: 3, h: 6 }
+        props: { label: Add content type, icon: Plus }
+        events:
+          click:
+            - type: setState
+              key: typeEdit
+              value: { isNew: true, id: '', label: '', description: '', aliasPattern: '/[node:title]', template: '' }
+            - { type: openModal, page: typeDialog, size: lg }
+            - { type: run, runnable: types }
+
+      - id: typesTable
+        type: table
+        name: Content types
+        layout: { x: 0, y: 9, w: 5, h: 50 }
+        props:
+          data: "{= runnables.types.outputs.types =}"
+          rowKey: id
+          fit: truncate
+          columns:
+            - { key: label, header: Name }
+            - { key: id, header: Machine name }
+            - { key: count, header: Content, format: number }
+            - { key: fieldCount, header: Fields, format: number }
+          rowActions:
+            - { id: edit, label: Edit, variant: outline }
+            - { id: delete, label: Delete, variant: destructive }
+        events:
+          rowClick:
+            - { type: setState, key: typeId, value: "{{ typesTable.selectedRow.id }}" }
+            - { type: run, runnable: types }
+          "action:edit":
+            - type: setState
+              key: typeEdit
+              value:
+                isNew: false
+                id: "{{ typesTable.selectedRow.id }}"
+                label: "{{ typesTable.selectedRow.label }}"
+                description: "{= typesTable.selectedRow.description =}"
+                aliasPattern: "{= typesTable.selectedRow.aliasPattern =}"
+                template: "{= typesTable.selectedRow.template =}"
+            - { type: openModal, page: typeDialog, size: lg }
+            - { type: run, runnable: types }
+          "action:delete": [{ type: run, runnable: deleteType }]
+
+      - id: fieldsTitle
+        type: text
+        name: Fields title
+        frame: none
+        layout: { x: 5, y: 9, w: 4, h: 7 }
+        props:
+          markdown: true
+          content: "**Manage fields: {{ runnables.types.outputs.type.label }}**\nURL alias pattern: `{{ runnables.types.outputs.type.aliasPattern }}`"
+
+      - id: addField
+        type: button
+        name: Add field
+        frame: none
+        layout: { x: 9, y: 10, w: 3, h: 6 }
+        props:
+          label: Add field
+          icon: Plus
+          variant: outline
+          disabled: "{% if runnables.types.outputs.type.id %}false{% else %}true{% endif %}"
+        events:
+          click:
+            - type: setState
+              key: fieldEdit
+              value:
+                isNew: true
+                type: "{{ runnables.types.outputs.type.id }}"
+                typeLabel: "{{ runnables.types.outputs.type.label }}"
+                name: ''
+                label: ''
+                kind: text
+                required: false
+                vocabulary: ''
+                options: ''
+                help: ''
+                weight: "{= runnables.types.outputs.type.nextWeight =}"
+            - { type: openModal, page: fieldDialog, size: md }
+            - { type: run, runnable: types }
+
+      - id: fieldsTable
+        type: table
+        name: Fields
+        layout: { x: 5, y: 16, w: 7, h: 43 }
+        props:
+          data: "{= runnables.types.outputs.fields =}"
+          rowKey: name
+          fit: truncate
+          columns:
+            - { key: label, header: Label }
+            - { key: name, header: Machine name }
+            - { key: kindLabel, header: Field type }
+            - { key: settingsText, header: Settings }
+            - { key: weight, header: Weight, format: number }
+          rowActions:
+            - { id: edit, label: Edit, variant: outline }
+            - { id: delete, label: Delete, variant: destructive }
+        events:
+          "action:edit":
+            - type: setState
+              key: fieldEdit
+              value:
+                isNew: false
+                type: "{{ runnables.types.outputs.type.id }}"
+                typeLabel: "{{ runnables.types.outputs.type.label }}"
+                name: "{{ fieldsTable.selectedRow.name }}"
+                label: "{{ fieldsTable.selectedRow.label }}"
+                kind: "{{ fieldsTable.selectedRow.kind }}"
+                required: "{= fieldsTable.selectedRow.required =}"
+                vocabulary: "{{ fieldsTable.selectedRow.vocabulary }}"
+                options: "{= fieldsTable.selectedRow.options =}"
+                help: "{= fieldsTable.selectedRow.help =}"
+                weight: "{= fieldsTable.selectedRow.weight =}"
+            - { type: openModal, page: fieldDialog, size: md }
+            - { type: run, runnable: types }
+          "action:delete": [{ type: run, runnable: deleteField }]
+
+      - id: typeError
+        type: alert
+        name: Delete error
+        layout: { x: 0, y: 59, w: 12, h: 7 }
+        props:
+          message: "{{ runnables.deleteType.error }}{{ runnables.deleteField.error }}"
+          variant: error
+          visible: "{% if runnables.deleteType.error or runnables.deleteField.error %}true{% else %}false{% endif %}"
+
+  # ------------------------------------------------------------------ content type dialog
+  - id: typeDialog
+    name: Content type
+    showInMenu: false
+
+    runnables:
+      save:
+        mode: run
+        workflow: saveType
+        inputs:
+          id: "{% if state.typeEdit.isNew %}{{ typeForm.values.id }}{% else %}{{ state.typeEdit.id }}{% endif %}"
+          label: "{{ typeForm.values.label }}"
+          description: "{= typeForm.values.description =}"
+          aliasPattern: "{= typeForm.values.aliasPattern =}"
+          isNew: "{= state.typeEdit.isNew =}"
+        outputs: [type]
+        onSuccess:
+          - { type: toast, message: "The content type {{ result.outputs.type.label }} has been saved.", variant: success }
+          - { type: setState, key: typeId, value: "{{ result.outputs.type.id }}" }
+          - { type: closeModal }
+
+    components:
+      - id: typeDialogTitle
+        type: text
+        name: Title
+        frame: none
+        layout: { x: 0, y: 0, w: 12, h: 6 }
+        props:
+          content: "{% if state.typeEdit.isNew %}Add content type{% else %}Edit {{ state.typeEdit.label }}{% endif %}"
+          fontSize: 18
+          fontWeight: semibold
+
+      - id: typeForm
+        type: form
+        name: Content type form
+        frame: none
+        layout: { x: 0, y: 6, w: 12, h: 92 }
+        props:
+          submitLabel: Save content type
+          fields:
+            - { name: label, label: Name, type: text, required: true, default: "{= state.typeEdit.label =}" }
+            - name: id
+              label: Machine name
+              type: text
+              default: "{= state.typeEdit.id =}"
+              placeholder: e.g. event
+              description: "Lowercase letters, numbers and underscores. Leave empty to make it from the name. Can't be changed once the type exists."
+            - { name: description, label: Description, type: textarea, default: "{= state.typeEdit.description =}" }
+            - name: aliasPattern
+              label: URL alias pattern
+              type: text
+              default: "{= state.typeEdit.aliasPattern =}"
+              description: "Used when content is saved without a URL alias. Tokens: [node:title], [node:type], [node:created:custom:Y] (year), [node:created:custom:m] (month)."
+        events:
+          submit: [{ type: run, runnable: save }]
+
+      - id: typeSaveError
+        type: alert
+        name: Save error
+        layout: { x: 0, y: 98, w: 12, h: 7 }
+        props:
+          message: "{{ runnables.save.error }}"
+          variant: error
+          visible: "{% if runnables.save.error %}true{% else %}false{% endif %}"
+
+  # ------------------------------------------------------------------ field dialog
+  - id: fieldDialog
+    name: Field
+    showInMenu: false
+
+    runnables:
+      vocabularies:
+        mode: run
+        workflow: listTerms
+        trigger: load
+        outputs: [vocabularies]
+        persist: false
+
+      save:
+        mode: run
+        workflow: saveField
+        inputs:
+          type: "{{ state.fieldEdit.type }}"
+          name: "{% if state.fieldEdit.isNew %}{{ fieldForm.values.name }}{% else %}{{ state.fieldEdit.name }}{% endif %}"
+          label: "{{ fieldForm.values.label }}"
+          kind: "{{ fieldForm.values.kind }}"
+          required: "{= fieldForm.values.required =}"
+          vocabulary: "{{ fieldForm.values.vocabulary }}"
+          options: "{= fieldForm.values.options =}"
+          help: "{= fieldForm.values.help =}"
+          weight: "{= fieldForm.values.weight =}"
+          isNew: "{= state.fieldEdit.isNew =}"
+        outputs: [field]
+        onSuccess:
+          - { type: toast, message: "The field {{ result.outputs.field.label }} has been saved.", variant: success }
+          - { type: closeModal }
+
+    components:
+      - id: fieldDialogTitle
+        type: text
+        name: Title
+        frame: none
+        layout: { x: 0, y: 0, w: 12, h: 6 }
+        props:
+          content: "{% if state.fieldEdit.isNew %}Add field to {{ state.fieldEdit.typeLabel }}{% else %}Edit {{ state.fieldEdit.label }}{% endif %}"
+          fontSize: 18
+          fontWeight: semibold
+
+      - id: fieldForm
+        type: form
+        name: Field form
+        frame: none
+        layout: { x: 0, y: 6, w: 12, h: 104 }
+        props:
+          submitLabel: Save field
+          fields:
+            - { name: label, label: Label, type: text, required: true, default: "{= state.fieldEdit.label =}" }
+            - name: name
+              label: Machine name
+              type: text
+              default: "{= state.fieldEdit.name =}"
+              placeholder: e.g. field_subtitle
+              description: "Leave empty to make it from the label; field_ is added in front. Can't be changed once the field exists."
+            - name: kind
+              label: Field type
+              type: select
+              required: true
+              default: "{= state.fieldEdit.kind =}"
+              description: "Can't be changed once the field exists."
+              options:
+                - { value: text, label: Text (plain) }
+                - { value: long_text, label: 'Text (formatted, long)' }
+                - { value: number, label: Number }
+                - { value: boolean, label: Boolean }
+                - { value: date, label: Date }
+                - { value: list, label: List (text) }
+                - { value: link, label: Link }
+                - { value: term_ref, label: Taxonomy term reference }
+                - { value: media_ref, label: Media reference }
+            - { name: required, label: Required field, type: checkbox, default: "{= state.fieldEdit.required =}" }
+            - name: vocabulary
+              label: Vocabulary
+              type: select
+              default: "{= state.fieldEdit.vocabulary =}"
+              description: Taxonomy term reference only — where its terms come from.
+              options: "{= runnables.vocabularies.outputs.vocabularies =}"
+            - name: options
+              label: Allowed values
+              type: textarea
+              default: "{= state.fieldEdit.options =}"
+              description: List only — one value per line.
+            - { name: help, label: Help text, type: text, default: "{= state.fieldEdit.help =}", description: Shown under the field in the edit form. }
+            - { name: weight, label: Weight, type: number, default: "{= state.fieldEdit.weight =}", description: Fields with a lower weight come first. }
+        events:
+          submit: [{ type: run, runnable: save }]
+
+      - id: fieldSaveError
+        type: alert
+        name: Save error
+        layout: { x: 0, y: 110, w: 12, h: 7 }
+        props:
+          message: "{{ runnables.save.error }}"
+          variant: error
+          visible: "{% if runnables.save.error %}true{% else %}false{% endif %}"
+
+  # ================================================================== taxonomy
+  - id: taxonomy
+    name: Taxonomy
+    icon: Tags
+
+    runnables:
+      terms:
+        mode: run
+        workflow: listTerms
+        trigger: load
+        inputs: { vocabulary: "{{ vocabularySelect.value }}" }
+        outputs: [vocabularies, terms]
+        persist: false
+
+      addTerm:
+        mode: run
+        workflow: saveTerm
+        inputs:
+          id: 0
+          vocabulary: "{{ vocabularySelect.value }}"
+          name: "{{ termForm.values.name }}"
+          weight: -1
+        outputs: [term]
+        onSuccess:
+          - { type: toast, message: "Created new term {{ result.outputs.term.name }}.", variant: success }
+          - { type: reset, component: termForm }
+          - { type: run, runnable: terms }
+
+      deleteTerm:
+        mode: run
+        workflow: deleteTerm
+        confirm: "Delete the term {{ termsTable.selectedRow.name }}? This can't be undone."
+        inputs: { id: "{= termsTable.selectedRow.id =}" }
+        outputs: [term]
+        onSuccess:
+          - { type: toast, message: "Deleted term {{ result.outputs.term.name }}.", variant: success }
+          - { type: run, runnable: terms }
+
+    components:
+      - id: taxonomyTitle
+        type: text
+        name: Title
+        frame: none
+        layout: { x: 0, y: 0, w: 8, h: 9 }
+        props:
+          markdown: true
+          content: "## Taxonomy\nVocabularies group terms; a Taxonomy term reference field lets content pick them."
+
+      - id: addVocabulary
+        type: button
+        name: Add vocabulary
+        frame: none
+        layout: { x: 9, y: 2, w: 3, h: 6 }
+        props: { label: Add vocabulary, icon: Plus, variant: outline }
+        events:
+          click:
+            - { type: openModal, page: vocabularyDialog, size: sm }
+            - { type: run, runnable: terms }
+
+      - id: vocabularySelect
+        type: select
+        name: Vocabulary
+        layout: { x: 0, y: 9, w: 4, h: 14 }
+        props:
+          label: Vocabulary
+          default: tags
+          options: "{= runnables.terms.outputs.vocabularies =}"
+        events:
+          change: [{ type: run, runnable: terms }]
+
+      - id: termForm
+        type: form
+        name: Add term
+        layout: { x: 0, y: 23, w: 4, h: 24 }
+        props:
+          title: Add term
+          submitLabel: Add term
+          fields:
+            - { name: name, label: Name, type: text, required: true, placeholder: e.g. Headless }
+        events:
+          submit: [{ type: run, runnable: addTerm }]
+
+      - id: termError
+        type: alert
+        name: Term error
+        layout: { x: 0, y: 47, w: 4, h: 10 }
+        props:
+          message: "{{ runnables.addTerm.error }}{{ runnables.deleteTerm.error }}"
+          variant: error
+          visible: "{% if runnables.addTerm.error or runnables.deleteTerm.error %}true{% else %}false{% endif %}"
+
+      - id: termsTable
+        type: table
+        name: Terms
+        layout: { x: 4, y: 9, w: 8, h: 60 }
+        props:
+          data: "{= runnables.terms.outputs.terms =}"
+          rowKey: id
+          searchable: true
+          columns:
+            - { key: name, header: Name }
+            - { key: usage, header: Used by, format: number }
+            - { key: weight, header: Weight, format: number }
+          rowActions:
+            - { id: edit, label: Edit, variant: outline }
+            - { id: delete, label: Delete, variant: destructive }
+        events:
+          "action:edit":
+            - type: setState
+              key: termEdit
+              value:
+                id: "{= termsTable.selectedRow.id =}"
+                name: "{{ termsTable.selectedRow.name }}"
+                weight: "{= termsTable.selectedRow.weight =}"
+                vocabulary: "{{ vocabularySelect.value }}"
+            - { type: openModal, page: termDialog, size: sm }
+            - { type: run, runnable: terms }
+          "action:delete": [{ type: run, runnable: deleteTerm }]
+
+  # ------------------------------------------------------------------ term dialog
+  - id: termDialog
+    name: Edit term
+    showInMenu: false
+
+    runnables:
+      save:
+        mode: run
+        workflow: saveTerm
+        inputs:
+          id: "{= state.termEdit.id =}"
+          vocabulary: "{{ state.termEdit.vocabulary }}"
+          name: "{{ termEditForm.values.name }}"
+          weight: "{= termEditForm.values.weight =}"
+        outputs: [term]
+        onSuccess:
+          - { type: toast, message: "Updated term {{ result.outputs.term.name }}.", variant: success }
+          - { type: closeModal }
+
+    components:
+      - id: termEditForm
+        type: form
+        name: Term form
+        frame: none
+        layout: { x: 0, y: 0, w: 12, h: 30 }
+        props:
+          title: Edit term
+          submitLabel: Save
+          fields:
+            - { name: name, label: Name, type: text, required: true, default: "{= state.termEdit.name =}" }
+            - { name: weight, label: Weight, type: number, required: true, default: "{= state.termEdit.weight =}", description: Terms with a lower weight come first. }
+        events:
+          submit: [{ type: run, runnable: save }]
+
+      - id: termSaveError
+        type: alert
+        name: Save error
+        layout: { x: 0, y: 30, w: 12, h: 7 }
+        props:
+          message: "{{ runnables.save.error }}"
+          variant: error
+          visible: "{% if runnables.save.error %}true{% else %}false{% endif %}"
+
+  # ------------------------------------------------------------------ vocabulary dialog
+  - id: vocabularyDialog
+    name: Add vocabulary
+    showInMenu: false
+
+    runnables:
+      save:
+        mode: run
+        workflow: saveVocabulary
+        inputs:
+          id: ''
+          label: "{{ vocabularyForm.values.label }}"
+          description: "{= vocabularyForm.values.description =}"
+        outputs: [vocabulary]
+        onSuccess:
+          - { type: toast, message: "Created new vocabulary {{ result.outputs.vocabulary.label }}.", variant: success }
+          - { type: closeModal }
+
+    components:
+      - id: vocabularyForm
+        type: form
+        name: Vocabulary form
+        frame: none
+        layout: { x: 0, y: 0, w: 12, h: 36 }
+        props:
+          title: Add vocabulary
+          submitLabel: Save
+          fields:
+            - { name: label, label: Name, type: text, required: true, placeholder: e.g. Audience }
+            - { name: description, label: Description, type: textarea }
+        events:
+          submit: [{ type: run, runnable: save }]
+
+      - id: vocabularySaveError
+        type: alert
+        name: Save error
+        layout: { x: 0, y: 36, w: 12, h: 7 }
+        props:
+          message: "{{ runnables.save.error }}"
+          variant: error
+          visible: "{% if runnables.save.error %}true{% else %}false{% endif %}"
+
+  # ================================================================== media
+  - id: media
+    name: Media library
+    icon: Images
+
+    runnables:
+      media:
+        mode: run
+        workflow: listMedia
+        trigger: load
+        outputs: [media]
+        persist: false
+
+      import:
+        mode: run
+        workflow: importMedia
+        inputs: { files: "{= mediaDrop.files =}" }
+        outputs: [imported, count]
+        onSuccess:
+          - { type: toast, message: "Added {{ result.outputs.count }} image(s) to the media library.", variant: success }
+          - { type: reset, component: mediaDrop }
+          - { type: run, runnable: media }
+
+      delete:
+        mode: run
+        workflow: deleteMedia
+        confirm: "Delete {{ mediaTable.selectedRow.name }} and its file? This can't be undone."
+        inputs: { id: "{= mediaTable.selectedRow.id =}" }
+        outputs: [media]
+        onSuccess:
+          - { type: toast, message: "Deleted {{ result.outputs.media.name }}.", variant: success }
+          - { type: run, runnable: media }
+
+    components:
+      - id: mediaTitle
+        type: text
+        name: Title
+        frame: none
+        layout: { x: 0, y: 0, w: 8, h: 9 }
+        props:
+          markdown: true
+          content: "## Media library\nImages a Media reference field can use. They're copied into `~/Tipeline/output/cms/media`."
+
+      - id: mediaDrop
+        type: fileDrop
+        name: Add images
+        layout: { x: 0, y: 9, w: 4, h: 30 }
+        props:
+          label: Add images
+          placeholder: Drop images here or click to browse
+          accept: "image/*"
+          maxSizeMb: 20
+
+      - id: importButton
+        type: button
+        name: Add to library
+        frame: none
+        layout: { x: 0, y: 39, w: 4, h: 6 }
+        props:
+          label: Add to library
+          icon: Upload
+          disabled: "{% if mediaDrop.files.size > 0 %}false{% else %}true{% endif %}"
+        events:
+          click: [{ type: run, runnable: import }]
+
+      - id: mediaError
+        type: alert
+        name: Media error
+        layout: { x: 0, y: 45, w: 4, h: 12 }
+        props:
+          message: "{{ runnables.import.error }}{{ runnables.delete.error }}"
+          variant: error
+          visible: "{% if runnables.import.error or runnables.delete.error %}true{% else %}false{% endif %}"
+
+      - id: mediaGallery
+        type: gallery
+        name: Gallery
+        layout: { x: 4, y: 9, w: 8, h: 48 }
+        props:
+          data: "{= runnables.media.outputs.media =}"
+          srcKey: src
+          captionKey: name
+          columns: 3
+          zoomable: true
+          emptyText: No images yet. Drop some on the left.
+
+      - id: mediaTable
+        type: table
+        name: Media items
+        layout: { x: 0, y: 57, w: 12, h: 40 }
+        props:
+          data: "{= runnables.media.outputs.media =}"
+          rowKey: id
+          searchable: true
+          fit: truncate
+          columns:
+            - { key: src, header: '', format: image, width: 64 }
+            - { key: name, header: Name }
+            - { key: mime, header: Type }
+            - { key: size, header: Bytes, format: number }
+            - { key: usage, header: Used by, format: number }
+            - { key: created, header: Added, format: datetime }
+          rowActions:
+            - { id: delete, label: Delete, variant: destructive }
+        events:
+          "action:delete": [{ type: run, runnable: delete }]
+
+  # ================================================================== publish
+  # ================================================================== publish
+  - id: publish
+    name: Publish
+    icon: Upload
+
+    runnables:
+      status:
+        mode: run
+        workflow: publishStatus
+        trigger: load
+        outputs: [lastExport, lastHtml, deployments, live, pending, siteName]
+        persist: false
+        onSuccess:
+          - { type: reset, component: siteNameInput }
+          - { type: reset, component: cfProject }
+
+      export:
+        mode: run
+        workflow: exportSite
+        inputs:
+          formats: "{= formats.value =}"
+          siteName: "{{ siteNameInput.value }}"
+        outputs: [summary, indexPath]
+        onSuccess:
+          - { type: toast, message: "Exported {{ result.outputs.summary.nodes }} published item(s) to {{ result.outputs.summary.files }} files.", variant: success }
+          - { type: run, runnable: status }
+
+      deploy:
+        mode: run
+        workflow: deployCloudflare
+        inputs: { project: "{{ cfProject.value }}" }
+        outputs: [deployment]
+        onSuccess:
+          - { type: toast, message: "Deployed to {{ result.outputs.deployment.url }}", variant: success }
+          - { type: run, runnable: status }
+
+    components:
+      - id: publishTitle
+        type: text
+        name: Title
+        frame: none
+        layout: { x: 0, y: 0, w: 6, h: 9 }
+        props:
+          markdown: true
+          content: "## Publish\nExport the published content, then put the HTML site live."
+
+      - id: previewSite
+        type: button
+        name: Preview site
+        frame: none
+        layout: { x: 6, y: 2, w: 3, h: 6 }
+        props:
+          label: Preview site
+          icon: Eye
+          variant: outline
+          disabled: "{% if runnables.status.outputs.lastHtml.has %}false{% else %}true{% endif %}"
+        events:
+          click: [{ type: openModal, page: sitePreview, size: xl }]
+
+      - id: openLive
+        type: button
+        name: Open live site
+        frame: none
+        layout: { x: 9, y: 2, w: 3, h: 6 }
+        props:
+          label: Open live site
+          icon: ExternalLink
+          variant: outline
+          disabled: "{% if runnables.status.outputs.live.has %}false{% else %}true{% endif %}"
+        events:
+          click: [{ type: openUrl, url: "{{ runnables.status.outputs.live.url }}" }]
+
+      # ---- 1. Export
+      - id: exportBox
+        type: container
+        name: Export
+        layout: { x: 0, y: 9, w: 12, h: 40 }
+        props:
+          title: 1. Export
+          description: Writes the published content to ~/Tipeline/output/cms/site. Each format replaces its own folder.
+
+      - id: siteNameInput
+        type: input
+        name: Site name
+        frame: none
+        parent: { id: exportBox }
+        layout: { x: 0, y: 0, w: 5, h: 14 }
+        props:
+          inputType: text
+          label: Site name
+          required: true
+          default: "{% if runnables.status.outputs.siteName %}{{ runnables.status.outputs.siteName }}{% else %}My Tipeline site{% endif %}"
+
+      # Tick boxes; HTML is the site. Markdown and JSON are for other tools.
+      - id: formats
+        type: select
+        name: Formats
+        frame: none
+        parent: { id: exportBox }
+        layout: { x: 5, y: 0, w: 7, h: 14 }
+        props:
+          label: Include
+          multiple: true
+          display: list
+          default: [html]
+          options:
+            - { value: html, label: HTML site }
+            - { value: markdown, label: Markdown files }
+            - { value: json, label: "JSON files (for other software)" }
+
+      - id: exportButton
+        type: button
+        name: Export
+        frame: none
+        parent: { id: exportBox }
+        layout: { x: 0, y: 15, w: 2, h: 6 }
+        props: { label: Export, icon: Upload }
+        events:
+          click: [{ type: run, runnable: export }]
+
+      - id: exportInfo
+        type: text
+        name: Last export
+        frame: none
+        parent: { id: exportBox }
+        layout: { x: 2, y: 15, w: 10, h: 6 }
+        props:
+          content: "{% if runnables.status.outputs.lastExport.has %}Last export {{ runnables.status.outputs.lastExport.at | date: '%b %d, %Y %H:%M' }}: {{ runnables.status.outputs.lastExport.formats }}, {{ runnables.status.outputs.lastExport.files }} files. {{ runnables.status.outputs.pending }} item(s) changed since.{% else %}Not exported yet.{% endif %}"
+          color: "var(--muted-foreground)"
+
+      - id: exportError
+        type: alert
+        name: Export error
+        parent: { id: exportBox }
+        layout: { x: 0, y: 22, w: 12, h: 7 }
+        props:
+          message: "{{ runnables.export.error }}"
+          variant: error
+          visible: "{% if runnables.export.error %}true{% else %}false{% endif %}"
+
+      # ---- 2. Deploy
+      - id: deployBox
+        type: container
+        name: Deploy
+        layout: { x: 0, y: 49, w: 12, h: 72 }
+        props:
+          title: 2. Deploy to Cloudflare Pages
+          description: Uploads the last exported HTML site. Export first to include your latest changes.
+
+      - id: cfProject
+        type: input
+        name: Pages project
+        frame: none
+        parent: { id: deployBox }
+        layout: { x: 0, y: 0, w: 5, h: 16 }
+        props:
+          inputType: text
+          label: Pages project
+          placeholder: my-blog
+          description: Lowercase letters, digits and dashes. Created on the first deploy.
+          default: "{{ runnables.status.outputs.live.project }}"
+
+      - id: cfHelp
+        type: text
+        name: Account and token
+        frame: none
+        parent: { id: deployBox }
+        layout: { x: 5, y: 0, w: 7, h: 16 }
+        props:
+          markdown: true
+          content: "**Account and token** · add the global variables `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` (mark the token secret) on the Variables page. The token needs the *Cloudflare Pages: Edit* permission. Deploying uses Cloudflare's Wrangler through `npx`, so Node.js must be installed."
+
+      - id: deployButton
+        type: button
+        name: Deploy
+        frame: none
+        parent: { id: deployBox }
+        layout: { x: 0, y: 17, w: 2, h: 6 }
+        props:
+          label: Deploy
+          icon: CloudUpload
+          disabled: "{% if runnables.status.outputs.lastHtml.has %}false{% else %}true{% endif %}"
+        events:
+          click: [{ type: run, runnable: deploy }]
+
+      - id: deployInfo
+        type: text
+        name: Deploy info
+        frame: none
+        parent: { id: deployBox }
+        layout: { x: 2, y: 17, w: 10, h: 6 }
+        props:
+          content: "{% if runnables.status.outputs.lastHtml.has %}Will upload the HTML export from {{ runnables.status.outputs.lastHtml.at | date: '%b %d, %Y %H:%M' }}.{% else %}Export with HTML site ticked first.{% endif %}"
+          color: "var(--muted-foreground)"
+
+      - id: deployError
+        type: alert
+        name: Deploy error
+        parent: { id: deployBox }
+        layout: { x: 0, y: 24, w: 12, h: 9 }
+        props:
+          message: "{{ runnables.deploy.error }}"
+          variant: error
+          visible: "{% if runnables.deploy.error %}true{% else %}false{% endif %}"
+
+      - id: deploymentsTable
+        type: table
+        name: Deployments
+        parent: { id: deployBox }
+        layout: { x: 0, y: 33, w: 12, h: 34 }
+        props:
+          data: "{= runnables.status.outputs.deployments =}"
+          fit: truncate
+          columns:
+            - { key: at, header: Deployed, format: datetime }
+            - { key: project, header: Project }
+            - { key: files, header: Files, format: number }
+            - { key: url, header: Address, format: link }
+            - { key: status, header: Status, format: badge, colors: { Live: green, Replaced: gray } }
+
+  # ------------------------------------------------------------------ site preview (dialog)
+  # The last exported HTML site, as files: its links, stylesheet and images work.
+  - id: sitePreview
+    name: Site preview
+    showInMenu: false
+
+    runnables:
+      status:
+        mode: run
+        workflow: publishStatus
+        trigger: load
+        outputs: [lastHtml]
+        persist: false
+
+    components:
+      - id: siteFrame
+        type: embed
+        name: Site
+        frame: none
+        layout: { x: 0, y: 0, w: 12, h: 80 }
+        props:
+          title: "Exported {{ runnables.status.outputs.lastHtml.at | date: '%b %d, %Y %H:%M' }}"
+          src: "{{ runnables.status.outputs.lastHtml.indexPath }}"
+          blockScripts: true
+          emptyText: Export the site with HTML to preview it here.

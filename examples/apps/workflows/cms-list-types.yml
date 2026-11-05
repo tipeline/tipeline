@@ -1,0 +1,183 @@
+version: 1.0.0
+name: 'CMS: List Content Types'
+description: |
+  The content types of the CMS store (`~/Tipeline/output/cms/cms.db`), and the fields of one of them, as Drupal's Structure → Content types and Manage fields pages show them.
+
+  **Inputs**
+
+  - `selected` — the type whose fields are listed; empty: the first
+
+  **Outputs**
+
+  - `types` — `[{ id, label, description, aliasPattern, count, fieldCount }]`
+  - `type` — the selected type, as in types, plus nextWeight
+  - `fields` — its fields: `[{ name, label, kind, kindLabel, required, weight, vocabulary, options, help, settingsText }]`
+  - `kinds` — the field kinds: `[{ value, label }]`
+  - `typeOptions` — the content types as `[{ value, label }]`
+author: tipeline
+tags: [example, apps, cms, content types, fields]
+
+pipeline:
+  variables:
+    - type: string
+      name: selected
+      value: ''
+      visibility: public
+      description: Content type whose fields are listed.
+
+    - type: array
+      name: types
+      value: []
+      visibility: public
+      description: Every content type. Returned to the app.
+
+    - type: object
+      name: type
+      value: {}
+      visibility: public
+      description: The selected content type. Returned to the app.
+
+    - type: array
+      name: fields
+      value: []
+      visibility: public
+      description: Its fields. Returned to the app.
+
+    - type: array
+      name: kinds
+      value: []
+      visibility: public
+      description: Field kinds a field can have. Returned to the app.
+
+    - type: array
+      name: typeOptions
+      value: []
+      visibility: public
+      description: The content types as choices ({ value, label }). Returned to the app.
+
+    - type: dbConnection
+      name: db
+
+    - type: array
+      name: rows
+      value: []
+
+    - type: array
+      name: fieldRows
+      value: []
+
+    - type: object
+      name: result
+      value: {}
+
+  actions:
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          SELECT t.id, t.label, t.description, t.alias_pattern AS aliasPattern,
+            (SELECT COUNT(*) FROM node n WHERE n.type = t.id) AS count,
+            (SELECT COUNT(*) FROM field f WHERE f.type_id = t.id) AS fieldCount
+          FROM content_type t ORDER BY t.label
+      destination: rows
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT * FROM field ORDER BY type_id, weight, name
+      destination: fieldRows
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          selected: '{{ selected }}'
+          rows: '{= rows =}'
+          fieldRows: '{= fieldRows =}'
+        code: |
+          const kinds = [
+            { value: 'text', label: 'Text (plain)' },
+            { value: 'long_text', label: 'Text (formatted, long)' },
+            { value: 'number', label: 'Number' },
+            { value: 'boolean', label: 'Boolean' },
+            { value: 'date', label: 'Date' },
+            { value: 'list', label: 'List (text)' },
+            { value: 'link', label: 'Link' },
+            { value: 'term_ref', label: 'Taxonomy term reference' },
+            { value: 'media_ref', label: 'Media reference' },
+          ];
+          const kindLabel = Object.fromEntries(kinds.map((k) => [k.value, k.label]));
+          const type = rows.find((t) => t.id === selected) || rows[0] || {};
+          const fields = fieldRows
+            .filter((f) => f.type_id === type.id)
+            .map((f) => {
+              let s = {};
+              try { s = JSON.parse(f.settings || '{}'); } catch (e) {}
+              const options = (s.options || []).join('\n');
+              return {
+                name: f.name,
+                label: f.label,
+                kind: f.kind,
+                kindLabel: kindLabel[f.kind] || f.kind,
+                required: f.required === 1,
+                weight: f.weight,
+                vocabulary: s.vocabulary || '',
+                options,
+                help: s.help || '',
+                settingsText: s.vocabulary ? 'Vocabulary: ' + s.vocabulary : options ? (s.options || []).join(', ') : '',
+              };
+            });
+          type.nextWeight = fields.reduce((max, f) => Math.max(max, f.weight), -1) + 1;
+          return { types: rows, type, fields, kinds, typeOptions: rows.map((t) => ({ value: t.id, label: t.label })) };
+      destination: result
+
+    - group: script
+      name: runScript
+      params:
+        context: { result: '{= result =}' }
+        code: return result.types;
+      destination: types
+
+    - group: script
+      name: runScript
+      params:
+        context: { result: '{= result =}' }
+        code: return result.type;
+      destination: type
+
+    - group: script
+      name: runScript
+      params:
+        context: { result: '{= result =}' }
+        code: return result.fields;
+      destination: fields
+
+    - group: script
+      name: runScript
+      params:
+        context: { result: '{= result =}' }
+        code: return result.kinds;
+      destination: kinds
+
+    - group: script
+      name: runScript
+      params:
+        context: { result: '{= result =}' }
+        code: return result.typeOptions;
+      destination: typeOptions

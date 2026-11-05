@@ -1,0 +1,28 @@
+version: 1.0.0
+name: Failing Job
+description: |
+  Always fails, with the reason it is given — to see how failed runs look.
+
+  Used by the Runs Monitor example app.
+
+  **Inputs**
+
+  - `reason` — the error message
+author: tipeline
+tags: [example, apps, errors, runs]
+
+pipeline:
+  variables:
+    - type: string
+      name: reason
+      value: Something went wrong on purpose
+      visibility: public
+      description: The error the run fails with. Set by the app.
+
+  actions:
+    - group: script
+      name: runScript
+      params:
+        context:
+          reason: '{{ reason }}'
+        code: throw new Error(reason);

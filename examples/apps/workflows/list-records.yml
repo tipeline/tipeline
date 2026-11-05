@@ -1,0 +1,102 @@
+version: 1.0.0
+name: List Records
+description: |
+  Reads the example record store (a JSON file in `~/Tipeline/output`) and returns the records matching a status, plus a summary for KPI cards.
+
+  Used by the example apps.
+
+  **Inputs**
+
+  - `status` — "all", "active", "pending" or "closed"
+
+  **Outputs**
+
+  - `records` — matching rows
+  - `summary` — `{ total, active, pending, closed, openAmount }`
+
+  The store doesn't exist until a record is first changed (see Update Record Status); until then the seed records in the workflow are returned.
+author: tipeline
+tags: [example, apps, records]
+
+pipeline:
+  variables:
+    - type: string
+      name: status
+      value: all
+      visibility: public
+      description: Status to keep — all, active, pending or closed. Set by the app.
+
+    - type: array
+      name: records
+      value: []
+      visibility: public
+      description: Records matching the status. Returned to the app.
+
+    - type: object
+      name: summary
+      value: {}
+      visibility: public
+      description: Counts per status and the amount still open. Returned to the app.
+
+    - type: string
+      name: raw
+      value: ''
+
+    - type: array
+      name: seed
+      value:
+        - { id: 1, name: Acme Corp, status: active, amount: 1200, updatedAt: '2026-09-01T10:00:00Z' }
+        - { id: 2, name: Globex, status: pending, amount: 850, updatedAt: '2026-09-12T15:30:00Z' }
+        - { id: 3, name: Initech, status: active, amount: 3400, updatedAt: '2026-09-20T09:15:00Z' }
+        - { id: 4, name: Umbrella, status: closed, amount: 410, updatedAt: '2026-09-25T18:45:00Z' }
+        - { id: 5, name: Soylent, status: pending, amount: 2300, updatedAt: '2026-09-28T11:05:00Z' }
+        - { id: 6, name: Hooli, status: active, amount: 990, updatedAt: '2026-10-01T08:20:00Z' }
+
+  actions:
+    # The store may not exist yet — keep going with `raw` empty and use the seed.
+    - group: file
+      name: read
+      onError: continue
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-records.json'
+      destination: raw
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          raw: '{= raw =}'
+          seed: '{= seed =}'
+          status: '{{ status }}'
+        code: |
+          const all = raw ? JSON.parse(raw) : seed;
+          const rows = status === 'all' ? all : all.filter((r) => r.status === status);
+          return rows.sort((a, b) => a.id - b.id);
+      destination: records
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          raw: '{= raw =}'
+          seed: '{= seed =}'
+        code: |
+          const all = raw ? JSON.parse(raw) : seed;
+          const count = (s) => all.filter((r) => r.status === s).length;
+          return {
+            total: all.length,
+            active: count('active'),
+            pending: count('pending'),
+            closed: count('closed'),
+            openAmount: all.filter((r) => r.status !== 'closed').reduce((sum, r) => sum + r.amount, 0),
+          };
+      destination: summary
+
+    # Visible result when the workflow is run on its own (apps read the outputs instead).
+    - group: system
+      name: message
+      params:
+        text: |
+          {{ records | size }} record(s) with status "{{ status }}" — total {{ summary.total }}: {{ summary.active }} active, {{ summary.pending }} pending, {{ summary.closed }} closed. Open amount: {{ summary.openAmount }}.
+          {% for r in records %}- #{{ r.id }} {{ r.name }} ({{ r.status }}) {{ r.amount }}
+          {% endfor %}

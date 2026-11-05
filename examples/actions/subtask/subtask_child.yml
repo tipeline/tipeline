@@ -1,0 +1,47 @@
+version: 1.0.0
+name: Subtask Child Task
+description: |
+  The child workflow that `subtask.yml` calls. It takes `rawInput` from the parent, changes it and exposes `processedResult` and `itemCount` for the parent to read.
+
+author: Jose Daniel Estrada
+tags: [example, subtask, sub-workflow]
+
+pipeline:
+  variables:
+    # Populated by the parent via props before this task runs
+    - type: string
+      name: rawInput
+      value: ''
+
+    # Computed inside this task; exported back to the parent via outputs
+    - type: string
+      name: processedResult
+      value: ''
+
+    - type: number
+      name: itemCount
+      value: 0
+
+  actions:
+    # Transform the injected input — uppercase it and store in processedResult
+    - group: string
+      name: toUpperCase
+      params:
+        string: '{{ rawInput }}'
+      destination: processedResult
+
+    # Set a numeric output the parent can read back
+    - group: variable
+      name: set
+      params:
+        name: itemCount
+        value: 42
+
+    # Log what this child computed before it exits
+    - group: system
+      name: message
+      params:
+        text: |
+          [child] rawInput       : {{ rawInput }}
+          [child] processedResult: {{ processedResult }}
+          [child] itemCount      : {{ itemCount }}

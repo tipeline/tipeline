@@ -1,0 +1,52 @@
+version: 1.0.0
+name: Test Loop Status Coloring
+description: |
+  Manual UI check for the status colors of a loop's steps. The for-each loop has 3 steps per pass, and each row should reset to grey and fill green again on every pass, not just the first.
+author: Jose Daniel Estrada
+tags: [example, desktop, loop, status]
+
+pipeline:
+  variables:
+    - type: array
+      name: colors
+      value: [red, green, blue, yellow]
+
+    - type: string
+      name: currentColor
+      value: ''
+
+  actions:
+    - group: system
+      name: message
+      params:
+        text: |
+          Starting loop status coloring test
+
+    - group: flow
+      name: forEachLoop
+      params:
+        iterable: '{= colors =}'
+        currentItem: currentColor
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                Step 1 - starting color: {{ currentColor }}
+
+          - group: flow
+            name: wait
+            params:
+              timeout: 600
+
+          - group: system
+            name: message
+            params:
+              text: |
+                Step 2 - finished color: {{ currentColor }}
+
+    - group: system
+      name: message
+      params:
+        text: |
+          Loop status coloring test complete

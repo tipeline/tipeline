@@ -1,0 +1,230 @@
+schemaVersion: 4
+name: Layout Showcase
+version: "1.0.0"
+description: Tabs and containers — sections in tabs, grouped controls in boxes, a section shown on demand, and buttons that switch tab
+author: tipeline
+
+# Read-only: it only lists the example records (shared with the other example apps).
+workflows:
+  listRecords: { file: ./workflows/list-records.yml }
+
+# The tab the "Go to …" buttons open (see the tabs' defaultTab).
+state:
+  tab: overview
+
+pages:
+  - id: workspace
+    name: Workspace
+    icon: PanelsTopLeft
+
+    runnables:
+      records:
+        mode: run
+        workflow: listRecords
+        trigger: load
+        inputs: { status: "{= statusFilter.value =}" }
+        outputs: [records, summary]
+        persist: false
+
+    components:
+      # ------------------------------------------------------------------ on the page grid
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 8, h: 7 }
+        props:
+          content: "Open tab: {{ sections.activeTab }}"
+          fontWeight: semibold
+
+      # Switching tab from a handler: set the state defaultTab is bound to, then reset the tabs.
+      - id: goRecords
+        type: button
+        name: Go to records
+        layout: { x: 8, y: 0, w: 2, h: 7 }
+        props: { label: Go to records, variant: outline }
+        events:
+          click:
+            - { type: setState, key: tab, value: records }
+            - { type: reset, component: sections }
+
+      - id: goOverview
+        type: button
+        name: Go to overview
+        layout: { x: 10, y: 0, w: 2, h: 7 }
+        props: { label: Go to overview, variant: outline }
+        events:
+          click:
+            - { type: setState, key: tab, value: overview }
+            - { type: reset, component: sections }
+
+      - id: sections
+        type: tabs
+        name: Sections
+        layout: { x: 0, y: 7, w: 12, h: 63 }
+        props:
+          defaultTab: "{{ state.tab }}"
+          tabs:
+            - { id: overview, label: Overview }
+            - { id: records, label: Records }
+            - { id: notes, label: Notes }
+
+      # Loose on the page on purpose: in the builder, drag these into a container or a tab.
+      - id: dragMe
+        type: text
+        name: Drag me
+        layout: { x: 0, y: 70, w: 6, h: 7 }
+        props:
+          content: "Builder test: drag me into a container or a tab — or drag something out to here."
+          color: "#6b7280"
+
+      - id: dragMeToo
+        type: kpi
+        name: Closed
+        layout: { x: 6, y: 70, w: 3, h: 14 }
+        props: { label: Closed, value: "{= runnables.records.outputs.summary.closed =}" }
+
+      # ------------------------------------------------------------------ Overview tab
+      - id: totals
+        type: container
+        name: Totals
+        parent: { id: sections, tab: overview }
+        layout: { x: 0, y: 0, w: 5, h: 42 }
+        props: { title: Totals, description: Across every record }
+
+      - id: totalKpi
+        type: kpi
+        name: Records
+        parent: { id: totals }
+        layout: { x: 0, y: 0, w: 6, h: 14 }
+        props: { label: Records, value: "{= runnables.records.outputs.summary.total =}" }
+
+      - id: pendingKpi
+        type: kpi
+        name: Pending
+        parent: { id: totals }
+        layout: { x: 6, y: 0, w: 6, h: 14 }
+        props: { label: Pending, value: "{= runnables.records.outputs.summary.pending =}" }
+
+      - id: openKpi
+        type: kpi
+        name: Open amount
+        parent: { id: totals }
+        layout: { x: 0, y: 14, w: 12, h: 14 }
+        props:
+          label: Open amount
+          value: "{= runnables.records.outputs.summary.openAmount =}"
+          format: currency
+
+      - id: amountsChart
+        type: chart
+        name: Amounts
+        parent: { id: sections, tab: overview }
+        layout: { x: 5, y: 0, w: 7, h: 42 }
+        props:
+          chartType: bar
+          title: Amount per record
+          data: "{= runnables.records.outputs.records =}"
+          xKey: name
+          series: [{ key: amount, label: Amount }]
+          format: currency
+
+      # ------------------------------------------------------------------ Records tab
+      - id: filters
+        type: container
+        name: Filters
+        parent: { id: sections, tab: records }
+        layout: { x: 0, y: 0, w: 4, h: 42 }
+        props: { title: Filters }
+
+      - id: statusFilter
+        type: select
+        name: Status filter
+        parent: { id: filters }
+        layout: { x: 0, y: 0, w: 12, h: 14 }
+        props:
+          label: Status
+          default: all
+          options:
+            - { value: all, label: All records }
+            - { value: pending, label: Pending }
+            - { value: active, label: Active }
+            - { value: closed, label: Closed }
+        events:
+          change: [{ type: run, runnable: records }]
+
+      - id: showDetails
+        type: checkbox
+        name: Show details
+        parent: { id: filters }
+        layout: { x: 0, y: 14, w: 12, h: 7 }
+        props: { label: Show the selected record }
+
+      - id: recordsTable
+        type: table
+        name: Records
+        parent: { id: sections, tab: records }
+        layout: { x: 4, y: 0, w: 8, h: 42 }
+        props:
+          data: "{= runnables.records.outputs.records =}"
+          searchable: true
+          columns:
+            - { key: id, header: ID }
+            - { key: name, header: Name }
+            - { key: status, header: Status }
+            - { key: amount, header: Amount, format: currency }
+
+      # Hidden with everything inside until "Show the selected record" is ticked.
+      - id: details
+        type: container
+        name: Details
+        parent: { id: sections, tab: records }
+        layout: { x: 4, y: 42, w: 8, h: 14 }
+        props:
+          title: Selected record
+          visible: "{{ showDetails.value }}"
+
+      # The clicked row as labeled fields (a Details component).
+      - id: detailsFields
+        type: keyValue
+        name: Details fields
+        parent: { id: details }
+        layout: { x: 0, y: 0, w: 12, h: 8 }
+        props:
+          data: "{= recordsTable.selectedRow =}"
+          display: grid
+          emptyText: Click a row in the table.
+          copyable: true
+          fields:
+            - { key: id, label: ID }
+            - { key: name, label: Name }
+            - { key: status, label: Status }
+            - { key: amount, label: Amount, format: currency }
+
+      # ------------------------------------------------------------------ Notes tab
+      - id: notesBox
+        type: container
+        name: Notes
+        parent: { id: sections, tab: notes }
+        layout: { x: 0, y: 0, w: 12, h: 46 }
+        props: { title: How this page is built }
+
+      # A Markdown text: headings, emphasis, lists, code and links — with bindings inside.
+      - id: notesText
+        type: text
+        name: Notes text
+        parent: { id: notesBox }
+        layout: { x: 0, y: 0, w: 12, h: 38 }
+        props:
+          markdown: true
+          content: |
+            ### Containers and tabs
+            Every component names its container in `parent` (and the tab, inside tabs).
+            Its layout is relative to that container's **12-column** grid.
+
+            - The open tab right now is **{{ sections.activeTab }}**.
+            - The *Go to …* buttons set `state.tab` and reset the tabs.
+            - Hidden containers take everything inside them along.
+
+            > This text is Markdown: switch **Markdown** off in its properties to see the source.
+
+            More in the [apps guide](https://github.com/tipeline/tipeline/blob/dev/apps/docs/desktop/apps.md).

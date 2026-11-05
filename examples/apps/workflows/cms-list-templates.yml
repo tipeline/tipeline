@@ -1,0 +1,220 @@
+version: 1.0.0
+name: 'CMS: List Templates'
+description: |
+  The site templates of the CMS store (`~/Tipeline/output/cms/cms.db`), for the CMS app's Templates page: choices for a template picker, the chosen template with its text, the items it can be previewed with, the variables it can use (for the editor's { } button) and a legend of them in Markdown.
+
+  **Inputs**
+
+  - `selected` — the template to open; empty: the first
+
+  **Outputs**
+
+  - `options` — `[{ value, label }]`, grouped by content type, then the site ones
+  - `template` — `{ id, name, kind, typeLabel, isDefault, html, language, about, canDelete, canMakeDefault }`
+  - `samples` — `[{ value, label }]`: items to preview it with
+  - `variables` — names for the `{ }` button
+  - `legend` — what the template can use, as Markdown
+author: tipeline
+tags: [example, apps, cms, templates, liquid]
+
+pipeline:
+  variables:
+    - { type: string, name: selected, value: '', visibility: public, description: Template to open. }
+    - { type: array, name: options, value: [], visibility: public, description: Template choices. Returned to the app. }
+    - { type: object, name: template, value: {}, visibility: public, description: The chosen template. Returned to the app. }
+    - { type: array, name: samples, value: [], visibility: public, description: Items to preview it with. Returned to the app. }
+    - { type: array, name: variables, value: [], visibility: public, description: "Names for the editor's { } button. Returned to the app." }
+    - { type: string, name: legend, value: '', visibility: public, description: What the template can use (Markdown). Returned to the app. }
+    - { type: dbConnection, name: db }
+    - { type: array, name: templates, value: [] }
+    - { type: array, name: types, value: [] }
+    - { type: array, name: nodes, value: [] }
+    - { type: array, name: fields, value: [] }
+    - { type: object, name: result, value: {} }
+
+  actions:
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT * FROM template ORDER BY name
+      destination: templates
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT id, label FROM content_type ORDER BY label
+      destination: types
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT id, type, title, status, template FROM node ORDER BY status DESC, changed DESC
+      destination: nodes
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT type_id, name, kind FROM field ORDER BY weight, name
+      destination: fields
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          selected: '{{ selected }}'
+          templates: '{= templates =}'
+          types: '{= types =}'
+          nodes: '{= nodes =}'
+          fields: '{= fields =}'
+        # {% raw %} keeps the Liquid examples in the legend as written.
+        code: |
+          {% raw %}
+          const SITE = { listing: 'Home page', layout: 'Site layout', stylesheet: 'Stylesheet' };
+          const ordered = [];
+          for (const t of types)
+            for (const x of templates.filter((y) => y.kind === 'content' && y.type_id === t.id).sort((a, b) => b.is_default - a.is_default || a.name.localeCompare(b.name)))
+              ordered.push({ x, group: t.label });
+          for (const k of Object.keys(SITE)) for (const x of templates.filter((y) => y.kind === k)) ordered.push({ x, group: 'Site' });
+          const options = ordered.map(({ x, group }) => ({ value: x.id, label: group + ' — ' + x.name + (x.kind === 'content' && x.is_default ? ' (default)' : '') }));
+
+          const t = (ordered.find((o) => o.x.id === selected) || ordered[0] || {}).x;
+          if (!t) return { options, template: {}, samples: [], variables: [], legend: '' };
+          const typeLabel = (types.find((y) => y.id === t.type_id) || {}).label || '';
+          const uses = nodes.filter((n) => n.type === t.type_id && (n.template === t.id || (!n.template && t.is_default === 1))).length;
+          const about =
+            t.kind === 'content' ? typeLabel + ' content · ' + (t.is_default ? 'the default' : 'picked per item') + ' · used by ' + uses + ' item' + (uses === 1 ? '' : 's')
+            : t.kind === 'listing' ? "The site's home page (index.html), listing the published items"
+            : t.kind === 'layout' ? 'Wraps every page of the site: head, header, menu, footer'
+            : 'style.css, linked from the Site layout';
+          const fits = t.kind === 'content' ? nodes.filter((n) => n.type === t.type_id) : nodes.filter((n) => n.status === 1);
+          const samples = t.kind === 'listing' ? [] : fits.map((n) => ({ value: n.id, label: n.title + (n.status === 1 ? '' : ' (unpublished)') }));
+
+          const own = t.kind === 'content' ? fields.filter((f) => f.type_id === t.type_id) : [];
+          const NODE = ['node.title', 'node.body', 'node.summary', 'node.url', 'node.created', 'node.changed', 'node.type', 'node.image.url', 'node.image.alt'];
+          const SITEV = ['site.name', 'site.url', 'site.year'];
+          const variables =
+            t.kind === 'content' ? [...NODE, ...own.map((f) => 'node.fields.' + f.name), ...SITEV]
+            : t.kind === 'listing' ? ['site.name', 'item.title', 'item.url', 'item.summary', 'item.created', 'item.type', 'item.image.url']
+            : t.kind === 'layout' ? ['content', 'page.title', 'site.name', 'site.url', 'site.stylesheet', 'site.year']
+            : ['site.name'];
+
+          const row = (code, text) => '| `' + code + '` | ' + text + ' |';
+          const legendRows =
+            t.kind === 'content' ? [
+              row('node.title', 'The title'),
+              row('node.body', 'The body, as HTML'),
+              row('node.summary', 'The first paragraph, as text'),
+              row('node.url', "The item's page"),
+              row('node.created', 'Created (format it with `\\| date: "%B %d, %Y"`)'),
+              row('node.changed', 'Last changed'),
+              row('node.image', 'The first image field: `url` and `alt`, or empty'),
+              row('node.tags', 'Terms of its term fields, each with `name`'),
+              ...own.map((f) => row('node.fields.' + f.name, f.kind === 'long_text' ? 'HTML' : f.kind === 'term_ref' ? 'Terms, each with `name`' : f.kind === 'media_ref' ? '`url` and `alt`, or empty' : 'The value')),
+              row('site.name', 'The site name'),
+            ]
+            : t.kind === 'listing' ? [
+              row('items', 'Published items (not Basic pages), newest first; each like `node`: title, url, summary, created, type, image'),
+              row('site.name', 'The site name'),
+              row('site.menu', 'The Basic pages, each with `title` and `url`'),
+            ]
+            : t.kind === 'layout' ? [
+              row('content', 'The page being shown: an item, or the home page'),
+              row('page.title', "That page's title (empty on the home page)"),
+              row('site.name', 'The site name'),
+              row('site.url', 'The way back to the site root, for links'),
+              row('site.stylesheet', 'The link to style.css'),
+              row('site.menu', 'The Basic pages, each with `title` and `url`'),
+              row('site.year', 'This year'),
+            ]
+            : [row('site.name', 'The site name'), row('(CSS)', 'Plain CSS works; Liquid is optional')];
+          const legend = [
+            '**What this template can use**',
+            '',
+            '| Name | What it is |',
+            '|---|---|',
+            ...legendRows,
+            '',
+            '**Liquid basics**',
+            '',
+            '| Write | To |',
+            '|---|---|',
+            "| `{% if node.image %}…{% endif %}` | Show something only when there's a value |",
+            '| `{% for tag in node.tags %}…{% endfor %}` | Repeat for each item of a list |',
+            '| `{{ node.created \\| date: "%B %d, %Y" }}` | October 14, 2026 |',
+            '| `{{ node.tags \\| map: "name" \\| join: ", " }}` | Drupal, Tipeline |',
+            '| `{{ item.summary \\| truncate: 140 }}` | Shorten to 140 characters |',
+          ].join('\n');
+
+          return {
+            options,
+            template: {
+              id: t.id,
+              name: t.name,
+              kind: t.kind,
+              typeLabel,
+              isDefault: t.is_default === 1,
+              html: t.html,
+              language: t.kind === 'stylesheet' ? 'css' : 'html',
+              about,
+              canDelete: t.kind === 'content' && t.is_default !== 1,
+              canMakeDefault: t.kind === 'content' && t.is_default !== 1,
+            },
+            samples,
+            variables,
+            legend,
+          };
+          {% endraw %}
+      destination: result
+
+    - group: script
+      name: runScript
+      params:
+        context: { result: '{= result =}' }
+        code: return result.options;
+      destination: options
+
+    - group: script
+      name: runScript
+      params:
+        context: { result: '{= result =}' }
+        code: return result.template;
+      destination: template
+
+    - group: script
+      name: runScript
+      params:
+        context: { result: '{= result =}' }
+        code: return result.samples;
+      destination: samples
+
+    - group: script
+      name: runScript
+      params:
+        context: { result: '{= result =}' }
+        code: return result.variables;
+      destination: variables
+
+    - group: script
+      name: runScript
+      params:
+        context: { result: '{= result =}' }
+        code: return result.legend;
+      destination: legend

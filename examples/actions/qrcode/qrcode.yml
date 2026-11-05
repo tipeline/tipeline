@@ -1,0 +1,39 @@
+version: 1.0.0
+name: QR Code Actions Test Suite
+description: |
+  Generates a QR code from text, then reads it back from the image.
+
+author: Jose Daniel Estrada
+tags: [example, qr code, qrcode, barcode]
+
+pipeline:
+  variables:
+    - type: string
+      name: qrCodeText
+      value: 'https://tipeline.io/tasks/send-daily-report'
+
+    - type: string
+      name: qrCodePath
+      value: '{{ _global.examplesDir }}/actions/qrcode/output.png'
+
+  actions:
+    # -------------------------------------------------------
+    # Generate
+    # -------------------------------------------------------
+
+    # Generate a QR code from a URL and save it to the output directory
+    - group: qrcode
+      name: generate
+      params:
+        text: '{{ qrCodeText }}'
+        path: '{{ qrCodePath }}'
+
+    # -------------------------------------------------------
+    # Read
+    # -------------------------------------------------------
+
+    # Read the QR code from the generated image and capture its decoded value
+    - group: qrcode
+      name: read
+      params:
+        path: '{{ qrCodePath }}'

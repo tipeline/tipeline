@@ -1,0 +1,109 @@
+schemaVersion: 4
+name: Table Features
+version: "1.0.0"
+description: What a table can show — links, images, status badges, colored cells, column filters and rows that expand to show more
+author: tipeline
+
+# No workflows: the data is written below, so everything works offline.
+workflows: {}
+
+pages:
+  - id: table
+    name: Table
+    icon: Table
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 9 }
+        props:
+          markdown: true
+          content: |
+            **Try it:** filter by name, pick a status or a due date above the table, click **Visit** (opens your browser),
+            and use the **›** at the start of a row to see its contact, notes and tags. Amounts below 0 are red, 5,000 and up green.
+
+      - id: accounts
+        type: table
+        name: Accounts
+        layout: { x: 0, y: 9, w: 12, h: 70 }
+        props:
+          searchable: false
+          expandable: true
+          # Columns share the table's width; long values end in "…" (hover for all of it).
+          fit: truncate
+          # Starts with the soonest due first; click any header to sort by it.
+          sortBy: due
+          sortOrder: asc
+          # What an expanded row shows.
+          detailFields:
+            - { key: contact, label: Contact }
+            - { key: notes, label: Notes }
+            - { key: tags, label: Tags, format: badge }
+          columns:
+            - { key: logo, header: "", format: image, sortable: false, width: 60 }
+            - { key: name, header: Account, filter: text, minWidth: 140 }
+            - { key: site, header: Website, format: link, linkText: Visit, sortable: false }
+            - { key: status, header: Status, format: badge, filter: select }
+            - key: amount
+              header: Balance
+              format: currency
+              highlight:
+                - { compareAs: number, operator: lt, value: 0, color: red }
+                - { compareAs: number, operator: gte, value: 5000, color: green }
+            - { key: due, header: Due, format: date, filter: date }
+          data:
+            - name: Acme Corp
+              site: https://acme.example
+              logo: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMyNTYzZWIiLz48dGV4dCB4PSIzMiIgeT0iNDMiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIzMiIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5BPC90ZXh0Pjwvc3ZnPg=="
+              status: active
+              amount: 12400
+              due: "2026-10-20"
+              contact: Ana Ruiz
+              notes: "Renewal in progress"
+              tags: [vip, billing]
+            - name: Globex
+              site: https://globex.example
+              logo: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMwNTk2NjkiLz48dGV4dCB4PSIzMiIgeT0iNDMiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIzMiIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5HPC90ZXh0Pjwvc3ZnPg=="
+              status: pending
+              amount: 850
+              due: "2026-10-08"
+              contact: Li Wei
+              notes: "Waiting on purchase order"
+              tags: [new]
+            - name: Initech
+              site: https://initech.example
+              logo: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiNkOTc3MDYiLz48dGV4dCB4PSIzMiIgeT0iNDMiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIzMiIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5JPC90ZXh0Pjwvc3ZnPg=="
+              status: overdue
+              amount: -320
+              due: "2026-09-30"
+              contact: Peter Gibbons
+              notes: "Refund issued, balance negative"
+              tags: [billing]
+            - name: Umbrella
+              site: https://umbrella.example
+              logo: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiNkYzI2MjYiLz48dGV4dCB4PSIzMiIgeT0iNDMiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIzMiIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5VPC90ZXh0Pjwvc3ZnPg=="
+              status: closed
+              amount: 0
+              due: "2026-08-15"
+              contact: Alice Abernathy
+              notes: ""
+              tags: []
+            - name: Hooli
+              site: https://hooli.example
+              logo: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiM3YzNhZWQiLz48dGV4dCB4PSIzMiIgeT0iNDMiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIzMiIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5IPC90ZXh0Pjwvc3ZnPg=="
+              status: active
+              amount: 5300
+              due: "2026-11-02"
+              contact: Gavin Belson
+              notes: "Expansion to 3 sites"
+              tags: [vip]
+            - name: Soylent
+              site: https://soylent.example
+              logo: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiM0NzU1NjkiLz48dGV4dCB4PSIzMiIgeT0iNDMiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIzMiIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5TPC90ZXh0Pjwvc3ZnPg=="
+              status: pending
+              amount: 2100
+              due: "2026-10-12"
+              contact: Sol Roth
+              notes: "Trial ends soon"
+              tags: [trial]

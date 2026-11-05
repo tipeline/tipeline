@@ -1,0 +1,89 @@
+version: 1.0.0
+name: PDF example
+description: |
+  Works with PDF files: extract text and images, merge files, count pages and split a file into one PDF per page.
+
+  **Actions**
+
+  - `extractText` — returns the text of all the pages as one string
+  - `extractImage` — saves the images of page 1 as PNG files and returns their paths
+  - `merge` — combines several PDF files into one
+  - `getPageCount` — returns the number of pages
+  - `splitPages` — writes each page to its own PDF and returns their paths
+
+  **Template syntax**
+
+  - `{{ varName }}` — puts a value into text; the result is always a string
+  - `{= varName =}` — passes the value as it is (object, array, number…); it must be the field's whole value, as list parameters like `input` need
+
+author: Jose Daniel Estrada
+tags: [example, pdf, merge, split, extract text]
+
+pipeline:
+  variables:
+    # ------------------------------------------------------------------
+    # Placeholder paths: change pdfPath and pdfFiles to PDF files of your
+    # own before running.
+    # ------------------------------------------------------------------
+
+    # Path to a single PDF file used for text extraction, image extraction, and page operations
+    - type: string
+      name: pdfPath
+      value: '/path/to/your/sample.pdf'
+
+    # Folder where extracted PNG images will be saved
+    - type: string
+      name: outputFolder
+      value: '{{ _global.examplesDir }}/actions/pdf/images'
+
+    # Folder where split page PDFs will be saved
+    - type: string
+      name: splitOutput
+      value: '{{ _global.examplesDir }}/actions/pdf/pages'
+
+    # List of PDF files to merge — must use {= =} when passed to the `input` param
+    - type: array
+      name: pdfFiles
+      value:
+        - '/path/to/your/doc1.pdf'
+        - '/path/to/your/doc2.pdf'
+
+    # Destination path for the merged PDF
+    - type: string
+      name: mergedOutput
+      value: '{{ _global.examplesDir }}/actions/pdf/docs/merged.pdf'
+
+  actions:
+    # Extract all text from a PDF — returns a single merged string
+    - group: pdf
+      name: extractText
+      params:
+        path: '{{ pdfPath }}'
+
+    # Extract images from page 1 of a PDF — returns an array of PNG file paths
+    - group: pdf
+      name: extractImage
+      params:
+        path: '{{ pdfPath }}'
+        output: '{{ outputFolder }}'
+
+    # Merge multiple PDFs into one — input must use {= =} because it expects an array
+    - group: pdf
+      name: merge
+      params:
+        input: '{= pdfFiles =}'
+        output: '{{ mergedOutput }}'
+
+    # Get the total page count — useful as input for conditional branching
+    - group: pdf
+      name: getPageCount
+      params:
+        path: '{{ pdfPath }}'
+
+    # Split every page into a separate PDF — prefix defaults to "page" if omitted
+    - group: pdf
+      name: splitPages
+      params:
+        path: '{{ pdfPath }}'
+        output: '{{ splitOutput }}'
+        prefix: page

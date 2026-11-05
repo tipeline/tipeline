@@ -1,0 +1,38 @@
+version: 1.0.0
+name: Get MySQL Version
+description: >
+  Returns the MySQL version installed on this computer, or "not installed" when
+  MySQL can't be found. Change the command to check another machine, e.g.
+  `ssh db1 mysql --version`.
+author: Tipeline Examples
+tags:
+  - mysql
+  - database
+  - version
+  - server
+
+pipeline:
+  variables:
+    - type: string
+      name: command
+      label: Command
+      description: The command that prints the MySQL version, e.g. mysql --version
+      value: mysql --version
+      visibility: public
+
+    - type: string
+      name: version
+      label: MySQL version
+      description: What the command printed, e.g. "mysql Ver 8.0.36 for macos14", or "not installed".
+      value: not installed
+      visibility: public
+      output: true
+
+  actions:
+    - group: system
+      name: runApplication
+      label: Read MySQL version
+      onError: continue
+      params:
+        command: '{{ command }}'
+      destination: version

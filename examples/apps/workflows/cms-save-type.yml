@@ -1,0 +1,164 @@
+version: 1.0.0
+name: 'CMS: Save Content Type'
+description: |
+  Adds or changes a content type in the CMS store (`~/Tipeline/output/cms/cms.db`). A new type gets a Body field, as in Drupal, and a default template (a copy of the Basic page one; change it on the Templates page).
+
+  The machine name can't change later. URL alias patterns take the tokens `[node:title]`, `[node:type]`, `[node:created:custom:Y]` and `[node:created:custom:m]`.
+
+  **Inputs**
+
+  - `id` — machine name: lowercase letters, digits, _
+  - `label` — the name editors see
+  - `description`
+  - `aliasPattern` — e.g. /blog/[node:title]
+  - `isNew` — true to add a type; false changes an existing one
+
+  **Outputs**
+
+  - `type` — `{ id, label }`
+author: tipeline
+tags: [example, apps, cms, content types]
+
+pipeline:
+  variables:
+    - type: string
+      name: id
+      value: ''
+      visibility: public
+      required: true
+      description: Machine name.
+
+    - type: string
+      name: label
+      value: ''
+      visibility: public
+      required: true
+      description: Name.
+
+    - type: string
+      name: description
+      value: ''
+      visibility: public
+      description: What the type is for.
+
+    - type: string
+      name: aliasPattern
+      value: ''
+      visibility: public
+      description: URL alias pattern.
+
+    - type: boolean
+      name: isNew
+      value: false
+      visibility: public
+      description: True adds the type, false changes it.
+
+    - type: object
+      name: type
+      value: {}
+      visibility: public
+      description: The saved type. Returned to the app.
+
+    - type: dbConnection
+      name: db
+
+    - type: array
+      name: existing
+      value: []
+
+    - type: object
+      name: save
+      value: {}
+
+  actions:
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT id FROM content_type WHERE id = ?
+        bindings: ['{{ id }}']
+      destination: existing
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          id: '{{ id }}'
+          label: '{{ label }}'
+          description: '{{ description }}'
+          aliasPattern: '{{ aliasPattern }}'
+          isNew: '{= isNew =}'
+          existing: '{= existing =}'
+        code: |
+          const fresh = isNew === true || isNew === 'true';
+          const name = String(label).trim();
+          if (!name) throw new Error('Name field is required.');
+          const machine = String(id).trim() ||
+            name.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+          if (!/^[a-z][a-z0-9_]{0,31}$/.test(machine))
+            throw new Error('The machine name must start with a letter and contain only lowercase letters, numbers and underscores (at most 32).');
+          if (fresh && existing.length) throw new Error('The machine name ' + machine + ' is already in use.');
+          if (!fresh && !existing.length) throw new Error('The content type ' + machine + ' was not found.');
+          return {
+            id: machine,
+            label: name,
+            description: String(description).trim(),
+            aliasPattern: String(aliasPattern).trim(),
+            addBody: fresh ? 1 : 0,
+          };
+      destination: save
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          INSERT INTO content_type (id, label, description, alias_pattern, template, created)
+          VALUES (?, ?, ?, ?, '', strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+          ON CONFLICT (id) DO UPDATE SET label = excluded.label, description = excluded.description,
+            alias_pattern = excluded.alias_pattern
+        bindings: ['{{ save.id }}', '{{ save.label }}', '{{ save.description }}', '{{ save.aliasPattern }}']
+
+    # A new type starts with a Body field.
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          INSERT OR IGNORE INTO field (type_id, name, label, kind, required, settings, weight)
+          SELECT ?, 'body', 'Body', 'long_text', 0, '{}', 0 WHERE ? = 1
+        bindings: ['{{ save.id }}', '{= save.addBody =}']
+
+    # ...and a default template: a copy of the Basic page one.
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          INSERT OR IGNORE INTO template (id, name, kind, type_id, html, is_default, created, changed)
+          SELECT ?, ?, 'content', ?, COALESCE((SELECT html FROM template WHERE id = 'page'), ''), 1,
+            strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+          WHERE ? = 1 AND NOT EXISTS (SELECT 1 FROM template WHERE kind = 'content' AND type_id = ?)
+        bindings: ['{{ save.id }}', '{{ save.label }}', '{{ save.id }}', '{= save.addBody =}', '{{ save.id }}']
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      name: runScript
+      params:
+        context: { save: '{= save =}' }
+        code: |
+          return { id: save.id, label: save.label };
+      destination: type

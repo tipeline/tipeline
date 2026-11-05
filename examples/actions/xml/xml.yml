@@ -1,0 +1,107 @@
+version: 1.0.0
+name: XML Actions Test Suite
+description: |
+  Turns XML into JSON, with or without its attributes, and reads RSS and Atom feeds into one common shape.
+
+  **Parameter notes**
+
+  - `xml` — use `{{ varName }}` to pass the XML string
+  - `ignoreAttributes` — when true, attributes are left out of the result
+  - `parseFeed` — works with RSS 2.0 (`<rss><channel>`) and Atom (`<feed>`) documents
+
+author: Jose Daniel Estrada
+tags: [example, xml, rss, atom, feed]
+
+pipeline:
+  variables:
+    # Small XML document with attributes, used to exercise generic parsing
+    - type: string
+      name: orderXml
+      value: |
+        <order id="A-100" status="paid">
+          <customer>Jose Daniel Estrada</customer>
+          <items>
+            <item sku="X1">Widget</item>
+            <item sku="X2">Gadget</item>
+          </items>
+        </order>
+
+    # RSS 2.0 feed used to exercise parseFeed
+    - type: string
+      name: rssFeed
+      value: |
+        <?xml version="1.0" encoding="UTF-8"?>
+        <rss version="2.0">
+          <channel>
+            <title>Tipeline Blog</title>
+            <link>https://tipeline.example/blog</link>
+            <description>Automation news and updates</description>
+            <item>
+              <title>Automating Daily Reports</title>
+              <link>https://tipeline.example/blog/daily-reports</link>
+              <description>How to automate daily reports.</description>
+              <pubDate>Wed, 29 Apr 2026 10:00:00 GMT</pubDate>
+              <guid>https://tipeline.example/blog/daily-reports</guid>
+            </item>
+            <item>
+              <title>Parsing RSS Feeds</title>
+              <link>https://tipeline.example/blog/parsing-rss</link>
+              <description>A guide to RSS parsing.</description>
+              <pubDate>Thu, 30 Apr 2026 10:00:00 GMT</pubDate>
+              <guid>https://tipeline.example/blog/parsing-rss</guid>
+            </item>
+          </channel>
+        </rss>
+
+    # Atom feed, used to show parseFeed normalizes both formats the same way
+    - type: string
+      name: atomFeed
+      value: |
+        <?xml version="1.0" encoding="UTF-8"?>
+        <feed xmlns="http://www.w3.org/2005/Atom">
+          <title>Tipeline Blog</title>
+          <subtitle>Automation news and updates</subtitle>
+          <link href="https://tipeline.example/blog" rel="alternate" />
+          <entry>
+            <title>Automating Daily Reports</title>
+            <link href="https://tipeline.example/blog/daily-reports" rel="alternate" />
+            <summary>How to automate daily reports.</summary>
+            <updated>2026-04-29T10:00:00Z</updated>
+            <id>https://tipeline.example/blog/daily-reports</id>
+          </entry>
+        </feed>
+
+  actions:
+    # -------------------------------------------------------
+    # Parsing
+    # -------------------------------------------------------
+
+    # Parse the order XML into an object, keeping element attributes
+    # (e.g. order.@_id, order.@_status, items.item[0].@_sku) in the result
+    - group: xml
+      name: parse
+      params:
+        xml: '{{ orderXml }}'
+
+    # Parse the same document but drop attributes for a cleaner shape
+    - group: xml
+      name: parse
+      params:
+        xml: '{{ orderXml }}'
+        ignoreAttributes: true
+
+    # -------------------------------------------------------
+    # Feeds
+    # -------------------------------------------------------
+
+    # Normalize an RSS 2.0 feed into { title, link, description, items }
+    - group: xml
+      name: parseFeed
+      params:
+        xml: '{{ rssFeed }}'
+
+    # Normalize an Atom feed the same way — output shape matches the RSS case
+    - group: xml
+      name: parseFeed
+      params:
+        xml: '{{ atomFeed }}'

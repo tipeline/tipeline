@@ -1,0 +1,231 @@
+version: 1.0.0
+name: Interaction actions
+description: |
+  Controls a page like a person would: viewport size, keyboard, mouse, mouse wheel, and drag and drop by coordinates or by element.
+author: Jose Daniel Estrada
+tags: [example, browser, keyboard, mouse, drag and drop]
+pipeline:
+  variables:
+    - type: browser
+      name: browserInstance
+    - type: object
+      name: viewportInfo
+  actions:
+    - group: browser
+      name: launch
+      params:
+        headless: true
+        timeout: 30000
+        viewport:
+          width: 1280
+          height: 720
+      destination: browserInstance
+
+    # Inject a page with draggable elements and a search input under our control
+    - group: browser
+      name: setContent
+      params:
+        browser: '{= browserInstance =}'
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <head><style>
+            #drag-source { width: 80px; height: 80px; background: steelblue; position: absolute; top: 100px; left: 100px; cursor: grab; }
+            #drop-target { width: 150px; height: 150px; background: #eee; border: 2px dashed #999; position: absolute; top: 80px; left: 400px; }
+          </style></head>
+          <body>
+            <input id="search-input" type="text" placeholder="Search..." style="position:absolute;top:20px;left:100px;width:300px;" />
+            <div id="drag-source" draggable="true">Drag me</div>
+            <div id="drop-target">Drop here</div>
+          </body>
+          </html>
+
+    # --------------------------------------------------
+    # Viewport
+    # --------------------------------------------------
+
+    # -- getViewport --
+    # Read the current width, height, and device settings
+    - group: browser
+      name: getViewport
+      params:
+        browser: '{= browserInstance =}'
+      destination: viewportInfo
+
+    # -- setViewport --
+    # Resize the viewport to 1440x900
+    - group: browser
+      name: setViewport
+      params:
+        browser: '{= browserInstance =}'
+        width: 1440
+        height: 900
+
+    # --------------------------------------------------
+    # Keyboard
+    # --------------------------------------------------
+
+    # -- keyboardType --
+    # Focus a field and type with a 80ms delay between keystrokes
+    - group: browser
+      name: keyboardType
+      params:
+        browser: '{= browserInstance =}'
+        selector: '#search-input'
+        selectorType: css
+        text: 'browser automation'
+        options:
+          delay: 80
+
+    - group: browser
+      name: wait
+      params:
+        browser: '{= browserInstance =}'
+        type: timeout
+        timeout: 500
+
+    # -- keyboardDown + keyboardUp --
+    # Hold Shift, then release it
+    - group: browser
+      name: keyboardDown
+      params:
+        browser: '{= browserInstance =}'
+        key: Shift
+
+    - group: browser
+      name: keyboardUp
+      params:
+        browser: '{= browserInstance =}'
+        key: Shift
+
+    # -- keyboardPress --
+    # Press a single key (Select All)
+    - group: browser
+      name: keyboardPress
+      params:
+        browser: '{= browserInstance =}'
+        key: 'a'
+
+    # -- keyboardSendCharacter --
+    # Dispatch a raw character event (useful for special symbols)
+    - group: browser
+      name: keyboardSendCharacter
+      params:
+        browser: '{= browserInstance =}'
+        char: '@'
+
+    - group: browser
+      name: wait
+      params:
+        browser: '{= browserInstance =}'
+        type: timeout
+        timeout: 500
+
+    # --------------------------------------------------
+    # Mouse
+    # --------------------------------------------------
+
+    # -- mouseMove --
+    # Move the cursor to the drag source element position
+    - group: browser
+      name: mouseMove
+      params:
+        browser: '{= browserInstance =}'
+        x: 140
+        y: 140
+        options:
+          steps: 5
+
+    # -- mouseClick --
+    # Left-click at specific coordinates
+    - group: browser
+      name: mouseClick
+      params:
+        browser: '{= browserInstance =}'
+        x: 140
+        y: 140
+        options:
+          button: left
+          count: 1
+          delay: 50
+
+    - group: browser
+      name: wait
+      params:
+        browser: '{= browserInstance =}'
+        type: timeout
+        timeout: 300
+
+    # -- mouseDown + mouseUp --
+    # Manual press and release at the current cursor position
+    - group: browser
+      name: mouseDown
+      params:
+        browser: '{= browserInstance =}'
+        options:
+          button: left
+
+    - group: browser
+      name: mouseUp
+      params:
+        browser: '{= browserInstance =}'
+        options:
+          button: left
+
+    # -- mouseWheel --
+    # Scroll down 400px
+    - group: browser
+      name: mouseWheel
+      params:
+        browser: '{= browserInstance =}'
+        options:
+          deltaX: 0
+          deltaY: 400
+
+    - group: browser
+      name: wait
+      params:
+        browser: '{= browserInstance =}'
+        type: timeout
+        timeout: 300
+
+    # --------------------------------------------------
+    # Drag & Drop
+    # --------------------------------------------------
+
+    # -- dragAndDropByCoordinates --
+    # Drag from the drag source center to the drop target center using raw coordinates
+    - group: browser
+      name: dragAndDropByCoordinates
+      params:
+        browser: '{= browserInstance =}'
+        start:
+          x: 140
+          y: 140
+        target:
+          x: 475
+          y: 155
+        steps: 20
+
+    - group: browser
+      name: wait
+      params:
+        browser: '{= browserInstance =}'
+        type: timeout
+        timeout: 300
+
+    # -- dragAndDropByElements --
+    # Same drag operation resolved via element selectors instead of raw coordinates
+    - group: browser
+      name: dragAndDropByElements
+      params:
+        browser: '{= browserInstance =}'
+        sourceSelector: '#drag-source'
+        targetSelector: '#drop-target'
+        selectorType: css
+        steps: 20
+
+    - group: browser
+      name: close
+      params:
+        browser: '{= browserInstance =}'

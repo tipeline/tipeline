@@ -1,0 +1,80 @@
+schemaVersion: 4
+name: Gallery
+description: Pictures from a workflow — postcards it draws as files, shown as a grid (click one to see it big, with previous / next) and as a carousel that turns by itself
+author: tipeline
+
+workflows:
+  makePostcards: { file: ./workflows/make-postcards.yml }
+
+pages:
+  - id: postcards
+    name: Postcards
+    icon: Images
+
+    runnables:
+      cards:
+        mode: run
+        workflow: makePostcards
+        trigger: load
+        inputs: { theme: "{{ theme.value }}" }
+        outputs: [cards]
+        persist: false
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 8, h: 10 }
+        props:
+          markdown: true
+          content: "A **Gallery** shows pictures from rows — here six postcards a workflow draws and saves in ~/Tipeline/output. Click one to see it big (arrow keys go through them); the carousel on the right turns every 3 seconds."
+
+      - id: theme
+        type: select
+        name: Theme
+        frame: none
+        layout: { x: 8, y: 0, w: 4, h: 10 }
+        props:
+          label: Theme
+          display: buttons
+          default: sunset
+          options:
+            - { value: sunset, label: Sunset }
+            - { value: ocean, label: Ocean }
+            - { value: forest, label: Forest }
+        events:
+          change: [{ type: run, runnable: cards }]
+
+      - id: grid
+        type: gallery
+        name: Postcards
+        layout: { x: 0, y: 10, w: 7, h: 52 }
+        props:
+          title: Postcards
+          data: "{= runnables.cards.outputs.cards =}"
+          columns: 3
+          zoomable: true
+
+      - id: carousel
+        type: gallery
+        name: Carousel
+        layout: { x: 7, y: 10, w: 5, h: 30 }
+        props:
+          title: Slideshow
+          data: "{= runnables.cards.outputs.cards =}"
+          display: carousel
+          autoplay: 3
+          zoomable: true
+
+      - id: picked
+        type: keyValue
+        name: Clicked postcard
+        layout: { x: 7, y: 40, w: 5, h: 22 }
+        props:
+          title: "{{ grid.selectedItem.place | default: 'Click a postcard' }}"
+          data: "{= grid.selectedItem =}"
+          emptyText: Click a postcard in the grid
+          fields:
+            - { key: place, label: Place }
+            - { key: theme, label: Theme, format: badge, colors: { sunset: amber, ocean: blue, forest: green } }
+            - { key: path, label: File }

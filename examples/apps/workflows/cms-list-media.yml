@@ -1,0 +1,41 @@
+version: 1.0.0
+name: 'CMS: List Media'
+description: |
+  The media library of the CMS store (`~/Tipeline/output/cms/cms.db`): every image, newest first, with how much content uses it.
+
+  **Outputs**
+
+  - `media` — `[{ id, name, src, mime, size, created, usage }]`; src is the file's path, for an image or gallery
+author: tipeline
+tags: [example, apps, cms, media, images]
+
+pipeline:
+  variables:
+    - { type: array, name: media, value: [], visibility: public, description: The media items. Returned to the app. }
+    - { type: dbConnection, name: db }
+
+  actions:
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          SELECT m.id, m.name, m.file AS src, m.mime, m.size, m.created,
+            (SELECT COUNT(DISTINCT n.id) FROM node n JOIN field f ON f.type_id = n.type AND f.kind = 'media_ref'
+              WHERE json_extract(n.fields, '$.' || f.name) = m.id) AS usage
+          FROM media m ORDER BY m.created DESC, m.id DESC
+      destination: media
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'

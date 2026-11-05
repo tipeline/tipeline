@@ -1,0 +1,109 @@
+schemaVersion: 4
+name: Slider Filters
+description: Sliders as filters — a price range with two handles and a distance feed a search workflow — and a required slider field in a feedback form
+author: tipeline
+
+workflows:
+  searchListings: { file: ./workflows/search-listings.yml }
+
+pages:
+  - id: listings
+    name: Listings
+    icon: SlidersHorizontal
+
+    runnables:
+      search:
+        mode: run
+        workflow: searchListings
+        trigger: load
+        inputs:
+          price: "{= price.value =}"
+          maxDistance: "{= distance.value =}"
+        outputs: [listings, count]
+        persist: false
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 7 }
+        props:
+          markdown: true
+          content: "**Slider** inputs: drag a handle or use the arrow keys. The search runs when you let go — not on every step of the drag."
+
+      # ---------------------------------------------------------------- filters
+      - id: price
+        type: input
+        name: Price
+        layout: { x: 0, y: 7, w: 4, h: 11 }
+        props:
+          inputType: slider
+          label: Monthly rent
+          range: true
+          min: 0
+          max: 2000
+          step: 50
+          currency: USD
+          default: [300, 1200]
+        events:
+          change: [{ type: run, runnable: search }]
+
+      - id: distance
+        type: input
+        name: Distance
+        layout: { x: 0, y: 18, w: 4, h: 11 }
+        props:
+          inputType: slider
+          label: Distance from the centre
+          min: 1
+          max: 50
+          unit: km
+          default: 15
+        events:
+          change: [{ type: run, runnable: search }]
+
+      - id: found
+        type: kpi
+        name: Found
+        layout: { x: 0, y: 29, w: 4, h: 14 }
+        props:
+          label: "Apartments {{ price.value[0] }}–{{ price.value[1] }} USD, within {{ distance.value }} km"
+          value: "{= runnables.search.outputs.count =}"
+          format: number
+
+      - id: results
+        type: table
+        name: Results
+        layout: { x: 4, y: 7, w: 8, h: 36 }
+        props:
+          data: "{= runnables.search.outputs.listings =}"
+          columns:
+            - { key: name, header: Apartment }
+            - { key: area, header: Area }
+            - { key: rent, header: Rent, format: currency }
+            - { key: distance, header: Km }
+            - { key: bedrooms, header: Bedrooms }
+
+      # ---------------------------------------------------------------- a form field
+      - id: feedback
+        type: form
+        name: Feedback
+        layout: { x: 0, y: 43, w: 6, h: 40 }
+        props:
+          submitLabel: Send
+          fields:
+            - { name: score, label: How likely are you to recommend us?, type: slider, min: 0, max: 10, required: true, description: "0 = not at all, 10 = certainly — required: move it to answer" }
+            - { name: budget, label: Your budget, type: slider, range: true, min: 0, max: 3000, step: 100, currency: USD, default: [500, 1500] }
+            - { name: comment, label: Anything else?, type: textarea }
+        events:
+          submit:
+            - { type: toast, variant: success, message: "Thanks! Score {{ feedback.values.score }}, budget {{ feedback.values.budget[0] }}–{{ feedback.values.budget[1] }} USD" }
+
+      - id: sent
+        type: json
+        name: Form values
+        layout: { x: 6, y: 43, w: 6, h: 40 }
+        props:
+          title: Form values (live)
+          data: "{= feedback.values =}"
+          expandDepth: 2

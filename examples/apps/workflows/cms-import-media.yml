@@ -1,0 +1,118 @@
+version: 1.0.0
+name: 'CMS: Import Media'
+description: |
+  Adds images to the media library of the CMS store: each file is copied into `~/Tipeline/output/cms/media` (as `<id>-<name>`) and gets a media item named after it. Only images are taken (PNG, JPEG, GIF, WebP, SVG, AVIF).
+
+  **Inputs**
+
+  - `files` — the files, as a file drop's `files`: `[{ name, path, size, type }]`
+
+  **Outputs**
+
+  - `imported` — `[{ id, name }]`
+  - `count` — how many were added
+author: tipeline
+tags: [example, apps, cms, media, images, import]
+
+pipeline:
+  variables:
+    - { type: array, name: files, value: [], visibility: public, required: true, description: The files to add. }
+    - { type: array, name: imported, value: [], visibility: public, description: The new media items. Returned to the app. }
+    - { type: number, name: count, value: 0, visibility: public, description: How many were added. Returned to the app. }
+    - { type: dbConnection, name: db }
+    - { type: array, name: items, value: [] }
+    - { type: object, name: item, value: {} }
+    - { type: array, name: row, value: [] }
+    - { type: string, name: dest, value: '' }
+
+  actions:
+    # Checked before anything is written.
+    - group: script
+      name: runScript
+      params:
+        context: { files: '{= files =}' }
+        code: |
+          const TYPES = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', avif: 'image/avif' };
+          const list = (Array.isArray(files) ? files : []).filter((f) => f && f.path);
+          if (!list.length) throw new Error('Drop the images to add first.');
+          return list.map((f) => {
+            const file = String(f.name || f.path.split(/[\\/]/).pop());
+            const ext = (file.split('.').pop() || '').toLowerCase();
+            if (!TYPES[ext]) throw new Error(file + ' is not an image this library takes (PNG, JPEG, GIF, WebP, SVG or AVIF).');
+            const safe = file.toLowerCase().replace(/[^a-z0-9.]+/g, '-').replace(/^-+|-+$/g, '');
+            return {
+              path: f.path,
+              file: safe,
+              name: file.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim() || file,
+              mime: TYPES[ext],
+              size: Number(f.size) || 0,
+            };
+          });
+      destination: items
+
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: flow
+      name: forEachLoop
+      params:
+        iterable: '{= items =}'
+        currentItem: item
+        actions:
+          - group: database
+            name: query
+            params:
+              connection: '{= db =}'
+              sql: >-
+                INSERT INTO media (name, file, mime, size, created)
+                VALUES (?, '', ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) RETURNING id, name
+              bindings: ['{{ item.name }}', '{{ item.mime }}', '{= item.size =}']
+            destination: row
+
+          - group: script
+            name: runScript
+            params:
+              context:
+                folder: '{{ _env.HOME }}/Tipeline/output/cms/media'
+                id: '{= row[0].id =}'
+                file: '{{ item.file }}'
+              code: return folder + '/' + id + '-' + file;
+            destination: dest
+
+          - group: file
+            name: copy
+            params:
+              src: '{{ item.path }}'
+              dest: '{{ dest }}'
+
+          - group: database
+            name: query
+            params:
+              connection: '{= db =}'
+              sql: UPDATE media SET file = ? WHERE id = ?
+              bindings: ['{{ dest }}', '{= row[0].id =}']
+
+          - group: script
+            name: runScript
+            params:
+              context: { imported: '{= imported =}', row: '{= row =}' }
+              code: return [...imported, row[0]];
+            destination: imported
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      name: runScript
+      params:
+        context: { imported: '{= imported =}' }
+        code: return imported.length;
+      destination: count

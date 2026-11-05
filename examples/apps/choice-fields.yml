@@ -1,0 +1,156 @@
+schemaVersion: 4
+name: Choice Fields
+version: "1.0.0"
+description: Every way a select and a checkbox can look — dropdown, radio list, buttons, toggle buttons, switch and tick box — with their values shown live
+author: tipeline
+
+# No workflows: everything here is the components themselves.
+workflows: {}
+
+pages:
+  - id: choices
+    name: Choices
+    icon: ListChecks
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 7 }
+        props:
+          markdown: true
+          content: "The same **Select** and **Checkbox** components with a different **Display** each. The value is the same kind in every look — see the panel on the right."
+
+      # ---------------------------------------------------------------- one choice
+      - id: sizeDropdown
+        type: select
+        name: Size (dropdown)
+        layout: { x: 0, y: 7, w: 4, h: 12 }
+        props:
+          label: "Dropdown (default)"
+          default: m
+          options: &sizes
+            - { value: s, label: Small }
+            - { value: m, label: Medium }
+            - { value: l, label: Large }
+
+      - id: sizeList
+        type: select
+        name: Size (list)
+        layout: { x: 4, y: 7, w: 4, h: 14 }
+        props:
+          label: "List — radio buttons"
+          display: list
+          default: m
+          options: *sizes
+
+      - id: sizeButtons
+        type: select
+        name: Size (buttons)
+        layout: { x: 8, y: 7, w: 4, h: 12 }
+        props:
+          label: "Buttons"
+          display: buttons
+          default: m
+          options: *sizes
+
+      # ---------------------------------------------------------------- several choices
+      - id: toppingsList
+        type: select
+        name: Toppings (list)
+        layout: { x: 0, y: 21, w: 4, h: 21 }
+        props:
+          label: "Multiple — list (tick boxes)"
+          multiple: true
+          default: [cheese]
+          options: &toppings
+            - { value: cheese, label: Cheese }
+            - { value: ham, label: Ham }
+            - { value: olives, label: Olives }
+            - { value: basil, label: Basil }
+
+      - id: toppingsButtons
+        type: select
+        name: Toppings (buttons)
+        layout: { x: 4, y: 21, w: 4, h: 21 }
+        props:
+          label: "Multiple — buttons"
+          display: buttons
+          multiple: true
+          default: [cheese, basil]
+          options: *toppings
+
+      # ---------------------------------------------------------------- on / off
+      - id: notify
+        type: checkbox
+        name: Notify (switch)
+        layout: { x: 8, y: 21, w: 4, h: 7 }
+        props:
+          label: "Switch (default)"
+          default: true
+
+      - id: agree
+        type: checkbox
+        name: Agree (tick box)
+        layout: { x: 8, y: 28, w: 4, h: 7 }
+        props:
+          label: "Tick box"
+          display: checkbox
+
+      # ---------------------------------------------------------------- the same in a form
+      - id: order
+        type: form
+        name: Order form
+        layout: { x: 0, y: 42, w: 6, h: 52 }
+        props:
+          title: The same looks in a form
+          submitLabel: Place order
+          fields:
+            - name: size
+              label: Size
+              type: select
+              display: buttons
+              required: true
+              options: *sizes
+            - name: extras
+              label: Extras
+              type: multiselect
+              display: buttons
+              options: *toppings
+            - name: delivery
+              label: Delivery
+              type: select
+              display: list
+              default: pickup
+              options:
+                - { value: pickup, label: Pick up }
+                - { value: home, label: Home delivery }
+            - { name: gift, label: It's a gift, type: checkbox }
+            - { name: terms, label: I accept the terms, type: checkbox, display: checkbox, required: true }
+        events:
+          submit:
+            - { type: toast, variant: success, message: "Order: {{ order.values.size }} with {{ order.values.extras | join: ', ' }}" }
+
+      # Live values of everything above. Empty ones show "—" — but not true / false:
+      # Liquid's `default` would replace false too.
+      - id: values
+        type: text
+        name: Values
+        layout: { x: 6, y: 42, w: 6, h: 52 }
+        props:
+          markdown: true
+          content: |
+            ### Values right now
+            | Component | Value |
+            |---|---|
+            | Dropdown | `{{ sizeDropdown.value | default: "—" }}` |
+            | List | `{{ sizeList.value | default: "—" }}` |
+            | Buttons | `{{ sizeButtons.value | default: "—" }}` |
+            | Multiple — list | `{{ toppingsList.value | join: ", " | default: "—" }}` |
+            | Multiple — buttons | `{{ toppingsButtons.value | join: ", " | default: "—" }}` |
+            | Switch | `{{ notify.value }}` |
+            | Tick box | `{{ agree.value }}` |
+            | Form size | `{{ order.values.size | default: "—" }}` |
+            | Form extras | `{{ order.values.extras | join: ", " | default: "—" }}` |
+            | Form delivery | `{{ order.values.delivery | default: "—" }}` |
+            | Form gift / terms | `{{ order.values.gift }}` / `{{ order.values.terms }}` |

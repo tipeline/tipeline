@@ -1,0 +1,55 @@
+version: 1.0.0
+name: Test Async Subtask Child
+description: |
+  A slow child workflow for the async sub-workflow demo: it waits, then finishes. Called by Test Async Subtask.
+author: Jose Daniel Estrada
+tags: [example, subtask, async]
+
+pipeline:
+  variables:
+    - type: number
+      name: delayMs
+      value: 3000
+
+    - type: string
+      name: childResult
+      value: ''
+
+    - type: string
+      name: childStartedAt
+      value: ''
+
+    - type: string
+      name: childFinishedAt
+      value: ''
+
+  actions:
+    - group: datetime
+      name: getCurrentDateTime
+      destination: childStartedAt
+
+    - group: system
+      name: message
+      params:
+        text: 'Child task started at {{ childStartedAt }}, will take {{ delayMs }}ms...'
+
+    # Simulates slow work (an HTTP call, file processing, etc.)
+    - group: flow
+      name: wait
+      params:
+        timeout: '{= delayMs =}'
+
+    - group: string
+      name: toUpperCase
+      params:
+        string: child work finished
+      destination: childResult
+
+    - group: datetime
+      name: getCurrentDateTime
+      destination: childFinishedAt
+
+    - group: system
+      name: message
+      params:
+        text: 'Child task finished at {{ childFinishedAt }}. childResult: {{ childResult }}'

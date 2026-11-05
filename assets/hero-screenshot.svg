@@ -1,0 +1,98 @@
+<svg width="720" height="480" viewBox="0 0 720 480" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Window frame -->
+  <rect width="720" height="480" rx="14" fill="#111113"/>
+  <!-- Title bar -->
+  <rect width="720" height="42" rx="14" fill="#1c1c1e"/>
+  <rect y="28" width="720" height="14" fill="#1c1c1e"/>
+  <!-- Window controls -->
+  <circle cx="22" cy="21" r="6" fill="#ff5f57"/>
+  <circle cx="44" cy="21" r="6" fill="#febc2e"/>
+  <circle cx="66" cy="21" r="6" fill="#28c840"/>
+  <!-- Tab bar -->
+  <rect x="280" y="12" width="160" height="18" rx="5" fill="#2a2a2e"/>
+  <rect x="298" y="18" width="90" height="7" rx="2" fill="#555"/>
+
+  <!-- Sidebar -->
+  <rect x="0" y="42" width="176" height="438" fill="#161618"/>
+  <!-- Logo -->
+  <rect x="16" y="60" width="96" height="14" rx="4" fill="#333"/>
+  <!-- Active nav item -->
+  <rect x="10" y="92" width="156" height="34" rx="7" fill="#7c3aed" fill-opacity="0.22"/>
+  <rect x="28" y="103" width="10" height="10" rx="2" fill="#a78bfa"/>
+  <rect x="46" y="105" width="52" height="7" rx="2" fill="#a78bfa"/>
+  <!-- Nav items -->
+  <rect x="28" y="142" width="10" height="10" rx="2" fill="#444"/>
+  <rect x="46" y="144" width="40" height="7" rx="2" fill="#555"/>
+  <rect x="28" y="172" width="10" height="10" rx="2" fill="#444"/>
+  <rect x="46" y="174" width="62" height="7" rx="2" fill="#555"/>
+  <rect x="28" y="202" width="10" height="10" rx="2" fill="#444"/>
+  <rect x="46" y="204" width="48" height="7" rx="2" fill="#555"/>
+  <rect x="28" y="232" width="10" height="10" rx="2" fill="#444"/>
+  <rect x="46" y="234" width="55" height="7" rx="2" fill="#555"/>
+  <rect x="28" y="262" width="10" height="10" rx="2" fill="#444"/>
+  <rect x="46" y="264" width="44" height="7" rx="2" fill="#555"/>
+  <rect x="28" y="292" width="10" height="10" rx="2" fill="#444"/>
+  <rect x="46" y="294" width="38" height="7" rx="2" fill="#555"/>
+
+  <!-- Main area background -->
+  <rect x="176" y="42" width="544" height="438" fill="#0d0d0f"/>
+
+  <!-- Top toolbar -->
+  <rect x="176" y="42" width="544" height="46" fill="#18181b"/>
+  <rect x="192" y="56" width="140" height="18" rx="5" fill="#27272a"/>
+  <rect x="602" y="53" width="52" height="24" rx="6" fill="#7c3aed"/>
+  <rect x="660" y="53" width="46" height="24" rx="6" fill="#27272a"/>
+
+  <!-- Section label -->
+  <rect x="192" y="106" width="70" height="9" rx="3" fill="#3f3f46"/>
+
+  <!-- Action row 1 -->
+  <rect x="192" y="122" width="528" height="50" rx="8" fill="#18181b"/>
+  <rect x="208" y="135" width="26" height="26" rx="6" fill="#7c3aed" fill-opacity="0.35"/>
+  <rect x="244" y="138" width="78" height="9" rx="3" fill="#71717a"/>
+  <rect x="244" y="152" width="120" height="7" rx="2" fill="#3f3f46"/>
+  <rect x="654" y="138" width="52" height="20" rx="5" fill="#27272a"/>
+
+  <!-- Action row 2 -->
+  <rect x="192" y="180" width="528" height="50" rx="8" fill="#18181b"/>
+  <rect x="208" y="193" width="26" height="26" rx="6" fill="#2563eb" fill-opacity="0.35"/>
+  <rect x="244" y="196" width="68" height="9" rx="3" fill="#71717a"/>
+  <rect x="244" y="210" width="100" height="7" rx="2" fill="#3f3f46"/>
+  <rect x="654" y="196" width="52" height="20" rx="5" fill="#27272a"/>
+
+  <!-- Action row 3 — selected/active -->
+  <rect x="192" y="238" width="528" height="50" rx="8" fill="#7c3aed" fill-opacity="0.14" stroke="#7c3aed" stroke-width="1" stroke-opacity="0.5"/>
+  <rect x="208" y="251" width="26" height="26" rx="6" fill="#7c3aed" fill-opacity="0.7"/>
+  <rect x="244" y="254" width="88" height="9" rx="3" fill="#c4b5fd"/>
+  <rect x="244" y="268" width="136" height="7" rx="2" fill="#7c3aed" fill-opacity="0.5"/>
+  <rect x="654" y="254" width="52" height="20" rx="5" fill="#7c3aed" fill-opacity="0.35"/>
+
+  <!-- Action row 4 -->
+  <rect x="192" y="296" width="528" height="50" rx="8" fill="#18181b"/>
+  <rect x="208" y="309" width="26" height="26" rx="6" fill="#059669" fill-opacity="0.35"/>
+  <rect x="244" y="312" width="58" height="9" rx="3" fill="#71717a"/>
+  <rect x="244" y="326" width="110" height="7" rx="2" fill="#3f3f46"/>
+  <rect x="654" y="312" width="52" height="20" rx="5" fill="#27272a"/>
+
+  <!-- Action row 5 -->
+  <rect x="192" y="354" width="528" height="50" rx="8" fill="#18181b"/>
+  <rect x="208" y="367" width="26" height="26" rx="6" fill="#444" fill-opacity="0.5"/>
+  <rect x="244" y="370" width="72" height="9" rx="3" fill="#52525b"/>
+  <rect x="244" y="384" width="92" height="7" rx="2" fill="#3f3f46"/>
+
+  <!-- Bottom live output bar -->
+  <rect x="176" y="416" width="544" height="64" fill="#111113"/>
+  <rect x="176" y="416" width="544" height="1" fill="#27272a"/>
+  <rect x="192" y="428" width="72" height="8" rx="2" fill="#3f3f46"/>
+  <!-- Status dots + output lines -->
+  <circle cx="200" cy="448" r="4" fill="#28c840"/>
+  <rect x="212" y="444" width="140" height="7" rx="2" fill="#3f3f46"/>
+  <circle cx="200" cy="463" r="4" fill="#28c840"/>
+  <rect x="212" y="459" width="110" height="7" rx="2" fill="#3f3f46"/>
+  <rect x="420" y="444" width="4" height="4" rx="1" fill="#a78bfa"/>
+  <rect x="430" y="444" width="80" height="5" rx="1" fill="#3f3f46"/>
+  <rect x="420" y="455" width="4" height="4" rx="1" fill="#a78bfa"/>
+  <rect x="430" y="455" width="100" height="5" rx="1" fill="#3f3f46"/>
+  <rect x="420" y="466" width="4" height="4" rx="1" fill="#febc2e"/>
+  <rect x="430" y="466" width="60" height="5" rx="1" fill="#3f3f46"/>
+</svg>

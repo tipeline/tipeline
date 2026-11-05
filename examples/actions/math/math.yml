@@ -1,0 +1,329 @@
+version: 1.0.0
+name: Math Actions Example
+description: |
+  Calculates with numbers on realistic inputs: arithmetic, rounding, totals and averages, limits, percentages and random numbers.
+
+  **Actions**
+
+  - Arithmetic — `abs`, `add`, `subtract`, `multiply`, `divide`, `mod`, `pow`
+  - Rounding — `ceil`, `floor`, `round`, `trunc`, `toFixed`, `formatNumber`
+  - Aggregates — `max`, `min`, `mean`, `sum`, `median` (these need a list of numbers)
+  - Utility — `clamp`, `percentage`, `sign`, `increment`, `decrement`, `inRange`
+  - Generators — `random`
+
+  **Template syntax**
+
+  - `{{ varName }}` — puts a value into text; the result is always a string
+  - `{= varName =}` — passes the value as it is (object, array, number…); it must be the field's whole value
+
+author: Jose Daniel Estrada
+tags: [example, math, numbers, arithmetic]
+
+pipeline:
+  variables:
+    # ------------------------------------------------------------------
+    # scope: task — arithmetic inputs
+    # ------------------------------------------------------------------
+    - type: number
+      name: balance
+      value: -42.5
+
+    - type: number
+      name: subtotal
+      value: 128.00
+
+    - type: number
+      name: invoiceTotal
+      value: 250.00
+
+    - type: number
+      name: discount
+      value: 25.00
+
+    - type: number
+      name: unitPrice
+      value: 14.99
+
+    - type: number
+      name: quantity
+      value: 3
+
+    - type: number
+      name: totalRevenue
+      value: 15000
+
+    - type: number
+      name: orderCount
+      value: 120
+
+    - type: number
+      name: rowIndex
+      value: 7
+
+    - type: number
+      name: retryCount
+      value: 4
+
+    # ------------------------------------------------------------------
+    # scope: task — rounding inputs
+    # ------------------------------------------------------------------
+    - type: number
+      name: rawOffset
+      value: -7.9
+
+    - type: number
+      name: pageCount
+      value: 7.33
+
+    - type: number
+      name: confidenceScore
+      value: 0.87
+
+    - type: number
+      name: averageScore
+      value: 82.6
+
+    - type: number
+      name: lineItemTotal
+      value: 19.999
+
+    # ------------------------------------------------------------------
+    # scope: task — aggregate inputs (use {= =} when passing to array params)
+    # ------------------------------------------------------------------
+    - type: array
+      name: scores
+      value: [88, 92, 70, 95, 85]
+
+    - type: array
+      name: prices
+      value: [12.5, 99.99, 45.0, 7.25, 60.0]
+
+    - type: array
+      name: responseTimes
+      value: [120, 340, 290, 410, 180]
+
+    - type: array
+      name: bids
+      value: [1500, 2300, 875, 3100, 1050]
+
+    - type: array
+      name: lineItems
+      value: [39.99, 14.99, 5.00, 22.50]
+
+    # ------------------------------------------------------------------
+    # scope: task — utility inputs
+    # ------------------------------------------------------------------
+    - type: number
+      name: httpStatusCode
+      value: 200
+
+    - type: number
+      name: profitDelta
+      value: -1250
+
+    - type: number
+      name: retryDelay
+      value: 120
+
+    - type: number
+      name: processedCount
+      value: 73
+
+    - type: number
+      name: totalCount
+      value: 200
+
+    - type: number
+      name: pageNumber
+      value: 3
+
+    - type: number
+      name: remainingRetries
+      value: 5
+
+  actions:
+    # -------------------------------------------------------
+    # Arithmetic
+    # -------------------------------------------------------
+
+    # Convert a negative balance to a positive magnitude
+    - group: math
+      name: abs
+      params:
+        number: '{{ balance }}'
+
+    # Add a fixed shipping fee to a pipeline-produced subtotal
+    - group: math
+      name: add
+      params:
+        augend: '{{ subtotal }}'
+        addend: 5
+
+    # Subtract a discount from the invoice total
+    - group: math
+      name: subtract
+      params:
+        minuend: '{{ invoiceTotal }}'
+        subtrahend: '{{ discount }}'
+
+    # Calculate total price from unit price and quantity
+    - group: math
+      name: multiply
+      params:
+        multiplier: '{{ unitPrice }}'
+        multiplicand: '{{ quantity }}'
+
+    # Calculate average order value from total revenue and order count
+    - group: math
+      name: divide
+      params:
+        dividend: '{{ totalRevenue }}'
+        divisor: '{{ orderCount }}'
+
+    # Check if a row index is even to apply alternating row formatting
+    - group: math
+      name: mod
+      params:
+        dividend: '{{ rowIndex }}'
+        divisor: 2
+
+    # Calculate exponential backoff — 2 to the power of the retry count
+    - group: math
+      name: pow
+      params:
+        base: 2
+        exponent: '{{ retryCount }}'
+
+    # -------------------------------------------------------
+    # Rounding
+    # -------------------------------------------------------
+
+    # Round up page count so all records fit — e.g., 7.33 pages → 8 pages
+    - group: math
+      name: ceil
+      params:
+        number: '{{ pageCount }}'
+
+    # Floor a float confidence score to its integer part for bucketing
+    - group: math
+      name: floor
+      params:
+        number: '{{ confidenceScore }}'
+
+    # Round a computed average to a whole number before displaying it
+    - group: math
+      name: round
+      params:
+        number: '{{ averageScore }}'
+
+    # Truncate a negative offset toward zero — e.g., -7.9 → -7 (differs from floor for negatives)
+    - group: math
+      name: trunc
+      params:
+        number: '{{ rawOffset }}'
+
+    # Format a calculated price to two decimal places for an invoice line item
+    - group: math
+      name: toFixed
+      params:
+        number: '{{ lineItemTotal }}'
+        digits: 2
+
+    # Format total revenue with locale-aware grouping for a report — e.g., 15000 → "15,000.00"
+    - group: math
+      name: formatNumber
+      params:
+        number: '{{ totalRevenue }}'
+        locale: en-US
+        minimumFractionDigits: 2
+        maximumFractionDigits: 2
+
+    # -------------------------------------------------------
+    # Aggregates — array params must use {= =} raw injection
+    # -------------------------------------------------------
+
+    # Find the highest price from a list of scraped product prices
+    - group: math
+      name: max
+      params:
+        array: '{= prices =}'
+
+    # Compute the average response time across a set of HTTP checks
+    - group: math
+      name: mean
+      params:
+        array: '{= responseTimes =}'
+
+    # Find the lowest bid from a set of submitted prices
+    - group: math
+      name: min
+      params:
+        array: '{= bids =}'
+
+    # Sum all invoice line item amounts to compute the subtotal
+    - group: math
+      name: sum
+      params:
+        array: '{= lineItems =}'
+
+    # Find the median score — more robust than mean when outliers skew the distribution
+    - group: math
+      name: median
+      params:
+        array: '{= scores =}'
+
+    # -------------------------------------------------------
+    # Utility
+    # -------------------------------------------------------
+
+    # Ensure a retry delay never drops below 1s or exceeds 60s
+    - group: math
+      name: clamp
+      params:
+        value: '{{ retryDelay }}'
+        min: 1
+        max: 60
+
+    # Calculate what percentage of records have been processed
+    - group: math
+      name: percentage
+      params:
+        value: '{{ processedCount }}'
+        total: '{{ totalCount }}'
+
+    # Detect whether a profit delta is positive, negative, or zero
+    - group: math
+      name: sign
+      params:
+        number: '{{ profitDelta }}'
+
+    # Advance a page counter to fetch the next batch of records
+    - group: math
+      name: increment
+      params:
+        number: '{{ pageNumber }}'
+
+    # Count down remaining retries after each failed attempt
+    - group: math
+      name: decrement
+      params:
+        number: '{{ remainingRetries }}'
+
+    # Check if an HTTP status code falls in the success range (200–299)
+    - group: math
+      name: inRange
+      params:
+        value: '{{ httpStatusCode }}'
+        min: 200
+        max: 299
+
+    # -------------------------------------------------------
+    # Generators
+    # -------------------------------------------------------
+
+    # Add random jitter to a retry delay to avoid thundering herd
+    - group: math
+      name: random
+      params:
+        min: 500
+        max: 1500

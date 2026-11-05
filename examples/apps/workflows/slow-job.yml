@@ -1,0 +1,57 @@
+version: 1.0.0
+name: Slow Job
+description: |
+  Takes about 20 seconds (four 5-second steps) — long enough to watch it run and to cancel it.
+
+  Used by the Runs Monitor example app.
+
+  **Inputs**
+
+  - `label` — a name for this run, echoed back
+
+  **Outputs**
+
+  - `done` — the label, once it finished
+author: tipeline
+tags: [example, apps, runs, cancel, long running]
+
+pipeline:
+  variables:
+    - type: string
+      name: label
+      value: job
+      visibility: public
+      description: A name for this run. Set by the app.
+
+    - type: string
+      name: done
+      value: ''
+      visibility: public
+      description: The label, once every step finished. Returned to the app.
+
+  actions:
+    - group: flow
+      name: wait
+      params:
+        timeout: 5000
+    - group: flow
+      name: wait
+      params:
+        timeout: 5000
+    - group: flow
+      name: wait
+      params:
+        timeout: 5000
+    - group: flow
+      name: wait
+      params:
+        timeout: 5000
+    - group: variable
+      name: set
+      params:
+        name: done
+        value: '{{ label }}'
+    - group: system
+      name: message
+      params:
+        text: 'Slow job "{{ label }}" finished.'

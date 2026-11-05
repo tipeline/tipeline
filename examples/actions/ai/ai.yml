@@ -1,0 +1,104 @@
+version: 1.0.0
+name: AI Actions Test Suite
+description: |
+  Sends a prompt to an AI model with `ai.prompt` and returns the generated text. The DeepSeek step runs as it is; the OpenAI and Anthropic steps are in the file, commented out.
+
+  Needs the API key of each provider you use, in an environment variable: `DEEPSEEK_API_KEY` for the step that runs.
+
+  **Providers**
+
+  - `deepseek` — OpenAI-compatible chat completions API; default model `deepseek-chat`
+  - `openai` — `api.openai.com/v1/chat/completions`; default model `gpt-4-turbo-preview`
+  - `anthropic` — `api.anthropic.com/v1/messages`; default model `claude-3-5-sonnet-20241022`
+
+  **Required parameters**
+
+  - `provider` — `deepseek`, `openai` or `anthropic`
+  - `apiKey` — the key for that provider
+  - `prompt` — the question or instruction
+
+  **Optional parameters**
+
+  - `model` — replaces the provider's default model
+  - `systemMessage` — sets the model's behavior and tone
+  - `temperature` — randomness, 0–2 (default 0.7)
+  - `maxTokens` — longest response, in tokens (default 1000)
+  - `topP` — nucleus sampling, 0–1 (default 1)
+  - `stream` — stream the response (default false)
+  - `frequencyPenalty` — penalizes repeated tokens, –2 to 2 (OpenAI and DeepSeek only)
+  - `presencePenalty` — encourages new topics, –2 to 2 (OpenAI and DeepSeek only)
+
+author: Jose Daniel Estrada
+tags: [example, ai, llm, prompt, deepseek, openai, anthropic]
+
+pipeline:
+  variables:
+    # ------------------------------------------------------------------
+    # API keys loaded from environment — never hard-code secrets in YAML
+    # ------------------------------------------------------------------
+    - type: string
+      name: deepseekKey
+      valueFromEnv: DEEPSEEK_API_KEY
+      secret: true
+
+    - type: string
+      name: openaiKey
+      valueFromEnv: OPENAI_API_KEY
+      secret: true
+
+    - type: string
+      name: anthropicKey
+      valueFromEnv: ANTHROPIC_API_KEY
+      secret: true
+
+    # ------------------------------------------------------------------
+    # Input text sent to the AI prompt
+    # ------------------------------------------------------------------
+    - type: string
+      name: documentText
+      value: >
+        Edge Computing is a distributed computing paradigm that brings
+        computation and data storage closer to the sources of data.
+        This improves response times and saves bandwidth.
+
+  actions:
+    # -------------------------------------------------------
+    # Text Generation
+    # -------------------------------------------------------
+
+    # DeepSeek — summarize a document with a system message and moderate temperature
+    - group: ai
+      name: prompt
+      params:
+        provider: deepseek
+        apiKey: '{{ deepseekKey }}'
+        prompt: 'Summarize the following text in 3 bullet points: {{ documentText }}'
+        systemMessage: 'You are a concise technical writer. Return plain text only.'
+        temperature: 0.5
+        maxTokens: 300
+
+    # OpenAI — creative writing with higher temperature and frequency penalty
+    # - group: ai
+    #   name: prompt
+    #   params:
+    #     provider: openai
+    #     apiKey: '{{ openaiKey }}'
+    #     model: gpt-4o
+    #     prompt: 'Write a product description for an edge computing platform.'
+    #     systemMessage: 'You are a persuasive copywriter. Keep it under 100 words.'
+    #     temperature: 0.9
+    #     maxTokens: 150
+    #     frequencyPenalty: 0.5
+
+    # Anthropic — factual Q&A with low temperature for precision
+    # - group: ai
+    #   name: prompt
+    #   params:
+    #     provider: anthropic
+    #     apiKey: '{{ anthropicKey }}'
+    #     model: claude-3-5-sonnet-20241022
+    #     prompt: 'What are the main benefits of edge computing over cloud computing?'
+    #     systemMessage: 'Answer concisely in plain text. Use bullet points.'
+    #     temperature: 0.3
+    #     maxTokens: 400
+    #     topP: 0.9

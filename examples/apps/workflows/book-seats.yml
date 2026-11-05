@@ -1,0 +1,86 @@
+version: 1.0.0
+name: Book Seats
+description: |
+  Books seats in the example hall: adds them to the seat store (a JSON file in `~/Tipeline/output`) and returns them. Fails — booking nothing — when one of them is already taken.
+
+  Used by the Custom Component example app.
+
+  **Inputs**
+
+  - `seats` — e.g. `["B2", "B3"]`
+
+  **Outputs**
+
+  - `booked` — the seats booked
+author: tipeline
+tags: [example, apps, booking, seats]
+
+pipeline:
+  variables:
+    - type: array
+      name: seats
+      value: []
+      visibility: public
+      description: The seats to book. Set by the app.
+
+    - type: array
+      name: booked
+      value: []
+      visibility: public
+      description: The seats booked. Returned to the app.
+
+    - type: string
+      name: raw
+      value: ''
+
+    - type: string
+      name: saved
+      value: ''
+
+    - type: array
+      name: seed
+      value:
+        - A3
+        - A4
+        - B5
+        - C1
+        - C2
+        - C7
+        - D4
+        - E8
+
+  actions:
+    - group: file
+      name: read
+      onError: continue
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-seats.json'
+      destination: raw
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          raw: '{= raw =}'
+          seed: '{= seed =}'
+          seats: '{= seats =}'
+        code: |
+          const wanted = Array.isArray(seats) ? seats.map(String) : [];
+          if (!wanted.length) throw new Error('Pick at least one seat');
+          const taken = raw ? JSON.parse(raw) : seed;
+          const clash = wanted.filter((s) => taken.includes(s));
+          if (clash.length) throw new Error(`Already taken: ${clash.join(', ')} — pick other seats`);
+          return JSON.stringify([...taken, ...wanted], null, 2);
+      destination: saved
+
+    - group: file
+      name: write
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-seats.json'
+        data: '{= saved =}'
+
+    - group: variable
+      name: set
+      params:
+        name: booked
+        value: '{= seats =}'

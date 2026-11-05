@@ -1,0 +1,91 @@
+version: 1.0.0
+name: Slow Report
+description: |
+  Builds a sales report for a region in about 2 seconds, and keeps its outputs for 2 minutes: the same region asked again within that time is answered from the cache, without running.
+
+  Used by the Cache Demo example app.
+
+  **Inputs**
+
+  - `region` — north, south, east or west
+
+  **Outputs**
+
+  - `rows` — `[{ product, units, revenue }]`
+  - `total` — the region's revenue
+  - `generatedAt` — when the report was built; stays the same while it's cached
+author: tipeline
+tags: [example, apps, caching, report, sales]
+
+cache:
+  ttl: 2m
+
+pipeline:
+  variables:
+    - type: string
+      name: region
+      value: north
+      visibility: public
+      description: The region to report on. Set by the app; each region is cached separately.
+
+    - type: array
+      name: rows
+      value: []
+      visibility: public
+      description: Sales per product. Returned to the app.
+
+    - type: number
+      name: total
+      value: 0
+      visibility: public
+      description: Revenue for the region. Returned to the app.
+
+    - type: string
+      name: generatedAt
+      value: ''
+      visibility: public
+      description: When the report was built. Returned to the app.
+
+    - type: object
+      name: report
+      value: {}
+
+  actions:
+    # Stands in for a slow query.
+    - group: flow
+      name: wait
+      params:
+        timeout: 2000
+
+    - group: script
+      name: runScript
+      params:
+        code: |
+          const region = '{{ region }}';
+          const seed = [...region].reduce((sum, c) => sum + c.charCodeAt(0), 0);
+          const rows = ['Lamps', 'Chairs', 'Desks', 'Shelves', 'Rugs'].map((product, i) => {
+            const units = 20 + ((seed * (i + 3)) % 80);
+            const price = [35, 80, 240, 120, 95][i];
+            return { product, units, revenue: units * price };
+          });
+          const total = rows.reduce((sum, row) => sum + row.revenue, 0);
+          return { rows, total, generatedAt: new Date().toISOString() };
+      destination: report
+
+    - group: variable
+      name: set
+      params:
+        name: rows
+        value: '{= report.rows =}'
+
+    - group: variable
+      name: set
+      params:
+        name: total
+        value: '{= report.total =}'
+
+    - group: variable
+      name: set
+      params:
+        name: generatedAt
+        value: '{{ report.generatedAt }}'

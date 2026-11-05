@@ -1,0 +1,271 @@
+version: 1.0.0
+name: 'CMS: Get Content'
+description: |
+  Builds the CMS app's node edit form from the content type's fields (Drupal's "Manage form display"), filled with the node's current values, or empty for new content of a type. The form is the field list of an app form whose `fields` are bound to this output.
+
+  **Field kinds become these inputs**
+
+  - `text` and `link` — text
+  - `long_text` — rich text (Markdown)
+  - `number` — number
+  - `boolean` — switch
+  - `date` — date
+  - `list` — dropdown
+  - `term_ref` — term buttons
+  - `media_ref` — media dropdown
+
+  The editor's sidebar settings (Published, Template, URL alias, revision log) are not in the form; `node` has their starting values and the template choices.
+
+  **Inputs**
+
+  - `id` — the node to edit, or 0 for new content
+  - `type` — the content type of new content
+  - `title` — new content only: a title to start with (e.g. from a quick draft)
+  - `body` — new content only: a body to start with
+
+  **Outputs**
+
+  - `form` — the form's fields: title and the type's fields
+  - `node` — `{ id, isNew, type, typeLabel, heading, title, status, published, template, templateOptions, alias, aliasPattern, created, changed }`
+author: tipeline
+tags: [example, apps, cms, content, forms]
+
+pipeline:
+  variables:
+    - type: number
+      name: id
+      value: 0
+      visibility: public
+      description: Node id, or 0 for new content.
+
+    - type: string
+      name: type
+      value: ''
+      visibility: public
+      description: Content type of new content (ignored when editing).
+
+    - type: string
+      name: title
+      value: ''
+      visibility: public
+      description: New content only — a title to start with.
+
+    - type: string
+      name: body
+      value: ''
+      visibility: public
+      description: New content only — a body to start with.
+
+    - type: array
+      name: templates
+      value: []
+
+    - type: array
+      name: form
+      value: []
+      visibility: public
+      description: The edit form's fields. Returned to the app.
+
+    - type: object
+      name: node
+      value: {}
+      visibility: public
+      description: About the node being edited. Returned to the app.
+
+    - type: dbConnection
+      name: db
+
+    - type: array
+      name: nodes
+      value: []
+
+    - type: array
+      name: types
+      value: []
+
+    - type: array
+      name: fields
+      value: []
+
+    - type: array
+      name: terms
+      value: []
+
+    - type: array
+      name: media
+      value: []
+
+    - type: object
+      name: result
+      value: {}
+
+  actions:
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT * FROM node WHERE id = ?
+        bindings: ['{= id =}']
+      destination: nodes
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT * FROM content_type WHERE id = COALESCE((SELECT type FROM node WHERE id = ?), ?)
+        bindings: ['{= id =}', '{{ type }}']
+      destination: types
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          SELECT * FROM field WHERE type_id = COALESCE((SELECT type FROM node WHERE id = ?), ?)
+          ORDER BY weight, name
+        bindings: ['{= id =}', '{{ type }}']
+      destination: fields
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT id, vocabulary, name FROM term ORDER BY vocabulary, weight, name
+      destination: terms
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT id, name FROM media ORDER BY name
+      destination: media
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT id, name, type_id, is_default FROM template WHERE kind = 'content' ORDER BY is_default DESC, name
+      destination: templates
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          id: '{= id =}'
+          nodes: '{= nodes =}'
+          types: '{= types =}'
+          fields: '{= fields =}'
+          terms: '{= terms =}'
+          media: '{= media =}'
+          templates: '{= templates =}'
+          title: '{{ title }}'
+          body: '{= body =}'
+        code: |
+          const editing = Number(id) > 0;
+          const node = nodes[0];
+          if (editing && !node) throw new Error('Content #' + id + ' was not found. It may have been deleted.');
+          const type = types[0];
+          if (!type) throw new Error('Choose a content type first');
+          const values = node ? JSON.parse(node.fields || '{}') : { body: body || '' };
+
+          const settingsOf = (f) => {
+            try { return JSON.parse(f.settings || '{}'); } catch (e) { return {}; }
+          };
+          const own = fields.map((f) => {
+            const s = settingsOf(f);
+            const v = values[f.name];
+            const base = { name: f.name, label: f.label, required: f.required === 1 };
+            if (s.help) base.description = s.help;
+            switch (f.kind) {
+              case 'long_text':
+                return { ...base, type: 'richtext', format: 'markdown', default: v ?? '' };
+              case 'number':
+                return { ...base, type: 'number', default: v ?? null };
+              case 'boolean':
+                return { ...base, type: 'checkbox', default: v === true };
+              case 'date':
+                return { ...base, type: 'date', default: v ?? '' };
+              case 'list':
+                return { ...base, type: 'select', options: (s.options || []).map(String), default: v ?? null };
+              case 'link':
+                return { ...base, type: 'text', placeholder: 'https://', default: v ?? '' };
+              case 'term_ref':
+                return {
+                  ...base,
+                  type: 'multiselect',
+                  display: 'buttons',
+                  options: terms.filter((t) => t.vocabulary === s.vocabulary).map((t) => ({ value: t.id, label: t.name })),
+                  default: Array.isArray(v) ? v : [],
+                };
+              case 'media_ref':
+                return {
+                  ...base,
+                  type: 'select',
+                  placeholder: 'No image',
+                  options: media.map((m) => ({ value: m.id, label: m.name })),
+                  default: v ?? null,
+                };
+              default:
+                return { ...base, type: 'text', default: v ?? '' };
+            }
+          });
+
+          const form = [
+            { name: 'title', label: 'Title', type: 'text', required: true, default: node ? node.title : String(title || '') },
+            ...own,
+          ];
+          const forType = templates.filter((t) => t.type_id === type.id);
+          const def = forType.find((t) => t.is_default === 1);
+          const templateOptions = [
+            { value: '', label: 'Default' + (def ? ': ' + def.name : '') },
+            ...forType.filter((t) => t.is_default !== 1).map((t) => ({ value: t.id, label: t.name })),
+          ];
+
+          return {
+            form,
+            node: {
+              id: node ? node.id : 0,
+              isNew: !node,
+              type: type.id,
+              typeLabel: type.label,
+              heading: node ? 'Edit ' + type.label + ': ' + node.title : 'Create ' + type.label,
+              title: node ? node.title : '',
+              status: node ? (node.status === 1 ? 'Published' : 'Unpublished') : 'New',
+              published: node ? node.status === 1 : false,
+              template: node && forType.some((t) => t.id === node.template) ? node.template : '',
+              templateOptions,
+              alias: node ? node.alias || '' : '',
+              aliasPattern: type.alias_pattern,
+              created: node ? node.created : null,
+              changed: node ? node.changed : null,
+            },
+          };
+      destination: result
+
+    - group: script
+      name: runScript
+      params:
+        context: { result: '{= result =}' }
+        code: return result.form;
+      destination: form
+
+    - group: script
+      name: runScript
+      params:
+        context: { result: '{= result =}' }
+        code: return result.node;
+      destination: node

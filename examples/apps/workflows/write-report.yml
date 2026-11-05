@@ -1,0 +1,85 @@
+version: 1.0.0
+name: Write Report
+description: |
+  Writes a small text report (the example records and their total) to `~/Tipeline/output/app-example-report.txt` and returns its path.
+
+  Used by the Open Links & Files example app.
+
+  **Inputs**
+
+  - `title` — the report's first line
+
+  **Outputs**
+
+  - `path` — where the report was written
+author: tipeline
+tags: [example, apps, report, text file]
+
+pipeline:
+  variables:
+    - type: string
+      name: title
+      value: Records report
+      visibility: public
+      description: The report's first line. Set by the app.
+
+    - type: string
+      name: path
+      value: ''
+      visibility: public
+      description: Where the report was written. Returned to the app.
+
+    - type: string
+      name: raw
+      value: ''
+
+    - type: string
+      name: report
+      value: ''
+
+    - type: array
+      name: seed
+      value:
+        - { id: 1, name: Acme Corp, status: active, amount: 1200 }
+        - { id: 2, name: Globex, status: pending, amount: 850 }
+        - { id: 3, name: Initech, status: active, amount: 3400 }
+
+  actions:
+    # The record store may not exist yet — then the seed records are reported.
+    - group: file
+      name: read
+      onError: continue
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-records.json'
+      destination: raw
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          raw: '{= raw =}'
+          seed: '{= seed =}'
+          title: '{{ title }}'
+        code: |
+          const records = raw ? JSON.parse(raw) : seed;
+          const total = records.reduce((sum, r) => sum + r.amount, 0);
+          const lines = records.map((r) => `#${r.id}  ${r.name.padEnd(12)} ${r.status.padEnd(8)} ${r.amount}`);
+          return [title, '='.repeat(title.length), '', ...lines, '', `Total: ${total}`, `Written: ${new Date().toISOString()}`].join('\n');
+      destination: report
+
+    - group: file
+      name: write
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-report.txt'
+        data: '{{ report }}'
+
+    - group: variable
+      name: set
+      params:
+        name: path
+        value: '{{ _env.HOME }}/Tipeline/output/app-example-report.txt'
+
+    - group: system
+      name: message
+      params:
+        text: 'Report written to {{ path }}'

@@ -1,0 +1,135 @@
+schemaVersion: 4
+name: Simple Dashboard
+version: "2.0.0"
+description: Record KPIs and a table — select a row to approve or close it
+author: tipeline
+
+# Workflows this app uses (alias → workflow). `file:` workflows ship with the app and
+# are installed together with it; pages only ever use the alias.
+workflows:
+  listRecords: { file: ./workflows/list-records.yml }
+  setStatus: { file: ./workflows/update-record-status.yml }
+
+pages:
+  - id: records
+    name: Records
+    icon: LayoutDashboard
+
+    runnables:
+      # Read-only lookup when the page opens and after every change.
+      # persist: false → doesn't fill the workflow's run history.
+      records:
+        mode: run
+        workflow: listRecords
+        trigger: load
+        inputs: { status: all }
+        outputs: [records, summary]
+        persist: false
+
+      # Changes are kept in run history (persist defaults to true), so every
+      # approval/closure is auditable from the workflow's history.
+      approve:
+        mode: run
+        workflow: setStatus
+        inputs:
+          id: "{= recordsTable.selectedRow.id =}"
+          status: active
+        outputs: [record]
+        onSuccess:
+          - { type: toast, message: "{{ result.outputs.record.name }} approved", variant: success }
+          - { type: run, runnable: records }
+
+      close:
+        mode: run
+        workflow: setStatus
+        confirm: "Close {{ recordsTable.selectedRow.name }}?"
+        inputs:
+          id: "{= recordsTable.selectedRow.id =}"
+          status: closed
+        outputs: [record]
+        onSuccess:
+          - { type: toast, message: "{{ result.outputs.record.name }} closed", variant: success }
+          - { type: run, runnable: records }
+
+    components:
+      - id: totalKpi
+        type: kpi
+        name: Total
+        layout: { x: 0, y: 0, w: 3, h: 14 }
+        props: { label: Records, value: "{= runnables.records.outputs.summary.total =}" }
+
+      - id: pendingKpi
+        type: kpi
+        name: Pending
+        layout: { x: 3, y: 0, w: 3, h: 14 }
+        props:
+          label: Pending approval
+          value: "{= runnables.records.outputs.summary.pending =}"
+          # Amber while anything waits, green when the queue is empty.
+          colorRules:
+            - { compareAs: number, operator: gt, value: 0, color: amber }
+            - { compareAs: number, operator: eq, value: 0, color: green }
+
+      - id: activeKpi
+        type: kpi
+        name: Active
+        layout: { x: 6, y: 0, w: 3, h: 14 }
+        props: { label: Active, value: "{= runnables.records.outputs.summary.active =}" }
+
+      - id: openAmountKpi
+        type: kpi
+        name: Open amount
+        layout: { x: 9, y: 0, w: 3, h: 14 }
+        props:
+          label: Open amount
+          value: "{= runnables.records.outputs.summary.openAmount =}"
+          format: currency
+
+      - id: selectionText
+        type: text
+        name: Selection
+        layout: { x: 0, y: 14, w: 6, h: 7 }
+        props:
+          content: "Selected: {{ recordsTable.selectedRow.name | default: 'none — click a row' }}"
+
+      - id: approveButton
+        type: button
+        name: Approve
+        layout: { x: 6, y: 14, w: 2, h: 7 }
+        props:
+          label: Approve
+          disabled: "{% if recordsTable.selectedRow.status == 'pending' %}false{% else %}true{% endif %}"
+        events:
+          click: [{ type: run, runnable: approve }]
+
+      - id: closeButton
+        type: button
+        name: Close
+        layout: { x: 8, y: 14, w: 2, h: 7 }
+        props:
+          label: Close
+          variant: destructive
+          disabled: "{% if recordsTable.selectedRow and recordsTable.selectedRow.status != 'closed' %}false{% else %}true{% endif %}"
+        events:
+          click: [{ type: run, runnable: close }]
+
+      - id: refreshButton
+        type: button
+        name: Refresh
+        layout: { x: 10, y: 14, w: 2, h: 7 }
+        props: { label: Refresh, variant: outline }
+        events:
+          click: [{ type: run, runnable: records }]
+
+      - id: recordsTable
+        type: table
+        name: Records
+        layout: { x: 0, y: 21, w: 12, h: 42 }
+        props:
+          data: "{= runnables.records.outputs.records =}"
+          columns:
+            - { key: id, header: ID, sortable: false }
+            - { key: name, header: Name }
+            - { key: status, header: Status }
+            - { key: amount, header: Amount, format: currency }
+            - { key: updatedAt, header: Updated, format: datetime }

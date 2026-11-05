@@ -1,0 +1,384 @@
+version: 1.0.0
+name: Flow Actions Test Suite
+description: |
+  Branches and loops: if / else if / else, switch / case / default, simple, for-each and conditional loops, and a wait.
+
+  **Conditional chains**
+
+  - `elseIfConditional` and `elseConditional` must come right after an `ifConditional` or `elseIfConditional`. Once a branch runs, the rest are skipped.
+  - `switchConditional` declares the expression and must be followed right away by one or more `caseConditional` steps and an optional `defaultConditional`. Once a case matches, the rest are skipped.
+
+  **Conditional loops**
+
+  The condition's values are read again on every pass, so changes made inside the loop count for the next check. The loop's body is its `actions` field, as in `ifConditional`.
+
+  Conditions themselves (`compareAs` and the operators) are covered in `conditions.yml`.
+
+  **Template syntax**
+
+  - `{{ varName }}` — puts a value into text; the result is always a string
+  - `{= varName =}` — passes the value as it is (object, array, number…); it must be the field's whole value
+
+author: Jose Daniel Estrada
+tags: [example, flow, conditions, loop, switch, if]
+
+pipeline:
+  variables:
+    # ------------------------------------------------------------------
+    # Conditionals / switch
+    # ------------------------------------------------------------------
+    - type: string
+      name: status
+      value: active
+
+    - type: number
+      name: score
+      value: 42
+
+    - type: string
+      name: fruit
+      value: banana
+
+    # ------------------------------------------------------------------
+    # Loops
+    # ------------------------------------------------------------------
+    - type: number
+      name: counter
+      value: 0
+
+    - type: array
+      name: fruits
+      value: [apple, banana, cherry]
+
+    - type: string
+      name: currentFruit
+      value: ''
+
+  actions:
+    # -------------------------------------------------------
+    # ifConditional — true branch
+    # -------------------------------------------------------
+
+    # Condition matches: status == "active" → prints the if-branch message
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{{ status }}'
+        compareAs: string
+        operator: eq
+        secondOperand: active
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                ifConditional → branch ran (status is active)
+
+    # -------------------------------------------------------
+    # ifConditional — false branch (condition does not match)
+    # -------------------------------------------------------
+
+    # Condition does not match: status == "inactive" → nothing runs
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{{ status }}'
+        compareAs: string
+        operator: eq
+        secondOperand: inactive
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                ifConditional → THIS SHOULD NOT PRINT
+
+    # -------------------------------------------------------
+    # if / else-if / else — first branch matches
+    # -------------------------------------------------------
+
+    # status == "active" → if-branch runs; else-if and else are skipped
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{{ status }}'
+        compareAs: string
+        operator: eq
+        secondOperand: active
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                chain 1 → if-branch ran (status is active)
+
+    - group: flow
+      name: elseIfConditional
+      params:
+        firstOperand: '{{ status }}'
+        compareAs: string
+        operator: eq
+        secondOperand: pending
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                chain 1 → THIS SHOULD NOT PRINT (else-if)
+
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                chain 1 → THIS SHOULD NOT PRINT (else)
+
+    # -------------------------------------------------------
+    # if / else-if / else — second branch matches
+    # -------------------------------------------------------
+
+    # status != "inactive" and score == 42 → else-if branch runs; else is skipped
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{{ status }}'
+        compareAs: string
+        operator: eq
+        secondOperand: inactive
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                chain 2 → THIS SHOULD NOT PRINT (if)
+
+    - group: flow
+      name: elseIfConditional
+      params:
+        firstOperand: '{= score =}'
+        compareAs: number
+        operator: eq
+        secondOperand: 42
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                chain 2 → else-if branch ran (score is 42)
+
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                chain 2 → THIS SHOULD NOT PRINT (else)
+
+    # -------------------------------------------------------
+    # if / else-if / else — else branch matches
+    # -------------------------------------------------------
+
+    # Neither condition matches → else runs
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{{ status }}'
+        compareAs: string
+        operator: eq
+        secondOperand: inactive
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                chain 3 → THIS SHOULD NOT PRINT (if)
+
+    - group: flow
+      name: elseIfConditional
+      params:
+        firstOperand: '{= score =}'
+        compareAs: number
+        operator: gt
+        secondOperand: 100
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                chain 3 → THIS SHOULD NOT PRINT (else-if)
+
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                chain 3 → else-branch ran (no condition matched)
+
+    # -------------------------------------------------------
+    # switch — first match wins
+    # -------------------------------------------------------
+
+    # fruit == "banana" → only the banana case runs; apple and default are skipped
+    - group: flow
+      name: switchConditional
+      params:
+        expression: '{{ fruit }}'
+
+    - group: flow
+      name: caseConditional
+      params:
+        match: apple
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                switch 1 → THIS SHOULD NOT PRINT (apple)
+
+    - group: flow
+      name: caseConditional
+      params:
+        match: banana
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                switch 1 → banana case ran
+
+    - group: flow
+      name: defaultConditional
+      params:
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                switch 1 → THIS SHOULD NOT PRINT (default)
+
+    # -------------------------------------------------------
+    # switch — default fallback
+    # -------------------------------------------------------
+
+    # fruit == "banana" but we only have "apple" and "cherry" cases → default runs
+    - group: flow
+      name: switchConditional
+      params:
+        expression: '{{ fruit }}'
+
+    - group: flow
+      name: caseConditional
+      params:
+        match: apple
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                switch 2 → THIS SHOULD NOT PRINT (apple)
+
+    - group: flow
+      name: caseConditional
+      params:
+        match: cherry
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                switch 2 → THIS SHOULD NOT PRINT (cherry)
+
+    - group: flow
+      name: defaultConditional
+      params:
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                switch 2 → default ran (no case matched "{{ fruit }}")
+
+    # -------------------------------------------------------
+    # simpleLoop — fixed iteration count
+    # -------------------------------------------------------
+
+    # Runs the body 4 times: i = 1, 3, 5, 7 (step 2, stop before 8)
+    - group: flow
+      name: simpleLoop
+      params:
+        indexValue: 1
+        indexEndValue: 8
+        incrementBy: 2
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                simpleLoop → iteration
+
+    # -------------------------------------------------------
+    # forEachLoop — iterate over an array
+    # -------------------------------------------------------
+
+    # Walks the fruits array; each item is bound to currentFruit before the body runs
+    - group: flow
+      name: forEachLoop
+      params:
+        iterable: '{= fruits =}'
+        currentItem: currentFruit
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                forEachLoop → current fruit: {{ currentFruit }}
+
+    # -------------------------------------------------------
+    # conditionalLoop — while counter < 3
+    # -------------------------------------------------------
+
+    # counter starts at 0; increments by 1 each iteration; exits when counter reaches 3
+    # Expected: 3 iterations (counter = 0 → 1 → 2 → 3, loop exits)
+    - group: flow
+      name: conditionalLoop
+      params:
+        compareAs: number
+        operator: lt
+        firstOperand: '{= counter =}'
+        secondOperand: 3
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= counter =}'
+              addend: 1
+            destination: counter
+          - group: system
+            name: message
+            params:
+              text: |
+                conditionalLoop → counter is now {{ counter }}
+
+    # -------------------------------------------------------
+    # wait — pause execution
+    # -------------------------------------------------------
+
+    # Pause for 500 ms then continue
+    - group: flow
+      name: wait
+      params:
+        timeout: 500
+
+    - group: system
+      name: message
+      params:
+        text: |
+          wait → resumed after 500 ms

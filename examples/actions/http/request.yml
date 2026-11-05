@@ -1,0 +1,183 @@
+# NOTE: absolute paths below (Documents, .ssh, database file, etc.) are
+# example values from the original author's machine — replace with your
+# own before running.
+
+version: 1.0.0
+name: HTTP example
+description: |
+  Makes HTTP requests and downloads files.
+
+  **Actions**
+
+  - `request` — GET, POST, PUT, PATCH or DELETE, with optional headers, query parameters, body, basic auth and response type
+  - `downloadFile` — saves a remote file to a local path; when the path is a folder, the file name comes from the URL
+
+  **Template syntax**
+
+  - `{{ varName }}` — puts a value into text; the result is always a string
+  - `{= varName =}` — passes the value as it is (object, array, number…); it must be the field's whole value
+  - `{{ _env.KEY }}` — an environment variable, no declaration needed
+  - `{{ _global.varName }}` — a global variable, no declaration needed
+
+author: Jose Daniel Estrada
+tags: [example, http, request, download, rest]
+
+pipeline:
+  variables:
+    - type: string
+      name: apiToken
+      valueFromEnv: API_TOKEN
+
+    - type: string
+      name: baseUrl
+      value: 'https://dummyjson.com'
+
+    - type: object
+      name: requestBody
+      value:
+        title: Send Daily Report
+        price: 0
+
+  actions:
+    # -------------------------------------------------------
+    # request — GET
+    # -------------------------------------------------------
+
+    # Every request returns { status, headers, data }; data is the response body.
+    # Add `destination: name` to keep it, then read name.status or name.data.
+
+    # Simple GET — fetch a single JSON resource
+    - group: http
+      name: request
+      params:
+        url: '{{ baseUrl }}/products/1'
+        method: get
+        responseType: json
+
+    # GET with query params — passed as a key-value map, appended to the URL automatically
+    - group: http
+      name: request
+      params:
+        url: '{{ baseUrl }}/products/search'
+        method: get
+        params:
+          q: phone
+          limit: 5
+        responseType: json
+
+    # -------------------------------------------------------
+    # request — POST / PUT / PATCH
+    # -------------------------------------------------------
+
+    # POST JSON with an authorization header
+    - group: http
+      name: request
+      params:
+        url: '{{ baseUrl }}/products/add'
+        method: post
+        headers:
+          Authorization: 'Bearer {{ apiToken }}'
+          Content-Type: application/json
+        data:
+          title: Send Daily Report
+          price: 0
+        timeout: 5000
+        responseType: json
+
+    # POST using a pre-built object variable — use {= =} to preserve the object type
+    - group: http
+      name: request
+      params:
+        url: '{{ baseUrl }}/products/add'
+        method: post
+        headers:
+          Content-Type: application/json
+        data: '{= requestBody =}'
+        responseType: json
+
+    # PUT — full replacement of an existing resource
+    - group: http
+      name: request
+      params:
+        url: '{{ baseUrl }}/products/1'
+        method: put
+        headers:
+          Content-Type: application/json
+        data:
+          title: Updated Report
+          price: 0
+        responseType: json
+
+    # PATCH — partial update of an existing resource
+    - group: http
+      name: request
+      params:
+        url: '{{ baseUrl }}/products/1'
+        method: patch
+        headers:
+          Content-Type: application/json
+        data:
+          title: Patched Report
+        responseType: json
+
+    # -------------------------------------------------------
+    # request — DELETE
+    # -------------------------------------------------------
+
+    - group: http
+      name: request
+      params:
+        url: '{{ baseUrl }}/products/1'
+        method: delete
+        responseType: json
+
+    # -------------------------------------------------------
+    # request — advanced options
+    # -------------------------------------------------------
+
+    # Custom response type — receive raw text instead of parsed JSON
+    - group: http
+      name: request
+      params:
+        url: '{{ baseUrl }}/products/1'
+        method: get
+        responseType: text
+
+    # Check the result yourself — a 4xx, a 5xx or no response no longer fails the step.
+    # With no response at all, status is 0 and error says why.
+    - group: http
+      name: request
+      params:
+        url: '{{ baseUrl }}/products/does-not-exist'
+        method: get
+        failOnHttpError: false
+
+    # Basic auth — credentials are base64-encoded by Axios automatically
+    # Requires API_USER and API_PASS to be set in the environment
+    # - group: http
+    #   name: request
+    #   params:
+    #     url: 'https://api.example.com/secure'
+    #     method: get
+    #     auth:
+    #       username: '{{ _env.API_USER }}'
+    #       password: '{{ _env.API_PASS }}'
+    #     responseType: json
+
+    # -------------------------------------------------------
+    # downloadFile
+    # -------------------------------------------------------
+
+    # Download into the same directory as this YAML file — filename is inferred from the URL
+    - group: http
+      name: downloadFile
+      params:
+        url: 'https://www.w3.org/Icons/w3c_home.png'
+        path: ./
+
+    # Download to an absolute directory — filename is also inferred from the URL
+    - group: http
+      name: downloadFile
+      params:
+        url: 'https://www.w3.org/Icons/w3c_home.png'
+        path: '/tmp/'

@@ -1,0 +1,31 @@
+services:
+  tipeline-core:
+    build:
+      context: ../..          # workspace root
+      dockerfile: docker/websockets/Dockerfile
+    container_name: tipeline-core
+    restart: unless-stopped
+
+    ports:
+      # WebSocket port — connect your local Desktop/CLI here
+      - "4000:4000"
+
+    environment:
+      TIPELINE_WS_PORT: "4000"
+      # Inside a container, the published port arrives on the container's own interface.
+      TIPELINE_BIND_HOST: "0.0.0.0"
+
+    volumes:
+      # Persist the SQLite database and config across restarts
+      - tipeline-data:/root/Tipeline
+
+    healthcheck:
+      # The container is healthy once the WebSocket port is open
+      test: ["CMD-SHELL", "nc -z localhost 4000 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  tipeline-data:

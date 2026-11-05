@@ -1,0 +1,31 @@
+version: 1.0.0
+name: OCR Actions Test Suite
+description: |
+  Reads the text in an image with Tesseract OCR.
+
+  **`recognize` returns**
+
+  - `text` — the text found in the image
+  - `confidence` — how sure OCR is, from 0 to 100
+
+author: Jose Daniel Estrada
+tags: [example, ocr, tesseract, image to text]
+
+pipeline:
+  variables:
+    # Placeholder path: change it to an image containing text before running
+    - type: string
+      name: imagePath
+      value: '/path/to/your/scan.png'
+
+    - type: string
+      name: language
+      value: eng
+
+  actions:
+    # Extract text and confidence score from a scanned image
+    - group: ocr
+      name: recognize
+      params:
+        source: '{{ imagePath }}'
+        language: '{{ language }}'

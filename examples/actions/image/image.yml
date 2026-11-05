@@ -1,0 +1,225 @@
+version: 1.0.0
+name: Image Actions Test Suite
+description: |
+  Edits images with the image actions: load, resize, rotate, flip, crop, change colors, blur and sharpen, combine images, read metadata and save.
+
+  Sharp applies `composite` after all the other queued changes (resize, rotate, crop…), whatever order they are in. So the composition section starts with a fresh `load`, which gives it an unchanged image large enough to hold the overlay.
+author: Jose Daniel Estrada
+tags: [example, image, resize, crop, sharp]
+pipeline:
+  variables:
+    - type: object
+      name: imageMeta
+
+    - type: string
+      name: imageBase64
+
+    # ------------------------------------------------------------------
+    # Placeholder paths: change inputPath and overlayPath to images of your
+    # own before running. inputPath should be at least 800×800, and the
+    # overlay must be smaller than inputPath.
+    # ------------------------------------------------------------------
+    - type: string
+      name: inputPath
+      value: '/path/to/your/image.jpg'
+
+    - type: string
+      name: overlayPath
+      value: '/path/to/your/overlay.png'
+
+    - type: string
+      name: outputPath
+      value: '{{ _global.examplesDir }}/actions/image/output.jpg'
+
+    - type: image
+      name: imageInstance
+
+  actions:
+    # -------------------------------------------------------
+    # I/O
+    # -------------------------------------------------------
+
+    # Load a JPEG from disk — store the instance for use in subsequent image actions
+    - group: image
+      name: load
+      params:
+        path: '{{ inputPath }}'
+      destination: imageInstance
+
+    # -------------------------------------------------------
+    # Transform
+    # -------------------------------------------------------
+
+    # Resize to a fixed 800×600 thumbnail — useful for email attachments
+    - group: image
+      name: resize
+      params:
+        image: '{= imageInstance =}'
+        width: 800
+        height: 600
+      destination: imageInstance
+
+    # Rotate 90 degrees clockwise — corrects orientation from some camera scans
+    - group: image
+      name: rotate
+      params:
+        image: '{= imageInstance =}'
+        angle: 90
+      destination: imageInstance
+
+    # Flip vertically — useful when source image is upside-down
+    - group: image
+      name: flip
+      params:
+        image: '{= imageInstance =}'
+      destination: imageInstance
+
+    # Flop horizontally — mirrors the image along the vertical axis
+    - group: image
+      name: flop
+      params:
+        image: '{= imageInstance =}'
+      destination: imageInstance
+
+    # Crop a 400×300 region starting at (100, 80) — extract a subject from a photo
+    - group: image
+      name: crop
+      params:
+        image: '{= imageInstance =}'
+        left: 100
+        top: 80
+        width: 400
+        height: 300
+      destination: imageInstance
+
+    # -------------------------------------------------------
+    # Appearance
+    # -------------------------------------------------------
+
+    # Convert to grayscale — useful for document scans or receipt images
+    - group: image
+      name: grayscale
+      params:
+        image: '{= imageInstance =}'
+      destination: imageInstance
+
+    # Apply a light blur (sigma 3) — smooths out compression artefacts before OCR
+    - group: image
+      name: blur
+      params:
+        image: '{= imageInstance =}'
+        sigma: 3
+      destination: imageInstance
+
+    # Sharpen the image — improves readability of small text in scanned documents
+    - group: image
+      name: sharpen
+      params:
+        image: '{= imageInstance =}'
+      destination: imageInstance
+
+    # Invert colors — useful for creating a negative of a document scan
+    - group: image
+      name: negate
+      params:
+        image: '{= imageInstance =}'
+      destination: imageInstance
+
+    # Apply a warm tint — shift colors toward a reddish tone
+    - group: image
+      name: tint
+      params:
+        image: '{= imageInstance =}'
+        r: 255
+        g: 200
+        b: 150
+      destination: imageInstance
+
+    # Boost brightness and desaturate slightly — normalizes photos for report covers
+    - group: image
+      name: modulate
+      params:
+        image: '{= imageInstance =}'
+        brightness: 1.2
+        saturation: 0.9
+        hue: 0
+      destination: imageInstance
+
+    # -------------------------------------------------------
+    # Metadata
+    # -------------------------------------------------------
+
+    # Read metadata after transformations — inspect final format and dimensions
+    - group: image
+      name: metadata
+      params:
+        image: '{= imageInstance =}'
+      destination: imageMeta
+
+    # -------------------------------------------------------
+    # Format & Output
+    # -------------------------------------------------------
+
+    # Convert to JPEG for final output
+    - group: image
+      name: toFormat
+      params:
+        image: '{= imageInstance =}'
+        format: jpeg
+      destination: imageInstance
+
+    # Export to a base64 WebP string — useful for embedding in JSON payloads or emails
+    - group: image
+      name: toBuffer
+      params:
+        image: '{= imageInstance =}'
+        format: webp
+      destination: imageBase64
+
+    # Save the processed image to disk — output path is derived from a pipeline variable
+    - group: image
+      name: toFile
+      params:
+        image: '{= imageInstance =}'
+        output: '{{ outputPath }}'
+
+    # -------------------------------------------------------
+    # Composition — requires a fresh load so Sharp's internal
+    # pipeline order does not place composite after crop
+    # -------------------------------------------------------
+
+    # Reload the source image to get a clean Sharp instance (no transforms queued)
+    - group: image
+      name: load
+      params:
+        path: '{{ inputPath }}'
+      destination: imageInstance
+
+    # Stamp a watermark PNG in the top-left corner — the overlay must fit within the source image
+    - group: image
+      name: composite
+      params:
+        image: '{= imageInstance =}'
+        overlay: '{{ overlayPath }}'
+        top: 10
+        left: 10
+      destination: imageInstance
+
+    # Add a 20px grey border around the image — useful for thumbnail frames
+    - group: image
+      name: extend
+      params:
+        image: '{= imageInstance =}'
+        top: 20
+        bottom: 20
+        left: 20
+        right: 20
+        background: '#cccccc'
+      destination: imageInstance
+
+    # Save the composited image to disk
+    - group: image
+      name: toFile
+      params:
+        image: '{= imageInstance =}'
+        output: '{{ outputPath }}'

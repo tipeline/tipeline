@@ -1,0 +1,93 @@
+version: 1.0.0
+name: 'CMS: Save Term'
+description: |
+  Adds a taxonomy term to a vocabulary of the CMS store (`~/Tipeline/output/cms/cms.db`), or renames / reorders one. Names are unique within a vocabulary.
+
+  **Inputs**
+
+  - `id` — the term, or 0 for a new one
+  - `vocabulary` — its vocabulary
+  - `name`
+  - `weight` — position: lower comes first; -1 puts a new term last
+
+  **Outputs**
+
+  - `term` — `{ id, name }`
+author: tipeline
+tags: [example, apps, cms, taxonomy]
+
+pipeline:
+  variables:
+    - { type: number, name: id, value: 0, visibility: public, description: Term id or 0 for a new term. }
+    - { type: string, name: vocabulary, value: '', visibility: public, required: true, description: Vocabulary. }
+    - { type: string, name: name, value: '', visibility: public, required: true, description: Term name. }
+    - { type: number, name: weight, value: -1, visibility: public, description: 'Position, lower first.' }
+    - { type: object, name: term, value: {}, visibility: public, description: The saved term. Returned to the app. }
+    - { type: dbConnection, name: db }
+    - { type: array, name: found, value: [] }
+    - { type: object, name: save, value: {} }
+    - { type: array, name: saved, value: [] }
+
+  actions:
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          SELECT (SELECT COUNT(*) FROM vocabulary WHERE id = ?) AS vocabularyFound,
+            (SELECT COUNT(*) FROM term WHERE id = ?) AS termFound,
+            (SELECT COUNT(*) FROM term WHERE vocabulary = ? AND lower(name) = lower(?) AND id != ?) AS nameTaken,
+            (SELECT COALESCE(MAX(weight), -1) + 1 FROM term WHERE vocabulary = ?) AS nextWeight
+        bindings: ['{{ vocabulary }}', '{= id =}', '{{ vocabulary }}', '{{ name }}', '{= id =}', '{{ vocabulary }}']
+      destination: found
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          id: '{= id =}'
+          name: '{{ name }}'
+          weight: '{= weight =}'
+          found: '{= found =}'
+        code: |
+          const f = found[0];
+          const text = String(name).trim();
+          if (!text) throw new Error('Name field is required.');
+          if (!f.vocabularyFound) throw new Error('Choose a vocabulary first.');
+          if (Number(id) > 0 && !f.termFound) throw new Error('That term was not found. It may have been deleted.');
+          if (f.nameTaken) throw new Error('There is already a term called ' + text + ' in this vocabulary.');
+          const w = Number(weight);
+          return { id: Number(id) || 0, name: text, weight: !Number.isFinite(w) || w < 0 ? f.nextWeight : Math.round(w) };
+      destination: save
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          INSERT INTO term (id, vocabulary, name, weight) VALUES (NULLIF(?, 0), ?, ?, ?)
+          ON CONFLICT (id) DO UPDATE SET name = excluded.name, weight = excluded.weight
+          RETURNING id, name
+        bindings: ['{= save.id =}', '{{ vocabulary }}', '{{ save.name }}', '{= save.weight =}']
+      destination: saved
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      name: runScript
+      params:
+        context: { saved: '{= saved =}' }
+        code: return saved[0];
+      destination: term

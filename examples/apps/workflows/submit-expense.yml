@@ -1,0 +1,204 @@
+version: 1.0.0
+name: Submit Expense
+description: |
+  Records an expense in the example expense store (a JSON file in `~/Tipeline/output`). Expenses of 500 or less are approved automatically; larger ones wait for a person's approval.
+
+  A person can approve or reject from the Approvals page, the workflow's Runs tab or the Approvals component of the Expense Approvals example app, and the run continues with that decision. Nobody deciding within two days rejects the expense.
+
+  **Inputs**
+
+  - `description` — what was bought, required
+  - `category` — Travel, Meals, Software, Equipment or Other
+  - `amount` — more than zero
+
+  **Outputs**
+
+  - `expense` — the expense as recorded
+
+  Needs run history to wait for a decision, so an app must keep `persist: true`.
+author: tipeline
+tags: [example, apps, approvals, expenses, finance]
+
+pipeline:
+  variables:
+    - type: string
+      name: description
+      value: ''
+      visibility: public
+      required: true
+      description: What was bought.
+
+    - type: string
+      name: category
+      value: Other
+      visibility: public
+      description: Travel, Meals, Software, Equipment or Other.
+
+    - type: number
+      name: amount
+      value: 0
+      visibility: public
+      description: Amount, more than zero.
+
+    - type: object
+      name: expense
+      value: {}
+      visibility: public
+      description: The expense as recorded. Returned to the app.
+
+    # Above this amount a person has to approve.
+    - type: number
+      name: limit
+      value: 500
+
+    - type: string
+      name: needsApproval
+      value: 'no'
+
+    # Replaced by the approval step's decision when one is needed.
+    - type: object
+      name: decision
+      value: { approved: true, comment: Auto-approved (500 or less), decidedBy: policy }
+
+    - type: string
+      name: raw
+      value: ''
+
+    - type: string
+      name: updated
+      value: ''
+
+    - type: array
+      name: seed
+      value:
+        - { id: 1, description: Flight to Madrid, category: Travel, amount: 640, status: approved, submittedAt: '2026-09-02T09:10:00Z', decidedBy: 'app:Expense Approvals', comment: Client visit }
+        - { id: 2, description: Team lunch, category: Meals, amount: 180, status: approved, submittedAt: '2026-09-05T13:20:00Z', decidedBy: policy, comment: Auto-approved (500 or less) }
+        - { id: 3, description: Design tool licence, category: Software, amount: 360, status: approved, submittedAt: '2026-09-11T08:00:00Z', decidedBy: policy, comment: Auto-approved (500 or less) }
+        - { id: 4, description: 4K monitor, category: Equipment, amount: 890, status: rejected, submittedAt: '2026-09-15T16:45:00Z', decidedBy: desktop, comment: Use the spare one in storage }
+        - { id: 5, description: 'Hotel, 2 nights', category: Travel, amount: 420, status: approved, submittedAt: '2026-09-19T19:30:00Z', decidedBy: policy, comment: Auto-approved (500 or less) }
+        - { id: 6, description: Laptop, category: Equipment, amount: 1850, status: approved, submittedAt: '2026-09-24T10:05:00Z', decidedBy: 'app:Expense Approvals', comment: Replacement }
+
+  actions:
+    # 1. Record the expense as pending.
+    - group: file
+      name: read
+      onError: continue
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-expenses.json'
+      destination: raw
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          raw: '{= raw =}'
+          seed: '{= seed =}'
+          description: '{{ description }}'
+          category: '{{ category }}'
+          amount: '{= amount =}'
+        code: |
+          const text = String(description).trim();
+          if (!text) throw new Error('A description is required');
+          const categories = ['Travel', 'Meals', 'Software', 'Equipment', 'Other'];
+          if (!categories.includes(category)) throw new Error(`Unknown category "${category}"`);
+          const value = Number(amount);
+          if (!Number.isFinite(value) || value <= 0) throw new Error('The amount must be more than zero');
+          const all = raw ? JSON.parse(raw) : seed;
+          const id = all.reduce((max, e) => Math.max(max, e.id), 0) + 1;
+          all.push({ id, description: text, category, amount: value, status: 'pending', submittedAt: new Date().toISOString(), decidedBy: '', comment: '' });
+          return JSON.stringify(all, null, 2);
+      destination: updated
+
+    - group: file
+      name: write
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-expenses.json'
+        data: '{= updated =}'
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          updated: '{= updated =}'
+        code: |
+          const all = JSON.parse(updated);
+          return all[all.length - 1];
+      destination: expense
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          expense: '{= expense =}'
+          limit: '{= limit =}'
+        code: |
+          return expense.amount > limit ? 'yes' : 'no';
+      destination: needsApproval
+
+    # 2. Over the limit: the run stops here until someone decides.
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{{ needsApproval }}'
+        compareAs: string
+        operator: eq
+        secondOperand: 'yes'
+        actions:
+          - group: approval
+            name: request
+            params:
+              title: 'Approve "{{ expense.description }}" — {{ expense.amount }} ({{ expense.category }})?'
+              details: 'Expense #{{ expense.id }}, submitted {{ expense.submittedAt }}. Expenses over {{ limit }} need approval.'
+              # Nobody deciding within two days rejects it (decidedBy: timeout).
+              timeout: 2d
+              onTimeout: reject
+              # Keep going after a rejection: the next steps record it on the expense.
+              # (The default, stop, would end the run as canceled right here.)
+              onReject: continue
+            destination: decision
+
+    # 3. Record the decision. Read the store again: other expenses may have changed
+    #    while this one was waiting.
+    - group: file
+      name: read
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-expenses.json'
+      destination: raw
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          raw: '{= raw =}'
+          expense: '{= expense =}'
+          decision: '{= decision =}'
+        code: |
+          const all = JSON.parse(raw);
+          const row = all.find((e) => e.id === expense.id);
+          if (!row) throw new Error(`Expense #${expense.id} is no longer in the store`);
+          row.status = decision.approved ? 'approved' : 'rejected';
+          row.decidedBy = decision.decidedBy ?? '';
+          row.comment = decision.comment ?? '';
+          return JSON.stringify(all, null, 2);
+      destination: updated
+
+    - group: file
+      name: write
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-expenses.json'
+        data: '{= updated =}'
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          updated: '{= updated =}'
+          expense: '{= expense =}'
+        code: |
+          return JSON.parse(updated).find((e) => e.id === expense.id);
+      destination: expense
+
+    - group: system
+      name: message
+      params:
+        text: 'Expense #{{ expense.id }} {{ expense.description }} ({{ expense.amount }}) was {{ expense.status }} by {{ expense.decidedBy }}.'

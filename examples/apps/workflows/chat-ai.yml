@@ -1,0 +1,74 @@
+version: 1.0.0
+name: Chat with AI
+description: |
+  Answers a chat with Claude (the ai.prompt action), giving it the conversation so far. Needs an Anthropic API key in the ANTHROPIC_API_KEY environment variable of the Tipeline service.
+
+  Used by the Chat example app.
+
+  **Inputs**
+
+  - `message` — the text just sent
+  - `messages` — the conversation: `[{ role, text, at }]`
+
+  **Outputs**
+
+  - `reply` — the answer
+author: tipeline
+tags: [example, apps, ai, chat, claude]
+
+pipeline:
+  variables:
+    - type: string
+      name: message
+      value: ''
+      visibility: public
+      description: The text just sent. Set by the app.
+
+    - type: array
+      name: messages
+      value: []
+      visibility: public
+      description: The conversation so far, this message included. Set by the app.
+
+    - type: string
+      name: reply
+      value: ''
+      visibility: public
+      description: The answer. Returned to the app.
+
+    - type: string
+      name: transcript
+      value: ''
+
+    # Never written in the workflow: read from the service's environment.
+    - type: string
+      name: anthropicKey
+      valueFromEnv: ANTHROPIC_API_KEY
+      secret: true
+
+  actions:
+    # The last 20 messages as a transcript (errors left out), ending with the new one.
+    - group: script
+      name: runScript
+      params:
+        context:
+          messages: '{= messages =}'
+        code: |
+          return messages
+            .filter((m) => m.role === 'user' || m.role === 'assistant')
+            .slice(-20)
+            .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.text}`)
+            .join('\n\n');
+      destination: transcript
+
+    - group: ai
+      name: prompt
+      params:
+        provider: anthropic
+        apiKey: '{{ anthropicKey }}'
+        systemMessage: >
+          You are a helpful assistant inside a Tipeline app. Answer the user's last
+          message, using the conversation for context. Be brief; Markdown is fine.
+        prompt: '{{ transcript }}'
+        maxTokens: 800
+      destination: reply

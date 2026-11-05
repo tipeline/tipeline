@@ -1,0 +1,50 @@
+version: 1.0.0
+name: Browser — all functions
+description: |
+  Runs the browser example files one after another as sub-workflows. `control.yml` and `cookies.yml` are on; the steps for `navigation.yml`, `elements.yml`, `content.yml`, `interactions.yml` and `transfer.yml` are commented out, ready to turn on.
+author: Jose Daniel Estrada
+tags: [example, browser, automation]
+pipeline:
+  variables: []
+  actions:
+    - group: subtask
+      name: exec
+      params:
+        host: local
+        path: './control.yml'
+
+    # - group: subtask
+    #   name: exec
+    #   params:
+    #     host: local
+    #     path: './navigation.yml'
+
+    # - group: subtask
+    #   name: exec
+    #   params:
+    #     host: local
+    #     path: './elements.yml'
+
+    - group: subtask
+      name: exec
+      params:
+        host: local
+        path: './cookies.yml'
+
+    # - group: subtask
+    #   name: exec
+    #   params:
+    #     host: local
+    #     path: './content.yml'
+
+    # - group: subtask
+    #   name: exec
+    #   params:
+    #     host: local
+    #     path: './interactions.yml'
+
+    # - group: subtask
+    #   name: exec
+    #   params:
+    #     host: local
+    #     path: './transfer.yml'

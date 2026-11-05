@@ -1,0 +1,104 @@
+version: 1.0.0
+name: 'CMS: Set Status'
+description: |
+  Publishes or unpublishes content in the CMS store (`~/Tipeline/output/cms/cms.db`). As in Drupal, the change is saved as a new revision ("Published" / "Unpublished"); content already in that state is left alone.
+
+  **Inputs**
+
+  - `ids` — node ids, or rows with an id (a table's selectedRows), at least one
+  - `published` — true to publish, false to unpublish
+
+  **Outputs**
+
+  - `count` — how many changed
+author: tipeline
+tags: [example, apps, cms, content, publish]
+
+pipeline:
+  variables:
+    - type: array
+      name: ids
+      value: []
+      visibility: public
+      required: true
+      description: The content to change.
+
+    - type: boolean
+      name: published
+      value: true
+      visibility: public
+      description: True publishes, false unpublishes.
+
+    - type: number
+      name: count
+      value: 0
+      visibility: public
+      description: How many changed. Returned to the app.
+
+    - type: dbConnection
+      name: db
+
+    - type: object
+      name: plan
+      value: {}
+
+    - type: array
+      name: changed
+      value: []
+
+  actions:
+    - group: script
+      name: runScript
+      params:
+        context:
+          ids: '{= ids =}'
+          published: '{= published =}'
+        code: |
+          const list = (Array.isArray(ids) ? ids : [ids]).map((x) => Number(x && typeof x === 'object' ? x.id : x)).filter((n) => Number.isInteger(n) && n > 0);
+          if (!list.length) throw new Error('Choose the content to change first');
+          const on = published === true || published === 'true';
+          return { ids: JSON.stringify(list), status: on ? 1 : 0, log: on ? 'Published' : 'Unpublished' };
+      destination: plan
+
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          INSERT INTO node_revision (node_id, title, status, alias, fields, log, created)
+          SELECT id, title, ?, alias, fields, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+          FROM node WHERE id IN (SELECT value FROM json_each(?)) AND status != ?
+          RETURNING node_id
+        bindings: ['{= plan.status =}', '{{ plan.log }}', '{{ plan.ids }}', '{= plan.status =}']
+      destination: changed
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          UPDATE node SET status = ?, changed = strftime('%Y-%m-%dT%H:%M:%SZ', 'now'),
+            revision_id = (SELECT MAX(r.id) FROM node_revision r WHERE r.node_id = node.id)
+          WHERE id IN (SELECT value FROM json_each(?)) AND status != ?
+        bindings: ['{= plan.status =}', '{{ plan.ids }}', '{= plan.status =}']
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      name: runScript
+      params:
+        context: { changed: '{= changed =}' }
+        code: return changed.length;
+      destination: count

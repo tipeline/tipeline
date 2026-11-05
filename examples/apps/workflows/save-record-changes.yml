@@ -1,0 +1,114 @@
+version: 1.0.0
+name: Save Record Changes
+description: |
+  Applies the unsaved changes of an editable table to the example record store (a JSON file in `~/Tipeline/output`) in one go: adds new records, updates edited ones and removes deleted ones.
+
+  Used by the Records Grid example app.
+
+  **Inputs**
+
+  - `changes` — the table's changes: `{ added: [], updated: [], deleted: [] }`
+
+  **Outputs**
+
+  - `summary` — how many records were added, updated and deleted
+
+  Nothing is written when a record is invalid (no name, unknown status, negative amount): the run fails and the app keeps the edits.
+author: tipeline
+tags: [example, apps, records, table, bulk]
+
+pipeline:
+  variables:
+    - type: object
+      name: changes
+      value: { added: [], updated: [], deleted: [] }
+      visibility: public
+      description: The table's changes. Set by the app.
+
+    - type: object
+      name: summary
+      value: {}
+      visibility: public
+      description: '{ added, updated, deleted } counts. Returned to the app.'
+
+    - type: string
+      name: raw
+      value: ''
+
+    - type: string
+      name: updated
+      value: ''
+
+    - type: array
+      name: seed
+      value:
+        - { id: 1, name: Acme Corp, status: active, amount: 1200, updatedAt: '2026-09-01T10:00:00Z' }
+        - { id: 2, name: Globex, status: pending, amount: 850, updatedAt: '2026-09-12T15:30:00Z' }
+        - { id: 3, name: Initech, status: active, amount: 3400, updatedAt: '2026-09-20T09:15:00Z' }
+        - { id: 4, name: Umbrella, status: closed, amount: 410, updatedAt: '2026-09-25T18:45:00Z' }
+        - { id: 5, name: Soylent, status: pending, amount: 2300, updatedAt: '2026-09-28T11:05:00Z' }
+        - { id: 6, name: Hooli, status: active, amount: 990, updatedAt: '2026-10-01T08:20:00Z' }
+
+  actions:
+    # The store may not exist yet — keep going with `raw` empty and use the seed.
+    - group: file
+      name: read
+      onError: continue
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-records.json'
+      destination: raw
+
+    # Check everything first, then build the new store — so a bad row writes nothing.
+    - group: script
+      name: runScript
+      params:
+        context:
+          raw: '{= raw =}'
+          seed: '{= seed =}'
+          changes: '{= changes =}'
+        code: |
+          const all = raw ? JSON.parse(raw) : seed;
+          const added = changes?.added ?? [];
+          const edited = changes?.updated ?? [];
+          const removed = new Set((changes?.deleted ?? []).map((r) => r.id));
+          const STATUSES = ['active', 'pending', 'closed'];
+          for (const r of [...added, ...edited]) {
+            if (!r.name || !String(r.name).trim()) throw new Error('Every record needs a name');
+            if (!STATUSES.includes(r.status)) throw new Error(`"${r.name}": status must be ${STATUSES.join(', ')}`);
+            if (typeof r.amount !== 'number' || r.amount < 0) throw new Error(`"${r.name}": amount must be 0 or more`);
+          }
+          const now = new Date().toISOString();
+          const byId = new Map(edited.map((r) => [r.id, r]));
+          const next = all
+            .filter((r) => !removed.has(r.id))
+            .map((r) => (byId.has(r.id) ? { ...r, ...byId.get(r.id), id: r.id, updatedAt: now } : r));
+          let id = all.reduce((max, r) => Math.max(max, r.id), 0);
+          for (const r of added) {
+            next.push({ id: ++id, name: String(r.name).trim(), status: r.status, amount: r.amount, updatedAt: now });
+          }
+          return JSON.stringify(next, null, 2);
+      destination: updated
+
+    - group: file
+      name: write
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-records.json'
+        data: '{= updated =}'
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          changes: '{= changes =}'
+        code: |
+          return {
+            added: (changes?.added ?? []).length,
+            updated: (changes?.updated ?? []).length,
+            deleted: (changes?.deleted ?? []).length,
+          };
+      destination: summary
+
+    - group: system
+      name: message
+      params:
+        text: 'Saved: {{ summary.added }} added, {{ summary.updated }} updated, {{ summary.deleted }} deleted.'

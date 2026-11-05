@@ -1,0 +1,13 @@
+Tipeline
+Copyright 2022-2026 José Daniel Estrada Guzmán
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+"Tipeline" and the Tipeline logo are trademarks of José Daniel Estrada Guzmán.
+The Apache License does not grant permission to use them; see TRADEMARKS.md.
+
+This product includes software developed by third parties:
+
+- apps/desktop was started from electron-vite-vue
+  (https://github.com/electron-vite/electron-vite-vue),
+  Copyright (c) 2023 草鞋没号, licensed under the MIT License (see apps/desktop/LICENSE).

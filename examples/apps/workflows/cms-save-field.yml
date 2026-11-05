@@ -1,0 +1,149 @@
+version: 1.0.0
+name: 'CMS: Save Field'
+description: |
+  Adds a field to a content type of the CMS store (`~/Tipeline/output/cms/cms.db`), or changes one. As in Drupal, a new field's machine name starts with `field_` (made from the label when left empty), and a field's kind can't change once it exists.
+
+  **Inputs**
+
+  - `type` — the content type
+  - `name` — machine name; empty for a new field: made from the label
+  - `label`
+  - `kind` — `text`, `long_text`, `number`, `boolean`, `date`, `list`, `link`, `term_ref` or `media_ref`
+  - `required`
+  - `vocabulary` — term_ref: the vocabulary its terms come from
+  - `options` — list: the choices, one per line
+  - `help` — text shown under the field
+  - `weight` — position: lower comes first; -1 puts a new field last
+  - `isNew` — true adds the field, false changes it
+
+  **Outputs**
+
+  - `field` — `{ name, label }`
+author: tipeline
+tags: [example, apps, cms, fields]
+
+pipeline:
+  variables:
+    - { type: string, name: type, value: '', visibility: public, required: true, description: The content type. }
+    - { type: string, name: name, value: '', visibility: public, description: Machine name (empty for a new field). }
+    - { type: string, name: label, value: '', visibility: public, required: true, description: Label. }
+    - { type: string, name: kind, value: text, visibility: public, description: Field kind. }
+    - { type: boolean, name: required, value: false, visibility: public, description: Must be filled in. }
+    - { type: string, name: vocabulary, value: '', visibility: public, description: term_ref only. }
+    - { type: string, name: options, value: '', visibility: public, description: 'list only: one choice per line.' }
+    - { type: string, name: help, value: '', visibility: public, description: Help text. }
+    - { type: number, name: weight, value: 0, visibility: public, description: 'Position, lower first; -1 puts a new field last.' }
+    - { type: boolean, name: isNew, value: true, visibility: public, description: True adds the field. }
+    - { type: object, name: field, value: {}, visibility: public, description: The saved field. Returned to the app. }
+    - { type: dbConnection, name: db }
+    - { type: array, name: found, value: [] }
+    - { type: object, name: save, value: {} }
+
+  actions:
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          SELECT (SELECT COUNT(*) FROM content_type WHERE id = ?) AS typeFound,
+            (SELECT json_group_array(name) FROM field WHERE type_id = ?) AS names,
+            (SELECT kind FROM field WHERE type_id = ? AND name = ?) AS currentKind,
+            (SELECT COUNT(*) FROM vocabulary WHERE id = ?) AS vocabularyFound,
+            (SELECT COALESCE(MAX(weight), -1) + 1 FROM field WHERE type_id = ?) AS nextWeight
+        bindings: ['{{ type }}', '{{ type }}', '{{ type }}', '{{ name }}', '{{ vocabulary }}', '{{ type }}']
+      destination: found
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          type: '{{ type }}'
+          name: '{{ name }}'
+          label: '{{ label }}'
+          kind: '{{ kind }}'
+          required: '{= required =}'
+          vocabulary: '{{ vocabulary }}'
+          options: '{{ options }}'
+          help: '{{ help }}'
+          weight: '{= weight =}'
+          isNew: '{= isNew =}'
+          found: '{= found =}'
+        code: |
+          const f = found[0];
+          const KINDS = ['text', 'long_text', 'number', 'boolean', 'date', 'list', 'link', 'term_ref', 'media_ref'];
+          const RESERVED = ['title', 'alias', 'status', 'log', 'id', 'type'];
+          const fresh = isNew === true || isNew === 'true';
+          if (!f.typeFound) throw new Error('The content type ' + type + ' was not found.');
+          const text = String(label).trim();
+          if (!text) throw new Error('Label field is required.');
+          if (!KINDS.includes(kind)) throw new Error('Choose what kind of field this is.');
+          const names = JSON.parse(f.names || '[]');
+
+          let machine = String(name).trim();
+          if (fresh) {
+            if (!machine) machine = text.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+            if (machine !== 'body' && !machine.startsWith('field_')) machine = 'field_' + machine;
+            if (!/^[a-z][a-z0-9_]{0,31}$/.test(machine) || RESERVED.includes(machine))
+              throw new Error('The machine name ' + machine + ' isn’t allowed: use lowercase letters, numbers and underscores (at most 32).');
+            if (names.includes(machine)) throw new Error('There is already a field called ' + machine + ' on this content type.');
+          } else {
+            if (!names.includes(machine)) throw new Error('The field ' + machine + ' was not found.');
+            if (f.currentKind !== kind)
+              throw new Error('A field’s kind can’t be changed once it exists. Delete the field and add it again.');
+          }
+
+          const settings = {};
+          if (kind === 'term_ref') {
+            if (!vocabulary) throw new Error('Choose the vocabulary its terms come from.');
+            if (!f.vocabularyFound) throw new Error('The vocabulary ' + vocabulary + ' was not found.');
+            settings.vocabulary = vocabulary;
+          }
+          if (kind === 'list') {
+            const list = String(options).split('\n').map((o) => o.trim()).filter(Boolean);
+            if (!list.length) throw new Error('A list field needs its choices, one per line.');
+            settings.options = [...new Set(list)];
+          }
+          if (String(help).trim()) settings.help = String(help).trim();
+
+          const w = Number(weight);
+          return {
+            name: machine,
+            label: text,
+            kind,
+            required: required === true || required === 'true' ? 1 : 0,
+            settings: JSON.stringify(settings),
+            weight: fresh && (!Number.isFinite(w) || w < 0) ? f.nextWeight : Number.isFinite(w) ? Math.round(w) : 0,
+          };
+      destination: save
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          INSERT INTO field (type_id, name, label, kind, required, settings, weight) VALUES (?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT (type_id, name) DO UPDATE SET label = excluded.label, required = excluded.required,
+            settings = excluded.settings, weight = excluded.weight
+        bindings: ['{{ type }}', '{{ save.name }}', '{{ save.label }}', '{{ save.kind }}', '{= save.required =}', '{{ save.settings }}', '{= save.weight =}']
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      name: runScript
+      params:
+        context: { save: '{= save =}' }
+        code: |
+          return { name: save.name, label: save.label };
+      destination: field

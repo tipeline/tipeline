@@ -1,0 +1,171 @@
+schemaVersion: 4
+name: Signup Wizard
+version: "1.0.0"
+description: A three-step signup — a Tabs component shown as steps, with Back / Next, required fields checked before each step and a Finish that greets the new account
+author: tipeline
+
+# No workflows: the wizard, its checks and its Finish are the components themselves.
+workflows: {}
+
+state:
+  created: ""
+
+pages:
+  - id: signup
+    name: Signup
+    icon: Footprints
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 9 }
+        props:
+          markdown: true
+          content: "A **Tabs** component with **Display: steps**. Try **Next** with empty fields: the required ones are marked and the wizard stays put. Finished steps reopen from the header; later ones only through Next."
+
+      # Shown once the wizard is finished.
+      - id: welcome
+        type: alert
+        name: Welcome
+        layout: { x: 0, y: 9, w: 9, h: 9 }
+        props:
+          variant: success
+          title: "{{ state.created }}"
+          message: "Your account is ready. Start over to run the wizard again."
+          visible: "{{ state.created }}"
+
+      - id: startOver
+        type: button
+        name: Start over
+        layout: { x: 9, y: 9, w: 3, h: 9 }
+        props:
+          label: Start over
+          variant: outline
+        events:
+          click:
+            - { type: reset, component: fullName }
+            - { type: reset, component: email }
+            - { type: reset, component: plan }
+            - { type: reset, component: company }
+            - { type: reset, component: teamSize }
+            - { type: reset, component: startWindow }
+            - { type: reset, component: newsletter }
+            - { type: reset, component: wizard }
+            - { type: setState, key: created, value: "" }
+
+      # ------------------------------------------------------------------ the wizard
+      - id: wizard
+        type: tabs
+        name: Wizard
+        layout: { x: 0, y: 18, w: 12, h: 52 }
+        props:
+          display: steps
+          finishLabel: Create account
+          tabs:
+            - { id: account, label: Account }
+            - { id: details, label: Details }
+            - { id: review, label: Review }
+        events:
+          finish:
+            - { type: setState, key: created, value: "Welcome, {{ fullName.value }}!" }
+            - { type: toast, variant: success, message: "Account created for {{ email.value }}" }
+
+      # Step 1 — Account
+      - id: fullName
+        type: input
+        name: Full name
+        parent: { id: wizard, tab: account }
+        layout: { x: 0, y: 0, w: 6, h: 12 }
+        props:
+          label: Full name
+          placeholder: Ada Lovelace
+          required: true
+
+      - id: email
+        type: input
+        name: Email
+        parent: { id: wizard, tab: account }
+        layout: { x: 6, y: 0, w: 6, h: 12 }
+        props:
+          label: Email
+          placeholder: ada@example.com
+          required: true
+
+      - id: plan
+        type: select
+        name: Plan
+        parent: { id: wizard, tab: account }
+        layout: { x: 0, y: 12, w: 6, h: 12 }
+        props:
+          label: Plan
+          display: buttons
+          required: true
+          options:
+            - { value: free, label: Free }
+            - { value: team, label: Team }
+            - { value: business, label: Business }
+
+      # Step 2 — Details. Fields inside a container are checked too.
+      - id: work
+        type: container
+        name: Work
+        parent: { id: wizard, tab: details }
+        layout: { x: 0, y: 0, w: 6, h: 32 }
+        props:
+          title: Work
+
+      - id: company
+        type: input
+        name: Company
+        parent: { id: work }
+        layout: { x: 0, y: 0, w: 12, h: 12 }
+        props:
+          label: Company
+          required: true
+
+      - id: teamSize
+        type: input
+        name: Team size
+        parent: { id: work }
+        layout: { x: 0, y: 12, w: 12, h: 12 }
+        props:
+          label: Team size (optional)
+          inputType: number
+
+      - id: startWindow
+        type: dateRange
+        name: Start window
+        parent: { id: wizard, tab: details }
+        layout: { x: 6, y: 0, w: 6, h: 12 }
+        props:
+          label: When do you want to start?
+          required: true
+
+      - id: newsletter
+        type: checkbox
+        name: Newsletter
+        parent: { id: wizard, tab: details }
+        layout: { x: 6, y: 12, w: 6, h: 8 }
+        props:
+          label: Send me the monthly newsletter
+
+      # Step 3 — Review
+      - id: summary
+        type: text
+        name: Summary
+        parent: { id: wizard, tab: review }
+        layout: { x: 0, y: 0, w: 12, h: 36 }
+        props:
+          markdown: true
+          content: |
+            ### Check your details
+            | Field | Value |
+            |---|---|
+            | Name | {{ fullName.value }} |
+            | Email | {{ email.value }} |
+            | Plan | {{ plan.value }} |
+            | Company | {{ company.value }} |
+            | Team size | {{ teamSize.value | default: "—" }} |
+            | Start | {{ startWindow.from }} → {{ startWindow.to }} |
+            | Newsletter | {{ newsletter.value }} |

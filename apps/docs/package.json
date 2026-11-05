@@ -1,0 +1,19 @@
+{
+  "name": "@tipeline/docs",
+  "version": "0.0.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview",
+    "generate": "tsx scripts/generate-actions.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-morph": "^23.0.0",
+    "tsx": "^4.0.0",
+    "vitepress": "^1.6.3"
+  }
+}

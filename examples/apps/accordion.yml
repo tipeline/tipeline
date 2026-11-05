@@ -1,0 +1,170 @@
+schemaVersion: 4
+name: Accordion
+description: Sections that fold — a record's details, a status change and its raw data stacked in an accordion, plus a FAQ; a row click opens the Details section
+author: tipeline
+
+workflows:
+  listRecords: { file: ./workflows/list-records.yml }
+  setStatus: { file: ./workflows/update-record-status.yml }
+
+# The clicked record, and the section the accordion opens on (its defaultTab).
+state:
+  record: null
+  section: details
+
+pages:
+  - id: records
+    name: Records
+    icon: ListCollapse
+
+    runnables:
+      records:
+        mode: run
+        workflow: listRecords
+        trigger: load
+        inputs: { status: all }
+        outputs: [records, summary]
+        persist: false
+      save:
+        mode: run
+        workflow: setStatus
+        inputs:
+          id: "{= state.record.id =}"
+          status: "{= newStatus.value =}"
+        outputs: [record]
+        onSuccess:
+          - { type: setState, key: record, value: "{= result.outputs.record =}" }
+          - { type: toast, message: "{{ result.outputs.record.name }} is now {{ result.outputs.record.status }}", variant: success }
+          - { type: run, runnable: records }
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 7 }
+        props:
+          markdown: true
+          content: "An **accordion** is a Tabs component shown as stacked sections. Click a row: the record fills the sections and **Details** opens (a set state + reset on the accordion)."
+
+      - id: recordsTable
+        type: table
+        name: Records
+        layout: { x: 0, y: 7, w: 7, h: 50 }
+        props:
+          data: "{= runnables.records.outputs.records =}"
+          columns:
+            - { key: id, header: ID }
+            - { key: name, header: Name }
+            - { key: status, header: Status, format: badge }
+            - { key: amount, header: Amount, format: currency }
+        events:
+          rowClick:
+            - { type: setState, key: record, value: "{= recordsTable.selectedRow =}" }
+            - { type: setState, key: section, value: details }
+            - { type: reset, component: recordSections }
+
+      # ---------------------------------------------------------------- the accordion
+      - id: recordSections
+        type: tabs
+        name: Record sections
+        layout: { x: 7, y: 7, w: 5, h: 50 }
+        props:
+          display: accordion
+          defaultTab: "{{ state.section }}"
+          tabs:
+            - { id: details, label: Details }
+            - { id: status, label: Change status }
+            - { id: raw, label: Raw data }
+
+      - id: details
+        type: keyValue
+        name: Details
+        frame: none
+        parent: { id: recordSections, tab: details }
+        layout: { x: 0, y: 0, w: 12, h: 24 }
+        props:
+          title: "{% if state.record == blank %}No record yet{% else %}#{{ state.record.id }} {{ state.record.name }}{% endif %}"
+          data: "{= state.record =}"
+          emptyText: Click a row in the table
+          fields:
+            - { key: status, label: Status, format: badge }
+            - { key: amount, label: Amount, format: currency }
+            - { key: updatedAt, label: Last updated, format: datetime }
+
+      - id: newStatus
+        type: select
+        name: New status
+        frame: none
+        parent: { id: recordSections, tab: status }
+        layout: { x: 0, y: 0, w: 12, h: 11 }
+        props:
+          label: "Status of {{ state.record.name | default: '…' }}"
+          display: buttons
+          default: "{= state.record.status =}"
+          options:
+            - { value: pending, label: Pending }
+            - { value: active, label: Active }
+            - { value: closed, label: Closed }
+
+      - id: saveButton
+        type: button
+        name: Save
+        frame: none
+        parent: { id: recordSections, tab: status }
+        layout: { x: 0, y: 11, w: 12, h: 6 }
+        props:
+          label: Save status
+          disabled: "{% if state.record == blank %}true{% else %}false{% endif %}"
+        events:
+          click: [{ type: run, runnable: save }]
+
+      - id: rawRecord
+        type: json
+        name: Raw record
+        frame: none
+        parent: { id: recordSections, tab: raw }
+        layout: { x: 0, y: 0, w: 12, h: 30 }
+        props:
+          data: "{= state.record =}"
+
+      # ---------------------------------------------------------------- a FAQ
+      - id: faq
+        type: tabs
+        name: FAQ
+        layout: { x: 0, y: 57, w: 12, h: 34 }
+        props:
+          display: accordion
+          tabs:
+            - { id: what, label: What is an accordion? }
+            - { id: how, label: How do I open a section from an event? }
+            - { id: many, label: Can several sections be open at once? }
+
+      - id: faqWhat
+        type: text
+        name: What
+        frame: none
+        parent: { id: faq, tab: what }
+        layout: { x: 0, y: 0, w: 12, h: 10 }
+        props:
+          markdown: true
+          content: "A **Tabs** component with *Display: accordion* — each tab is a section with its own grid. Drag **Accordion** from the palette to start with three sections."
+
+      - id: faqHow
+        type: text
+        name: How
+        frame: none
+        parent: { id: faq, tab: how }
+        layout: { x: 0, y: 0, w: 12, h: 10 }
+        props:
+          markdown: true
+          content: "Bind **Default tab** to state (here `state.section`), then in the handler **Set state** to the section's id and **Reset** the accordion. Its `activeTab` tells you which one is open."
+
+      - id: faqMany
+        type: text
+        name: Many
+        frame: none
+        parent: { id: faq, tab: many }
+        layout: { x: 0, y: 0, w: 12, h: 10 }
+        props:
+          markdown: true
+          content: "No — one is open at a time, and it fills the rest of the box. Use several accordions, or a container, to show more at once."

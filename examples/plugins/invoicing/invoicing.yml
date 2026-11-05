@@ -1,0 +1,59 @@
+version: 1.0.0
+name: Invoicing Plugin Example
+description: |
+  Shows the invoicing plugin and how a plugin declares rules for its parameters. Core enforces these rules when the step runs, not only the Desktop builder.
+
+  - `createDraft` uses only plain `type` and `required` fields.
+  - `sendInvoice` adds `enum`, `pattern`, `min` and `precision` rules, plus a rule across fields: `ccEmail` is required when `sendCopy` is true.
+
+  **Setup**
+
+  Copy or symlink `examples/plugins/invoicing/` to `~/Tipeline/plugins/invoicing/`, so it's loaded when Core starts.
+
+  **Template syntax**
+
+  - `{{ var }}` — puts a value into text; the result is always a string
+  - `{{ obj.prop }}` — reads a nested property
+  - `{= varName =}` — passes the value as it is, such as an object
+
+author: Jose Daniel Estrada
+tags: [example, plugin, invoicing, validation]
+
+pipeline:
+  variables:
+    - type: object
+      name: draft
+      value: {}
+    - type: object
+      name: sent
+      value: {}
+
+  actions:
+    # ------------------------------------------------------------------
+    # 1. Create a draft invoice — plain required/type fields only.
+    # ------------------------------------------------------------------
+    - group: invoicing
+      name: createDraft
+      params:
+        customerName: 'Acme Corp'
+        notes: 'Net 30 terms'
+      destination: draft
+
+    # ------------------------------------------------------------------
+    # 2. Send the invoice — customerEmail/ccEmail must match the email
+    #    pattern, currency must be one of the enum values, amount is capped
+    #    at 2 decimal places, and because sendCopy is true, ccEmail is
+    #    required (the rules.sendInvoice cross-field check). Change
+    #    sendCopy to false or remove ccEmail to see ActionFactory reject
+    #    this action at load time instead of failing mid-run.
+    # ------------------------------------------------------------------
+    - group: invoicing
+      name: sendInvoice
+      params:
+        invoiceId: '{{ draft.id }}'
+        customerEmail: 'billing@acme-corp.test'
+        amount: 149.99
+        currency: 'USD'
+        sendCopy: true
+        ccEmail: 'ap@acme-corp.test'
+      destination: sent

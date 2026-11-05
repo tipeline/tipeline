@@ -1,0 +1,76 @@
+version: 1.0.0
+name: Network Actions Test Suite
+description: |
+  Checks a network: whether a port is open, DNS and reverse DNS lookups, host name lookup, ping and a look at a TLS certificate.
+author: Jose Daniel Estrada
+tags: [example, network, dns, ping, tls, port]
+
+pipeline:
+  variables:
+    - type: string
+      name: targetHost
+      value: 'google.com'
+
+    - type: string
+      name: targetIp
+      value: '8.8.8.8'
+
+    - type: string
+      name: serverHost
+      value: 'github.com'
+
+  actions:
+    # -------------------------------------------------------
+    # Port
+    # -------------------------------------------------------
+
+    # Wait until the HTTPS port is accepting connections before proceeding
+    - group: network
+      name: waitPort
+      params:
+        host: '{{ targetHost }}'
+        port: 443
+        timeout: 30000
+
+    # -------------------------------------------------------
+    # DNS
+    # -------------------------------------------------------
+
+    # Resolve IPv4 A records for the target hostname
+    - group: network
+      name: resolveDNS
+      params:
+        host: '{{ targetHost }}'
+        type: A
+
+    # Reverse-lookup the hostname(s) associated with a known IP address
+    - group: network
+      name: reverseDNS
+      params:
+        ip: '{{ targetIp }}'
+
+    # Look up all IP addresses (IPv4 and IPv6) for the target hostname
+    - group: network
+      name: lookup
+      params:
+        hostname: '{{ targetHost }}'
+
+    # -------------------------------------------------------
+    # Connectivity
+    # -------------------------------------------------------
+
+    # Check whether the remote host is reachable via ICMP ping
+    - group: network
+      name: ping
+      params:
+        host: '{{ targetHost }}'
+
+    # -------------------------------------------------------
+    # TLS
+    # -------------------------------------------------------
+
+    # Inspect the TLS certificate on a web server (defaults to port 443)
+    - group: network
+      name: checkTlsCertificate
+      params:
+        host: '{{ serverHost }}'

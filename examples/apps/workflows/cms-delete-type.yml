@@ -1,0 +1,93 @@
+version: 1.0.0
+name: 'CMS: Delete Content Type'
+description: |
+  Deletes a content type, with its fields and templates, from the CMS store (`~/Tipeline/output/cms/cms.db`). As in Drupal, a type that still has content can't be deleted.
+
+  **Inputs**
+
+  - `id` — the content type
+
+  **Outputs**
+
+  - `type` — `{ id, label }`
+author: tipeline
+tags: [example, apps, cms, content types, delete]
+
+pipeline:
+  variables:
+    - type: string
+      name: id
+      value: ''
+      visibility: public
+      required: true
+      description: The content type to delete.
+
+    - type: object
+      name: type
+      value: {}
+      visibility: public
+      description: The deleted type. Returned to the app.
+
+    - type: dbConnection
+      name: db
+
+    - type: array
+      name: found
+      value: []
+
+  actions:
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT id, label, (SELECT COUNT(*) FROM node WHERE type = t.id) AS count FROM content_type t WHERE id = ?
+        bindings: ['{{ id }}']
+      destination: found
+
+    - group: script
+      name: runScript
+      params:
+        context: { found: '{= found =}' }
+        code: |
+          const t = found[0];
+          if (!t) throw new Error('That content type was not found.');
+          if (t.count > 0)
+            throw new Error(t.label + ' is used by ' + t.count + ' piece' + (t.count === 1 ? '' : 's') +
+              ' of content. You can not remove this content type until you have removed all of the ' + t.label + ' content.');
+          return { id: t.id, label: t.label };
+      destination: type
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: DELETE FROM field WHERE type_id = ?
+        bindings: ['{{ type.id }}']
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: DELETE FROM template WHERE kind = 'content' AND type_id = ?
+        bindings: ['{{ type.id }}']
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: DELETE FROM content_type WHERE id = ?
+        bindings: ['{{ type.id }}']
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'

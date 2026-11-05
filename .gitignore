@@ -1,0 +1,93 @@
+# Node dependencies (all workspaces)
+node_modules/
+**/node_modules/
+
+# Build outputs (all workspaces)
+**/dist/
+**/dist-ssr/
+**/dist-electron/
+**/release/
+**/build/
+
+# Compiled binaries (CLI, desktop, etc.)
+*.exe
+*.bin
+*.pkg
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment files & local overrides
+**/.env*
+*.local
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+
+# VSCode (keep only shared configs)
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Media in resources/examples folders
+**/resources/**/*.mp3
+**/resources/**/*.mp4
+**/resources/**/*.mkv
+**/resources/**/*.avi
+**/resources/**/*.wav
+**/examples/**/*.mp3
+**/examples/**/*.mp4
+**/examples/**/*.mkv
+**/examples/**/*.avi
+**/examples/**/*.wav
+# Images, archives, PDFs and spreadsheets the example workflows use or create
+**/examples/**/*.png
+**/examples/**/*.jpg
+**/examples/**/*.jpeg
+**/examples/**/*.gif
+**/examples/**/*.webp
+**/examples/**/*.svg
+**/examples/**/*.bmp
+**/examples/**/*.tif
+**/examples/**/*.tiff
+**/examples/**/*.ico
+**/examples/**/*.heic
+**/examples/**/*.avif
+**/examples/**/*.zip
+**/examples/**/*.tar
+**/examples/**/*.gz
+**/examples/**/*.tgz
+**/examples/**/*.bz2
+**/examples/**/*.xz
+**/examples/**/*.7z
+**/examples/**/*.rar
+**/examples/**/*.pdf
+**/examples/**/*.xlsx
+# Where the compression example extracts its archives
+examples/actions/compression/unarchived/
+
+# OAuth tokens saved next to a run
+token.json
+
+# Lockfiles (only allow root lockfile)
+package-lock.json
+!/package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+.vscode/settings.json
+# VitePress dev cache
+apps/docs/.vitepress/cache/
+
+# Claude Code personal settings (the shared CLAUDE.md stays tracked)
+.claude/settings.local.json

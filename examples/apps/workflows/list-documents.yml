@@ -1,0 +1,111 @@
+version: 1.0.0
+name: List Documents
+description: |
+  Returns an example document library — its folders as a tree (with icons and how many files each holds) and the files in one folder, the folders under it included.
+
+  Used by the Document Library example app.
+
+  **Inputs**
+
+  - `folder` — a folder id; empty for every file
+
+  **Outputs**
+
+  - `folders` — `[{ id, name, icon, files, children }]`
+  - `files` — `[{ name, folder, size, modified }]`
+author: tipeline
+tags: [example, apps, documents, tree, files]
+
+pipeline:
+  variables:
+    - type: string
+      name: folder
+      value: ''
+      visibility: public
+      description: The folder whose files to list (empty for all). Set by the app.
+
+    - type: array
+      name: folders
+      value: []
+      visibility: public
+      description: The folders, nested. Returned to the app.
+
+    - type: array
+      name: files
+      value: []
+      visibility: public
+      description: The files in the folder and the folders under it. Returned to the app.
+
+    - type: object
+      name: library
+      value: {}
+
+  actions:
+    - group: script
+      name: runScript
+      params:
+        context:
+          folder: '{{ folder }}'
+        code: |
+          const tree = [
+            { id: 'finance', name: 'Finance', children: [
+              { id: 'invoices', name: 'Invoices', children: [
+                { id: 'invoices-2025', name: '2025' },
+                { id: 'invoices-2026', name: '2026' },
+              ] },
+              { id: 'receipts', name: 'Receipts' },
+            ] },
+            { id: 'legal', name: 'Legal', children: [
+              { id: 'contracts', name: 'Contracts' },
+              { id: 'policies', name: 'Policies' },
+            ] },
+            { id: 'marketing', name: 'Marketing', children: [
+              { id: 'brand', name: 'Brand' },
+              { id: 'campaigns', name: 'Campaigns' },
+            ] },
+          ];
+          const names = {
+            'invoices-2025': ['INV-0931.pdf', 'INV-0932.pdf', 'INV-0950.pdf'],
+            'invoices-2026': ['INV-1001.pdf', 'INV-1002.pdf', 'INV-1003.pdf', 'INV-1004.pdf'],
+            receipts: ['taxi-0312.jpg', 'hotel-0313.pdf'],
+            contracts: ['Acme MSA.pdf', 'Globex NDA.pdf', 'Initech SOW.docx'],
+            policies: ['Privacy policy.md', 'Travel policy.md'],
+            brand: ['logo.svg', 'colors.pdf', 'fonts.zip'],
+            campaigns: ['Spring launch.pptx', 'Newsletter 04.html'],
+          };
+          const all = Object.entries(names).flatMap(([at, list], f) =>
+            list.map((name, i) => ({
+              name,
+              folder: at,
+              size: `${(((f + 3) * (i + 7) * 37) % 900) + 12} KB`,
+              modified: new Date(Date.UTC(2026, 8, 1 + ((f * 5 + i * 3) % 28))).toISOString().slice(0, 10),
+            }))
+          );
+          // Each folder's own files and the ones under it.
+          const under = (node) => [node.id, ...(node.children || []).flatMap(under)];
+          const dress = (node) => {
+            const ids = under(node);
+            return {
+              ...node,
+              icon: 'Folder',
+              files: all.filter((f) => ids.includes(f.folder)).length,
+              ...(node.children ? { children: node.children.map(dress) } : {}),
+            };
+          };
+          const find = (list) => list.flatMap((n) => (n.id === folder ? [n] : find(n.children || [])));
+          const chosen = folder ? find(tree)[0] : null;
+          const ids = chosen ? under(chosen) : Object.keys(names);
+          return { folders: tree.map(dress), files: all.filter((f) => ids.includes(f.folder)) };
+      destination: library
+
+    - group: variable
+      name: set
+      params:
+        name: folders
+        value: '{= library.folders =}'
+
+    - group: variable
+      name: set
+      params:
+        name: files
+        value: '{= library.files =}'

@@ -1,0 +1,176 @@
+version: 1.0.0
+name: File Actions Test Suite
+description: |
+  Works with files: check they exist, copy, move, rename, remove, read and write, read and write CSV, get parts of a path, and convert to and from Base64.
+author: Jose Daniel Estrada
+tags: [example, file, csv, base64]
+pipeline:
+  variables:
+    - type: string
+      name: reportFile
+      value: '{{ _global.examplesDir }}/actions/file/reports/daily-report.txt'
+
+    - type: string
+      name: backupFile
+      value: '{{ _global.examplesDir }}/actions/file/reports/daily-report-backup.txt'
+
+    - type: string
+      name: archivedFile
+      value: '{{ _global.examplesDir }}/actions/file/archive/daily-report-2024.txt'
+
+    - type: string
+      name: renamedFile
+      value: '{{ _global.examplesDir }}/actions/file/archive/pipeline-report-2024.txt'
+
+    - type: string
+      name: csvInput
+      value: '{{ _global.examplesDir }}/actions/file/data/invoices.csv'
+
+    - type: string
+      name: csvOutput
+      value: '{{ _global.examplesDir }}/actions/file/data/invoices-processed.csv'
+
+    - type: string
+      name: base64Data
+      value: ''
+
+  actions:
+    # -------------------------------------------------------
+    # Existence
+    # -------------------------------------------------------
+
+    # Verify the daily report exists before downstream actions attempt to read it
+    - group: file
+      name: fileExists
+      params:
+        src: '{{ reportFile }}'
+
+    # -------------------------------------------------------
+    # Copy & Move
+    # -------------------------------------------------------
+
+    # Back up the report before processing — preserves the original in case of failure
+    - group: file
+      name: copy
+      params:
+        src: '{{ reportFile }}'
+        dest: '{{ backupFile }}'
+
+    # Move the backup to the archive directory after processing is complete
+    - group: file
+      name: move
+      params:
+        src: '{{ backupFile }}'
+        dest: '{{ archivedFile }}'
+
+    # Rename the archived file to include the pipeline name for traceability
+    - group: file
+      name: rename
+      params:
+        oldPath: '{{ archivedFile }}'
+        newPath: '{{ renamedFile }}'
+
+    # -------------------------------------------------------
+    # Read & Write
+    # -------------------------------------------------------
+
+    # Read the daily report content to pass downstream to an email or notification action
+    - group: file
+      name: read
+      params:
+        src: '{{ reportFile }}'
+
+    # Write a pipeline summary to a log file after execution completes
+    - group: file
+      name: write
+      params:
+        src: '{{ _global.examplesDir }}/actions/file/logs/pipeline-summary.txt'
+        data: 'Pipeline completed successfully. Report: daily-report.txt'
+
+    # -------------------------------------------------------
+    # CSV
+    # -------------------------------------------------------
+
+    # Parse an invoice CSV into rows for downstream processing or filtering
+    - group: file
+      name: readCSV
+      params:
+        src: '{{ csvInput }}'
+        options:
+          columns: true
+          skip_empty_lines: true
+          delimiter: ','
+          trim: true
+
+    # Write processed invoice rows back to a CSV for export or archiving
+    - group: file
+      name: writeCSV
+      params:
+        src: '{{ csvOutput }}'
+        rows:
+          - invoice: 'INV-001'
+            client: 'Acme Corp'
+            amount: 4200
+          - invoice: 'INV-002'
+            client: 'Globex'
+            amount: 8750
+
+    # -------------------------------------------------------
+    # Path
+    # -------------------------------------------------------
+
+    # Extract the directory from a report path — useful for creating sibling files
+    - group: file
+      name: getFilePathPart
+      params:
+        src: '{{ reportFile }}'
+        part: dirname
+
+    # Extract the base filename including extension — useful for log labels and email subjects
+    - group: file
+      name: getFilePathPart
+      params:
+        src: '{{ reportFile }}'
+        part: basename
+
+    # Extract just the filename without extension — useful as a task identifier or slug
+    - group: file
+      name: getFilePathPart
+      params:
+        src: '{{ reportFile }}'
+        part: filename
+
+    # Extract the file extension — useful for routing to the correct downstream parser
+    - group: file
+      name: getFilePathPart
+      params:
+        src: '{{ reportFile }}'
+        part: extname
+
+    # -------------------------------------------------------
+    # Base64
+    # -------------------------------------------------------
+
+    # Encode the report file to Base64 — useful when attaching it to an HTTP or email payload
+    - group: file
+      name: convertFileToBase64
+      params:
+        src: '{{ reportFile }}'
+      destination: base64Data
+
+    # Decode a Base64 attachment and write it to disk for further processing
+    - group: file
+      name: convertBase64ToFile
+      params:
+        dest: '{{ _global.examplesDir }}/actions/file/reports/decoded-report.txt'
+        base64: '{{ base64Data }}'
+
+    # -------------------------------------------------------
+    # Remove
+    # -------------------------------------------------------
+
+    # Clean up the renamed archive after processing — keeps the working directory tidy
+    - group: file
+      name: remove
+      params:
+        src: '{{ renamedFile }}'

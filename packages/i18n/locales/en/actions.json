@@ -1,0 +1,5444 @@
+{
+  "ai": {
+    "label": "AI",
+    "actions": {
+      "prompt": {
+        "label": "AI Prompt",
+        "description": "Send a prompt to an AI provider and get a text response.",
+        "fields": {
+          "provider": {
+            "label": "Provider",
+            "description": "AI provider to use (deepseek, openai, or anthropic)."
+          },
+          "apiKey": {
+            "label": "API Key",
+            "description": "API key for the selected provider."
+          },
+          "prompt": {
+            "label": "Prompt",
+            "description": "The user prompt to send to the AI model."
+          },
+          "model": {
+            "label": "Model",
+            "description": "Model identifier (e.g. gpt-4o, claude-3-5-sonnet). Defaults to provider default."
+          },
+          "systemMessage": {
+            "label": "System Message",
+            "description": "Optional system/instruction message to set model behavior."
+          },
+          "temperature": {
+            "label": "Temperature",
+            "description": "Sampling temperature (0–2). Higher values produce more random output."
+          },
+          "maxTokens": {
+            "label": "Max Tokens",
+            "description": "Maximum number of tokens to generate (1–100000)."
+          },
+          "topP": {
+            "label": "Top P",
+            "description": "Nucleus sampling cutoff (0–1). Alternative to temperature."
+          },
+          "stream": {
+            "label": "Stream",
+            "description": "Whether to stream the response token by token."
+          },
+          "frequencyPenalty": {
+            "label": "Frequency Penalty",
+            "description": "Penalty for token frequency (-2 to 2). Reduces repetition."
+          },
+          "presencePenalty": {
+            "label": "Presence Penalty",
+            "description": "Penalty for token presence (-2 to 2). Encourages new topics."
+          }
+        }
+      }
+    }
+  },
+  "api": {
+    "label": "API",
+    "actions": {
+      "auth": {
+        "label": "OAuth2 Authentication",
+        "description": "Authenticate using OAuth2 flow with client credentials and scopes.",
+        "fields": {
+          "type": {
+            "label": "Type",
+            "description": "Authentication type (currently only oauth2 is supported)."
+          },
+          "clientId": {
+            "label": "Client ID",
+            "description": "OAuth2 client ID issued by the provider."
+          },
+          "clientSecret": {
+            "label": "Client Secret",
+            "description": "OAuth2 client secret issued by the provider."
+          },
+          "scopes": {
+            "label": "Scopes",
+            "description": "List of OAuth2 scopes to request."
+          },
+          "authEndpoint": {
+            "label": "Auth Endpoint",
+            "description": "Authorization endpoint URL for the OAuth2 provider."
+          },
+          "tokenEndpoint": {
+            "label": "Token Endpoint",
+            "description": "Token exchange endpoint URL for the OAuth2 provider."
+          },
+          "port": {
+            "label": "Port",
+            "description": "Local port to listen on for the OAuth2 redirect callback."
+          },
+          "tokenPath": {
+            "label": "Token Path",
+            "description": "Optional file path to persist the access token."
+          }
+        }
+      },
+      "request": {
+        "label": "Direct API Call",
+        "description": "Make a direct API call with authentication token and parameters.",
+        "fields": {
+          "url": {
+            "label": "URL",
+            "description": "Full URL of the API endpoint to call."
+          },
+          "method": {
+            "label": "Method",
+            "description": "HTTP method to use (GET, POST, PUT, DELETE, PATCH)."
+          },
+          "args": {
+            "label": "Args",
+            "description": "Path or template arguments for URL interpolation."
+          },
+          "parameters": {
+            "label": "Parameters",
+            "description": "Query string parameters to append to the URL."
+          },
+          "headers": {
+            "label": "Headers",
+            "description": "HTTP headers to include in the request."
+          },
+          "body": {
+            "label": "Body",
+            "description": "Request body payload (any type)."
+          }
+        }
+      },
+      "load": {
+        "label": "Load OpenAPI Spec",
+        "description": "Load and parse OpenAPI schema from URL with optional filters.",
+        "fields": {
+          "url": {
+            "label": "URL",
+            "description": "URL pointing to the OpenAPI (Swagger) specification JSON or YAML."
+          },
+          "include": {
+            "label": "Include",
+            "description": "Optional list of operation IDs or paths to include."
+          },
+          "exclude": {
+            "label": "Exclude",
+            "description": "Optional list of operation IDs or paths to exclude."
+          },
+          "usePathAsId": {
+            "label": "Use Path As ID",
+            "description": "Use the URL path as the endpoint identifier instead of operationId."
+          },
+          "idFormat": {
+            "label": "ID Format",
+            "description": "Casing format applied to generated endpoint IDs (camelCase, snakeCase, etc.)."
+          }
+        }
+      },
+      "invoke": {
+        "label": "Call Loaded Endpoint",
+        "description": "Call a method from previously loaded OpenAPI endpoints.",
+        "fields": {
+          "endpoints": {
+            "label": "Endpoints",
+            "description": "Reference to the loaded OpenAPI endpoints object."
+          },
+          "method": {
+            "label": "Method",
+            "description": "Name of the endpoint method to invoke."
+          },
+          "args": {
+            "label": "Args",
+            "description": "Path arguments required by the endpoint."
+          },
+          "parameters": {
+            "label": "Parameters",
+            "description": "Query parameters for the endpoint call."
+          },
+          "headers": {
+            "label": "Headers",
+            "description": "HTTP headers to include in the request."
+          }
+        }
+      }
+    }
+  },
+  "array": {
+    "label": "Array",
+    "actions": {
+      "parse": {
+        "label": "Parse",
+        "description": "Parse string to an array with optional element type conversion.",
+        "fields": {
+          "text": {
+            "label": "Text",
+            "description": "The string to parse into an array."
+          },
+          "separator": {
+            "label": "Separator",
+            "description": "Delimiter character used to split the string (default comma)."
+          },
+          "type": {
+            "label": "Type",
+            "description": "Parsing format: json, csv, lines, or custom separator."
+          },
+          "trim": {
+            "label": "Trim",
+            "description": "Whether to trim whitespace from each element."
+          },
+          "elementType": {
+            "label": "Element Type",
+            "description": "Type to coerce each element to: string, number, boolean, or auto."
+          }
+        }
+      },
+      "toString": {
+        "label": "To String",
+        "description": "Convert array to string in various formats.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array to convert to a string."
+          },
+          "separator": {
+            "label": "Separator",
+            "description": "Delimiter to join elements with (default comma)."
+          },
+          "format": {
+            "label": "Format",
+            "description": "Output format: json, csv, or lines."
+          }
+        }
+      },
+      "join": {
+        "label": "Join",
+        "description": "Join array elements into a string with separator.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array whose elements to join."
+          },
+          "separator": {
+            "label": "Separator",
+            "description": "Delimiter to place between elements (default comma)."
+          }
+        }
+      },
+      "length": {
+        "label": "Length",
+        "description": "Get the length of an array.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array to measure."
+          }
+        }
+      },
+      "contains": {
+        "label": "Contains",
+        "description": "Check if array contains a specific value.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array to search in."
+          },
+          "value": {
+            "label": "Value",
+            "description": "The value to look for in the array."
+          }
+        }
+      },
+      "indexOf": {
+        "label": "Index Of",
+        "description": "Find the index of first occurrence of a value (-1 if not found).",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array to search in."
+          },
+          "value": {
+            "label": "Value",
+            "description": "The value whose index to find."
+          }
+        }
+      },
+      "get": {
+        "label": "Get Element",
+        "description": "Get element at specific index (supports negative indices).",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array to access."
+          },
+          "index": {
+            "label": "Index",
+            "description": "Zero-based index of the element to retrieve (negative counts from end)."
+          },
+          "defaultValue": {
+            "label": "Default Value",
+            "description": "Value to return if the index is out of bounds."
+          }
+        }
+      },
+      "push": {
+        "label": "Push",
+        "description": "Add element to array at start or end.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array to add an element to."
+          },
+          "value": {
+            "label": "Value",
+            "description": "The element to add."
+          },
+          "position": {
+            "label": "Position",
+            "description": "Where to insert: start or end of the array."
+          }
+        }
+      },
+      "remove": {
+        "label": "Remove",
+        "description": "Remove element at specific index.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array to remove an element from."
+          },
+          "index": {
+            "label": "Index",
+            "description": "Zero-based index of the element to remove."
+          }
+        }
+      },
+      "set": {
+        "label": "Set Element",
+        "description": "Update the element at a specific index (supports negative indices).",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array to update."
+          },
+          "index": {
+            "label": "Index",
+            "description": "Zero-based index of the element to replace (negative counts from end)."
+          },
+          "value": {
+            "label": "Value",
+            "description": "The new value to set at the given index."
+          }
+        }
+      },
+      "unique": {
+        "label": "Unique",
+        "description": "Get unique values from array (remove duplicates).",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array to deduplicate."
+          }
+        }
+      },
+      "compact": {
+        "label": "Compact",
+        "description": "Remove falsy values (null, undefined, false, 0, \"\", NaN).",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array to compact by removing all falsy values."
+          }
+        }
+      },
+      "chunk": {
+        "label": "Chunk",
+        "description": "Split array into chunks of specified size.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array to split into chunks."
+          },
+          "size": {
+            "label": "Size",
+            "description": "Number of elements per chunk."
+          }
+        }
+      },
+      "flatten": {
+        "label": "Flatten",
+        "description": "Flatten nested arrays to specified depth.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The nested array to flatten."
+          },
+          "depth": {
+            "label": "Depth",
+            "description": "Number of nesting levels to flatten (default 1)."
+          }
+        }
+      },
+      "intersection": {
+        "label": "Intersection",
+        "description": "Get common elements present in all arrays.",
+        "fields": {
+          "arrays": {
+            "label": "Arrays",
+            "description": "Two or more arrays to intersect."
+          }
+        }
+      },
+      "union": {
+        "label": "Union",
+        "description": "Combine arrays and get unique elements.",
+        "fields": {
+          "arrays": {
+            "label": "Arrays",
+            "description": "Two or more arrays to combine into a unique set."
+          }
+        }
+      },
+      "difference": {
+        "label": "Difference",
+        "description": "Get elements in first array not present in second array.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The primary array to subtract from."
+          },
+          "exclude": {
+            "label": "Exclude",
+            "description": "Array of values to exclude from the primary array."
+          }
+        }
+      },
+      "sort": {
+        "label": "Sort",
+        "description": "Sort array by one or more keys with custom order.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array to sort."
+          },
+          "keys": {
+            "label": "Keys",
+            "description": "Property keys to sort by (for arrays of objects)."
+          },
+          "orders": {
+            "label": "Orders",
+            "description": "Sort direction per key: asc or desc."
+          }
+        }
+      },
+      "reverse": {
+        "label": "Reverse",
+        "description": "Reverse the order of array elements.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array to reverse."
+          }
+        }
+      },
+      "slice": {
+        "label": "Slice",
+        "description": "Extract a portion of the array.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array to slice."
+          },
+          "start": {
+            "label": "Start",
+            "description": "Start index (inclusive, default 0)."
+          },
+          "end": {
+            "label": "End",
+            "description": "End index (exclusive). Omit to slice to the end."
+          }
+        }
+      },
+      "concat": {
+        "label": "Concat",
+        "description": "Concatenate multiple arrays into one.",
+        "fields": {
+          "arrays": {
+            "label": "Arrays",
+            "description": "List of arrays to concatenate in order."
+          }
+        }
+      }
+    }
+  },
+  "approval": {
+    "label": "Approval",
+    "actions": {
+      "request": {
+        "label": "Request Approval",
+        "description": "Pause the run until someone approves or rejects it — from the Approvals page, the workflow's runs or an app's Approvals component. Approved: the run continues with the decision (approved, comment, decidedBy, decidedAt). Rejected: the run is canceled, unless On reject is continue.",
+        "fields": {
+          "title": {
+            "label": "Title",
+            "description": "What is being approved, shown to the approver."
+          },
+          "details": {
+            "label": "Details",
+            "description": "Extra context for the approver."
+          }
+        }
+      }
+    }
+  },
+  "audio": {
+    "label": "Audio",
+    "actions": {
+      "load": {
+        "label": "Load Audio",
+        "description": "Load audio from a path or URL.",
+        "fields": {
+          "input": {
+            "label": "Input",
+            "description": "File path or URL of the audio to load."
+          }
+        }
+      },
+      "export": {
+        "label": "Export Audio",
+        "description": "Write audio to a file.",
+        "fields": {
+          "audio": {
+            "label": "Audio",
+            "description": "The audio object to export."
+          },
+          "output": {
+            "label": "Output",
+            "description": "Destination file path (e.g. /output/final.mp3)."
+          }
+        }
+      },
+      "convertFormat": {
+        "label": "Convert Format",
+        "description": "Transcode audio to a different format.",
+        "fields": {
+          "audio": {
+            "label": "Audio",
+            "description": "The audio object to transcode."
+          },
+          "format": {
+            "label": "Format",
+            "description": "Target output format."
+          }
+        }
+      },
+      "compress": {
+        "label": "Compress",
+        "description": "Reduce size by targeting a bitrate.",
+        "fields": {
+          "audio": {
+            "label": "Audio",
+            "description": "The audio object to compress."
+          },
+          "bitrate": {
+            "label": "Bitrate",
+            "description": "Target bitrate (e.g. 64k, 128k, 320k)."
+          }
+        }
+      },
+      "trim": {
+        "label": "Trim",
+        "description": "Cut a segment from the audio.",
+        "fields": {
+          "audio": {
+            "label": "Audio",
+            "description": "The audio object to trim."
+          },
+          "start": {
+            "label": "Start",
+            "description": "Start timestamp of the segment (HH:MM:SS or HH:MM:SS.ms)."
+          },
+          "duration": {
+            "label": "Duration",
+            "description": "Length of the segment to keep (HH:MM:SS or HH:MM:SS.ms)."
+          }
+        }
+      },
+      "concatenate": {
+        "label": "Concatenate",
+        "description": "Append multiple sources to an audio base.",
+        "fields": {
+          "audio": {
+            "label": "Audio",
+            "description": "The base audio object to append onto."
+          },
+          "inputs": {
+            "label": "Inputs",
+            "description": "List of file paths to append in order."
+          }
+        }
+      },
+      "changeVolume": {
+        "label": "Change Volume",
+        "description": "Scale the audio volume.",
+        "fields": {
+          "audio": {
+            "label": "Audio",
+            "description": "The audio object to adjust."
+          },
+          "volume": {
+            "label": "Volume",
+            "description": "Volume multiplier (e.g. 0.5 = half, 2.0 = double)."
+          }
+        }
+      },
+      "fadeIn": {
+        "label": "Fade In",
+        "description": "Apply a fade-in effect.",
+        "fields": {
+          "audio": {
+            "label": "Audio",
+            "description": "The audio object to apply the fade to."
+          },
+          "duration": {
+            "label": "Duration",
+            "description": "Length of the fade in seconds."
+          },
+          "start": {
+            "label": "Start",
+            "description": "Timestamp (seconds) where the fade begins. Defaults to 0."
+          }
+        }
+      },
+      "fadeOut": {
+        "label": "Fade Out",
+        "description": "Apply a fade-out effect.",
+        "fields": {
+          "audio": {
+            "label": "Audio",
+            "description": "The audio object to apply the fade to."
+          },
+          "duration": {
+            "label": "Duration",
+            "description": "Length of the fade in seconds."
+          },
+          "start": {
+            "label": "Start",
+            "description": "Timestamp (seconds) in the audio where the fade begins."
+          }
+        }
+      },
+      "changeSpeed": {
+        "label": "Change Speed",
+        "description": "Adjust playback speed without changing pitch.",
+        "fields": {
+          "audio": {
+            "label": "Audio",
+            "description": "The audio object to speed up or slow down."
+          },
+          "speed": {
+            "label": "Speed",
+            "description": "Speed multiplier between 0.25 and 4.0 (1.0 = original speed)."
+          }
+        }
+      },
+      "addSilence": {
+        "label": "Add Silence",
+        "description": "Pad the audio with silence at the start or end.",
+        "fields": {
+          "audio": {
+            "label": "Audio",
+            "description": "The audio object to pad."
+          },
+          "duration": {
+            "label": "Duration",
+            "description": "Duration of silence to add in seconds."
+          },
+          "position": {
+            "label": "Position",
+            "description": "Where to insert the silence: at the start or end."
+          }
+        }
+      },
+      "mixAudio": {
+        "label": "Mix Audio",
+        "description": "Overlay a second audio track onto the main audio.",
+        "fields": {
+          "audio": {
+            "label": "Audio",
+            "description": "The base audio object to mix onto."
+          },
+          "input": {
+            "label": "Input",
+            "description": "File path of the audio track to overlay."
+          },
+          "volume": {
+            "label": "Volume",
+            "description": "Volume of the overlaid track (default 1.0). The base track is always at full volume."
+          }
+        }
+      },
+      "getInfo": {
+        "label": "Get Info",
+        "description": "Probe metadata and stream details.",
+        "fields": {
+          "audio": {
+            "label": "Audio",
+            "description": "The audio object to probe."
+          }
+        }
+      },
+      "normalize": {
+        "label": "Normalize",
+        "description": "Normalize loudness/peaks.",
+        "fields": {
+          "audio": {
+            "label": "Audio",
+            "description": "The audio object to normalize."
+          }
+        }
+      }
+    }
+  },
+  "browser": {
+    "label": "Browser",
+    "actions": {
+      "launch": {
+        "label": "Launch",
+        "description": "Start a browser instance.",
+        "fields": {
+          "chromePath": {
+            "label": "Chrome Path",
+            "description": "Optional path to a custom Chromium/Chrome executable."
+          },
+          "headless": {
+            "label": "Headless",
+            "description": "Run in headless mode: true, false, or \"shell\"."
+          },
+          "timeout": {
+            "label": "Timeout",
+            "description": "Launch timeout in milliseconds."
+          },
+          "viewport": {
+            "label": "Viewport",
+            "description": "Initial viewport size and mobile/landscape settings."
+          }
+        }
+      },
+      "close": {
+        "label": "Close",
+        "description": "Close the browser.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance to close."
+          }
+        }
+      },
+      "emulateDevice": {
+        "label": "Emulate Device",
+        "description": "Emulate a predefined device profile.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance to configure."
+          },
+          "device": {
+            "label": "Device",
+            "description": "Device name to emulate (e.g. \"iPhone 12\", \"iPad Pro\")."
+          }
+        }
+      },
+      "setCacheEnabled": {
+        "label": "Set Cache Enabled",
+        "description": "Enable or disable the browser's own HTTP cache for the current page.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance to configure."
+          },
+          "enabled": {
+            "label": "Enabled",
+            "description": "true to use the browser cache normally, false to force every request to hit the network."
+          }
+        }
+      },
+      "setGeolocation": {
+        "label": "Set Geolocation",
+        "description": "Set geolocation coordinates.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance to configure."
+          },
+          "coordinates": {
+            "label": "Coordinates",
+            "description": "Geolocation object with latitude, longitude, and optional accuracy."
+          }
+        }
+      },
+      "emulateTimezone": {
+        "label": "Emulate Timezone",
+        "description": "Override timezone.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance to configure."
+          },
+          "timezoneId": {
+            "label": "Timezone ID",
+            "description": "IANA timezone identifier (e.g. \"America/New_York\", \"Europe/London\")."
+          }
+        }
+      },
+      "isJavaScriptEnabled": {
+        "label": "Is JS Enabled",
+        "description": "Check if JavaScript is enabled.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance to check."
+          }
+        }
+      },
+      "setUserAgent": {
+        "label": "Set User Agent",
+        "description": "Set custom user agent.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance to configure."
+          },
+          "userAgent": {
+            "label": "User Agent",
+            "description": "Custom user agent string to set."
+          }
+        }
+      },
+      "getUserAgent": {
+        "label": "Get User Agent",
+        "description": "Get current user agent.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance to read the user agent from."
+          }
+        }
+      },
+      "goTo": {
+        "label": "Go To",
+        "description": "Navigate to a URL.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance to navigate."
+          },
+          "url": {
+            "label": "URL",
+            "description": "URL to navigate to."
+          },
+          "waitUntil": {
+            "label": "Wait Until",
+            "description": "Navigation wait condition: load, domcontentloaded, networkidle0, or networkidle2."
+          },
+          "timeout": {
+            "label": "Timeout",
+            "description": "Navigation timeout in milliseconds."
+          }
+        }
+      },
+      "reload": {
+        "label": "Reload",
+        "description": "Reload the current page.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance to reload."
+          }
+        }
+      },
+      "goBackPage": {
+        "label": "Back",
+        "description": "Go back in history.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance to navigate back."
+          }
+        }
+      },
+      "goForwardPage": {
+        "label": "Forward",
+        "description": "Go forward in history.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance to navigate forward."
+          }
+        }
+      },
+      "getUrl": {
+        "label": "Get URL",
+        "description": "Return the current URL.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance to get the URL from."
+          }
+        }
+      },
+      "getPageTitle": {
+        "label": "Get Title",
+        "description": "Return the page title.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance to get the title from."
+          }
+        }
+      },
+      "setContent": {
+        "label": "Set Content",
+        "description": "Set the page HTML content.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance to set content on."
+          },
+          "content": {
+            "label": "Content",
+            "description": "HTML string to set as the page content."
+          }
+        }
+      },
+      "source": {
+        "label": "Get Source",
+        "description": "Get the page source.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance to get the source from."
+          }
+        }
+      },
+      "hoverElement": {
+        "label": "Hover",
+        "description": "Hover over an element.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "CSS/XPath selector for the element to hover over."
+          },
+          "selectorType": {
+            "label": "Selector Type",
+            "description": "Selector strategy: css, xpath, text, or aria."
+          }
+        }
+      },
+      "clickElement": {
+        "label": "Click",
+        "description": "Click an element; optionally wait.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "Selector for the element to click."
+          },
+          "selectorType": {
+            "label": "Selector Type",
+            "description": "Selector strategy: css, xpath, text, or aria."
+          },
+          "waitFor": {
+            "label": "Wait For",
+            "description": "Optional wait condition after clicking (timeout, selector, navigation, or networkidle)."
+          }
+        }
+      },
+      "focusElement": {
+        "label": "Focus",
+        "description": "Focus an element.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "Selector for the element to focus."
+          },
+          "selectorType": {
+            "label": "Selector Type",
+            "description": "Selector strategy: css, xpath, text, or aria."
+          }
+        }
+      },
+      "typeInElement": {
+        "label": "Type",
+        "description": "Type text into an element.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "Selector for the input element to type into."
+          },
+          "selectorType": {
+            "label": "Selector Type",
+            "description": "Selector strategy: css, xpath, text, or aria."
+          },
+          "text": {
+            "label": "Text",
+            "description": "Text to type into the element."
+          }
+        }
+      },
+      "getElement": {
+        "label": "Get Element",
+        "description": "Read an attribute/text from an element.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "Selector for the element to read."
+          },
+          "selectorType": {
+            "label": "Selector Type",
+            "description": "Selector strategy: css, xpath, text, or aria."
+          },
+          "attribute": {
+            "label": "Attribute",
+            "description": "Attribute or property to read (e.g. text, href, src, id, class)."
+          },
+          "waitFor": {
+            "label": "Wait For",
+            "description": "Optional wait condition before reading (timeout, selector, navigation, or networkidle)."
+          }
+        }
+      },
+      "getElements": {
+        "label": "Get Elements",
+        "description": "Read an attribute/text from multiple matching elements.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "Selector to match multiple elements."
+          },
+          "selectorType": {
+            "label": "Selector Type",
+            "description": "Selector strategy: css, xpath, text, or aria."
+          },
+          "attribute": {
+            "label": "Attribute",
+            "description": "Attribute or property to read from each element."
+          }
+        }
+      },
+      "extractStructuredData": {
+        "label": "Extract Structured Data",
+        "description": "Scrape lists/cards into structured records.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "itemSelector": {
+            "label": "Item Selector",
+            "description": "Selector for each repeating item (e.g. a card or list row)."
+          },
+          "selectorType": {
+            "label": "Selector Type",
+            "description": "Selector strategy for itemSelector."
+          },
+          "fieldSelectors": {
+            "label": "Field Selectors",
+            "description": "Array of field definitions, each with a selector and attribute to extract."
+          }
+        }
+      },
+      "setCheckState": {
+        "label": "Set Check State",
+        "description": "Set a checkbox to checked/unchecked.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "Selector for the checkbox element."
+          },
+          "selectorType": {
+            "label": "Selector Type",
+            "description": "Selector strategy: css, xpath, text, or aria."
+          },
+          "checked": {
+            "label": "Checked",
+            "description": "Whether to check (true) or uncheck (false) the checkbox."
+          }
+        }
+      },
+      "getCheckState": {
+        "label": "Get Check State",
+        "description": "Read a checkbox state.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "Selector for the checkbox element."
+          },
+          "selectorType": {
+            "label": "Selector Type",
+            "description": "Selector strategy: css, xpath, text, or aria."
+          }
+        }
+      },
+      "setSelectState": {
+        "label": "Set Select",
+        "description": "Choose option(s) in a dropdown (select) field.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "Selector for the dropdown (select) element."
+          },
+          "selectorType": {
+            "label": "Selector Type",
+            "description": "Selector strategy: css, xpath, text, or aria."
+          },
+          "value": {
+            "label": "Value",
+            "description": "Value(s) to select — a single string or array for multi-select."
+          }
+        }
+      },
+      "getSelectState": {
+        "label": "Get Select",
+        "description": "Read selected option(s).",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "Selector for the dropdown (select) element."
+          },
+          "selectorType": {
+            "label": "Selector Type",
+            "description": "Selector strategy: css, xpath, text, or aria."
+          }
+        }
+      },
+      "contains": {
+        "label": "Contains",
+        "description": "Assertions for element/text presence.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "selectorType": {
+            "label": "Selector Type",
+            "description": "Selector strategy used for the assertion."
+          },
+          "mode": {
+            "label": "Mode",
+            "description": "Assertion mode: contain-element, not-contain-element, contain-text, or not-contain-text."
+          },
+          "value": {
+            "label": "Value",
+            "description": "Selector or text to assert the presence or absence of."
+          }
+        }
+      },
+      "runJavaScript": {
+        "label": "Run JavaScript",
+        "description": "Execute JS in the page context.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "script": {
+            "label": "Script",
+            "description": "JavaScript code to execute in the page context."
+          },
+          "context": {
+            "label": "Context",
+            "description": "Optional variables to expose to the script."
+          }
+        }
+      },
+      "takeScreenshot": {
+        "label": "Screenshot",
+        "description": "Capture a screenshot.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "options": {
+            "label": "Options",
+            "description": "Screenshot options: path, fullPage, quality, and type (jpeg/png/webp)."
+          }
+        }
+      },
+      "takeScreenshotElement": {
+        "label": "Screenshot Element",
+        "description": "Capture an element screenshot.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "Selector for the element to screenshot."
+          },
+          "selectorType": {
+            "label": "Selector Type",
+            "description": "Selector strategy (default css)."
+          },
+          "options": {
+            "label": "Options",
+            "description": "Screenshot options: path, quality, and type (jpeg/png/webp)."
+          }
+        }
+      },
+      "startScreencast": {
+        "label": "Start Screencast",
+        "description": "Begin recording a screencast.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "options": {
+            "label": "Options",
+            "description": "Screencast options: path, quality (0–63), and format (gif/webm/mp4)."
+          }
+        }
+      },
+      "stopScreencast": {
+        "label": "Stop Screencast",
+        "description": "Stop recording a screencast.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "recorder": {
+            "label": "Recorder",
+            "description": "The recorder object returned by Start Screencast."
+          }
+        }
+      },
+      "generatePDF": {
+        "label": "Generate PDF",
+        "description": "Generate a PDF of the page.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "options": {
+            "label": "Options",
+            "description": "PDF options: path, format (e.g. A4), landscape, printBackground, margins, headers/footers."
+          }
+        }
+      },
+      "runLighthouseAudit": {
+        "label": "Run Lighthouse Audit",
+        "description": "Run a Lighthouse audit against a URL and return category scores and audit results.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance to audit against (its debugging port is reused)."
+          },
+          "url": {
+            "label": "URL",
+            "description": "URL to audit."
+          },
+          "categories": {
+            "label": "Categories",
+            "description": "Which Lighthouse categories to run: performance, accessibility, best-practices, seo. Defaults to all. Each category bundles many individual audits (e.g. performance includes uses-long-cache-ttl, server-response-time) — you cannot select a single audit directly, only the category it belongs to."
+          }
+        }
+      },
+      "startHarCapture": {
+        "label": "Start HAR Capture",
+        "description": "Begin recording a HAR (HTTP Archive) capture of every request/response on the page — headers, timing, cache status, and cookies. Does not capture response bodies.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          }
+        }
+      },
+      "stopHarCapture": {
+        "label": "Stop HAR Capture",
+        "description": "Stop a HAR capture and return the HAR object (log.entries[] holds one item per request/response). Optionally also writes it to a .har file.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "capture": {
+            "label": "Capture",
+            "description": "The capture id returned by Start HAR Capture."
+          },
+          "path": {
+            "label": "Path",
+            "description": "Optional local file path to also write the HAR JSON to."
+          }
+        }
+      },
+      "wait": {
+        "label": "Wait",
+        "description": "Wait for timeout, selector, or events.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "type": {
+            "label": "Type",
+            "description": "What to wait for: timeout, selector, navigation, or networkidle."
+          },
+          "timeout": {
+            "label": "Timeout",
+            "description": "Maximum time to wait in milliseconds."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "CSS/XPath selector to wait for (when type is selector)."
+          },
+          "selectorType": {
+            "label": "Selector Type",
+            "description": "Selector strategy for the selector."
+          }
+        }
+      },
+      "metadata": {
+        "label": "Metadata",
+        "description": "Get named metadata (e.g., description).",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "name": {
+            "label": "Name",
+            "description": "Name of the metadata attribute to retrieve (e.g. \"description\", \"keywords\")."
+          }
+        }
+      },
+      "addStyleTag": {
+        "label": "Add Style Tag",
+        "description": "Inject CSS into the page.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "css": {
+            "label": "CSS",
+            "description": "CSS string or style object to inject into the page."
+          }
+        }
+      },
+      "getCookies": {
+        "label": "Get Cookies",
+        "description": "Read browser cookies.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance to read cookies from."
+          }
+        }
+      },
+      "setCookies": {
+        "label": "Set Cookies",
+        "description": "Set cookies on the page.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "cookies": {
+            "label": "Cookies",
+            "description": "Array of cookie objects with name, value, and domain."
+          }
+        }
+      },
+      "deleteCookies": {
+        "label": "Delete Cookies",
+        "description": "Delete cookies from the page.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "cookies": {
+            "label": "Cookies",
+            "description": "Array of cookie objects to delete."
+          }
+        }
+      },
+      "getViewport": {
+        "label": "Get Viewport",
+        "description": "Get current viewport.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance to get the viewport from."
+          }
+        }
+      },
+      "setViewport": {
+        "label": "Set Viewport",
+        "description": "Resize the viewport.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "width": {
+            "label": "Width",
+            "description": "Viewport width in pixels."
+          },
+          "height": {
+            "label": "Height",
+            "description": "Viewport height in pixels."
+          }
+        }
+      },
+      "keyboardType": {
+        "label": "Keyboard Type",
+        "description": "Type keystrokes with optional delay.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "text": {
+            "label": "Text",
+            "description": "Text to type."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "Optional selector to focus before typing."
+          },
+          "selectorType": {
+            "label": "Selector Type",
+            "description": "Selector strategy for the optional selector."
+          },
+          "options": {
+            "label": "Options",
+            "description": "Optional typing options (delay in ms between keystrokes)."
+          }
+        }
+      },
+      "keyboardDown": {
+        "label": "Key Down",
+        "description": "Press and hold a key.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "key": {
+            "label": "Key",
+            "description": "Key name to press (e.g. \"Enter\", \"ArrowLeft\", \"Shift\")."
+          }
+        }
+      },
+      "keyboardUp": {
+        "label": "Key Up",
+        "description": "Release a key.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "key": {
+            "label": "Key",
+            "description": "Key name to release."
+          }
+        }
+      },
+      "keyboardPress": {
+        "label": "Key Press",
+        "description": "Press a key.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "key": {
+            "label": "Key",
+            "description": "Key name to press (press and release)."
+          }
+        }
+      },
+      "keyboardSendCharacter": {
+        "label": "Send Character",
+        "description": "Send a raw character.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "char": {
+            "label": "Char",
+            "description": "A single character to dispatch as a keyboard event."
+          }
+        }
+      },
+      "mouseClick": {
+        "label": "Mouse Click",
+        "description": "Click at page coordinates.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "x": {
+            "label": "X",
+            "description": "Horizontal page coordinate to click."
+          },
+          "y": {
+            "label": "Y",
+            "description": "Vertical page coordinate to click."
+          },
+          "options": {
+            "label": "Options",
+            "description": "Click options: button (left/right/middle), count, and delay."
+          }
+        }
+      },
+      "mouseDown": {
+        "label": "Mouse Down",
+        "description": "Mouse button down.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "options": {
+            "label": "Options",
+            "description": "Optional button to press down: left, right, or middle."
+          }
+        }
+      },
+      "mouseUp": {
+        "label": "Mouse Up",
+        "description": "Mouse button up.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "options": {
+            "label": "Options",
+            "description": "Optional button to release: left, right, or middle."
+          }
+        }
+      },
+      "mouseMove": {
+        "label": "Mouse Move",
+        "description": "Move mouse to coordinates.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "x": {
+            "label": "X",
+            "description": "Target horizontal page coordinate."
+          },
+          "y": {
+            "label": "Y",
+            "description": "Target vertical page coordinate."
+          },
+          "options": {
+            "label": "Options",
+            "description": "Optional steps for smooth movement."
+          }
+        }
+      },
+      "mouseWheel": {
+        "label": "Mouse Wheel",
+        "description": "Scroll the page.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "options": {
+            "label": "Options",
+            "description": "Scroll deltas: deltaX (horizontal) and deltaY (vertical) in pixels."
+          }
+        }
+      },
+      "dragAndDropByCoordinates": {
+        "label": "Drag & Drop (XY)",
+        "description": "Drag from XY to XY.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "start": {
+            "label": "Start",
+            "description": "Starting coordinates {x, y} for the drag."
+          },
+          "target": {
+            "label": "Target",
+            "description": "Target coordinates {x, y} to drop at."
+          },
+          "steps": {
+            "label": "Steps",
+            "description": "Number of intermediate steps for smooth dragging."
+          }
+        }
+      },
+      "dragAndDropByElements": {
+        "label": "Drag & Drop (Elements)",
+        "description": "Drag one element to another.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "sourceSelector": {
+            "label": "Source Selector",
+            "description": "Selector for the element to drag."
+          },
+          "targetSelector": {
+            "label": "Target Selector",
+            "description": "Selector for the element to drop onto."
+          },
+          "selectorType": {
+            "label": "Selector Type",
+            "description": "Selector strategy: css, xpath, text, or aria."
+          },
+          "steps": {
+            "label": "Steps",
+            "description": "Number of intermediate steps for smooth dragging."
+          }
+        }
+      },
+      "uploadFile": {
+        "label": "Upload File",
+        "description": "Upload files via a file input field.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "Selector for the file input element."
+          },
+          "selectorType": {
+            "label": "Selector Type",
+            "description": "Selector strategy: css, xpath, text, or aria."
+          },
+          "filePaths": {
+            "label": "File Paths",
+            "description": "Array of local file paths to upload."
+          }
+        }
+      },
+      "downloadFile": {
+        "label": "Download File",
+        "description": "Trigger a download to a path.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "The browser instance."
+          },
+          "path": {
+            "label": "Path",
+            "description": "Local directory path to save the downloaded file."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "Selector for the element that triggers the download."
+          },
+          "selectorType": {
+            "label": "Selector Type",
+            "description": "Selector strategy: css, xpath, text, or aria."
+          }
+        }
+      }
+    }
+  },
+  "compression": {
+    "label": "Compression",
+    "actions": {
+      "archive": {
+        "label": "Archive",
+        "description": "Create an archive from sources.",
+        "fields": {
+          "path": {
+            "label": "Path",
+            "description": "Destination path for the output archive file."
+          },
+          "sources": {
+            "label": "Sources",
+            "description": "List of file paths, directories, or globs to include in the archive."
+          },
+          "level": {
+            "label": "Level",
+            "description": "Compression level (0 = no compression, 9 = maximum)."
+          },
+          "format": {
+            "label": "Format",
+            "description": "Archive format: zip, tar, or tar.gz."
+          },
+          "password": {
+            "label": "Password",
+            "description": "Optional password to protect the archive (not yet implemented)."
+          }
+        }
+      },
+      "unarchive": {
+        "label": "Unarchive",
+        "description": "Extract an archive to a folder.",
+        "fields": {
+          "path": {
+            "label": "Path",
+            "description": "Path to the archive file to extract."
+          },
+          "destination": {
+            "label": "Destination",
+            "description": "Directory where extracted files will be placed."
+          },
+          "password": {
+            "label": "Password",
+            "description": "Optional password to decrypt the archive (not yet implemented)."
+          }
+        }
+      }
+    }
+  },
+  "cryptography": {
+    "label": "Cryptography",
+    "actions": {
+      "base64EncodeText": {
+        "label": "Base64 Encode (Text)",
+        "description": "Encode text to Base64.",
+        "fields": {
+          "text": {
+            "label": "Text",
+            "description": "The text string to encode as Base64."
+          }
+        }
+      },
+      "base64EncodeFile": {
+        "label": "Base64 Encode (File)",
+        "description": "Encode file contents to Base64.",
+        "fields": {
+          "filePath": {
+            "label": "File Path",
+            "description": "Path to the file whose contents will be Base64-encoded."
+          }
+        }
+      },
+      "base64DecodeText": {
+        "label": "Base64 Decode (Text)",
+        "description": "Decode Base64 string to text.",
+        "fields": {
+          "base64String": {
+            "label": "Base64 String",
+            "description": "The Base64-encoded string to decode."
+          }
+        }
+      },
+      "base64DecodeToFile": {
+        "label": "Base64 Decode (File)",
+        "description": "Decode Base64 string into a file.",
+        "fields": {
+          "base64String": {
+            "label": "Base64 String",
+            "description": "The Base64-encoded string to decode."
+          },
+          "outputFilePath": {
+            "label": "Output File Path",
+            "description": "Path to write the decoded binary content to."
+          }
+        }
+      },
+      "hashText": {
+        "label": "Hash Text",
+        "description": "Hash text with SHA-2 algorithms.",
+        "fields": {
+          "text": {
+            "label": "Text",
+            "description": "The text to hash."
+          },
+          "algorithm": {
+            "label": "Algorithm",
+            "description": "Hashing algorithm to use: sha256, sha384, or sha512."
+          },
+          "encoding": {
+            "label": "Encoding",
+            "description": "Output encoding: base64, hex, or binary."
+          }
+        }
+      },
+      "hashFile": {
+        "label": "Hash File",
+        "description": "Hash a file with SHA-2 algorithms.",
+        "fields": {
+          "filePath": {
+            "label": "File Path",
+            "description": "Path to the file to hash."
+          },
+          "algorithm": {
+            "label": "Algorithm",
+            "description": "Hashing algorithm to use: sha256, sha384, or sha512."
+          },
+          "encoding": {
+            "label": "Encoding",
+            "description": "Output encoding: base64, hex, or binary."
+          }
+        }
+      },
+      "hmacText": {
+        "label": "HMAC Text",
+        "description": "Compute HMAC for text.",
+        "fields": {
+          "text": {
+            "label": "Text",
+            "description": "The text to compute HMAC for."
+          },
+          "algorithm": {
+            "label": "Algorithm",
+            "description": "HMAC algorithm to use: sha256, sha384, or sha512."
+          },
+          "encoding": {
+            "label": "Encoding",
+            "description": "Output encoding: base64, hex, or binary."
+          },
+          "key": {
+            "label": "Key",
+            "description": "Secret key for HMAC computation."
+          }
+        }
+      },
+      "hmacFile": {
+        "label": "HMAC File",
+        "description": "Compute HMAC for a file.",
+        "fields": {
+          "filePath": {
+            "label": "File Path",
+            "description": "Path to the file to compute HMAC for."
+          },
+          "algorithm": {
+            "label": "Algorithm",
+            "description": "HMAC algorithm to use: sha256, sha384, or sha512."
+          },
+          "encoding": {
+            "label": "Encoding",
+            "description": "Output encoding: base64, hex, or binary."
+          },
+          "key": {
+            "label": "Key",
+            "description": "Secret key for HMAC computation."
+          }
+        }
+      },
+      "encryptText": {
+        "label": "Encrypt Text",
+        "description": "AES-CBC encrypt a string.",
+        "fields": {
+          "message": {
+            "label": "Message",
+            "description": "The plaintext string to encrypt."
+          },
+          "algorithm": {
+            "label": "Algorithm",
+            "description": "AES cipher algorithm (aes-128-cbc, aes-192-cbc, aes-256-cbc)."
+          },
+          "encoding": {
+            "label": "Encoding",
+            "description": "Output encoding for the ciphertext: base64 or hex."
+          },
+          "iv": {
+            "label": "IV",
+            "description": "Initialization vector — must be exactly 16 bytes."
+          },
+          "key": {
+            "label": "Key",
+            "description": "Encryption key — length must match the chosen algorithm."
+          }
+        }
+      },
+      "decryptText": {
+        "label": "Decrypt Text",
+        "description": "AES-CBC decrypt a string.",
+        "fields": {
+          "encryptedMessage": {
+            "label": "Encrypted Message",
+            "description": "The ciphertext string to decrypt."
+          },
+          "algorithm": {
+            "label": "Algorithm",
+            "description": "AES cipher algorithm (aes-128-cbc, aes-192-cbc, aes-256-cbc)."
+          },
+          "encoding": {
+            "label": "Encoding",
+            "description": "Encoding of the ciphertext input: base64 or hex."
+          },
+          "iv": {
+            "label": "IV",
+            "description": "Initialization vector — must be exactly 16 bytes."
+          },
+          "key": {
+            "label": "Key",
+            "description": "Decryption key — length must match the chosen algorithm."
+          }
+        }
+      },
+      "encryptToFile": {
+        "label": "Encrypt to File",
+        "description": "Encrypt a file and write output.",
+        "fields": {
+          "algorithm": {
+            "label": "Algorithm",
+            "description": "AES cipher algorithm (aes-128-cbc, aes-192-cbc, aes-256-cbc)."
+          },
+          "encoding": {
+            "label": "Encoding",
+            "description": "Output encoding for the encrypted file: base64 or hex."
+          },
+          "iv": {
+            "label": "IV",
+            "description": "Initialization vector (non-empty string)."
+          },
+          "key": {
+            "label": "Key",
+            "description": "Encryption key — length must match the chosen algorithm."
+          },
+          "inputPath": {
+            "label": "Input Path",
+            "description": "Path to the source file to encrypt."
+          },
+          "outputPath": {
+            "label": "Output Path",
+            "description": "Path where the encrypted output file will be written."
+          }
+        }
+      },
+      "decryptToFile": {
+        "label": "Decrypt to File",
+        "description": "Decrypt a file and write output.",
+        "fields": {
+          "algorithm": {
+            "label": "Algorithm",
+            "description": "AES cipher algorithm (aes-128-cbc, aes-192-cbc, aes-256-cbc)."
+          },
+          "encoding": {
+            "label": "Encoding",
+            "description": "Encoding of the encrypted input file: base64 or hex."
+          },
+          "iv": {
+            "label": "IV",
+            "description": "Initialization vector (non-empty string)."
+          },
+          "key": {
+            "label": "Key",
+            "description": "Decryption key — length must match the chosen algorithm."
+          },
+          "inputPath": {
+            "label": "Input Path",
+            "description": "Path to the encrypted source file."
+          },
+          "outputPath": {
+            "label": "Output Path",
+            "description": "Path where the decrypted output file will be written."
+          }
+        }
+      }
+    }
+  },
+  "database": {
+    "label": "Database",
+    "actions": {
+      "connect": {
+        "label": "Connect",
+        "description": "Open a database connection.",
+        "fields": {
+          "configuration": {
+            "label": "Configuration",
+            "description": "Database configuration object or reference string (host, port, credentials, database name, etc.)."
+          }
+        }
+      },
+      "query": {
+        "label": "Query",
+        "description": "Run a SQL statement.",
+        "fields": {
+          "connection": {
+            "label": "Connection",
+            "description": "The active database connection object."
+          },
+          "sql": {
+            "label": "SQL",
+            "description": "SQL statement to execute (SELECT, INSERT, UPDATE, DELETE, etc.)."
+          }
+        }
+      },
+      "close": {
+        "label": "Close",
+        "description": "Close a database connection.",
+        "fields": {
+          "connection": {
+            "label": "Connection",
+            "description": "The active database connection to close."
+          }
+        }
+      }
+    }
+  },
+  "datetime": {
+    "label": "Datetime",
+    "actions": {
+      "getCurrentDateTime": {
+        "label": "Current DateTime",
+        "description": "Return the current local date & time."
+      },
+      "nowISO": {
+        "label": "Now ISO (UTC)",
+        "description": "Return the current UTC date & time in ISO format"
+      },
+      "toTimestamp": {
+        "label": "To Timestamp",
+        "description": "Convert a date/time string to a Unix timestamp in milliseconds.",
+        "fields": {
+          "dateTime": {
+            "label": "Date Time",
+            "description": "Date/time string to convert (e.g. \"2024-01-15T10:30:00\")."
+          }
+        }
+      },
+      "fromTimestamp": {
+        "label": "From Timestamp",
+        "description": "Convert a Unix timestamp (ms) to a Date object.",
+        "fields": {
+          "timestamp": {
+            "label": "Timestamp",
+            "description": "Unix timestamp in milliseconds to convert to a Date."
+          }
+        }
+      },
+      "format": {
+        "label": "Format",
+        "description": "Format a date/time using a pattern.",
+        "fields": {
+          "dateTime": {
+            "label": "Date Time",
+            "description": "The date/time value to format."
+          },
+          "format": {
+            "label": "Format",
+            "description": "Format pattern string (e.g. \"yyyy-MM-dd\", \"dd/MM/yyyy HH:mm:ss\"). Full token list: https://date-fns.org/docs/format"
+          }
+        }
+      },
+      "parseDate": {
+        "label": "Parse Date",
+        "description": "Parse a date string using a format.",
+        "fields": {
+          "dateString": {
+            "label": "Date String",
+            "description": "The date string to parse."
+          },
+          "format": {
+            "label": "Format",
+            "description": "Format pattern that describes the input string (e.g. \"dd/MM/yyyy\"). Full token list: https://date-fns.org/docs/format"
+          }
+        }
+      },
+      "add": {
+        "label": "Add Duration",
+        "description": "Add a duration to a date/time.",
+        "fields": {
+          "dateTime": {
+            "label": "Date Time",
+            "description": "The base date/time to add to."
+          },
+          "duration": {
+            "label": "Duration",
+            "description": "Duration object with time unit keys and numeric values (e.g. { days: 1, hours: 2 })."
+          }
+        }
+      },
+      "subtract": {
+        "label": "Subtract Duration",
+        "description": "Subtract a duration from a date/time.",
+        "fields": {
+          "dateTime": {
+            "label": "Date Time",
+            "description": "The base date/time to subtract from."
+          },
+          "duration": {
+            "label": "Duration",
+            "description": "Duration object with time unit keys and numeric values (e.g. { days: 1, hours: 2 })."
+          }
+        }
+      },
+      "startOf": {
+        "label": "Start Of",
+        "description": "Return the start of a day, week, month, or year for a given date.",
+        "fields": {
+          "dateTime": {
+            "label": "Date Time",
+            "description": "The reference date/time."
+          },
+          "unit": {
+            "label": "Unit",
+            "description": "Boundary unit: day, week, month, or year."
+          }
+        }
+      },
+      "endOf": {
+        "label": "End Of",
+        "description": "Return the end of a day, week, month, or year for a given date.",
+        "fields": {
+          "dateTime": {
+            "label": "Date Time",
+            "description": "The reference date/time."
+          },
+          "unit": {
+            "label": "Unit",
+            "description": "Boundary unit: day, week, month, or year."
+          }
+        }
+      },
+      "difference": {
+        "label": "Difference",
+        "description": "Compute the difference between two date/times in a unit.",
+        "fields": {
+          "date1": {
+            "label": "Date1",
+            "description": "The first (earlier) date/time."
+          },
+          "date2": {
+            "label": "Date2",
+            "description": "The second (later) date/time."
+          },
+          "unit": {
+            "label": "Unit",
+            "description": "Unit for the result: milliseconds, seconds, minutes, hours, or days."
+          }
+        }
+      },
+      "isAfter": {
+        "label": "Is After",
+        "description": "Check if a date/time is after another.",
+        "fields": {
+          "dateTime": {
+            "label": "Date Time",
+            "description": "The date/time to test."
+          },
+          "dateTimeToCompare": {
+            "label": "Date Time To Compare",
+            "description": "The date/time to compare against."
+          }
+        }
+      },
+      "isBefore": {
+        "label": "Is Before",
+        "description": "Check if a date/time is before another.",
+        "fields": {
+          "dateTime": {
+            "label": "Date Time",
+            "description": "The date/time to test."
+          },
+          "dateTimeToCompare": {
+            "label": "Date Time To Compare",
+            "description": "The date/time to compare against."
+          }
+        }
+      },
+      "isEqual": {
+        "label": "Is Equal",
+        "description": "Check if two date/times are equal.",
+        "fields": {
+          "dateTime": {
+            "label": "Date Time",
+            "description": "The first date/time."
+          },
+          "dateTimeToCompare": {
+            "label": "Date Time To Compare",
+            "description": "The date/time to compare for equality."
+          }
+        }
+      },
+      "isValid": {
+        "label": "Is Valid",
+        "description": "Check if a date/time string represents a valid date.",
+        "fields": {
+          "dateTime": {
+            "label": "Date Time",
+            "description": "The date/time string to validate."
+          }
+        }
+      }
+    }
+  },
+  "email": {
+    "label": "Email",
+    "actions": {
+      "send": {
+        "label": "Send Email",
+        "description": "Send an email via SMTP.",
+        "fields": {
+          "host": {
+            "label": "Host",
+            "description": "SMTP server hostname or IP address."
+          },
+          "port": {
+            "label": "Port",
+            "description": "SMTP server port (e.g. 465, 587)."
+          },
+          "secure": {
+            "label": "Secure",
+            "description": "Use TLS for the connection. True for port 465, false for STARTTLS."
+          },
+          "user": {
+            "label": "User",
+            "description": "SMTP authentication username."
+          },
+          "pass": {
+            "label": "Pass",
+            "description": "SMTP authentication password."
+          },
+          "from": {
+            "label": "From",
+            "description": "Sender email address."
+          },
+          "to": {
+            "label": "To",
+            "description": "Recipient email address or list of addresses."
+          },
+          "cc": {
+            "label": "CC",
+            "description": "Carbon copy recipient email address or list."
+          },
+          "bcc": {
+            "label": "BCC",
+            "description": "Blind carbon copy recipient email address or list."
+          },
+          "subject": {
+            "label": "Subject",
+            "description": "Email subject line."
+          },
+          "text": {
+            "label": "Text",
+            "description": "Plain-text body of the email."
+          },
+          "html": {
+            "label": "HTML",
+            "description": "HTML body of the email (takes precedence over text for HTML-capable clients)."
+          },
+          "attachments": {
+            "label": "Attachments",
+            "description": "File attachments to include with the email."
+          }
+        }
+      }
+    }
+  },
+  "file": {
+    "label": "File",
+    "actions": {
+      "fileExists": {
+        "label": "File Exists",
+        "description": "Check whether a path exists.",
+        "fields": {
+          "src": {
+            "label": "Src",
+            "description": "File or directory path to check for existence."
+          }
+        }
+      },
+      "copy": {
+        "label": "Copy",
+        "description": "Copy a file or directory.",
+        "fields": {
+          "src": {
+            "label": "Src",
+            "description": "Source file or directory path to copy."
+          },
+          "dest": {
+            "label": "Dest",
+            "description": "Destination path for the copy."
+          }
+        }
+      },
+      "move": {
+        "label": "Move",
+        "description": "Move/rename a file or directory.",
+        "fields": {
+          "src": {
+            "label": "Src",
+            "description": "Source file or directory path to move."
+          },
+          "dest": {
+            "label": "Dest",
+            "description": "Destination path (including new filename if renaming)."
+          }
+        }
+      },
+      "remove": {
+        "label": "Remove",
+        "description": "Delete a file or directory.",
+        "fields": {
+          "src": {
+            "label": "Src",
+            "description": "Path of the file or directory to delete."
+          }
+        }
+      },
+      "rename": {
+        "label": "Rename",
+        "description": "Rename a file or directory.",
+        "fields": {
+          "oldPath": {
+            "label": "Old Path",
+            "description": "Current path of the file or directory."
+          },
+          "newPath": {
+            "label": "New Path",
+            "description": "New path (name) for the file or directory."
+          }
+        }
+      },
+      "read": {
+        "label": "Read",
+        "description": "Read a file as text.",
+        "fields": {
+          "src": {
+            "label": "Src",
+            "description": "Path of the file to read."
+          }
+        }
+      },
+      "write": {
+        "label": "Write",
+        "description": "Write text to a file.",
+        "fields": {
+          "src": {
+            "label": "Src",
+            "description": "Destination path for the file to write."
+          },
+          "data": {
+            "label": "Data",
+            "description": "Text content to write to the file."
+          }
+        }
+      },
+      "readCSV": {
+        "label": "Read CSV",
+        "description": "Parse a CSV file into rows.",
+        "fields": {
+          "src": {
+            "label": "Src",
+            "description": "Path to the CSV file to read."
+          },
+          "options": {
+            "label": "Options",
+            "description": "CSV parsing options (columns, delimiter, trim, skip empty lines)."
+          }
+        }
+      },
+      "writeCSV": {
+        "label": "Write CSV",
+        "description": "Write rows to a CSV file.",
+        "fields": {
+          "src": {
+            "label": "Src",
+            "description": "Destination path for the CSV file."
+          },
+          "rows": {
+            "label": "Rows",
+            "description": "Array of record objects to write as CSV rows."
+          }
+        }
+      },
+      "getFilePathPart": {
+        "label": "Path Part",
+        "description": "Extract a portion of a file path.",
+        "fields": {
+          "src": {
+            "label": "Src",
+            "description": "The file path to extract a part from."
+          },
+          "part": {
+            "label": "Part",
+            "description": "Part to extract: dirname, basename, extname, filename, or root."
+          }
+        }
+      },
+      "convertFileToBase64": {
+        "label": "File → Base64",
+        "description": "Encode a file to Base64.",
+        "fields": {
+          "src": {
+            "label": "Src",
+            "description": "Path of the file to encode as Base64."
+          }
+        }
+      },
+      "convertBase64ToFile": {
+        "label": "Base64 → File",
+        "description": "Decode Base64 and write to a file.",
+        "fields": {
+          "dest": {
+            "label": "Dest",
+            "description": "Destination path to write the decoded file content."
+          },
+          "base64": {
+            "label": "Base64",
+            "description": "The Base64-encoded string to decode and write."
+          }
+        }
+      }
+    }
+  },
+  "flow": {
+    "label": "Flow",
+    "actions": {
+      "ifConditional": {
+        "label": "If ",
+        "description": "If conditional.",
+        "fields": {
+          "firstOperand": {
+            "label": "Value",
+            "description": "The value to check."
+          },
+          "compareAs": {
+            "label": "Compare as",
+            "description": "How both values are read: text, number, date, boolean, array or object. Values are converted first, so text from a template still compares as a number."
+          },
+          "operator": {
+            "label": "Operator",
+            "description": "The comparison to make. The list depends on \"Compare as\"."
+          },
+          "secondOperand": {
+            "label": "Compare with",
+            "description": "What to compare with (not used by operators like \"is empty\" or \"is true\")."
+          },
+          "ignoreCase": {
+            "label": "Ignore case",
+            "description": "Text comparisons treat upper and lower case as the same."
+          }
+        }
+      },
+      "elseIfConditional": {
+        "label": "ElseIf",
+        "description": "Elseif conditional",
+        "fields": {
+          "firstOperand": {
+            "label": "Value",
+            "description": "The value to check."
+          },
+          "compareAs": {
+            "label": "Compare as",
+            "description": "How both values are read: text, number, date, boolean, array or object. Values are converted first, so text from a template still compares as a number."
+          },
+          "operator": {
+            "label": "Operator",
+            "description": "The comparison to make. The list depends on \"Compare as\"."
+          },
+          "secondOperand": {
+            "label": "Compare with",
+            "description": "What to compare with (not used by operators like \"is empty\" or \"is true\")."
+          },
+          "ignoreCase": {
+            "label": "Ignore case",
+            "description": "Text comparisons treat upper and lower case as the same."
+          }
+        }
+      },
+      "elseConditional": {
+        "label": "Else",
+        "description": "Else conditional."
+      },
+      "conditionalLoop": {
+        "label": "Conditional Loop",
+        "description": "Loop while a condition remains true.",
+        "fields": {
+          "firstOperand": {
+            "label": "Value",
+            "description": "The value to check on each iteration (the loop runs while the condition is true)."
+          },
+          "compareAs": {
+            "label": "Compare as",
+            "description": "How both values are read: text, number, date, boolean, array or object. Values are converted first, so text from a template still compares as a number."
+          },
+          "operator": {
+            "label": "Operator",
+            "description": "The comparison to make. The list depends on \"Compare as\"."
+          },
+          "secondOperand": {
+            "label": "Compare with",
+            "description": "What to compare with (not used by operators like \"is empty\" or \"is true\")."
+          },
+          "ignoreCase": {
+            "label": "Ignore case",
+            "description": "Text comparisons treat upper and lower case as the same."
+          }
+        }
+      },
+      "switchConditional": {
+        "label": "Switch",
+        "description": "Declare the expression to match against cases.",
+        "fields": {
+          "expression": {
+            "label": "Expression",
+            "description": "The value or expression to match against case blocks."
+          }
+        }
+      },
+      "caseConditional": {
+        "label": "Case",
+        "description": "Run actions when the switch expression matches this value.",
+        "fields": {
+          "match": {
+            "label": "Match",
+            "description": "The value this case matches against the switch expression."
+          }
+        }
+      },
+      "defaultConditional": {
+        "label": "Default",
+        "description": "Fallback branch when no case matched."
+      },
+      "simpleLoop": {
+        "label": "Simple Loop",
+        "description": "For-loop from start to end by increment.",
+        "fields": {
+          "indexValue": {
+            "label": "Index Value",
+            "description": "Starting index value (inclusive)."
+          },
+          "indexEndValue": {
+            "label": "Index End Value",
+            "description": "Ending index value (exclusive)."
+          },
+          "incrementBy": {
+            "label": "Increment By",
+            "description": "Amount to increment the index on each iteration."
+          }
+        }
+      },
+      "forEachLoop": {
+        "label": "For Each",
+        "description": "Iterate over items and run steps per item.",
+        "fields": {
+          "iterable": {
+            "label": "Iterable",
+            "description": "The array or string variable to iterate over."
+          },
+          "currentItem": {
+            "label": "Current Item",
+            "description": "Variable name to bind the current element on each iteration."
+          }
+        }
+      },
+      "wait": {
+        "label": "Wait",
+        "description": "Pause execution for a duration.",
+        "fields": {
+          "timeout": {
+            "label": "Timeout",
+            "description": "Duration to wait in milliseconds."
+          }
+        }
+      }
+    }
+  },
+  "folder": {
+    "label": "Folder",
+    "actions": {
+      "exists": {
+        "label": "Folder Exists",
+        "description": "Check whether a folder exists.",
+        "fields": {
+          "src": {
+            "label": "Src",
+            "description": "Path of the folder to check."
+          }
+        }
+      },
+      "getFiles": {
+        "label": "Get Files",
+        "description": "List files in a folder.",
+        "fields": {
+          "src": {
+            "label": "Src",
+            "description": "Path of the folder to list files from."
+          }
+        }
+      },
+      "getSubfolders": {
+        "label": "Get Subfolders",
+        "description": "List subfolders in a folder.",
+        "fields": {
+          "src": {
+            "label": "Src",
+            "description": "Path of the folder to list subfolders from."
+          }
+        }
+      },
+      "create": {
+        "label": "Create Folder",
+        "description": "Create a folder (recursive as needed).",
+        "fields": {
+          "src": {
+            "label": "Src",
+            "description": "Path of the folder to create (parent directories created automatically)."
+          }
+        }
+      },
+      "delete": {
+        "label": "Delete Folder",
+        "description": "Delete a folder.",
+        "fields": {
+          "src": {
+            "label": "Src",
+            "description": "Path of the folder to delete."
+          }
+        }
+      },
+      "empty": {
+        "label": "Empty Folder",
+        "description": "Remove all contents of a folder.",
+        "fields": {
+          "src": {
+            "label": "Src",
+            "description": "Path of the folder to empty (all contents deleted, folder remains)."
+          }
+        }
+      },
+      "copy": {
+        "label": "Copy Folder",
+        "description": "Copy a folder to a destination.",
+        "fields": {
+          "src": {
+            "label": "Src",
+            "description": "Source folder path to copy."
+          },
+          "dest": {
+            "label": "Dest",
+            "description": "Destination path for the copied folder."
+          }
+        }
+      },
+      "move": {
+        "label": "Move Folder",
+        "description": "Move a folder to a destination.",
+        "fields": {
+          "src": {
+            "label": "Src",
+            "description": "Source folder path to move."
+          },
+          "dest": {
+            "label": "Dest",
+            "description": "Destination path for the moved folder."
+          }
+        }
+      },
+      "rename": {
+        "label": "Rename Folder",
+        "description": "Rename a folder.",
+        "fields": {
+          "oldPath": {
+            "label": "Old Path",
+            "description": "Current path of the folder."
+          },
+          "newPath": {
+            "label": "New Path",
+            "description": "New path (name) for the folder."
+          }
+        }
+      }
+    }
+  },
+  "html": {
+    "label": "HTML",
+    "actions": {
+      "getElement": {
+        "label": "Get Element",
+        "description": "Read an attribute/text from a single element.",
+        "fields": {
+          "html": {
+            "label": "HTML",
+            "description": "HTML string to parse and query."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "CSS selector to target the element."
+          },
+          "attribute": {
+            "label": "Attribute",
+            "description": "Attribute or property to read (e.g. text, href, src, id)."
+          }
+        }
+      },
+      "getElements": {
+        "label": "Get Elements",
+        "description": "Read an attribute/text from multiple elements as array.",
+        "fields": {
+          "html": {
+            "label": "HTML",
+            "description": "HTML string to parse and query."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "CSS selector to match multiple elements."
+          },
+          "attribute": {
+            "label": "Attribute",
+            "description": "Attribute or property to read from each element (e.g. text, href, src)."
+          }
+        }
+      },
+      "elementExists": {
+        "label": "Element Exists",
+        "description": "Check if an element exists in the HTML.",
+        "fields": {
+          "html": {
+            "label": "HTML",
+            "description": "HTML string to search."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "CSS selector to check for."
+          }
+        }
+      },
+      "countElements": {
+        "label": "Count Elements",
+        "description": "Count the number of elements matching a selector.",
+        "fields": {
+          "html": {
+            "label": "HTML",
+            "description": "HTML string to search."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "CSS selector to count matches for."
+          }
+        }
+      },
+      "getLinks": {
+        "label": "Get Links",
+        "description": "Extract all links (text and href) from HTML.",
+        "fields": {
+          "html": {
+            "label": "HTML",
+            "description": "HTML string to extract links from."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "Optional CSS selector to scope link extraction (defaults to all anchors)."
+          }
+        }
+      },
+      "tableToJson": {
+        "label": "Table to JSON",
+        "description": "Convert an HTML table to an array of objects.",
+        "fields": {
+          "html": {
+            "label": "HTML",
+            "description": "HTML string containing the table to convert."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "CSS selector targeting the table element."
+          }
+        }
+      },
+      "extractData": {
+        "label": "Extract Data",
+        "description": "Extract structured data using a schema map of selectors.",
+        "fields": {
+          "html": {
+            "label": "HTML",
+            "description": "HTML string to extract data from."
+          },
+          "schema": {
+            "label": "Schema",
+            "description": "Object mapping field names to CSS selectors (e.g. { title: \"h1\", price: \".price\" })."
+          }
+        }
+      },
+      "removeElements": {
+        "label": "Remove Elements",
+        "description": "Remove elements matching selector and return cleaned HTML.",
+        "fields": {
+          "html": {
+            "label": "HTML",
+            "description": "HTML string to modify."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "CSS selector for elements to remove."
+          }
+        }
+      },
+      "getHtml": {
+        "label": "Get HTML",
+        "description": "Get inner or outer HTML of an element.",
+        "fields": {
+          "html": {
+            "label": "HTML",
+            "description": "HTML string to query."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "CSS selector targeting the element."
+          },
+          "outer": {
+            "label": "Outer",
+            "description": "If true, returns the outer HTML including the element itself; otherwise inner HTML."
+          }
+        }
+      },
+      "findByText": {
+        "label": "Find by Text",
+        "description": "Find elements containing specific text.",
+        "fields": {
+          "html": {
+            "label": "HTML",
+            "description": "HTML string to search."
+          },
+          "selector": {
+            "label": "Selector",
+            "description": "CSS selector to scope the search."
+          },
+          "text": {
+            "label": "Text",
+            "description": "Text to search for within the matched elements."
+          }
+        }
+      },
+      "fromMarkdown": {
+        "label": "From Markdown",
+        "description": "Convert Markdown text into HTML.",
+        "fields": {
+          "markdown": {
+            "label": "Markdown",
+            "description": "Markdown source text to convert."
+          },
+          "sanitize": {
+            "label": "Sanitize",
+            "description": "Strip potentially unsafe HTML (scripts, event handlers) from the output. Enabled by default."
+          },
+          "inline": {
+            "label": "Inline",
+            "description": "Render as an inline fragment instead of a full document — skips wrapping the output in block tags like <p> or <h1>. Use for short snippets (e.g. a single line with a link) that will be inserted into existing HTML. Disabled by default."
+          }
+        }
+      }
+    }
+  },
+  "http": {
+    "label": "HTTP",
+    "actions": {
+      "request": {
+        "label": "HTTP Request",
+        "description": "Make an HTTP request (Axios-like options). Returns status, headers and data.",
+        "fields": {
+          "url": {
+            "label": "URL",
+            "description": "Request URL."
+          },
+          "method": {
+            "label": "Method",
+            "description": "HTTP method (get, post, put, delete, patch, etc.)."
+          },
+          "baseURL": {
+            "label": "Base URL",
+            "description": "Optional base URL prepended to the url."
+          },
+          "headers": {
+            "label": "Headers",
+            "description": "HTTP headers as key-value pairs."
+          },
+          "params": {
+            "label": "Params",
+            "description": "URL query parameters as key-value pairs."
+          },
+          "data": {
+            "label": "Data",
+            "description": "Request body payload."
+          },
+          "timeout": {
+            "label": "Timeout",
+            "description": "Request timeout in milliseconds."
+          },
+          "withCredentials": {
+            "label": "With Credentials",
+            "description": "Whether to send cookies with cross-site requests."
+          },
+          "auth": {
+            "label": "Auth",
+            "description": "Basic authentication credentials (username and password)."
+          },
+          "responseType": {
+            "label": "Response Type",
+            "description": "Expected response type: arraybuffer, document, json, text, stream, or blob."
+          },
+          "responseEncoding": {
+            "label": "Response Encoding",
+            "description": "Encoding used to decode the response (e.g. utf8)."
+          },
+          "failOnHttpError": {
+            "label": "Fail on HTTP error",
+            "description": "Fail the step when a request gets a 4xx or 5xx response or no response at all. On by default. Turn it off to check the result in a later step: with no response, status is 0 and error says why."
+          }
+        }
+      },
+      "downloadFile": {
+        "label": "Download File",
+        "description": "Download a URL to a local path.",
+        "fields": {
+          "browser": {
+            "label": "Browser",
+            "description": "Browser instance to use for the download."
+          },
+          "url": {
+            "label": "URL",
+            "description": "URL of the file to download."
+          },
+          "path": {
+            "label": "Path",
+            "description": "Local file path to save the downloaded file."
+          }
+        }
+      }
+    }
+  },
+  "image": {
+    "label": "Image",
+    "actions": {
+      "load": {
+        "label": "Load Image",
+        "description": "Load an image from disk.",
+        "fields": {
+          "path": {
+            "label": "Path",
+            "description": "File path of the image to load."
+          }
+        }
+      },
+      "resize": {
+        "label": "Resize",
+        "description": "Resize by width/height.",
+        "fields": {
+          "image": {
+            "label": "Image",
+            "description": "The image object to resize."
+          },
+          "width": {
+            "label": "Width",
+            "description": "Target width in pixels (optional, preserves aspect ratio if only one dimension given)."
+          },
+          "height": {
+            "label": "Height",
+            "description": "Target height in pixels (optional, preserves aspect ratio if only one dimension given)."
+          }
+        }
+      },
+      "rotate": {
+        "label": "Rotate",
+        "description": "Rotate by angle (degrees).",
+        "fields": {
+          "image": {
+            "label": "Image",
+            "description": "The image object to rotate."
+          },
+          "angle": {
+            "label": "Angle",
+            "description": "Rotation angle in degrees (clockwise)."
+          }
+        }
+      },
+      "flip": {
+        "label": "Flip (Vertical)",
+        "description": "Flip vertically.",
+        "fields": {
+          "image": {
+            "label": "Image",
+            "description": "The image object to flip vertically."
+          }
+        }
+      },
+      "flop": {
+        "label": "Flop (Horizontal)",
+        "description": "Flip horizontally.",
+        "fields": {
+          "image": {
+            "label": "Image",
+            "description": "The image object to flip horizontally."
+          }
+        }
+      },
+      "crop": {
+        "label": "Crop",
+        "description": "Crop to a rectangle.",
+        "fields": {
+          "image": {
+            "label": "Image",
+            "description": "The image object to crop."
+          },
+          "left": {
+            "label": "Left",
+            "description": "Left offset in pixels from the image origin."
+          },
+          "top": {
+            "label": "Top",
+            "description": "Top offset in pixels from the image origin."
+          },
+          "width": {
+            "label": "Width",
+            "description": "Width of the crop area in pixels."
+          },
+          "height": {
+            "label": "Height",
+            "description": "Height of the crop area in pixels."
+          }
+        }
+      },
+      "grayscale": {
+        "label": "Grayscale",
+        "description": "Convert to grayscale.",
+        "fields": {
+          "image": {
+            "label": "Image",
+            "description": "The image object to convert to grayscale."
+          }
+        }
+      },
+      "blur": {
+        "label": "Blur",
+        "description": "Gaussian blur with sigma.",
+        "fields": {
+          "image": {
+            "label": "Image",
+            "description": "The image object to blur."
+          },
+          "sigma": {
+            "label": "Sigma",
+            "description": "Blur radius (0.3–1000). Higher values produce stronger blur."
+          }
+        }
+      },
+      "sharpen": {
+        "label": "Sharpen",
+        "description": "Sharpen the image.",
+        "fields": {
+          "image": {
+            "label": "Image",
+            "description": "The image object to sharpen."
+          }
+        }
+      },
+      "negate": {
+        "label": "Invert",
+        "description": "Invert image colors.",
+        "fields": {
+          "image": {
+            "label": "Image",
+            "description": "The image object to invert colors on."
+          }
+        }
+      },
+      "tint": {
+        "label": "Tint",
+        "description": "Apply an RGB tint.",
+        "fields": {
+          "image": {
+            "label": "Image",
+            "description": "The image object to tint."
+          },
+          "r": {
+            "label": "R",
+            "description": "Red channel value (0–255)."
+          },
+          "g": {
+            "label": "G",
+            "description": "Green channel value (0–255)."
+          },
+          "b": {
+            "label": "B",
+            "description": "Blue channel value (0–255)."
+          }
+        }
+      },
+      "modulate": {
+        "label": "Modulate",
+        "description": "Adjust brightness, saturation, hue.",
+        "fields": {
+          "image": {
+            "label": "Image",
+            "description": "The image object to modulate."
+          },
+          "brightness": {
+            "label": "Brightness",
+            "description": "Brightness multiplier (e.g. 1.5 = 50% brighter)."
+          },
+          "saturation": {
+            "label": "Saturation",
+            "description": "Saturation multiplier (e.g. 0.5 = half saturation)."
+          },
+          "hue": {
+            "label": "Hue",
+            "description": "Hue rotation in degrees (0–360)."
+          }
+        }
+      },
+      "composite": {
+        "label": "Composite",
+        "description": "Overlay another image at a position.",
+        "fields": {
+          "image": {
+            "label": "Image",
+            "description": "The base image object to composite onto."
+          },
+          "overlay": {
+            "label": "Overlay",
+            "description": "File path of the image to overlay."
+          },
+          "top": {
+            "label": "Top",
+            "description": "Vertical offset from the top of the base image (pixels)."
+          },
+          "left": {
+            "label": "Left",
+            "description": "Horizontal offset from the left of the base image (pixels)."
+          }
+        }
+      },
+      "extend": {
+        "label": "Extend Canvas",
+        "description": "Add borders with a background color.",
+        "fields": {
+          "image": {
+            "label": "Image",
+            "description": "The image object to extend."
+          },
+          "top": {
+            "label": "Top",
+            "description": "Pixels to add to the top."
+          },
+          "bottom": {
+            "label": "Bottom",
+            "description": "Pixels to add to the bottom."
+          },
+          "left": {
+            "label": "Left",
+            "description": "Pixels to add to the left."
+          },
+          "right": {
+            "label": "Right",
+            "description": "Pixels to add to the right."
+          },
+          "background": {
+            "label": "Background",
+            "description": "Background fill color for the extended area (e.g. \"#FFFFFF\")."
+          }
+        }
+      },
+      "metadata": {
+        "label": "Metadata",
+        "description": "Read image metadata.",
+        "fields": {
+          "image": {
+            "label": "Image",
+            "description": "The image object to read metadata from."
+          }
+        }
+      },
+      "toFormat": {
+        "label": "To Format",
+        "description": "Convert to a different image format.",
+        "fields": {
+          "image": {
+            "label": "Image",
+            "description": "The image object to convert."
+          },
+          "format": {
+            "label": "Format",
+            "description": "Target format: jpeg, png, webp, tiff, avif, gif, or heif."
+          }
+        }
+      },
+      "toBuffer": {
+        "label": "To Buffer",
+        "description": "Render image into a Buffer.",
+        "fields": {
+          "image": {
+            "label": "Image",
+            "description": "The image object to render."
+          },
+          "format": {
+            "label": "Format",
+            "description": "Optional output format for the buffer (jpeg, png, webp, etc.)."
+          }
+        }
+      },
+      "toFile": {
+        "label": "To File",
+        "description": "Write the image to a file path.",
+        "fields": {
+          "image": {
+            "label": "Image",
+            "description": "The image object to write."
+          },
+          "output": {
+            "label": "Output",
+            "description": "Destination file path (format inferred from extension)."
+          }
+        }
+      }
+    }
+  },
+  "math": {
+    "label": "Math",
+    "actions": {
+      "abs": {
+        "label": "Absolute",
+        "description": "Absolute value.",
+        "fields": {
+          "number": {
+            "label": "Number",
+            "description": "The number to take the absolute value of."
+          }
+        }
+      },
+      "add": {
+        "label": "Addition",
+        "description": "Adds two numbers.",
+        "fields": {
+          "augend": {
+            "label": "Augend",
+            "description": "The first number (augend) to add."
+          },
+          "addend": {
+            "label": "Addend",
+            "description": "The second number (addend) to add."
+          }
+        }
+      },
+      "subtract": {
+        "label": "Subtract",
+        "description": "Difference of two numbers.",
+        "fields": {
+          "minuend": {
+            "label": "Minuend",
+            "description": "The number to subtract from."
+          },
+          "subtrahend": {
+            "label": "Subtrahend",
+            "description": "The number to subtract."
+          }
+        }
+      },
+      "multiply": {
+        "label": "Multiply",
+        "description": "Product of two numbers.",
+        "fields": {
+          "multiplier": {
+            "label": "Multiplier",
+            "description": "The first number (multiplier)."
+          },
+          "multiplicand": {
+            "label": "Multiplicand",
+            "description": "The second number (multiplicand)."
+          }
+        }
+      },
+      "divide": {
+        "label": "Division",
+        "description": "Divides one number by another.",
+        "fields": {
+          "dividend": {
+            "label": "Dividend",
+            "description": "The number to divide (dividend)."
+          },
+          "divisor": {
+            "label": "Divisor",
+            "description": "The number to divide by (cannot be zero)."
+          }
+        }
+      },
+      "mod": {
+        "label": "Modulo",
+        "description": "Remainder after division.",
+        "fields": {
+          "dividend": {
+            "label": "Dividend",
+            "description": "The number to divide (dividend)."
+          },
+          "divisor": {
+            "label": "Divisor",
+            "description": "The divisor (cannot be zero)."
+          }
+        }
+      },
+      "pow": {
+        "label": "Power",
+        "description": "Raises a base to an exponent.",
+        "fields": {
+          "base": {
+            "label": "Base",
+            "description": "The base number."
+          },
+          "exponent": {
+            "label": "Exponent",
+            "description": "The exponent to raise the base to."
+          }
+        }
+      },
+      "ceil": {
+        "label": "Ceil",
+        "description": "Rounds up to nearest integer.",
+        "fields": {
+          "number": {
+            "label": "Number",
+            "description": "The number to round up."
+          }
+        }
+      },
+      "floor": {
+        "label": "Floor",
+        "description": "Rounds down to nearest integer.",
+        "fields": {
+          "number": {
+            "label": "Number",
+            "description": "The number to round down."
+          }
+        }
+      },
+      "round": {
+        "label": "Round",
+        "description": "Rounds to nearest integer.",
+        "fields": {
+          "number": {
+            "label": "Number",
+            "description": "The number to round."
+          }
+        }
+      },
+      "trunc": {
+        "label": "Trunc",
+        "description": "Truncates toward zero, removing the fractional part.",
+        "fields": {
+          "number": {
+            "label": "Number",
+            "description": "The number to truncate."
+          }
+        }
+      },
+      "toFixed": {
+        "label": "To Fixed",
+        "description": "Formats a number to a fixed number of decimal places.",
+        "fields": {
+          "number": {
+            "label": "Number",
+            "description": "The number to format."
+          },
+          "digits": {
+            "label": "Digits",
+            "description": "Number of decimal places to keep (0–20)."
+          }
+        }
+      },
+      "formatNumber": {
+        "label": "Format Number",
+        "description": "Locale-aware number formatting via Intl.NumberFormat.",
+        "fields": {
+          "number": {
+            "label": "Number",
+            "description": "The number to format."
+          },
+          "locale": {
+            "label": "Locale",
+            "description": "BCP 47 locale string (e.g. \"en-US\", \"de-DE\"). Defaults to system locale."
+          },
+          "minimumFractionDigits": {
+            "label": "Minimum Fraction Digits",
+            "description": "Minimum number of decimal digits to display."
+          },
+          "maximumFractionDigits": {
+            "label": "Maximum Fraction Digits",
+            "description": "Maximum number of decimal digits to display."
+          }
+        }
+      },
+      "max": {
+        "label": "Max",
+        "description": "Largest number in an array.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "Array of numbers to find the maximum of."
+          }
+        }
+      },
+      "mean": {
+        "label": "Mean",
+        "description": "Average of numbers.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "Array of numbers to average."
+          }
+        }
+      },
+      "min": {
+        "label": "Min",
+        "description": "Smallest number in an array.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "Array of numbers to find the minimum of."
+          }
+        }
+      },
+      "sum": {
+        "label": "Sum",
+        "description": "Sum of numbers in an array.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "Array of numbers to sum."
+          }
+        }
+      },
+      "median": {
+        "label": "Median",
+        "description": "Middle value of a sorted array of numbers.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "Array of numbers to find the median of."
+          }
+        }
+      },
+      "clamp": {
+        "label": "Clamp",
+        "description": "Constrains a number between a minimum and maximum.",
+        "fields": {
+          "value": {
+            "label": "Value",
+            "description": "The number to clamp."
+          },
+          "min": {
+            "label": "Min",
+            "description": "Lower bound (inclusive)."
+          },
+          "max": {
+            "label": "Max",
+            "description": "Upper bound (inclusive)."
+          }
+        }
+      },
+      "percentage": {
+        "label": "Percentage",
+        "description": "Calculates what percentage a value is of a total.",
+        "fields": {
+          "value": {
+            "label": "Value",
+            "description": "The partial value."
+          },
+          "total": {
+            "label": "Total",
+            "description": "The total value (cannot be zero)."
+          }
+        }
+      },
+      "sign": {
+        "label": "Sign",
+        "description": "Returns -1, 0, or 1 based on the sign of the number.",
+        "fields": {
+          "number": {
+            "label": "Number",
+            "description": "The number whose sign to determine."
+          }
+        }
+      },
+      "increment": {
+        "label": "Increment",
+        "description": "Increases a number by a step (default 1).",
+        "fields": {
+          "number": {
+            "label": "Number",
+            "description": "The number to increment."
+          },
+          "step": {
+            "label": "Step",
+            "description": "Amount to increment by (default 1)."
+          }
+        }
+      },
+      "decrement": {
+        "label": "Decrement",
+        "description": "Decreases a number by a step (default 1).",
+        "fields": {
+          "number": {
+            "label": "Number",
+            "description": "The number to decrement."
+          },
+          "step": {
+            "label": "Step",
+            "description": "Amount to decrement by (default 1)."
+          }
+        }
+      },
+      "inRange": {
+        "label": "In Range",
+        "description": "Returns true if value is between min and max (inclusive).",
+        "fields": {
+          "value": {
+            "label": "Value",
+            "description": "The number to test."
+          },
+          "min": {
+            "label": "Min",
+            "description": "Lower bound (inclusive)."
+          },
+          "max": {
+            "label": "Max",
+            "description": "Upper bound (inclusive)."
+          }
+        }
+      },
+      "random": {
+        "label": "Random",
+        "description": "Random number in [min, max) — min and max are optional.",
+        "fields": {
+          "min": {
+            "label": "Min",
+            "description": "Minimum value (inclusive). Defaults to 0."
+          },
+          "max": {
+            "label": "Max",
+            "description": "Maximum value (exclusive). Defaults to 1."
+          }
+        }
+      }
+    }
+  },
+  "network": {
+    "label": "Network",
+    "actions": {
+      "waitPort": {
+        "label": "Wait for Port",
+        "description": "Wait until a TCP port is open.",
+        "fields": {
+          "host": {
+            "label": "Host",
+            "description": "Hostname or IP address to connect to."
+          },
+          "port": {
+            "label": "Port",
+            "description": "TCP port number to wait for (1–65535)."
+          },
+          "timeout": {
+            "label": "Timeout",
+            "description": "Maximum time to wait in milliseconds (default 60000)."
+          }
+        }
+      },
+      "resolveDNS": {
+        "label": "Resolve DNS",
+        "description": "DNS resolution for a hostname.",
+        "fields": {
+          "host": {
+            "label": "Host",
+            "description": "Hostname to resolve."
+          },
+          "type": {
+            "label": "Type",
+            "description": "DNS record type to query (A, AAAA, MX, NS, CNAME, or TXT). Defaults to A."
+          }
+        }
+      },
+      "lookup": {
+        "label": "Lookup",
+        "description": "General DNS lookup for a hostname.",
+        "fields": {
+          "hostname": {
+            "label": "Hostname",
+            "description": "Hostname to look up."
+          }
+        }
+      },
+      "reverseDNS": {
+        "label": "Reverse DNS",
+        "description": "Reverse-lookup a PTR record for an IP.",
+        "fields": {
+          "ip": {
+            "label": "IP",
+            "description": "IP address to perform a reverse DNS lookup on."
+          }
+        }
+      },
+      "ping": {
+        "label": "Ping",
+        "description": "ICMP echo request to a host.",
+        "fields": {
+          "host": {
+            "label": "Host",
+            "description": "Hostname or IP address to ping."
+          }
+        }
+      },
+      "checkTlsCertificate": {
+        "label": "Check TLS Certificate",
+        "description": "Fetch and inspect a server TLS certificate.",
+        "fields": {
+          "host": {
+            "label": "Host",
+            "description": "Server hostname to check the TLS certificate for."
+          },
+          "port": {
+            "label": "Port",
+            "description": "Server port (default 443)."
+          }
+        }
+      }
+    }
+  },
+  "object": {
+    "label": "Object",
+    "actions": {
+      "parse": {
+        "label": "Parse",
+        "description": "Try to parse string to an object.",
+        "fields": {
+          "text": {
+            "label": "Text",
+            "description": "JSON string to parse into an object."
+          }
+        }
+      },
+      "setProperty": {
+        "label": "Set property",
+        "description": "Set a nested property on an object using a dot/bracket path.",
+        "fields": {
+          "object": {
+            "label": "Object",
+            "description": "The object to modify."
+          },
+          "property": {
+            "label": "Property",
+            "description": "Dot or bracket path to the property (e.g. \"user.name\" or \"items[0].id\")."
+          },
+          "value": {
+            "label": "Value",
+            "description": "Value to set at the property path."
+          }
+        }
+      },
+      "hasProperty": {
+        "label": "Has property",
+        "description": "Check if a property exists in an object (supports nested paths).",
+        "fields": {
+          "object": {
+            "label": "Object",
+            "description": "The object to inspect."
+          },
+          "property": {
+            "label": "Property",
+            "description": "Dot or bracket path to the property to check (e.g. \"user.address.city\")."
+          }
+        }
+      },
+      "getProperty": {
+        "label": "Get property",
+        "description": "Get a property value from an object (supports nested paths and default values).",
+        "fields": {
+          "object": {
+            "label": "Object",
+            "description": "The object to read from."
+          },
+          "property": {
+            "label": "Property",
+            "description": "Dot or bracket path to the property (e.g. \"user.name\")."
+          },
+          "defaultValue": {
+            "label": "Default Value",
+            "description": "Value to return if the property does not exist."
+          }
+        }
+      },
+      "keys": {
+        "label": "Keys",
+        "description": "Get all keys from an object.",
+        "fields": {
+          "object": {
+            "label": "Object",
+            "description": "The object to extract keys from."
+          }
+        }
+      },
+      "values": {
+        "label": "Values",
+        "description": "Get all values from an object.",
+        "fields": {
+          "object": {
+            "label": "Object",
+            "description": "The object to extract values from."
+          }
+        }
+      },
+      "merge": {
+        "label": "Merge",
+        "description": "Merge multiple objects deeply into a single object.",
+        "fields": {
+          "objects": {
+            "label": "Objects",
+            "description": "Array of objects to deep-merge (later entries override earlier ones)."
+          }
+        }
+      },
+      "pick": {
+        "label": "Pick",
+        "description": "Pick specific properties from an object.",
+        "fields": {
+          "object": {
+            "label": "Object",
+            "description": "The source object to pick from."
+          },
+          "properties": {
+            "label": "Properties",
+            "description": "List of property keys to include in the result."
+          }
+        }
+      },
+      "omit": {
+        "label": "Omit",
+        "description": "Omit specific properties from an object.",
+        "fields": {
+          "object": {
+            "label": "Object",
+            "description": "The source object to omit from."
+          },
+          "properties": {
+            "label": "Properties",
+            "description": "List of property keys to exclude from the result."
+          }
+        }
+      },
+      "clone": {
+        "label": "Clone",
+        "description": "Create a deep copy of an object.",
+        "fields": {
+          "object": {
+            "label": "Object",
+            "description": "The object to deep-clone."
+          }
+        }
+      },
+      "entries": {
+        "label": "Entries",
+        "description": "Get all key-value pairs from an object as an array of [key, value] entries.",
+        "fields": {
+          "object": {
+            "label": "Object",
+            "description": "The object to get entries from."
+          }
+        }
+      },
+      "deleteProperty": {
+        "label": "Delete property",
+        "description": "Delete a nested property from an object using a dot or bracket path.",
+        "fields": {
+          "object": {
+            "label": "Object",
+            "description": "The object to delete a property from."
+          },
+          "property": {
+            "label": "Property",
+            "description": "Dot or bracket path of the property to delete (e.g. \"user.address\")."
+          }
+        }
+      }
+    }
+  },
+  "ocr": {
+    "label": "OCR",
+    "actions": {
+      "recognize": {
+        "label": "OCR Recognize",
+        "description": "Extract text from an image or document.",
+        "fields": {
+          "source": {
+            "label": "Source",
+            "description": "File path or URL of the image or document to recognize."
+          },
+          "language": {
+            "label": "Language",
+            "description": "Language code for OCR recognition (e.g. \"eng\" for English)."
+          }
+        }
+      }
+    }
+  },
+  "pdf": {
+    "label": "PDF",
+    "actions": {
+      "extractText": {
+        "label": "Extract Text",
+        "description": "Extract all text from a PDF.",
+        "fields": {
+          "path": {
+            "label": "Path",
+            "description": "Path to the PDF file to extract text from."
+          }
+        }
+      },
+      "extractImage": {
+        "label": "Extract Images",
+        "description": "Extract images from a PDF to an output path.",
+        "fields": {
+          "path": {
+            "label": "Path",
+            "description": "Path to the PDF file to extract images from."
+          },
+          "output": {
+            "label": "Output",
+            "description": "Directory path where extracted images will be saved."
+          }
+        }
+      },
+      "merge": {
+        "label": "Merge PDFs",
+        "description": "Merge multiple PDFs into one.",
+        "fields": {
+          "input": {
+            "label": "Input",
+            "description": "List of PDF file paths to merge in order."
+          },
+          "output": {
+            "label": "Output",
+            "description": "Destination path for the merged PDF."
+          }
+        }
+      },
+      "getPageCount": {
+        "label": "Get Page Count",
+        "description": "Return the total number of pages in a PDF.",
+        "fields": {
+          "path": {
+            "label": "Path",
+            "description": "Path to the PDF file to count pages in."
+          }
+        }
+      },
+      "splitPages": {
+        "label": "Split Pages",
+        "description": "Split a PDF into one file per page.",
+        "fields": {
+          "path": {
+            "label": "Path",
+            "description": "Path to the PDF file to split."
+          },
+          "output": {
+            "label": "Output",
+            "description": "Directory path where the per-page PDF files will be saved."
+          },
+          "prefix": {
+            "label": "Prefix",
+            "description": "Optional filename prefix for the output files (e.g. \"page\" → page1.pdf)."
+          }
+        }
+      }
+    }
+  },
+  "qrcode": {
+    "label": "QR Code",
+    "actions": {
+      "generate": {
+        "label": "Generate QR Code",
+        "description": "Create a QR code image from text.",
+        "fields": {
+          "text": {
+            "label": "Text",
+            "description": "Text or URL to encode in the QR code."
+          },
+          "path": {
+            "label": "Path",
+            "description": "Output file path to save the generated QR code image."
+          }
+        }
+      },
+      "read": {
+        "label": "Read QR Code",
+        "description": "Decode text from a QR code image.",
+        "fields": {
+          "path": {
+            "label": "Path",
+            "description": "File path of the QR code image to decode."
+          }
+        }
+      }
+    }
+  },
+  "script": {
+    "label": "Script",
+    "actions": {
+      "runScript": {
+        "label": "Run Script",
+        "description": "Execute a script with an optional context.",
+        "fields": {
+          "code": {
+            "label": "Code",
+            "description": "JavaScript code to execute."
+          },
+          "context": {
+            "label": "Context",
+            "description": "Optional object of variables to inject into the script scope."
+          }
+        }
+      }
+    }
+  },
+  "ssh": {
+    "label": "SSH",
+    "actions": {
+      "connect": {
+        "label": "Connect",
+        "description": "Open an SSH connection.",
+        "fields": {
+          "config": {
+            "label": "Config",
+            "description": "SSH connection configuration object or reference (host, port, user, private key, etc.)."
+          }
+        }
+      },
+      "exec": {
+        "label": "Exec",
+        "description": "Execute a command over SSH.",
+        "fields": {
+          "connection": {
+            "label": "Connection",
+            "description": "The active SSH connection object."
+          },
+          "command": {
+            "label": "Command",
+            "description": "Shell command to execute on the remote host."
+          }
+        }
+      },
+      "close": {
+        "label": "Close",
+        "description": "Close an SSH connection.",
+        "fields": {
+          "connection": {
+            "label": "Connection",
+            "description": "The active SSH connection to close."
+          }
+        }
+      }
+    }
+  },
+  "spreadsheet": {
+    "label": "Spreadsheet",
+    "actions": {
+      "open": {
+        "label": "Open",
+        "description": "Open an existing spreadsheet file.",
+        "fields": {
+          "path": {
+            "label": "Path",
+            "description": "Path to the spreadsheet file to open."
+          }
+        }
+      },
+      "create": {
+        "label": "Create",
+        "description": "Create a new spreadsheet file.",
+        "fields": {
+          "path": {
+            "label": "Path",
+            "description": "Path where the new spreadsheet file will be created."
+          }
+        }
+      },
+      "save": {
+        "label": "Save",
+        "description": "Save workbook to disk.",
+        "fields": {
+          "path": {
+            "label": "Path",
+            "description": "Destination path to save the workbook."
+          },
+          "workbook": {
+            "label": "Workbook",
+            "description": "The workbook object to save."
+          }
+        }
+      },
+      "delete": {
+        "label": "Delete",
+        "description": "Delete a spreadsheet file.",
+        "fields": {
+          "path": {
+            "label": "Path",
+            "description": "Path to the spreadsheet file to delete."
+          }
+        }
+      },
+      "getSheetNames": {
+        "label": "Get Sheet Names",
+        "description": "List all sheets in the workbook.",
+        "fields": {
+          "workbook": {
+            "label": "Workbook",
+            "description": "The workbook object to list sheets from."
+          }
+        }
+      },
+      "addSheet": {
+        "label": "Add Sheet",
+        "description": "Add a new sheet by name.",
+        "fields": {
+          "workbook": {
+            "label": "Workbook",
+            "description": "The workbook object to add a sheet to."
+          },
+          "name": {
+            "label": "Name",
+            "description": "Name for the new sheet."
+          }
+        }
+      },
+      "deleteSheet": {
+        "label": "Delete Sheet",
+        "description": "Remove a sheet by name.",
+        "fields": {
+          "workbook": {
+            "label": "Workbook",
+            "description": "The workbook object to remove a sheet from."
+          },
+          "name": {
+            "label": "Name",
+            "description": "Name of the sheet to delete."
+          }
+        }
+      },
+      "renameSheet": {
+        "label": "Rename Sheet",
+        "description": "Rename a sheet.",
+        "fields": {
+          "workbook": {
+            "label": "Workbook",
+            "description": "The workbook object containing the sheet."
+          },
+          "name": {
+            "label": "Name",
+            "description": "Current name of the sheet to rename."
+          },
+          "newName": {
+            "label": "New Name",
+            "description": "New name for the sheet."
+          }
+        }
+      },
+      "toJson": {
+        "label": "To JSON",
+        "description": "Convert sheet to an array of row objects keyed by the first-row headers.",
+        "fields": {
+          "workbook": {
+            "label": "Workbook",
+            "description": "The workbook object."
+          },
+          "sheet": {
+            "label": "Sheet",
+            "description": "Name of the sheet to convert."
+          }
+        }
+      },
+      "toArray": {
+        "label": "To Array",
+        "description": "Convert sheet to a 2D array including the header row.",
+        "fields": {
+          "workbook": {
+            "label": "Workbook",
+            "description": "The workbook object."
+          },
+          "sheet": {
+            "label": "Sheet",
+            "description": "Name of the sheet to convert."
+          }
+        }
+      },
+      "appendRow": {
+        "label": "Append Row",
+        "description": "Append a new row after the last used row.",
+        "fields": {
+          "workbook": {
+            "label": "Workbook",
+            "description": "The workbook object."
+          },
+          "sheet": {
+            "label": "Sheet",
+            "description": "Name of the sheet."
+          },
+          "values": {
+            "label": "Values",
+            "description": "Array of values to append as a new row."
+          }
+        }
+      },
+      "getRowCount": {
+        "label": "Row Count",
+        "description": "Return the number of used rows in a sheet.",
+        "fields": {
+          "workbook": {
+            "label": "Workbook",
+            "description": "The workbook object."
+          },
+          "sheet": {
+            "label": "Sheet",
+            "description": "Name of the sheet to count rows in."
+          }
+        }
+      },
+      "readCell": {
+        "label": "Read Cell",
+        "description": "Read a cell value by row and column index.",
+        "fields": {
+          "workbook": {
+            "label": "Workbook",
+            "description": "The workbook object."
+          },
+          "sheet": {
+            "label": "Sheet",
+            "description": "Name of the sheet."
+          },
+          "row": {
+            "label": "Row",
+            "description": "Zero-based row index."
+          },
+          "col": {
+            "label": "Col",
+            "description": "Zero-based column index."
+          }
+        }
+      },
+      "writeCell": {
+        "label": "Write Cell",
+        "description": "Write a value to a cell by row and column index.",
+        "fields": {
+          "workbook": {
+            "label": "Workbook",
+            "description": "The workbook object."
+          },
+          "sheet": {
+            "label": "Sheet",
+            "description": "Name of the sheet."
+          },
+          "row": {
+            "label": "Row",
+            "description": "Zero-based row index."
+          },
+          "col": {
+            "label": "Col",
+            "description": "Zero-based column index."
+          },
+          "value": {
+            "label": "Value",
+            "description": "Value to write to the cell."
+          }
+        }
+      },
+      "clearCell": {
+        "label": "Clear Cell",
+        "description": "Delete the value from a cell by row and column index.",
+        "fields": {
+          "workbook": {
+            "label": "Workbook",
+            "description": "The workbook object."
+          },
+          "sheet": {
+            "label": "Sheet",
+            "description": "Name of the sheet."
+          },
+          "row": {
+            "label": "Row",
+            "description": "Zero-based row index."
+          },
+          "col": {
+            "label": "Col",
+            "description": "Zero-based column index."
+          }
+        }
+      },
+      "getCellAddress": {
+        "label": "Cell Address",
+        "description": "Convert a row/col index pair to an A1-style cell reference.",
+        "fields": {
+          "row": {
+            "label": "Row",
+            "description": "Zero-based row index."
+          },
+          "col": {
+            "label": "Col",
+            "description": "Zero-based column index."
+          }
+        }
+      },
+      "readCellByRef": {
+        "label": "Read Cell by Ref",
+        "description": "Read a cell value by A1-style reference (e.g. \"B3\").",
+        "fields": {
+          "workbook": {
+            "label": "Workbook",
+            "description": "The workbook object."
+          },
+          "sheet": {
+            "label": "Sheet",
+            "description": "Name of the sheet."
+          },
+          "cellRef": {
+            "label": "Cell Ref",
+            "description": "A1-style cell reference (e.g. \"B3\")."
+          }
+        }
+      },
+      "setCellFormula": {
+        "label": "Set Formula",
+        "description": "Write a formula to a cell by A1-style reference.",
+        "fields": {
+          "workbook": {
+            "label": "Workbook",
+            "description": "The workbook object."
+          },
+          "sheet": {
+            "label": "Sheet",
+            "description": "Name of the sheet."
+          },
+          "cellRef": {
+            "label": "Cell Ref",
+            "description": "A1-style cell reference to write the formula to (e.g. \"C5\")."
+          },
+          "formula": {
+            "label": "Formula",
+            "description": "Spreadsheet formula to write (e.g. \"=SUM(A1:A10)\")."
+          }
+        }
+      },
+      "readRange": {
+        "label": "Read Range",
+        "description": "Read all cell values in a rectangular range as a 2D array.",
+        "fields": {
+          "workbook": {
+            "label": "Workbook",
+            "description": "The workbook object."
+          },
+          "sheet": {
+            "label": "Sheet",
+            "description": "Name of the sheet."
+          },
+          "startCell": {
+            "label": "Start Cell",
+            "description": "Top-left cell of the range (A1-style, e.g. \"A1\")."
+          },
+          "endCell": {
+            "label": "End Cell",
+            "description": "Bottom-right cell of the range (A1-style, e.g. \"D10\")."
+          }
+        }
+      },
+      "writeRange": {
+        "label": "Write Range",
+        "description": "Write a 2D array of values starting from a cell reference.",
+        "fields": {
+          "workbook": {
+            "label": "Workbook",
+            "description": "The workbook object."
+          },
+          "sheet": {
+            "label": "Sheet",
+            "description": "Name of the sheet."
+          },
+          "startCell": {
+            "label": "Start Cell",
+            "description": "Top-left cell to begin writing from (A1-style)."
+          },
+          "values": {
+            "label": "Values",
+            "description": "2D array of values to write (rows × columns)."
+          }
+        }
+      },
+      "clearRange": {
+        "label": "Clear Range",
+        "description": "Delete all cell values in a rectangular range.",
+        "fields": {
+          "workbook": {
+            "label": "Workbook",
+            "description": "The workbook object."
+          },
+          "sheet": {
+            "label": "Sheet",
+            "description": "Name of the sheet."
+          },
+          "startCell": {
+            "label": "Start Cell",
+            "description": "Top-left cell of the range to clear (A1-style)."
+          },
+          "endCell": {
+            "label": "End Cell",
+            "description": "Bottom-right cell of the range to clear (A1-style)."
+          }
+        }
+      },
+      "getUsedRange": {
+        "label": "Used Range",
+        "description": "Return the A1:XN reference string for the sheet's used range.",
+        "fields": {
+          "workbook": {
+            "label": "Workbook",
+            "description": "The workbook object."
+          },
+          "sheet": {
+            "label": "Sheet",
+            "description": "Name of the sheet to get the used range for."
+          }
+        }
+      },
+      "getSpreadsheetInfo": {
+        "label": "Spreadsheet Info",
+        "description": "Return file metadata (size, createdAt, modifiedAt) for a spreadsheet.",
+        "fields": {
+          "path": {
+            "label": "Path",
+            "description": "Path to the spreadsheet file to get info for."
+          }
+        }
+      }
+    }
+  },
+  "string": {
+    "label": "String",
+    "actions": {
+      "camelCase": {
+        "label": "Camel Case",
+        "description": "Convert to camelCase.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to convert to camelCase."
+          }
+        }
+      },
+      "capitalize": {
+        "label": "Capitalize",
+        "description": "Uppercase the first character.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to capitalize."
+          }
+        }
+      },
+      "endsWith": {
+        "label": "Ends With",
+        "description": "Check if a string ends with a substring.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to test."
+          },
+          "search": {
+            "label": "Search",
+            "description": "The substring to search for at the end."
+          },
+          "position": {
+            "label": "Position",
+            "description": "Optional character position to treat as the end of the string."
+          }
+        }
+      },
+      "encodeHTMLEntities": {
+        "label": "encodeHTMLEntities",
+        "description": "Escape special characters.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to HTML-encode (e.g. & → &amp;)."
+          }
+        }
+      },
+      "decodeHTMLEntities": {
+        "label": "decodeHTMLEntities",
+        "description": "Unescape HTML entities to their original characters.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The HTML-encoded string to decode."
+          }
+        }
+      },
+      "includes": {
+        "label": "Includes",
+        "description": "Substring presence test.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to search within."
+          },
+          "search": {
+            "label": "Search",
+            "description": "The substring to look for."
+          },
+          "position": {
+            "label": "Position",
+            "description": "Optional index to start searching from."
+          }
+        }
+      },
+      "indexOf": {
+        "label": "Index Of",
+        "description": "Index of first occurrence.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to search within."
+          },
+          "search": {
+            "label": "Search",
+            "description": "The substring to find."
+          },
+          "position": {
+            "label": "Position",
+            "description": "Optional index to start searching from."
+          }
+        }
+      },
+      "kebabCase": {
+        "label": "Kebab Case",
+        "description": "Convert to kebab-case.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to convert to kebab-case."
+          }
+        }
+      },
+      "stringify": {
+        "label": "Stringify",
+        "description": "Convert any value to a string representation.",
+        "fields": {
+          "value": {
+            "label": "Value",
+            "description": "The value to stringify."
+          },
+          "pretty": {
+            "label": "Pretty",
+            "description": "Whether to pretty-print JSON output."
+          },
+          "indent": {
+            "label": "Indent",
+            "description": "Number of spaces for indentation when pretty is true (default 2)."
+          }
+        }
+      },
+      "lowerFirst": {
+        "label": "Lower First",
+        "description": "Lowercase the first character.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to lowercase the first character of."
+          }
+        }
+      },
+      "match": {
+        "label": "Match",
+        "description": "Regex match against a string.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to match against."
+          },
+          "pattern": {
+            "label": "Pattern",
+            "description": "Regex pattern string or RegExp object."
+          },
+          "flag": {
+            "label": "Flag",
+            "description": "Optional regex flags (e.g. \"g\" for global, \"i\" for case-insensitive)."
+          }
+        }
+      },
+      "replace": {
+        "label": "Replace",
+        "description": "Replace first match.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to perform replacement on."
+          },
+          "pattern": {
+            "label": "Pattern",
+            "description": "Exact text to find (not a regex)."
+          },
+          "replacement": {
+            "label": "Replacement",
+            "description": "Replacement string (empty string to delete)."
+          }
+        }
+      },
+      "replaceAll": {
+        "label": "Replace All",
+        "description": "Replace all matches.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to perform replacements on."
+          },
+          "pattern": {
+            "label": "Pattern",
+            "description": "Exact text to find and replace everywhere (not a regex)."
+          },
+          "replacement": {
+            "label": "Replacement",
+            "description": "Replacement string."
+          }
+        }
+      },
+      "search": {
+        "label": "Search",
+        "description": "Search using regex/string.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to search in."
+          },
+          "pattern": {
+            "label": "Pattern",
+            "description": "Regex pattern or string to search for."
+          }
+        }
+      },
+      "slice": {
+        "label": "Slice",
+        "description": "Extract a substring by range.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to slice."
+          },
+          "start": {
+            "label": "Start",
+            "description": "Start index (inclusive)."
+          },
+          "end": {
+            "label": "End",
+            "description": "End index (exclusive). Omit to slice to the end."
+          }
+        }
+      },
+      "snakeCase": {
+        "label": "Snake Case",
+        "description": "Convert to snake_case.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to convert to snake_case."
+          }
+        }
+      },
+      "split": {
+        "label": "Split",
+        "description": "Split into parts by separator.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to split."
+          },
+          "separator": {
+            "label": "Separator",
+            "description": "Separator string to split on."
+          },
+          "limit": {
+            "label": "Limit",
+            "description": "Optional maximum number of parts to return."
+          }
+        }
+      },
+      "startCase": {
+        "label": "Start Case",
+        "description": "Capitalize words with spaces.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to convert to Start Case."
+          }
+        }
+      },
+      "startsWith": {
+        "label": "Starts With",
+        "description": "Check if a string starts with a substring.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to test."
+          },
+          "target": {
+            "label": "Target",
+            "description": "The substring to check for at the start."
+          },
+          "position": {
+            "label": "Position",
+            "description": "Optional starting index to begin the check."
+          }
+        }
+      },
+      "toLowerCase": {
+        "label": "To Lower Case",
+        "description": "Lowercase the string.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to lowercase."
+          }
+        }
+      },
+      "toUpperCase": {
+        "label": "To Upper Case",
+        "description": "Uppercase the string.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to uppercase."
+          }
+        }
+      },
+      "upperFirst": {
+        "label": "Upper First",
+        "description": "Uppercase the first character.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to uppercase the first character of."
+          }
+        }
+      },
+      "trim": {
+        "label": "Trim",
+        "description": "Trim whitespace from both ends.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to trim whitespace from."
+          }
+        }
+      },
+      "trimEnd": {
+        "label": "Trim End",
+        "description": "Trim whitespace from the end.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to trim trailing whitespace from."
+          }
+        }
+      },
+      "trimStart": {
+        "label": "Trim Start",
+        "description": "Trim whitespace from the start.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to trim leading whitespace from."
+          }
+        }
+      },
+      "words": {
+        "label": "Words",
+        "description": "Split into words (optional regex).",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to split into words."
+          },
+          "pattern": {
+            "label": "Pattern",
+            "description": "Optional regex pattern to use as the word boundary."
+          }
+        }
+      },
+      "len": {
+        "label": "Length",
+        "description": "String length.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to measure the length of."
+          }
+        }
+      },
+      "substring": {
+        "label": "Substring",
+        "description": "Substring with start and end.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to extract a substring from."
+          },
+          "start": {
+            "label": "Start",
+            "description": "Start index (inclusive)."
+          },
+          "end": {
+            "label": "End",
+            "description": "End index (exclusive)."
+          }
+        }
+      },
+      "containsRegex": {
+        "label": "Contains Regex",
+        "description": "Test if regex pattern exists.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to test."
+          },
+          "pattern": {
+            "label": "Pattern",
+            "description": "Regex pattern string to test against the string."
+          }
+        }
+      },
+      "format": {
+        "label": "Format",
+        "description": "Template string interpolation.",
+        "fields": {
+          "template": {
+            "label": "Template",
+            "description": "Template string with {key} placeholders."
+          },
+          "values": {
+            "label": "Values",
+            "description": "Object mapping placeholder keys to their replacement values."
+          }
+        }
+      },
+      "parseQueryString": {
+        "label": "Parse Query",
+        "description": "Parse query string to object.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "URL query string to parse (e.g. \"a=1&b=2\")."
+          }
+        }
+      },
+      "stringifyQueryObject": {
+        "label": "Stringify Query",
+        "description": "Stringify object to query string.",
+        "fields": {
+          "object": {
+            "label": "Object",
+            "description": "Object of key-value pairs to serialize as a query string."
+          }
+        }
+      },
+      "encodeURIComponent": {
+        "label": "Encode URI Component",
+        "description": "Percent-encode a URI component.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to percent-encode for use in a URI."
+          }
+        }
+      },
+      "decodeURIComponent": {
+        "label": "Decode URI Component",
+        "description": "Decode a percent-encoded component.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The percent-encoded URI component to decode."
+          }
+        }
+      },
+      "slugify": {
+        "label": "Slugify",
+        "description": "Make a URL-friendly slug.",
+        "fields": {
+          "string": {
+            "label": "String",
+            "description": "The string to slugify (e.g. \"Hello World\" → \"hello-world\")."
+          }
+        }
+      },
+      "renderTemplate": {
+        "label": "Render Template",
+        "description": "Render a Liquid template held in a variable, with the data you give it.",
+        "fields": {
+          "template": {
+            "label": "Template",
+            "description": "The template, usually a variable holding it. Text typed here is filled in with the workflow's variables first."
+          },
+          "data": {
+            "label": "Data",
+            "description": "What the template can use, by name."
+          }
+        }
+      },
+      "template": {
+        "label": "Template",
+        "description": "Compose a multi-line string using variable interpolation.",
+        "fields": {
+          "content": {
+            "label": "Content",
+            "description": "The template string with variable placeholders."
+          },
+          "format": {
+            "label": "Format",
+            "description": "Output content format: plain, html, markdown, or css."
+          }
+        }
+      }
+    }
+  },
+  "subtask": {
+    "label": "Sub-workflow",
+    "actions": {
+      "exec": {
+        "label": "Sub-workflow Execution",
+        "description": "Run a child workflow inline and wait for it to finish. Pass values in via props and pull results back via outputs.",
+        "fields": {
+          "identifier": {
+            "label": "Identifier",
+            "description": "Identifier of the child workflow to execute."
+          },
+          "path": {
+            "label": "Path",
+            "description": "File path to the child workflow definition (alternative to identifier)."
+          },
+          "props": {
+            "label": "Props",
+            "description": "Key-value pairs passed as input variables to the child workflow."
+          },
+          "outputs": {
+            "label": "Outputs",
+            "description": "Mapping of child workflow output variable names to local variable names."
+          }
+        }
+      }
+    }
+  },
+  "system": {
+    "label": "System",
+    "actions": {
+      "message": {
+        "label": "System Message",
+        "description": "Emit a system message.",
+        "fields": {
+          "text": {
+            "label": "Text",
+            "description": "Message text to emit."
+          }
+        }
+      },
+      "runApplication": {
+        "label": "Run Application",
+        "description": "Execute a command with optional args and env.",
+        "fields": {
+          "command": {
+            "label": "Command",
+            "description": "The executable or command to run."
+          },
+          "args": {
+            "label": "Args",
+            "description": "List of command-line arguments to pass."
+          },
+          "env": {
+            "label": "Env",
+            "description": "Environment variables to set for the process."
+          },
+          "options": {
+            "label": "Options",
+            "description": "Execution options (e.g. shell: true to run in a shell)."
+          }
+        }
+      },
+      "terminateProcess": {
+        "label": "Terminate Process",
+        "description": "Send a signal to terminate a process.",
+        "fields": {
+          "pid": {
+            "label": "PID",
+            "description": "Process ID (PID) of the process to terminate."
+          },
+          "signal": {
+            "label": "Signal",
+            "description": "Signal to send: SIGTERM (graceful), SIGKILL (force), or SIGINT (interrupt)."
+          }
+        }
+      },
+      "setEnvVariable": {
+        "label": "Set Env Variable",
+        "description": "Set an environment variable.",
+        "fields": {
+          "key": {
+            "label": "Key",
+            "description": "Environment variable name."
+          },
+          "value": {
+            "label": "Value",
+            "description": "Value to assign to the environment variable."
+          }
+        }
+      },
+      "getEnvVariable": {
+        "label": "Get Env Variable",
+        "description": "Read an environment variable.",
+        "fields": {
+          "key": {
+            "label": "Key",
+            "description": "Name of the environment variable to read."
+          }
+        }
+      },
+      "deleteEnvVariable": {
+        "label": "Delete Env Variable",
+        "description": "Delete an environment variable.",
+        "fields": {
+          "key": {
+            "label": "Key",
+            "description": "Name of the environment variable to delete."
+          }
+        }
+      }
+    }
+  },
+  "variable": {
+    "label": "Variable",
+    "actions": {
+      "set": {
+        "label": "Set Variable",
+        "description": "Create or update a pipeline variable.",
+        "fields": {
+          "name": {
+            "label": "Name",
+            "description": "Variable name (letters, numbers, underscores; prefix with \"_global.\" for global scope)."
+          },
+          "value": {
+            "label": "Value",
+            "description": "Value to assign to the variable."
+          }
+        }
+      }
+    }
+  },
+  "video": {
+    "label": "Video",
+    "actions": {
+      "load": {
+        "label": "Load Video",
+        "description": "Load a video from a path or URL.",
+        "fields": {
+          "input": {
+            "label": "Input",
+            "description": "File path or URL of the video to load."
+          }
+        }
+      },
+      "export": {
+        "label": "Export Video",
+        "description": "Write the video to a file.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The video object to export."
+          },
+          "output": {
+            "label": "Output",
+            "description": "Destination file path for the exported video."
+          }
+        }
+      },
+      "trim": {
+        "label": "Trim",
+        "description": "Cut a segment from the video.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The video object to trim."
+          },
+          "start": {
+            "label": "Start",
+            "description": "Start timestamp of the segment (HH:MM:SS or HH:MM:SS.ms)."
+          },
+          "duration": {
+            "label": "Duration",
+            "description": "Duration of the segment to keep (HH:MM:SS or HH:MM:SS.ms)."
+          }
+        }
+      },
+      "changeResolution": {
+        "label": "Change Resolution",
+        "description": "Resize video canvas.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The video object to resize."
+          },
+          "width": {
+            "label": "Width",
+            "description": "Target width in pixels."
+          },
+          "height": {
+            "label": "Height",
+            "description": "Target height in pixels."
+          }
+        }
+      },
+      "crop": {
+        "label": "Crop",
+        "description": "Crop to a rectangle.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The video object to crop."
+          },
+          "width": {
+            "label": "Width",
+            "description": "Width of the crop area in pixels."
+          },
+          "height": {
+            "label": "Height",
+            "description": "Height of the crop area in pixels."
+          },
+          "x": {
+            "label": "X",
+            "description": "Horizontal offset from the left edge in pixels."
+          },
+          "y": {
+            "label": "Y",
+            "description": "Vertical offset from the top edge in pixels."
+          }
+        }
+      },
+      "rotate": {
+        "label": "Rotate",
+        "description": "Rotate using transpose filter.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The video object to rotate."
+          },
+          "transpose": {
+            "label": "Transpose",
+            "description": "Transpose mode: 0=90°CCW+flip, 1=90°CW, 2=90°CCW, 3=90°CW+flip."
+          }
+        }
+      },
+      "changeFramerate": {
+        "label": "Change Framerate",
+        "description": "Adjust frames per second.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The video object to change the frame rate of."
+          },
+          "fps": {
+            "label": "FPS",
+            "description": "Target frames per second."
+          }
+        }
+      },
+      "changeVolume": {
+        "label": "Change Volume",
+        "description": "Scale the audio volume.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The video object to adjust audio volume for."
+          },
+          "volume": {
+            "label": "Volume",
+            "description": "Volume multiplier (e.g. 0.5 = half, 2.0 = double)."
+          }
+        }
+      },
+      "mute": {
+        "label": "Mute",
+        "description": "Remove the audio track.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The video object to mute."
+          }
+        }
+      },
+      "replaceAudio": {
+        "label": "Replace Audio",
+        "description": "Replace audio with an external track.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The video object to replace the audio of."
+          },
+          "audio": {
+            "label": "Audio",
+            "description": "File path of the audio track to use as replacement."
+          }
+        }
+      },
+      "addBackgroundMusic": {
+        "label": "Add BGM",
+        "description": "Mix background music into the video.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The video object to add background music to."
+          },
+          "music": {
+            "label": "Music",
+            "description": "File path of the background music audio track."
+          },
+          "musicVolume": {
+            "label": "Music Volume",
+            "description": "Volume of the background music track (default 1.0)."
+          }
+        }
+      },
+      "convertFormat": {
+        "label": "Convert Format",
+        "description": "Transcode video to a new format.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The video object to transcode."
+          },
+          "format": {
+            "label": "Format",
+            "description": "Target container format (e.g. \"mp4\", \"webm\", \"mov\")."
+          }
+        }
+      },
+      "compress": {
+        "label": "Compress",
+        "description": "Reduce size via CRF/preset.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The video object to compress."
+          },
+          "crf": {
+            "label": "CRF",
+            "description": "Constant Rate Factor (0–51). Lower = better quality, higher = smaller file. Typical: 18–28."
+          },
+          "preset": {
+            "label": "Preset",
+            "description": "Encoding speed preset (ultrafast to veryslow). Slower presets yield better compression."
+          }
+        }
+      },
+      "concatenateVideos": {
+        "label": "Concatenate",
+        "description": "Append multiple videos in sequence.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The base video object to append to."
+          },
+          "inputs": {
+            "label": "Inputs",
+            "description": "List of file paths of videos to append in order."
+          },
+          "resolution": {
+            "label": "Resolution",
+            "description": "Optional output resolution to normalize all inputs to (width and height)."
+          }
+        }
+      },
+      "addOverlay": {
+        "label": "Add Overlay",
+        "description": "Overlay an image/video onto the base.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The base video object."
+          },
+          "overlay": {
+            "label": "Overlay",
+            "description": "File path of the image or video to overlay."
+          },
+          "x": {
+            "label": "X",
+            "description": "Horizontal position of the overlay in pixels (default 0)."
+          },
+          "y": {
+            "label": "Y",
+            "description": "Vertical position of the overlay in pixels (default 0)."
+          },
+          "width": {
+            "label": "Width",
+            "description": "Width to scale the overlay to in pixels (optional)."
+          },
+          "height": {
+            "label": "Height",
+            "description": "Height to scale the overlay to in pixels (optional)."
+          }
+        }
+      },
+      "addWatermark": {
+        "label": "Watermark",
+        "description": "Add an image watermark.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The base video object."
+          },
+          "image": {
+            "label": "Image",
+            "description": "File path of the watermark image."
+          },
+          "x": {
+            "label": "X",
+            "description": "Horizontal position of the watermark in pixels (default 0)."
+          },
+          "y": {
+            "label": "Y",
+            "description": "Vertical position of the watermark in pixels (default 0)."
+          },
+          "width": {
+            "label": "Width",
+            "description": "Width to scale the watermark to in pixels (optional)."
+          },
+          "height": {
+            "label": "Height",
+            "description": "Height to scale the watermark to in pixels (optional)."
+          }
+        }
+      },
+      "addSubtitles": {
+        "label": "Add Subtitles",
+        "description": "Burn-in or attach subtitles.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The video object to add subtitles to."
+          },
+          "subtitle": {
+            "label": "Subtitle",
+            "description": "File path to the subtitle file (e.g. .srt or .ass)."
+          }
+        }
+      },
+      "getInfo": {
+        "label": "Get Info",
+        "description": "Probe metadata and stream details.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The video object to probe."
+          }
+        }
+      },
+      "getDuration": {
+        "label": "Get Duration",
+        "description": "Get total video duration.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The video object to get duration from."
+          }
+        }
+      },
+      "getThumbnail": {
+        "label": "Thumbnail",
+        "description": "Extract a frame to an image file.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The video object to extract a frame from."
+          },
+          "output": {
+            "label": "Output",
+            "description": "Destination file path for the thumbnail image."
+          },
+          "timestamp": {
+            "label": "Timestamp",
+            "description": "Timestamp of the frame to capture (HH:MM:SS or HH:MM:SS.ms)."
+          }
+        }
+      },
+      "extractFrames": {
+        "label": "Extract Frames",
+        "description": "Export frames to images.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The video object to extract frames from."
+          },
+          "outputDir": {
+            "label": "Output Dir",
+            "description": "Directory where frame images will be saved."
+          },
+          "fps": {
+            "label": "FPS",
+            "description": "Number of frames per second to extract."
+          },
+          "format": {
+            "label": "Format",
+            "description": "Image format for extracted frames: png, jpg, or bmp."
+          },
+          "start": {
+            "label": "Start",
+            "description": "Start timestamp for frame extraction (optional)."
+          },
+          "end": {
+            "label": "End",
+            "description": "End timestamp for frame extraction (optional)."
+          }
+        }
+      },
+      "extractAudio": {
+        "label": "Extract Audio",
+        "description": "Demux or transcode audio to a file.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The video object to extract audio from."
+          },
+          "output": {
+            "label": "Output",
+            "description": "Destination file path for the extracted audio."
+          }
+        }
+      },
+      "generateGif": {
+        "label": "Generate GIF",
+        "description": "Create an animated GIF from a segment.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The video object to create a GIF from."
+          },
+          "output": {
+            "label": "Output",
+            "description": "Destination file path for the GIF."
+          },
+          "start": {
+            "label": "Start",
+            "description": "Start timestamp of the segment (HH:MM:SS)."
+          },
+          "duration": {
+            "label": "Duration",
+            "description": "Duration of the GIF segment (HH:MM:SS)."
+          },
+          "fps": {
+            "label": "FPS",
+            "description": "Frame rate for the GIF (optional)."
+          },
+          "width": {
+            "label": "Width",
+            "description": "Width of the GIF in pixels (optional, maintains aspect ratio)."
+          }
+        }
+      },
+      "blurRegion": {
+        "label": "Blur Region",
+        "description": "Blur rectangular regions over time.",
+        "fields": {
+          "video": {
+            "label": "Video",
+            "description": "The video object to apply blur regions to."
+          },
+          "regions": {
+            "label": "Regions",
+            "description": "Array of region definitions with x, y, width, height, start/end times, and optional blur strength."
+          }
+        }
+      }
+    }
+  },
+  "xml": {
+    "label": "XML",
+    "actions": {
+      "parse": {
+        "label": "Parse XML",
+        "description": "Parse an XML string into a JSON object.",
+        "fields": {
+          "xml": {
+            "label": "XML",
+            "description": "XML string to parse."
+          },
+          "ignoreAttributes": {
+            "label": "Ignore Attributes",
+            "description": "When true, element attributes are stripped from the result (default false)."
+          }
+        }
+      },
+      "parseFeed": {
+        "label": "Parse Feed (RSS/Atom)",
+        "description": "Parse an RSS 2.0 or Atom feed into a normalized object with title, link, description, and items.",
+        "fields": {
+          "xml": {
+            "label": "XML",
+            "description": "Raw RSS or Atom feed XML content to parse."
+          }
+        }
+      }
+    }
+  }
+}

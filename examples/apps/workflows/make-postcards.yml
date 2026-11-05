@@ -1,0 +1,97 @@
+version: 1.0.0
+name: Make Postcards
+description: |
+  Draws six postcards (SVG pictures) in a colour theme, writes each one to `~/Tipeline/output/app-example-postcards/` and returns the list.
+
+  Used by the Gallery example app.
+
+  **Inputs**
+
+  - `theme` — "sunset", "ocean" or "forest"
+
+  **Outputs**
+
+  - `cards` — `[{ id, path, caption, place, theme }]`
+author: tipeline
+tags: [example, apps, images, svg, gallery]
+
+pipeline:
+  variables:
+    - type: string
+      name: theme
+      value: sunset
+      visibility: public
+      description: The colour theme — sunset, ocean or forest. Set by the app.
+
+    - type: array
+      name: cards
+      value: []
+      visibility: public
+      description: The postcards written, with their paths. Returned to the app.
+
+    - type: array
+      name: drawn
+      value: []
+
+    - type: object
+      name: card
+      value: {}
+
+  actions:
+    - group: script
+      name: runScript
+      params:
+        context:
+          theme: '{{ theme }}'
+          home: '{{ _env.HOME }}'
+        code: |
+          const themes = {
+            sunset: ['#ff7e5f', '#feb47b', '#6a3093'],
+            ocean: ['#2193b0', '#6dd5ed', '#0b486b'],
+            forest: ['#5a8f29', '#a8e063', '#1e3c13'],
+          };
+          const colors = themes[theme];
+          if (!colors) throw new Error(`Unknown theme "${theme}" — use sunset, ocean or forest`);
+          const places = ['San José', 'Monteverde', 'Tortuguero', 'Arenal', 'Manuel Antonio', 'Osa'];
+          return places.map((place, i) => {
+            const sun = 60 + i * 35;
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400">
+            <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="${colors[0]}"/><stop offset="1" stop-color="${colors[1]}"/></linearGradient></defs>
+            <rect width="640" height="400" fill="url(#sky)"/>
+            <circle cx="${sun + 300}" cy="${110 + (i % 3) * 20}" r="46" fill="#fff" opacity=".85"/>
+            <path d="M0 300 Q ${120 + i * 20} ${220 - i * 8} 320 290 T 640 ${270 + (i % 2) * 30} V 400 H 0 Z" fill="${colors[2]}" opacity=".9"/>
+            <text x="32" y="368" font-family="Georgia, serif" font-size="34" fill="#fff">${place}</text>
+          </svg>`;
+            return {
+              id: i + 1,
+              place,
+              theme,
+              caption: `${place} · ${theme}`,
+              path: `${home}/Tipeline/output/app-example-postcards/${theme}-${i + 1}.svg`,
+              svg,
+            };
+          });
+      destination: drawn
+
+    # One file per postcard.
+    - group: flow
+      name: forEachLoop
+      params:
+        iterable: '{= drawn =}'
+        currentItem: card
+        actions:
+          - group: file
+            name: write
+            params:
+              src: '{{ card.path }}'
+              data: '{{ card.svg }}'
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          drawn: '{= drawn =}'
+        code: |
+          return drawn.map(({ svg, ...card }) => card);
+      destination: cards

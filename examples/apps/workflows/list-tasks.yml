@@ -1,0 +1,54 @@
+version: 1.0.0
+name: List Tasks
+description: |
+  Returns the example tasks from the task store (a JSON file in `~/Tipeline/output`), in their board order.
+
+  Used by the Task Board example app.
+
+  **Outputs**
+
+  - `tasks` — `[{ id, title, status, owner, due, priority }]`
+author: tipeline
+tags: [example, apps, tasks, kanban]
+
+pipeline:
+  variables:
+    - type: array
+      name: tasks
+      value: []
+      visibility: public
+      description: The tasks, in board order. Returned to the app.
+
+    - type: string
+      name: raw
+      value: ''
+
+    - type: array
+      name: seed
+      value:
+        - { id: 1, title: Collect requirements, status: done, owner: Ana, due: "2026-10-02", priority: high }
+        - { id: 2, title: Design the signup form, status: doing, owner: Luis, due: "2026-10-09", priority: high }
+        - { id: 3, title: Write the welcome email, status: doing, owner: Ana, due: "2026-10-10", priority: medium }
+        - { id: 4, title: Set up the payment provider, status: todo, owner: Sam, due: "2026-10-14", priority: high }
+        - { id: 5, title: Translate the pages, status: todo, due: "2026-10-16", priority: low }
+        - { id: 6, title: Plan the launch, status: backlog, owner: Luis, priority: medium }
+        - { id: 7, title: Customer interviews, status: backlog, priority: low }
+
+  actions:
+    # Until a task is moved there's no store yet: then the seed is the board.
+    - group: file
+      name: read
+      onError: continue
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-tasks.json'
+      destination: raw
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          raw: '{= raw =}'
+          seed: '{= seed =}'
+        code: |
+          return raw ? JSON.parse(raw) : seed;
+      destination: tasks

@@ -1,0 +1,92 @@
+schemaVersion: 4
+name: Embed
+description: Web pages and HTML inside an app — a workflow's HTML report shown as text and as a file, whose rows tell the app what was clicked, and a web page
+author: tipeline
+
+workflows:
+  makeReport: { file: ./workflows/make-html-report.yml }
+
+pages:
+  - id: report
+    name: Report
+    icon: AppWindow
+
+    runnables:
+      report:
+        mode: run
+        workflow: makeReport
+        trigger: load
+        inputs: { title: "{{ reportTitle.value }}" }
+        outputs: [html, path]
+        persist: false
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 8, h: 12 }
+        props:
+          markdown: true
+          content: "**Embed** shows HTML a workflow made — its report as text (left) and as the file it wrote (right) — and web pages. Click a row in the report: it sends the row to the app (`parent.postMessage`), firing the embed's **message** event."
+
+      - id: reportTitle
+        type: input
+        name: Report title
+        layout: { x: 8, y: 0, w: 2, h: 12 }
+        props:
+          label: Report title
+          default: Records report
+
+      - id: makeButton
+        type: button
+        name: Make report
+        frame: none
+        layout: { x: 10, y: 3, w: 2, h: 6 }
+        props:
+          label: Make report
+          icon: FileCode
+        events:
+          click: [{ type: run, runnable: report }]
+
+      - id: reportHtml
+        type: embed
+        name: Report (HTML text)
+        layout: { x: 0, y: 12, w: 6, h: 36 }
+        props:
+          title: Report — HTML from the workflow
+          html: "{{ runnables.report.outputs.html }}"
+          emptyText: Making the report…
+        events:
+          message:
+            - { type: toast, message: "Clicked {{ reportHtml.message.record.name }} in the report" }
+
+      - id: reportFile
+        type: embed
+        name: Report (file)
+        layout: { x: 6, y: 12, w: 6, h: 36 }
+        props:
+          title: Report — the file it wrote
+          src: "{{ runnables.report.outputs.path }}"
+          emptyText: Making the report…
+
+      - id: clicked
+        type: keyValue
+        name: Clicked in the report
+        layout: { x: 0, y: 48, w: 6, h: 22 }
+        props:
+          title: Clicked in the report (reportHtml.message)
+          data: "{= reportHtml.message.record =}"
+          emptyText: Click a row in the report on the left
+          fields:
+            - { key: id, label: ID }
+            - { key: name, label: Name }
+            - { key: status, label: Status, format: badge }
+            - { key: amount, label: Amount, format: currency }
+
+      - id: webPage
+        type: embed
+        name: Web page
+        layout: { x: 6, y: 48, w: 6, h: 36 }
+        props:
+          title: A web page
+          src: "https://www.openstreetmap.org/export/embed.html?bbox=-84.13%2C9.90%2C-84.04%2C9.96&layer=mapnik"

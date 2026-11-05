@@ -1,0 +1,212 @@
+schemaVersion: 4
+name: Records Manager
+version: "1.0.0"
+description: Add, edit and delete records — a form, a filter, row actions and an edit dialog, each backed by a workflow
+author: tipeline
+
+# Workflows ship with the app (installed with it, or reused if already installed).
+# List Records and Update Record Status are shared with the other example apps.
+workflows:
+  listRecords: { file: ./workflows/list-records.yml }
+  addRecord: { file: ./workflows/add-record.yml }
+  setStatus: { file: ./workflows/update-record-status.yml }
+  deleteRecord: { file: ./workflows/delete-record.yml }
+
+# The record being edited, set right before the edit dialog opens.
+state:
+  editing: null
+
+pages:
+  # ------------------------------------------------------------------ records
+  - id: records
+    name: Records
+    icon: Table
+
+    runnables:
+      # Read-only lookup: page load, filter changes, and after every change.
+      records:
+        mode: run
+        workflow: listRecords
+        trigger: load
+        inputs: { status: "{= statusFilter.value =}" }
+        outputs: [records, summary]
+        persist: false
+
+      # Changes are kept in run history (persist defaults to true).
+      add:
+        mode: run
+        workflow: addRecord
+        inputs:
+          name: "{= newRecord.values.name =}"
+          status: "{= newRecord.values.status =}"
+          amount: "{= newRecord.values.amount =}"
+        outputs: [record]
+        onSuccess:
+          - { type: toast, message: "{{ result.outputs.record.name }} added", variant: success }
+          - { type: reset, component: newRecord }
+          - { type: run, runnable: records }
+
+      delete:
+        mode: run
+        workflow: deleteRecord
+        confirm: "Delete {{ recordsTable.selectedRow.name }}? This can't be undone."
+        inputs: { id: "{= recordsTable.selectedRow.id =}" }
+        outputs: [record]
+        onSuccess:
+          - { type: toast, message: "{{ result.outputs.record.name }} deleted", variant: success }
+          - { type: run, runnable: records }
+
+    components:
+      - id: totalKpi
+        type: kpi
+        name: Records
+        layout: { x: 0, y: 0, w: 4, h: 14 }
+        props: { label: Records, value: "{= runnables.records.outputs.summary.total =}" }
+
+      - id: pendingKpi
+        type: kpi
+        name: Pending
+        layout: { x: 4, y: 0, w: 4, h: 14 }
+        props: { label: Pending approval, value: "{= runnables.records.outputs.summary.pending =}" }
+
+      - id: openAmountKpi
+        type: kpi
+        name: Open amount
+        layout: { x: 8, y: 0, w: 4, h: 14 }
+        props:
+          label: Open amount
+          value: "{= runnables.records.outputs.summary.openAmount =}"
+          format: currency
+
+      # Add a record: required fields are checked before the workflow runs; the
+      # workflow's own checks (duplicate name…) come back as the alert below.
+      - id: newRecord
+        type: form
+        name: New record
+        layout: { x: 0, y: 14, w: 4, h: 42 }
+        props:
+          title: New record
+          submitLabel: Add record
+          resetLabel: Clear
+          fields:
+            - { name: name, label: Name, type: text, required: true, placeholder: e.g. Wayne Enterprises }
+            - name: status
+              label: Status
+              type: select
+              default: pending
+              options:
+                - { value: pending, label: Pending approval }
+                - { value: active, label: Active }
+            - { name: amount, label: Amount, type: number, required: true, placeholder: "0" }
+        events:
+          submit: [{ type: run, runnable: add }]
+
+      - id: addError
+        type: alert
+        name: Add error
+        layout: { x: 4, y: 14, w: 8, h: 7 }
+        props:
+          message: "Couldn't add the record: {{ runnables.add.error }}"
+          variant: error
+          visible: "{% if runnables.add.error %}true{% else %}false{% endif %}"
+
+      - id: statusFilter
+        type: select
+        name: Status filter
+        layout: { x: 4, y: 21, w: 4, h: 14 }
+        props:
+          label: Show
+          default: all
+          # All four choices visible at once, one click each (instead of a dropdown).
+          display: buttons
+          options:
+            - { value: all, label: All records }
+            - { value: pending, label: Pending approval }
+            - { value: active, label: Active }
+            - { value: closed, label: Closed }
+        events:
+          change: [{ type: run, runnable: records }]
+
+      - id: recordsTable
+        type: table
+        name: Records
+        layout: { x: 4, y: 35, w: 8, h: 49 }
+        props:
+          data: "{= runnables.records.outputs.records =}"
+          searchable: true
+          exportable: true
+          columns:
+            - { key: id, header: ID, sortable: false }
+            - { key: name, header: Name }
+            - { key: status, header: Status, format: badge }
+            - { key: amount, header: Amount, format: currency }
+            - { key: updatedAt, header: Updated, format: datetime }
+          rowActions:
+            - { id: edit, label: Edit, variant: outline }
+            - { id: delete, label: Delete, variant: destructive }
+        events:
+          # The dialog's Save closes it with closeModal, so the refresh only runs after
+          # a save; dismissing the dialog (✕ or Escape) skips it.
+          "action:edit":
+            - { type: setState, key: editing, value: "{= recordsTable.selectedRow =}" }
+            - { type: openModal, page: editRecord }
+            - { type: run, runnable: records }
+          "action:delete":
+            - { type: run, runnable: delete }
+
+  # ------------------------------------------------------------------ edit dialog
+  # Hidden from the page menu — opened as a dialog by the Edit row action.
+  - id: editRecord
+    name: Edit record
+    showInMenu: false
+
+    runnables:
+      save:
+        mode: run
+        workflow: setStatus
+        inputs:
+          id: "{= state.editing.id =}"
+          status: "{= editForm.values.status =}"
+        outputs: [record]
+        onSuccess:
+          - { type: toast, message: "{{ result.outputs.record.name }} is now {{ result.outputs.record.status }}", variant: success }
+          - { type: closeModal }
+
+    components:
+      - id: editTitle
+        type: text
+        name: Title
+        layout: { x: 0, y: 0, w: 12, h: 7 }
+        props:
+          content: "#{{ state.editing.id }} {{ state.editing.name }} — {{ state.editing.amount }}"
+          fontSize: 16
+          fontWeight: semibold
+
+      # Starts at the record's current status (defaults are resolved when the dialog opens).
+      - id: editForm
+        type: form
+        name: Edit
+        layout: { x: 0, y: 7, w: 12, h: 28 }
+        props:
+          submitLabel: Save
+          fields:
+            - name: status
+              label: Status
+              type: select
+              required: true
+              default: "{= state.editing.status =}"
+              options:
+                - { value: pending, label: Pending approval }
+                - { value: active, label: Active }
+                - { value: closed, label: Closed }
+        events:
+          submit: [{ type: run, runnable: save }]
+
+      - id: saveError
+        type: alert
+        name: Save error
+        layout: { x: 0, y: 35, w: 12, h: 7 }
+        props:
+          message: "{{ runnables.save.error }}"
+          variant: error
+          visible: "{% if runnables.save.error %}true{% else %}false{% endif %}"

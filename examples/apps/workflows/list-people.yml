@@ -1,0 +1,77 @@
+version: 1.0.0
+name: List People
+description: |
+  Returns an example team — names, roles, statuses, and drawn pictures for some of them (as data URLs) — and the projects they own.
+
+  Used by the Team Directory example app.
+
+  **Outputs**
+
+  - `people` — `[{ name, email, role, status, photo }]`
+  - `projects` — `[{ project, owner, ownerPhoto, due, status }]`
+author: tipeline
+tags: [example, apps, people, team, avatars]
+
+pipeline:
+  variables:
+    - type: array
+      name: people
+      value: []
+      visibility: public
+      description: The team. Returned to the app.
+
+    - type: array
+      name: projects
+      value: []
+      visibility: public
+      description: Projects and who owns them. Returned to the app.
+
+    - type: object
+      name: team
+      value: {}
+
+  actions:
+    - group: script
+      name: runScript
+      params:
+        code: |
+          // A drawn "photo": a head and shoulders on a colored background, as an SVG data URL.
+          const photo = (bg, skin, hair) =>
+            'data:image/svg+xml;base64,' +
+            Buffer.from(
+              `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="${bg}"/>` +
+                `<circle cx="32" cy="27" r="13" fill="${skin}"/><path d="M19 25a13 13 0 0 1 26 0c-3-6-9-8-13-8s-10 2-13 8z" fill="${hair}"/>` +
+                `<path d="M10 64c2-13 11-19 22-19s20 6 22 19z" fill="${hair}" opacity=".85"/></svg>`
+            ).toString('base64');
+          const people = [
+            { name: 'Ada Lovelace', role: 'Engineering lead', status: 'online', photo: photo('#c7d2fe', '#f1c7a5', '#4b2e1e') },
+            { name: 'Grace Hopper', role: 'Platform', status: 'busy', photo: photo('#fde68a', '#e9b48a', '#9ca3af') },
+            { name: 'Alan Turing', role: 'Security', status: 'away' },
+            { name: 'Katherine Johnson', role: 'Data', status: 'online', photo: photo('#a7f3d0', '#8d5524', '#1f1300') },
+            { name: 'Linus Torvalds', role: 'Infrastructure', status: 'offline' },
+            { name: 'Margaret Hamilton', role: 'Quality', status: 'online' },
+            { name: 'Tim Berners-Lee', role: 'Web', status: 'away', photo: photo('#fecaca', '#f3d2b3', '#6b4f3a') },
+            { name: 'Radia Perlman', role: 'Networking', status: 'offline' },
+          ].map((p) => ({ ...p, email: p.name.toLowerCase().replace(/[^a-z]+/g, '.') + '@example.org' }));
+          const by = Object.fromEntries(people.map((p) => [p.name, p]));
+          const projects = [
+            ['Billing revamp', 'Ada Lovelace', '2026-11-03', 'active'],
+            ['Single sign-on', 'Alan Turing', '2026-10-21', 'review'],
+            ['Data warehouse', 'Katherine Johnson', '2026-12-15', 'active'],
+            ['Status page', 'Tim Berners-Lee', '2026-10-30', 'pending'],
+            ['Release checklist', 'Margaret Hamilton', '2026-10-12', 'done'],
+          ].map(([project, owner, due, status]) => ({ project, owner, ownerPhoto: by[owner].photo ?? null, due, status }));
+          return { people, projects };
+      destination: team
+
+    - group: variable
+      name: set
+      params:
+        name: people
+        value: '{= team.people =}'
+
+    - group: variable
+      name: set
+      params:
+        name: projects
+        value: '{= team.projects =}'

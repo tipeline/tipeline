@@ -1,0 +1,108 @@
+version: 1.0.0
+name: Update Record Status
+description: |
+  Changes the status of one record in the example record store (a JSON file in `~/Tipeline/output`) and returns the updated record.
+
+  Used by the example apps.
+
+  **Inputs**
+
+  - `id` — record id
+  - `status` — new status: active, pending or closed
+
+  **Outputs**
+
+  - `record` — the updated record
+
+  Fails with a clear message for an unknown id or status — the app shows it.
+author: tipeline
+tags: [example, apps, records, status]
+
+pipeline:
+  variables:
+    - type: number
+      name: id
+      value: 0
+      visibility: public
+      description: Id of the record to change. Set by the app.
+
+    - type: string
+      name: status
+      value: active
+      visibility: public
+      description: New status — active, pending or closed. Set by the app.
+
+    - type: object
+      name: record
+      value: {}
+      visibility: public
+      description: The record after the change. Returned to the app.
+
+    - type: string
+      name: raw
+      value: ''
+
+    - type: string
+      name: updated
+      value: ''
+
+    - type: array
+      name: seed
+      value:
+        - { id: 1, name: Acme Corp, status: active, amount: 1200, updatedAt: '2026-09-01T10:00:00Z' }
+        - { id: 2, name: Globex, status: pending, amount: 850, updatedAt: '2026-09-12T15:30:00Z' }
+        - { id: 3, name: Initech, status: active, amount: 3400, updatedAt: '2026-09-20T09:15:00Z' }
+        - { id: 4, name: Umbrella, status: closed, amount: 410, updatedAt: '2026-09-25T18:45:00Z' }
+        - { id: 5, name: Soylent, status: pending, amount: 2300, updatedAt: '2026-09-28T11:05:00Z' }
+        - { id: 6, name: Hooli, status: active, amount: 990, updatedAt: '2026-10-01T08:20:00Z' }
+
+  actions:
+    # First change creates the store from the seed.
+    - group: file
+      name: read
+      onError: continue
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-records.json'
+      destination: raw
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          raw: '{= raw =}'
+          seed: '{= seed =}'
+          id: '{= id =}'
+          status: '{{ status }}'
+        code: |
+          if (!['active', 'pending', 'closed'].includes(status)) {
+            throw new Error(`Unknown status "${status}" — use active, pending or closed`);
+          }
+          const all = raw ? JSON.parse(raw) : seed;
+          const target = all.find((r) => r.id === Number(id));
+          if (!target) throw new Error(`No record with id ${id}`);
+          target.status = status;
+          target.updatedAt = new Date().toISOString();
+          return JSON.stringify(all, null, 2);
+      destination: updated
+
+    - group: file
+      name: write
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-records.json'
+        data: '{= updated =}'
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          updated: '{= updated =}'
+          id: '{= id =}'
+        code: |
+          return JSON.parse(updated).find((r) => r.id === Number(id));
+      destination: record
+
+    # Visible result when the workflow is run on its own (apps read the output instead).
+    - group: system
+      name: message
+      params:
+        text: 'Record #{{ record.id }} {{ record.name }} is now {{ record.status }} (updated {{ record.updatedAt }}).'

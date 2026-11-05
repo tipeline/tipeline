@@ -1,0 +1,136 @@
+version: 1.0.0
+name: 'Entitlements: Views vs entitlement for a customer application'
+description: |
+  Compares a customer application's page views between two dates with the views the customer pays for, from the traffic API. Returns the views, the entitlement, the percent used, whether it's over the limit and a short summary.
+
+  Gets the views from "Data: Traffic API for a customer application", which keeps the API call in one place and caches it. Installing this workflow installs that one with it.
+author: tipeline
+tags: [entitlements, views, pageviews, usage, limit, traffic]
+
+pipeline:
+  variables:
+    # Inputs
+    - type: string
+      name: customerId
+      label: Customer id
+      description: The customer's id in the traffic API, e.g. 4821.
+      value: '4821'
+      required: true
+      visibility: public
+    - type: string
+      name: applicationId
+      label: Application id
+      description: The application's id in the traffic API, e.g. www.
+      value: www
+      required: true
+      visibility: public
+    - type: date
+      name: dateFrom
+      label: From
+      description: First day included. Empty = today.
+      visibility: public
+    - type: date
+      name: dateTo
+      label: To
+      description: Last day included. Empty = today.
+      visibility: public
+    - type: number
+      name: entitlement
+      label: Views paid for
+      description: Page views the customer pays for in this period, e.g. 2000000.
+      value: 2000000
+      required: true
+      visibility: public
+
+    # Outputs
+    - type: string
+      name: summary
+      label: Summary
+      description: One or two sentences with the views, the percent of the entitlement used and whether it's over.
+      value: ''
+      visibility: public
+      output: true
+    - type: string
+      name: period
+      label: Period
+      description: The days the figures cover, e.g. 2026-09-01 to 2026-09-30.
+      value: ''
+      visibility: public
+      output: true
+    - type: number
+      name: views
+      label: Views
+      description: Page views in the period.
+      value: 0
+      visibility: public
+      output: true
+    - type: number
+      name: usedPercent
+      label: Used (%)
+      description: Views as a percent of the entitlement, one decimal.
+      value: 0
+      visibility: public
+      output: true
+    - type: boolean
+      name: overLimit
+      label: Over the limit
+      description: True when the views are more than the entitlement.
+      value: false
+      visibility: public
+      output: true
+
+    # Working data
+    - type: object
+      name: result
+      value: {}
+      visibility: private
+
+  actions:
+    # Only views and period come back; everything else the helper returns is left there.
+    - group: subtask
+      name: exec
+      label: Get the views
+      params:
+        path: ./data-traffic-api.yml
+        props:
+          customerId: '{{ customerId }}'
+          applicationId: '{{ applicationId }}'
+          dateFrom: '{= dateFrom =}'
+          dateTo: '{= dateTo =}'
+        outputs:
+          views: views # this workflow ← the helper
+          period: period
+
+    - group: script
+      name: runScript
+      label: Compare with the entitlement
+      params:
+        code: |
+          const usedPercent = Math.round((views / entitlement) * 1000) / 10;
+          const overLimit = views > entitlement;
+          const n = (x) => x.toLocaleString('en-US');
+          const summary =
+            `${n(views)} views from ${period}: ${usedPercent}% of the ${n(entitlement)} paid for. ` +
+            (overLimit ? `Over the limit by ${n(views - entitlement)} views.` : 'Within the limit.');
+          return { usedPercent, overLimit, summary };
+        context:
+          views: '{= views =}'
+          entitlement: '{= entitlement =}'
+          period: '{{ period }}'
+      destination: result
+
+    - group: variable
+      name: set
+      params:
+        name: usedPercent
+        value: '{= result.usedPercent =}'
+    - group: variable
+      name: set
+      params:
+        name: overLimit
+        value: '{= result.overLimit =}'
+    - group: variable
+      name: set
+      params:
+        name: summary
+        value: '{{ result.summary }}'

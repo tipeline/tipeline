@@ -1,0 +1,152 @@
+version: 1.0.0
+name: API example
+description: |
+  Calls a REST API from its OpenAPI spec: `api.load` turns the Linode spec into a map of endpoints, and `api.invoke` calls one to list your instances.
+
+  Steps for `api.auth` (OAuth2) and `api.request` (direct calls to Gmail, Google Calendar and Linode) are in the file, commented out.
+
+  Needs a Linode token in the `LINODE_TOKEN` environment variable.
+
+  **Template syntax**
+
+  - `{{ varName }}` — puts a value into text; the result is always a string
+  - `{= varName =}` — passes the value as it is (object, array, number…); it must be the field's whole value
+
+author: Jose Daniel Estrada
+tags: [example, api, openapi, rest, linode, oauth2]
+
+pipeline:
+  variables:
+    - type: object
+      name: googleToken
+      value: {}
+    - type: object
+      name: linodeAPI
+      value: {}
+    - type: object
+      name: gmailMessages
+      value: {}
+    - type: object
+      name: calendarEvents
+      value: {}
+    - type: object
+      name: linodeInstances
+      value: {}
+
+  actions:
+    # - group: api
+    #   name: request
+    #   params:
+    #     url: https://api.linode.com/{apiVersion}/linode/instances/
+    #     method: GET
+    #     headers:
+    #       Authorization: 'Bearer {{ _env.LINODE_TOKEN }}'
+    #     args:
+    #       apiVersion: v4
+
+    # # ------------------------------------------------------------------
+    # # 1. OAuth2 Authentication
+    # #    Opens a browser for consent, captures the code via a local
+    # #    redirect server, exchanges it for tokens, and saves them to
+    # #    ~/Tipeline/.tokens/token.json for reuse and silent refresh.
+    # # ------------------------------------------------------------------
+    # - group: api
+    #   name: auth
+    #   params:
+    #     type: oauth2
+    #     clientId: '{{ _env.GOOGLE_CLIENT_ID }}'
+    #     clientSecret: '{{ _env.GOOGLE_CLIENT_SECRET }}'
+    #     scopes:
+    #       - 'https://www.googleapis.com/auth/gmail.readonly'
+    #       - 'https://www.googleapis.com/auth/calendar.readonly'
+    #     authEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth'
+    #     tokenEndpoint: 'https://oauth2.googleapis.com/token'
+    #   destination: googleToken
+
+    # # ------------------------------------------------------------------
+    # # 2. Direct API request (GET)
+    # #    Uses the access_token from the auth step above.
+    # #    For GET requests, `args` are appended as query string parameters.
+    # # ------------------------------------------------------------------
+    # - group: api
+    #   name: request
+    #   params:
+    #     url: 'https://gmail.googleapis.com/gmail/v1/users/me/messages'
+    #     method: GET
+    #     headers:
+    #       Authorization: 'Bearer {{ googleToken.access_token }}'
+    #     parameters:
+    #       maxResults: 5
+    #   destination: gmailMessages
+
+    # # ------------------------------------------------------------------
+    # # 3. Direct API request (GET) — Google Calendar
+    # # ------------------------------------------------------------------
+    # - group: api
+    #   name: request
+    #   params:
+    #     url: 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
+    #     method: GET
+    #     headers:
+    #       Authorization: 'Bearer {{ googleToken.access_token }}'
+    #     parameters:
+    #       timeMin: '2025-05-22T00:00:00.000Z'
+    #       maxResults: 5
+    #       singleEvents: true
+    #       orderBy: startTime
+    #   destination: calendarEvents
+
+    # # ------------------------------------------------------------------
+    # # 4. Direct API request (POST with path parameter interpolation)
+    # #    {apiVersion} in the URL is replaced by the value in `parameters`.
+    # #    `args` are sent as the JSON request body for non-GET methods.
+    # # ------------------------------------------------------------------
+    # - group: api
+    #   name: request
+    #   params:
+    #     url: 'https://api.linode.com/{apiVersion}/linode/instances'
+    #     method: POST
+    #     headers:
+    #       Authorization: 'Bearer {{ _env.LINODE_TOKEN }}'
+    #     args:
+    #       apiVersion: v4
+    #     parameters:
+    #       label: my-server
+    #       region: us-east
+    #       type: g6-standard-1
+    #       image: linode/almalinux9
+    #       root_pass: '{{ _env.SERVER_ROOT_PASS }}'
+    #       booted: true
+    #   destination: newInstance
+
+    # ------------------------------------------------------------------
+    # 5. Load an OpenAPI spec into a named endpoint map
+    #    `include` limits which operationIds are loaded.
+    #    The result is stored as a plain object in the pipeline variable
+    #    so it can be safely serialized and passed to `invoke`.
+    # ------------------------------------------------------------------
+    - group: api
+      name: load
+      params:
+        url: 'https://raw.githubusercontent.com/linode/linode-api-docs/refs/heads/development/openapi.json'
+        include:
+          - get-linode-instances
+          - get-linode-instance
+      destination: linodeAPI
+
+    # ------------------------------------------------------------------
+    # 6. Invoke a loaded endpoint by operationId
+    #    Use {= varName =} to pass the endpoint map as a raw object.
+    #    `args` fills in {param} placeholders in the URL path.
+    #    `parameters` are query params (GET) or body (POST/PUT/PATCH).
+    # ------------------------------------------------------------------
+    - group: api
+      name: invoke
+      params:
+        endpoints: '{= linodeAPI =}'
+        method: get-linode-instances
+        headers:
+          Authorization: 'Bearer {{ _env.LINODE_TOKEN }}'
+        args:
+          apiVersion: v4
+      destination: linodeInstances

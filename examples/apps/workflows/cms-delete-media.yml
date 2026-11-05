@@ -1,0 +1,74 @@
+version: 1.0.0
+name: 'CMS: Delete Media'
+description: |
+  Deletes an image from the media library of the CMS store, and its file in `~/Tipeline/output/cms/media`. An image that content still uses can't be deleted.
+
+  **Inputs**
+
+  - `id` — the media item
+
+  **Outputs**
+
+  - `media` — `{ id, name }`
+author: tipeline
+tags: [example, apps, cms, media, images, delete]
+
+pipeline:
+  variables:
+    - { type: number, name: id, value: 0, visibility: public, required: true, description: The media item to delete. }
+    - { type: object, name: media, value: {}, visibility: public, description: The deleted item. Returned to the app. }
+    - { type: dbConnection, name: db }
+    - { type: array, name: found, value: [] }
+
+  actions:
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          SELECT m.id, m.name, m.file,
+            (SELECT group_concat(title, ', ') FROM (
+              SELECT DISTINCT n.title FROM node n JOIN field f ON f.type_id = n.type AND f.kind = 'media_ref'
+              WHERE json_extract(n.fields, '$.' || f.name) = m.id ORDER BY n.title)) AS usedBy
+          FROM media m WHERE m.id = ?
+        bindings: ['{= id =}']
+      destination: found
+
+    - group: script
+      name: runScript
+      params:
+        context: { found: '{= found =}' }
+        code: |
+          const m = found[0];
+          if (!m) throw new Error('That image was not found. It may have been deleted.');
+          if (m.usedBy) throw new Error(m.name + ' is used by: ' + m.usedBy + '. Choose another image there first.');
+          return { id: m.id, name: m.name, file: m.file };
+      destination: media
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: DELETE FROM media WHERE id = ?
+        bindings: ['{= media.id =}']
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'
+
+    # The row is gone either way; a file already missing is fine.
+    - group: file
+      name: remove
+      onError: continue
+      params:
+        src: '{{ media.file }}'

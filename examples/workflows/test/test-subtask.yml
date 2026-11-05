@@ -1,0 +1,53 @@
+version: 1.0.0
+name: Test Subtask
+description: |
+  The sub-workflow that Test Main calls. Prints the `parentGreeting` and `parentCounter` it receives, multiplies the counter by 3 and uppercases the greeting.
+
+  It has default values for both, so it also runs on its own.
+author: Jose Daniel Estrada
+tags: [example, subtask, sub-workflow, props]
+
+pipeline:
+  variables:
+    - type: string
+      name: parentGreeting
+      value: default greeting
+
+    - type: number
+      name: parentCounter
+      value: 0
+
+    - type: number
+      name: subtaskResult
+      value: 0
+
+  actions:
+    - group: system
+      name: message
+      params:
+        text: |
+          Subtask started.
+          parentGreeting: {{ parentGreeting }}
+          parentCounter: {{ parentCounter }}
+
+    - group: math
+      name: multiply
+      params:
+        multiplicand: '{= parentCounter =}'
+        multiplier: 3
+      destination: subtaskResult
+
+    - group: system
+      name: message
+      params:
+        text: 'subtaskResult (parentCounter × 3): {{ subtaskResult }}'
+
+    - group: string
+      name: toUpperCase
+      params:
+        string: '{{ parentGreeting }}'
+
+    - group: system
+      name: message
+      params:
+        text: Subtask finished.

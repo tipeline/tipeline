@@ -1,0 +1,99 @@
+version: 1.0.0
+name: Test Async Subtask
+description: |
+  Shows the async mode of `subtask.exec`: a normal call waits for the child to finish, while an async call returns at once and leaves the child running in the background.
+
+  Compare the times logged before and after each call, then look in the run history for the async child's own run.
+author: Jose Daniel Estrada
+tags: [example, subtask, async, background]
+
+pipeline:
+  variables:
+    - type: string
+      name: syncStartedAt
+      value: ''
+
+    - type: string
+      name: syncFinishedAt
+      value: ''
+
+    - type: string
+      name: syncChildResult
+      value: ''
+
+    - type: string
+      name: asyncStartedAt
+      value: ''
+
+    - type: string
+      name: asyncReturnedAt
+      value: ''
+
+  actions:
+    - group: system
+      name: message
+      params:
+        text: '=== 1. Synchronous subtask (parent waits) ==='
+
+    - group: datetime
+      name: getCurrentDateTime
+      destination: syncStartedAt
+
+    - group: subtask
+      name: exec
+      params:
+        path: ./test-async-subtask-child.yml
+        props:
+          delayMs: 3000
+        outputs:
+          syncChildResult: childResult
+
+    - group: datetime
+      name: getCurrentDateTime
+      destination: syncFinishedAt
+
+    - group: system
+      name: message
+      params:
+        text: |
+          Sync call started:  {{ syncStartedAt }}
+          Sync call returned: {{ syncFinishedAt }}   (~3s later — the parent waited)
+          Output pulled back: {{ syncChildResult }}
+
+    - group: system
+      name: message
+      params:
+        text: '=== 2. Async subtask (parent does not wait) ==='
+
+    - group: datetime
+      name: getCurrentDateTime
+      destination: asyncStartedAt
+
+    # No `outputs` here — the schema/action rejects async + outputs together.
+    # See test-async-subtask-invalid.yml for what that error looks like.
+    - group: subtask
+      name: exec
+      params:
+        path: ./test-async-subtask-child.yml
+        async: true
+        props:
+          delayMs: 3000
+
+    - group: datetime
+      name: getCurrentDateTime
+      destination: asyncReturnedAt
+
+    - group: system
+      name: message
+      params:
+        text: |
+          Async call started:  {{ asyncStartedAt }}
+          Async call returned: {{ asyncReturnedAt }}   (near-instant — the parent did not wait)
+
+    - group: system
+      name: message
+      params:
+        text: >
+          Parent pipeline is finishing now. The async child task is still running in the
+          background (~3s of work) — check pipeline history in a few seconds for its own,
+          separately tracked run.

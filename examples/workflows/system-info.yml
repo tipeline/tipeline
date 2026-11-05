@@ -1,0 +1,46 @@
+version: 2.0.0
+name: System Info
+description: |
+  Reads this computer's system information: computer name, macOS version, processor, memory, disk space and uptime. Returns it as text, one detail per line, ready to show, save to a file or send. macOS only.
+
+  Published to the local hub as an example for the assistant: ask it to "get my computer's system info and save it to a file" and it offers to install this workflow and drafts one that runs it, then writes the file.
+author: Tipeline Hub
+platform: macos
+tags:
+  - system
+  - computer
+  - hardware
+  - macos
+
+pipeline:
+  variables:
+    - type: string
+      name: systemInfo
+      label: System information
+      description: >
+        One detail per line: computer name, hostname, macOS version, kernel,
+        architecture, processor, cores, memory, free disk space and uptime.
+      value: ''
+      visibility: public
+      output: true
+
+  actions:
+    - group: system
+      name: runApplication
+      label: Read system information
+      params:
+        command: sh
+        args:
+          - -c
+          - |
+            echo "Computer: $(scutil --get ComputerName)"
+            echo "Hostname: $(hostname)"
+            echo "macOS: $(sw_vers -productVersion) ($(sw_vers -buildVersion))"
+            echo "Kernel: $(uname -sr)"
+            echo "Architecture: $(uname -m)"
+            echo "Processor: $(sysctl -n machdep.cpu.brand_string)"
+            echo "Cores: $(sysctl -n hw.ncpu)"
+            echo "Memory: $(( $(sysctl -n hw.memsize) / 1073741824 )) GB"
+            echo "Disk (/): $(df -h / | awk 'NR==2 {print $4 " free of " $2}')"
+            echo "Uptime: $(uptime | sed -E 's/.*up ([^,]*),.*/\1/')"
+      destination: systemInfo

@@ -1,0 +1,82 @@
+version: 1.0.0
+name: Sales Stats
+description: |
+  Returns example sales numbers for one region: the last 14 days, a signup funnel, deals (size against days to close) and support tickets per weekday and hour.
+
+  Used by the More Charts example app.
+
+  **Inputs**
+
+  - `region` — "all", "north" or "south"
+
+  **Outputs**
+
+  - `stats` — `{ daily, funnel, deals, tickets, totals }`
+author: tipeline
+tags: [example, apps, sales, charts]
+
+pipeline:
+  variables:
+    - type: string
+      name: region
+      value: all
+      visibility: public
+      description: Region to show — all, north or south. Set by the app.
+
+    - type: object
+      name: stats
+      value: {}
+      visibility: public
+      description: The region's numbers. Returned to the app.
+
+  actions:
+    - group: script
+      name: runScript
+      params:
+        context:
+          region: '{{ region }}'
+        code: |
+          const scale = region === 'north' ? 0.6 : region === 'south' ? 0.4 : 1;
+          const offset = region === 'south' ? 3 : 0;
+          const wave = (i) => Math.round((Math.sin((i + offset) / 2) + 1.4 + i / 10) * 100 * scale);
+
+          const daily = Array.from({ length: 14 }, (_, i) => ({
+            day: `D${i + 1}`,
+            revenue: wave(i) * 10,
+            orders: Math.round(wave(i) / 4),
+            visitors: wave(i) * 6,
+          }));
+
+          const visits = Math.round(12000 * scale);
+          const funnel = [
+            { stage: 'Visited', people: visits },
+            { stage: 'Signed up', people: Math.round(visits * 0.32) },
+            { stage: 'Tried it', people: Math.round(visits * 0.18) },
+            { stage: 'Paid', people: Math.round(visits * 0.07) },
+          ];
+
+          const names = ['Acme', 'Globex', 'Initech', 'Umbrella', 'Hooli', 'Stark', 'Wayne', 'Wonka', 'Tyrell', 'Soylent'];
+          const deals = names.map((customer, i) => ({
+            customer,
+            days: 5 + ((i * 7 + offset * 3) % 40),
+            amount: Math.round((2000 + ((i * 3731 + offset * 977) % 18000)) * scale),
+          }));
+
+          const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+          const tickets = [];
+          for (const [d, weekday] of weekdays.entries()) {
+            for (let h = 9; h <= 17; h += 2) {
+              const busy = (h === 11 || h === 15 ? 3 : 1) + (d === 0 ? 2 : 0);
+              tickets.push({ weekday, hour: `${h}:00`, count: Math.round((busy * 4 + ((d * 5 + h + offset) % 6)) * scale) });
+            }
+          }
+
+          const sum = (key) => daily.reduce((s, r) => s + r[key], 0);
+          return {
+            daily,
+            funnel,
+            deals,
+            tickets,
+            totals: { revenue: sum('revenue'), orders: sum('orders'), visitors: sum('visitors') },
+          };
+      destination: stats

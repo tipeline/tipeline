@@ -1,0 +1,143 @@
+version: 1.0.0
+name: System Actions
+description: |
+  Runs commands, manages processes and handles environment variables.
+
+  **Actions**
+
+  - `message` — returns a text as the step's result
+  - `runApplication` — runs a shell command and captures its output
+  - `terminateProcess` — sends a signal (`SIGTERM`, `SIGKILL` or `SIGINT`) to a process by its id
+  - `setEnvVariable` — sets a value in `process.env`
+  - `getEnvVariable` — reads a value from `process.env`
+  - `deleteEnvVariable` — removes a value from `process.env`
+
+author: Jose Daniel Estrada
+tags: [example, system, process, environment variables, shell]
+
+pipeline:
+  variables:
+    - type: string
+      name: status
+      value: running
+
+    - type: string
+      name: greetingOutput
+      value: ''
+
+    - type: string
+      name: pid
+      value: '0'
+
+    - type: string
+      name: apiToken
+      valueFromEnv: API_TOKEN
+
+    - type: string
+      name: homeDir
+      value: ''
+
+    - type: string
+      name: retrievedToken
+      value: ''
+
+  actions:
+    # -------------------------------------------------------
+    # Message
+    # -------------------------------------------------------
+
+    # Emit a log line with a pipeline variable interpolated
+    - group: system
+      name: message
+      params:
+        text: 'Pipeline status: {{ status }}'
+
+    # -------------------------------------------------------
+    # Process
+    # -------------------------------------------------------
+
+    # Run a shell command string and capture its stdout
+    - group: system
+      name: runApplication
+      params:
+        command: echo Hello Tipeline
+        options:
+          shell: true
+      destination: greetingOutput
+
+    - group: system
+      name: message
+      params:
+        text: 'Command output: {{ greetingOutput }}'
+
+    # Run with an explicit args array (shell is disabled)
+    - group: system
+      name: runApplication
+      params:
+        command: echo
+        args:
+          - Hello
+          - Tipeline
+
+    # Spawn a detached sleep process and capture its PID, then terminate it.
+    # nohup makes sleep ignore SIGHUP so it survives after bash exits —
+    # without it macOS reaps the child when the parent shell closes.
+    - group: system
+      name: runApplication
+      params:
+        command: bash -c 'nohup sleep 60 >/dev/null 2>&1 & echo $!'
+        options:
+          shell: true
+      destination: pid
+
+    - group: system
+      name: message
+      params:
+        text: 'Spawned sleep PID: {{ pid }}'
+
+    - group: system
+      name: terminateProcess
+      params:
+        pid: '{{ pid }}'
+        signal: SIGTERM
+
+    # -------------------------------------------------------
+    # Environment Variables
+    # -------------------------------------------------------
+
+    # Inject a runtime value into process.env
+    - group: system
+      name: setEnvVariable
+      params:
+        key: TIPELINE_API_TOKEN
+        value: '{{ apiToken }}'
+
+    # Read the variable back and store it in a pipeline variable
+    - group: system
+      name: getEnvVariable
+      params:
+        key: TIPELINE_API_TOKEN
+      destination: retrievedToken
+
+    - group: system
+      name: message
+      params:
+        text: 'Retrieved token: {{ retrievedToken }}'
+
+    # Read a built-in env variable
+    - group: system
+      name: getEnvVariable
+      params:
+        key: HOME
+      destination: homeDir
+
+    - group: system
+      name: message
+      params:
+        text: 'Home directory: {{ homeDir }}'
+
+    # Remove the token after use to avoid leaking credentials
+    - group: system
+      name: deleteEnvVariable
+      params:
+        key: TIPELINE_API_TOKEN

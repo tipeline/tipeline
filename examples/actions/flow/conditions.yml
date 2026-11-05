@@ -1,0 +1,716 @@
+version: 1.0.0
+name: Conditions Test Suite
+description: |
+  A quick tour of conditions: a few checks for each type, plus the array steps and a Conditional Loop. Each check prints ✅ or ❌, and the last step says whether all 20 passed.
+
+  After it, two commented-out steps show the messages you get for values that can't be compared. Uncomment one to try it.
+
+  **How a condition is written**
+
+  `firstOperand` + `compareAs` + `operator`, plus `secondOperand` and `ignoreCase` where they apply. `compareAs` decides which operators you can use and how both values are read. See "Conditions" in the workflow file docs.
+author: Jose Daniel Estrada
+tags: [example, flow, conditions, if, loop]
+
+pipeline:
+  variables:
+    - { type: number, name: failures, value: 0 }
+    - { type: string, name: text, value: Banana }
+    - { type: string, name: blank, value: '' }
+    - { type: string, name: amountText, value: '1250' }
+    - { type: string, name: dueDate, value: '2026-10-01' }
+    - { type: boolean, name: flag, value: true }
+    - { type: string, name: flagText, value: 'yes' }
+    - { type: array, name: fruits, value: [apple, banana, cherry] }
+    - { type: array, name: emptyList, value: [] }
+    - type: object
+      name: customer
+      value: { name: Ada, email: ada@example.com }
+    - type: array
+      name: invoices
+      value:
+        - { id: 1, status: pending, amount: 120, due: '2026-09-15' }
+        - { id: 2, status: paid, amount: 80, due: '2026-10-20' }
+        - { id: 3, status: PENDING, amount: '500', due: '2026-11-01' }
+        - { id: 4, status: void, amount: n/a, due: '2026-12-01' }
+    - { type: number, name: counter, value: 0 }
+    - { type: array, name: bigInvoices, value: [] }
+    - { type: number, name: pendingCount, value: 0 }
+
+  actions:
+    # ------------------------------------------------------------
+    # Text (compareAs: string)
+    # ------------------------------------------------------------
+
+    # string eq → expect true
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{{ text }}'
+        compareAs: string
+        operator: eq
+        secondOperand: 'Banana'
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '✅ string eq'
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= failures =}'
+              addend: 1
+            destination: failures
+          - group: system
+            name: message
+            params:
+              text: '❌ string eq'
+
+    # string eq + ignoreCase → expect true
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{{ text }}'
+        compareAs: string
+        operator: eq
+        secondOperand: 'banana'
+        ignoreCase: true
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '✅ string eq + ignoreCase'
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= failures =}'
+              addend: 1
+            destination: failures
+          - group: system
+            name: message
+            params:
+              text: '❌ string eq + ignoreCase'
+
+    # string contains → expect true
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{{ text }}'
+        compareAs: string
+        operator: contains
+        secondOperand: 'nan'
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '✅ string contains'
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= failures =}'
+              addend: 1
+            destination: failures
+          - group: system
+            name: message
+            params:
+              text: '❌ string contains'
+
+    # string matchesRegex → expect true
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{{ text }}'
+        compareAs: string
+        operator: matchesRegex
+        secondOperand: '^B.*a$'
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '✅ string matchesRegex'
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= failures =}'
+              addend: 1
+            destination: failures
+          - group: system
+            name: message
+            params:
+              text: '❌ string matchesRegex'
+
+    # string empty → expect true
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{{ blank }}'
+        compareAs: string
+        operator: empty
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '✅ string empty'
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= failures =}'
+              addend: 1
+            destination: failures
+          - group: system
+            name: message
+            params:
+              text: '❌ string empty'
+
+    # ------------------------------------------------------------
+    # Number
+    # ------------------------------------------------------------
+
+    # number gt reads template text as a number ("1250" > 1000) → expect true
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{{ amountText }}'
+        compareAs: number
+        operator: gt
+        secondOperand: 1000
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '✅ number gt reads template text as a number ("1250" > 1000)'
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= failures =}'
+              addend: 1
+            destination: failures
+          - group: system
+            name: message
+            params:
+              text: '❌ number gt reads template text as a number ("1250" > 1000)'
+
+    # number gt ("10" > "9", which text comparison gets wrong) → expect true
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '10'
+        compareAs: number
+        operator: gt
+        secondOperand: '9'
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '✅ number gt ("10" > "9", which text comparison gets wrong)'
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= failures =}'
+              addend: 1
+            destination: failures
+          - group: system
+            name: message
+            params:
+              text: '❌ number gt ("10" > "9", which text comparison gets wrong)'
+
+    # number isValid on "Banana" → expect false
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{{ text }}'
+        compareAs: number
+        operator: isValid
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= failures =}'
+              addend: 1
+            destination: failures
+          - group: system
+            name: message
+            params:
+              text: '❌ number isValid on "Banana"'
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '✅ number isValid on "Banana"'
+
+    # ------------------------------------------------------------
+    # Date & time
+    # ------------------------------------------------------------
+
+    # date before → expect true
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{{ dueDate }}'
+        compareAs: date
+        operator: before
+        secondOperand: '2030-01-01'
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '✅ date before'
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= failures =}'
+              addend: 1
+            destination: failures
+          - group: system
+            name: message
+            params:
+              text: '❌ date before'
+
+    # date afterOrEqual (same day) → expect true
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{{ dueDate }}'
+        compareAs: date
+        operator: afterOrEqual
+        secondOperand: '2026-10-01'
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '✅ date afterOrEqual (same day)'
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= failures =}'
+              addend: 1
+            destination: failures
+          - group: system
+            name: message
+            params:
+              text: '❌ date afterOrEqual (same day)'
+
+    # ------------------------------------------------------------
+    # Boolean
+    # ------------------------------------------------------------
+
+    # boolean isTrue reads "yes" → expect true
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{{ flagText }}'
+        compareAs: boolean
+        operator: isTrue
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '✅ boolean isTrue reads "yes"'
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= failures =}'
+              addend: 1
+            destination: failures
+          - group: system
+            name: message
+            params:
+              text: '❌ boolean isTrue reads "yes"'
+
+    # boolean isFalse → expect false
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{= flag =}'
+        compareAs: boolean
+        operator: isFalse
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= failures =}'
+              addend: 1
+            destination: failures
+          - group: system
+            name: message
+            params:
+              text: '❌ boolean isFalse'
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '✅ boolean isFalse'
+
+    # ------------------------------------------------------------
+    # Array
+    # ------------------------------------------------------------
+
+    # array contains → expect true
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{= fruits =}'
+        compareAs: array
+        operator: contains
+        secondOperand: 'cherry'
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '✅ array contains'
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= failures =}'
+              addend: 1
+            destination: failures
+          - group: system
+            name: message
+            params:
+              text: '❌ array contains'
+
+    # array lengthEq → expect true
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{= fruits =}'
+        compareAs: array
+        operator: lengthEq
+        secondOperand: 3
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '✅ array lengthEq'
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= failures =}'
+              addend: 1
+            destination: failures
+          - group: system
+            name: message
+            params:
+              text: '❌ array lengthEq'
+
+    # array empty → expect true
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{= emptyList =}'
+        compareAs: array
+        operator: empty
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '✅ array empty'
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= failures =}'
+              addend: 1
+            destination: failures
+          - group: system
+            name: message
+            params:
+              text: '❌ array empty'
+
+    # ------------------------------------------------------------
+    # Object
+    # ------------------------------------------------------------
+
+    # object hasKey → expect true
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{= customer =}'
+        compareAs: object
+        operator: hasKey
+        secondOperand: 'email'
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '✅ object hasKey'
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= failures =}'
+              addend: 1
+            destination: failures
+          - group: system
+            name: message
+            params:
+              text: '❌ object hasKey'
+
+    # To check for a missing property use notHasKey on the object. A raw reference to a
+    # missing property ({= customer.phone =}) gives back its own text, so notExists can't see it.
+    # object notHasKey (a missing property) → expect true
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{= customer =}'
+        compareAs: object
+        operator: notHasKey
+        secondOperand: 'phone'
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '✅ object notHasKey (a missing property)'
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= failures =}'
+              addend: 1
+            destination: failures
+          - group: system
+            name: message
+            params:
+              text: '❌ object notHasKey (a missing property)'
+
+    # ------------------------------------------------------------
+    # Array steps (find, filter, some, every, count) use the same conditions.
+    # Invoice 4 has amount "n/a": with compareAs number it simply doesn't match.
+    # ------------------------------------------------------------
+
+    - group: array
+      name: filter
+      params:
+        array: '{= invoices =}'
+        key: 'amount'
+        compareAs: 'number'
+        operator: 'gt'
+        value: 100
+      destination: bigInvoices
+
+    - group: array
+      name: count
+      params:
+        array: '{= invoices =}'
+        key: 'status'
+        compareAs: 'string'
+        operator: 'eq'
+        value: 'pending'
+        ignoreCase: true
+      destination: pendingCount
+
+    # filter amount > 100 keeps invoices 1 and 3 ("500" as text counts) → expect true
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{= bigInvoices =}'
+        compareAs: array
+        operator: lengthEq
+        secondOperand: 2
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '✅ filter amount > 100 keeps invoices 1 and 3 ("500" as text counts)'
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= failures =}'
+              addend: 1
+            destination: failures
+          - group: system
+            name: message
+            params:
+              text: '❌ filter amount > 100 keeps invoices 1 and 3 ("500" as text counts)'
+
+    # count status = pending (ignoreCase) is 2 → expect true
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{{ pendingCount }}'
+        compareAs: number
+        operator: eq
+        secondOperand: 2
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '✅ count status = pending (ignoreCase) is 2'
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= failures =}'
+              addend: 1
+            destination: failures
+          - group: system
+            name: message
+            params:
+              text: '❌ count status = pending (ignoreCase) is 2'
+
+    # ------------------------------------------------------------
+    # Conditional Loop — {{ counter }} is text each pass; compareAs number reads it as a number
+    # ------------------------------------------------------------
+
+    - group: flow
+      name: conditionalLoop
+      params:
+        firstOperand: '{{ counter }}'
+        compareAs: number
+        operator: lt
+        secondOperand: 3
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= counter =}'
+              addend: 1
+            destination: counter
+
+    # loop ran 3 times → expect true
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{= counter =}'
+        compareAs: number
+        operator: eq
+        secondOperand: 3
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '✅ loop ran 3 times'
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: math
+            name: add
+            params:
+              augend: '{= failures =}'
+              addend: 1
+            destination: failures
+          - group: system
+            name: message
+            params:
+              text: '❌ loop ran 3 times'
+
+    # ------------------------------------------------------------
+    # Result
+    # ------------------------------------------------------------
+
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{{ failures }}'
+        compareAs: number
+        operator: eq
+        secondOperand: 0
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '✅ All 20 checks passed'
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: system
+            name: message
+            params:
+              text: '❌ {{ failures }} of 20 checks failed — search the run for ❌'
+
+    # ------------------------------------------------------------
+    # Values that can't be compared — uncomment ONE of these to see its message.
+    # The step fails and the run stops there (it doesn't quietly go to Else).
+    # (onError: continue would hide the error completely, so it isn't used here.)
+    # ------------------------------------------------------------
+
+    # "Banana" compared as a number → fails with:
+    #   The value is "Banana", not a number (compared as number).
+    # - group: flow
+    #   name: ifConditional
+    #   params:
+    #     firstOperand: '{{ text }}'
+    #     compareAs: number
+    #     operator: gt
+    #     secondOperand: 1
+
+    # the list rendered as text → fails with:
+    #   The value is "applebananacherry", not an array (compared as array). Use {= name =} instead of {{ name }} to pass the value itself, not its text.
+    # - group: flow
+    #   name: ifConditional
+    #   params:
+    #     firstOperand: '{{ fruits }}'
+    #     compareAs: array
+    #     operator: contains
+    #     secondOperand: 'apple'

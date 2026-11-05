@@ -1,0 +1,106 @@
+schemaVersion: 4
+name: Search Select
+description: Selects with a search box — options filtered as you type, several picked at once, and a remote search that asks a workflow for matching records
+author: tipeline
+
+workflows:
+  searchRecords: { file: ./workflows/search-records.yml }
+
+pages:
+  - id: search
+    name: Search
+    icon: Search
+
+    runnables:
+      # Runs on load (so the list isn't empty before typing) and on every search.
+      findRecords:
+        mode: run
+        workflow: searchRecords
+        trigger: load
+        inputs: { query: "{{ customer.search }}" }
+        outputs: [options]
+        persist: false
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 9 }
+        props:
+          markdown: true
+          content: "**Select** components with **Search box** set. *local* filters the options as you type; *remote* fires the **search** event instead, and its handler runs a workflow whose result becomes the options."
+
+      # ---------------------------------------------------------------- local
+      - id: country
+        type: select
+        name: Country
+        layout: { x: 0, y: 9, w: 4, h: 13 }
+        props:
+          label: "Country — local search"
+          placeholder: Pick a country
+          search: local
+          options:
+            - { value: ar, label: Argentina }
+            - { value: au, label: Australia }
+            - { value: br, label: Brazil }
+            - { value: ca, label: Canada }
+            - { value: cl, label: Chile }
+            - { value: co, label: Colombia }
+            - { value: cr, label: Costa Rica }
+            - { value: de, label: Germany }
+            - { value: es, label: Spain }
+            - { value: fr, label: France }
+            - { value: in, label: India }
+            - { value: it, label: Italy }
+            - { value: jp, label: Japan }
+            - { value: mx, label: Mexico }
+            - { value: nl, label: Netherlands }
+            - { value: pe, label: Peru }
+            - { value: pt, label: Portugal }
+            - { value: gb, label: United Kingdom }
+            - { value: us, label: United States }
+            - { value: uy, label: Uruguay }
+
+      - id: skills
+        type: select
+        name: Skills
+        layout: { x: 4, y: 9, w: 4, h: 13 }
+        props:
+          label: "Skills — several, local search"
+          multiple: true
+          search: local
+          default: [vue]
+          options: [vue, react, svelte, angular, node, python, go, rust, sql, docker, kubernetes, terraform]
+
+      # ---------------------------------------------------------------- remote
+      - id: customer
+        type: select
+        name: Customer
+        layout: { x: 8, y: 9, w: 4, h: 13 }
+        props:
+          label: "Customer — remote search"
+          placeholder: Search the records
+          description: "Each search runs the Search Records workflow"
+          search: remote
+          options: "{= runnables.findRecords.outputs.options =}"
+        events:
+          search:
+            - { type: run, runnable: findRecords }
+
+      # Live values. selectedOptions keeps the label of a remote choice even when
+      # the latest search no longer returns it.
+      - id: values
+        type: text
+        name: Values
+        layout: { x: 0, y: 22, w: 12, h: 24 }
+        props:
+          markdown: true
+          content: |
+            ### Values right now
+            | Component | value | selectedOptions (labels) |
+            |---|---|---|
+            | Country | `{{ country.value | default: "—" }}` | {{ country.selectedOptions | map: "label" | join: ", " }} |
+            | Skills | `{{ skills.value | join: ", " }}` | {{ skills.selectedOptions | map: "label" | join: ", " }} |
+            | Customer | `{{ customer.value | default: "—" }}` | {{ customer.selectedOptions | map: "label" | join: ", " }} |
+
+            Last remote search: `{{ customer.search | default: "(none yet)" }}` · results: {{ runnables.findRecords.outputs.options | size }}

@@ -1,0 +1,55 @@
+version: 1.0.0
+name: List Seats
+description: |
+  Returns the example hall's seats that are already taken, from the seat store (a JSON file in `~/Tipeline/output`).
+
+  Used by the Custom Component example app.
+
+  **Outputs**
+
+  - `hall` — `{ rows: ["A"…"E"], perRow: 8, taken: ["A3", …] }`
+author: tipeline
+tags: [example, apps, seats, booking]
+
+pipeline:
+  variables:
+    - type: object
+      name: hall
+      value: {}
+      visibility: public
+      description: The hall and its taken seats. Returned to the app.
+
+    - type: string
+      name: raw
+      value: ''
+
+    - type: array
+      name: seed
+      value:
+        - A3
+        - A4
+        - B5
+        - C1
+        - C2
+        - C7
+        - D4
+        - E8
+
+  actions:
+    # Until a seat is booked there's no store yet: then the seed is what's taken.
+    - group: file
+      name: read
+      onError: continue
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/app-example-seats.json'
+      destination: raw
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          raw: '{= raw =}'
+          seed: '{= seed =}'
+        code: |
+          return { rows: ['A', 'B', 'C', 'D', 'E'], perRow: 8, taken: raw ? JSON.parse(raw) : seed };
+      destination: hall

@@ -1,0 +1,78 @@
+schemaVersion: 4
+name: Calendar
+description: A calendar of bookings from a workflow — loads just the days shown, colored by status; click an event for its details, or a day to pick it
+author: tipeline
+
+workflows:
+  listBookings: { file: ./workflows/list-bookings.yml }
+
+pages:
+  - id: bookings
+    name: Bookings
+    icon: CalendarDays
+
+    # Asked for whenever the calendar shows other days (rangeChange): only those.
+    runnables:
+      bookings:
+        mode: run
+        workflow: listBookings
+        inputs:
+          from: "{{ schedule.from }}"
+          to: "{{ schedule.to }}"
+        outputs: [bookings]
+        persist: false
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 9 }
+        props:
+          markdown: true
+          content: "A **Calendar** of bookings. Each time it shows other days it fires **rangeChange**, which runs the workflow for just those days (`schedule.from` → `schedule.to`). Visits sit at their hours, deliveries and trips are all day."
+
+      - id: schedule
+        type: calendar
+        name: Schedule
+        layout: { x: 0, y: 9, w: 8, h: 70 }
+        props:
+          title: Bookings
+          data: "{= runnables.bookings.outputs.bookings =}"
+          colorKey: status
+          colors: { confirmed: green, pending: amber, canceled: red }
+          view: month
+        events:
+          rangeChange: [{ type: run, runnable: bookings }]
+
+      - id: picked
+        type: keyValue
+        name: Selected booking
+        layout: { x: 8, y: 9, w: 4, h: 32 }
+        props:
+          title: "{{ schedule.selectedEvent.title | default: 'Click an event' }}"
+          data: "{= schedule.selectedEvent =}"
+          emptyText: Click an event on the calendar
+          fields:
+            - { key: customer, label: Customer }
+            - { key: status, label: Status, format: badge, colors: { confirmed: green, pending: amber, canceled: red } }
+            - { key: start, label: Starts }
+            - { key: end, label: Ends }
+
+      - id: dayInfo
+        type: text
+        name: Day picked
+        layout: { x: 8, y: 41, w: 4, h: 14 }
+        props:
+          markdown: true
+          content: |
+            **Day picked:** {{ schedule.selectedDate | default: "click a day (or drag over several)" }}
+
+            {% if schedule.selectedStart != blank and schedule.selectedEnd != schedule.selectedStart %}From {{ schedule.selectedStart }} to {{ schedule.selectedEnd }}{% endif %}
+
+      - id: rangeInfo
+        type: text
+        name: Range shown
+        layout: { x: 8, y: 55, w: 4, h: 10 }
+        props:
+          markdown: true
+          content: "**Shown:** {{ schedule.from }} → {{ schedule.to }} · {{ runnables.bookings.outputs.bookings | size }} bookings"

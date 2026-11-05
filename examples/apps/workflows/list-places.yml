@@ -1,0 +1,52 @@
+version: 1.0.0
+name: List Places
+description: |
+  Returns example places — offices and deliveries with their latitude and longitude — optionally only those with one status.
+
+  Used by the Map example app.
+
+  **Inputs**
+
+  - `status` — "all", "active", "pending" or "closed"
+
+  **Outputs**
+
+  - `places` — `[{ id, name, city, lat, lng, status, deliveries }]`
+author: tipeline
+tags: [example, apps, places, map, locations]
+
+pipeline:
+  variables:
+    - type: string
+      name: status
+      value: all
+      visibility: public
+      description: Status to keep — all, active, pending or closed. Set by the app.
+
+    - type: array
+      name: places
+      value: []
+      visibility: public
+      description: The matching places. Returned to the app.
+
+    - type: array
+      name: all
+      value:
+        - { id: 1, name: Central office, city: San José, lat: 9.9333, lng: -84.0845, status: active, deliveries: 42 }
+        - { id: 2, name: Airport depot, city: Alajuela, lat: 10.0163, lng: -84.2116, status: active, deliveries: 31 }
+        - { id: 3, name: Old town store, city: Cartago, lat: 9.8644, lng: -83.9194, status: pending, deliveries: 8 }
+        - { id: 4, name: University kiosk, city: Heredia, lat: 9.9981, lng: -84.1170, status: active, deliveries: 17 }
+        - { id: 5, name: Port warehouse, city: Puntarenas, lat: 9.9763, lng: -84.8384, status: closed, deliveries: 0 }
+        - { id: 6, name: Beach shop, city: Liberia, lat: 10.6346, lng: -85.4377, status: pending, deliveries: 5 }
+        - { id: 7, name: Caribbean office, city: Limón, lat: 9.9907, lng: -83.0350, status: active, deliveries: 12 }
+
+  actions:
+    - group: script
+      name: runScript
+      params:
+        context:
+          all: '{= all =}'
+          status: '{{ status }}'
+        code: |
+          return status === 'all' ? all : all.filter((p) => p.status === status);
+      destination: places

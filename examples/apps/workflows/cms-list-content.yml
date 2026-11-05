@@ -1,0 +1,96 @@
+version: 1.0.0
+name: 'CMS: List Content'
+description: |
+  The CMS app's Content page (Drupal's admin/content): every node of the CMS store (`~/Tipeline/output/cms/cms.db`), newest change first, filtered by content type and status.
+
+  **Inputs**
+
+  - `type` — a content type id, or "all"
+  - `status` — "all", "published" or "unpublished"
+
+  **Outputs**
+
+  - `rows` — `[{ id, title, type, typeId, status, alias, changed, template }]`
+  - `typeOptions` — `[{ value, label }]` for a type filter, "All types" first
+author: tipeline
+tags: [example, apps, cms, content]
+
+pipeline:
+  variables:
+    - type: string
+      name: type
+      value: all
+      visibility: public
+      description: Content type id to keep, or "all".
+
+    - type: string
+      name: status
+      value: all
+      visibility: public
+      description: all, published or unpublished.
+
+    - type: array
+      name: rows
+      value: []
+      visibility: public
+      description: The matching content.
+
+    - type: array
+      name: typeOptions
+      value: []
+      visibility: public
+      description: Choices for a content type filter.
+
+    - type: dbConnection
+      name: db
+
+    - type: array
+      name: types
+      value: []
+
+  actions:
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          SELECT n.id, n.title, n.type AS typeId, COALESCE(t.label, n.type) AS type,
+            CASE n.status WHEN 1 THEN 'Published' ELSE 'Unpublished' END AS status,
+            n.alias, n.changed,
+            COALESCE(tp.name, (SELECT d.name || ' (default)' FROM template d WHERE d.kind = 'content' AND d.type_id = n.type AND d.is_default = 1), '') AS template
+          FROM node n LEFT JOIN content_type t ON t.id = n.type
+            LEFT JOIN template tp ON tp.id = n.template AND tp.type_id = n.type
+          WHERE (? = 'all' OR ? = '' OR n.type = ?)
+            AND (? IN ('all', '') OR n.status = CASE ? WHEN 'published' THEN 1 ELSE 0 END)
+          ORDER BY n.changed DESC, n.id DESC
+        bindings: ['{{ type }}', '{{ type }}', '{{ type }}', '{{ status }}', '{{ status }}']
+      destination: rows
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT id AS value, label FROM content_type ORDER BY label
+      destination: types
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      name: runScript
+      params:
+        context: { types: '{= types =}' }
+        code: |
+          return [{ value: 'all', label: 'All types' }, ...types];
+      destination: typeOptions

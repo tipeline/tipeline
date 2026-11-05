@@ -1,0 +1,159 @@
+version: 1.0.0
+name: Variable Actions Test Suite
+description: |
+  Changes a workflow's variables with `variable.set`, across the supported types and scopes.
+
+  **Where variables live**
+
+  - Task — lasts for this run; the default, no `scope` needed
+  - Environment — read from `process.env` with `valueFromEnv`, or inline with `{{ _env.KEY }}` without declaring it
+  - Global — stored in the database and shared by all workflows; inline with `{{ _global.name }}`
+  - Core — set by the engine, like a loop's index or the run's id
+
+  **Template syntax**
+
+  - `{{ varName }}` — puts a value into text; the result is always a string
+  - `{= varName =}` — passes the value as it is (object, array, number…); it must be the field's whole value
+  - `{{ _env.KEY }}` — an environment variable, no declaration needed
+  - `{{ _global.varName }}` — a global variable, no declaration needed
+
+author: Jose Daniel Estrada
+tags: [example, variable, global variables, environment variables]
+
+pipeline:
+  variables:
+    # ------------------------------------------------------------------
+    # scope: task (default) — covers all supported primitive types
+    # ------------------------------------------------------------------
+    - type: string
+      name: greeting
+      value: Hello World
+
+    - type: number
+      name: retryCount
+      value: 3
+
+    - type: boolean
+      name: isActive
+      value: true
+
+    - type: array
+      name: tags
+      value: [automation, tipeline]
+
+    - type: object
+      name: config
+      value:
+        timeout: 30
+        format: json
+
+    - type: date
+      name: runDate
+      value: '2026-01-01T00:00:00.000Z'
+
+    # ------------------------------------------------------------------
+    # scope: env — valueFromEnv seeds a mutable task variable from process.env.
+    # Use {{ _env.KEY }} inline when you only need a read-only reference.
+    # ------------------------------------------------------------------
+    - type: string
+      name: apiToken
+      valueFromEnv: API_TOKEN
+
+    - type: string
+      name: dbPassword
+      valueFromEnv: DB_PASSWORD
+      secret: true
+
+    # ------------------------------------------------------------------
+    # scope: global — valueFromGlobal seeds a mutable task variable from
+    # the global_variable table. The global record is NOT modified.
+    # Use {{ _global.varName }} inline when you only need a read-only reference.
+    # ------------------------------------------------------------------
+    - type: string
+      name: organisation
+      valueFromGlobal: organisation
+
+  actions:
+    # -------------------------------------------------------
+    # Mutation
+    # -------------------------------------------------------
+
+    # Overwrite a string variable mid-pipeline — useful for tracking computed values
+    - group: variable
+      name: set
+      params:
+        name: greeting
+        value: Hello Tipeline
+
+    # Show the updated string variable
+    - group: system
+      name: message
+      params:
+        text: |
+          greeting (after set): {{ greeting }}
+
+    # Overwrite a number variable — useful for updating counters or retry limits
+    - group: variable
+      name: set
+      params:
+        name: retryCount
+        value: 5
+
+    # Show the updated number variable
+    - group: system
+      name: message
+      params:
+        text: |
+          retryCount (after set): {{ retryCount }}
+
+    # Overwrite a boolean variable — useful for toggling feature flags mid-run
+    - group: variable
+      name: set
+      params:
+        name: isActive
+        value: false
+
+    # Show the updated boolean variable
+    - group: system
+      name: message
+      params:
+        text: |
+          isActive (after set): {{ isActive }}
+
+    # Set a variable to an object using raw injection — value must be the entire field
+    - group: variable
+      name: set
+      params:
+        name: config
+        value: '{= config =}'
+
+    # Show the updated object variable (interpolated as string)
+    - group: system
+      name: message
+      params:
+        text: |
+          config.format (after set): {{ config.format }}
+
+    # Set a variable to an array using raw injection
+    - group: variable
+      name: set
+      params:
+        name: tags
+        value: '{= tags =}'
+
+    # Show the updated array variable
+    - group: system
+      name: message
+      params:
+        text: |
+          tags (after set): {{ tags }}
+
+    # Show env and global variables (read-only references — no set needed)
+    - group: system
+      name: message
+      params:
+        text: |
+          apiToken (env alias)        : {{ apiToken }}
+          HOME (inline env)           : {{ _env.HOME }}
+          organisation (global alias) : {{ organisation }}
+          organisation (inline global): {{ _global.organisation }}

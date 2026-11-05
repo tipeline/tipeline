@@ -1,0 +1,476 @@
+version: 1.0.0
+name: 'CMS: Export Site'
+description: |
+  Writes the published content of the CMS store (`~/Tipeline/output/cms/cms.db`) to `~/Tipeline/output/cms/site`, as a static HTML site, Markdown files or JSON. Each format replaces its own folder from the last export.
+
+  **Formats**
+
+  - `html/` — a static site. Every item is rendered with its template (its own, or its content type's default), then wrapped in the Site layout. `index.html` is the Home page template and `style.css` is the Stylesheet template. All templates are Liquid. Links are relative, so the folder works opened from disk and when deployed.
+  - `markdown/` — one `.md` file per item, with YAML front matter.
+  - `json/` — one `node--<type>.json` per content type, shaped like Drupal's JSON:API, for other software that reads the content. The site doesn't need it.
+
+  Remembers the export (and the last one with HTML) for CMS: Publish Status and the Cloudflare deploy.
+
+  **Inputs**
+
+  - `formats` — any of "html", "markdown", "json"
+  - `siteName` — the site's name: `{{ site.name }}` in templates
+
+  **Outputs**
+
+  - `indexPath` — the HTML home page, or empty without html
+  - `summary` — `{ nodes, files, formats, folder, at }`
+author: tipeline
+tags: [example, apps, cms, export, static site, html, markdown, json]
+
+pipeline:
+  variables:
+    - { type: array, name: formats, value: [html], visibility: public, description: 'html, markdown and/or json.' }
+    - { type: string, name: siteName, value: My Tipeline site, visibility: public, description: The site's name. }
+    - { type: string, name: indexPath, value: '', visibility: public, description: The HTML home page. Returned to the app. }
+    - { type: object, name: summary, value: {}, visibility: public, description: What was exported. Returned to the app. }
+    - { type: dbConnection, name: db }
+    - { type: array, name: nodes, value: [] }
+    - { type: array, name: types, value: [] }
+    - { type: array, name: fields, value: [] }
+    - { type: array, name: terms, value: [] }
+    - { type: array, name: media, value: [] }
+    - { type: array, name: templates, value: [] }
+    - { type: array, name: pieces, value: [] }
+    - { type: object, name: piece, value: {} }
+    - { type: string, name: htmlOut, value: '' }
+    - { type: object, name: rendered, value: {} }
+    - { type: object, name: plan, value: {} }
+    - { type: object, name: pg, value: {} }
+    - { type: string, name: inner, value: '' }
+    - { type: string, name: full, value: '' }
+    - { type: object, name: out, value: {} }
+    - { type: string, name: fmt, value: '' }
+
+  actions:
+    - group: script
+      name: runScript
+      params:
+        context: { formats: '{= formats =}' }
+        code: |
+          const chosen = (Array.isArray(formats) ? formats : [formats]).filter((f) => ['html', 'markdown', 'json'].includes(f));
+          if (!chosen.length) throw new Error('Choose at least one format: HTML, Markdown or JSON.');
+          return chosen;
+      destination: formats
+
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT * FROM node WHERE status = 1 ORDER BY created DESC, id DESC
+      destination: nodes
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT * FROM content_type
+      destination: types
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT * FROM field ORDER BY weight, name
+      destination: fields
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT * FROM term
+      destination: terms
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT * FROM media
+      destination: media
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT * FROM template
+      destination: templates
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'
+
+    # Every long text value, from Markdown to HTML.
+    - group: script
+      name: runScript
+      params:
+        context:
+          nodes: '{= nodes =}'
+          fields: '{= fields =}'
+        code: |
+          const pieces = [];
+          for (const n of nodes) {
+            const values = JSON.parse(n.fields || '{}');
+            for (const f of fields)
+              if (f.type_id === n.type && f.kind === 'long_text' && values[f.name])
+                pieces.push({ key: n.id + ':' + f.name, md: String(values[f.name]) });
+          }
+          return pieces;
+      destination: pieces
+
+    - group: flow
+      name: forEachLoop
+      params:
+        iterable: '{= pieces =}'
+        currentItem: piece
+        actions:
+          - group: html
+            name: fromMarkdown
+            params:
+              markdown: '{= piece.md =}'
+            destination: htmlOut
+
+          - group: script
+            name: runScript
+            params:
+              context:
+                rendered: '{= rendered =}'
+                key: '{{ piece.key }}'
+                html: '{= htmlOut =}'
+              code: |
+                const next = Object.assign({}, rendered);
+                next[key] = html;
+                return next;
+            destination: rendered
+
+    # Works out every page (its template and what the template can use), the
+    # Markdown and JSON files, and the images to copy.
+    - group: script
+      name: runScript
+      params:
+        context:
+          root: '{{ _env.HOME }}/Tipeline/output/cms/site'
+          formats: '{= formats =}'
+          siteName: '{{ siteName }}'
+          nodes: '{= nodes =}'
+          types: '{= types =}'
+          fields: '{= fields =}'
+          terms: '{= terms =}'
+          media: '{= media =}'
+          templates: '{= templates =}'
+          rendered: '{= rendered =}'
+        code: |
+          const site = String(siteName).trim() || 'My Tipeline site';
+          const at = new Date().toISOString();
+          const typeOf = Object.fromEntries(types.map((t) => [t.id, t]));
+          const termOf = Object.fromEntries(terms.map((t) => [t.id, t]));
+          const mediaOf = Object.fromEntries(media.map((m) => [m.id, m]));
+          const fileName = (p) => String(p).split('/').pop();
+          const slug = (n) => (n.alias || '/node/' + n.id).replace(/^\/+|\/+$/g, '') || 'node/' + n.id;
+          const summaryOf = (md) => {
+            const lines = String(md || '').split('\n').map((l) => l.trim()).filter(Boolean);
+            const line = (lines.find((l) => !/^(#|-|\*|>|\d+\.)/.test(l)) || lines.find((l) => !/^#/.test(l)) || '').replace(/^(-|\*|>|\d+\.)\s*/, '');
+            return line.replace(/\*\*?|__?|`/g, '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+          };
+          const usedMedia = new Set();
+
+          // What a template sees as `node` (and a listing as each `item`).
+          const nodeVars = (n, prefix) => {
+            const values = JSON.parse(n.fields || '{}');
+            const own = fields.filter((f) => f.type_id === n.type);
+            const out = {};
+            let image = null;
+            const tags = [];
+            for (const f of own) {
+              const v = values[f.name];
+              if (f.kind === 'long_text') out[f.name] = rendered[n.id + ':' + f.name] || '';
+              else if (f.kind === 'term_ref') {
+                const list = (Array.isArray(v) ? v : []).map((id) => termOf[id]).filter(Boolean).map((t) => ({ id: t.id, name: t.name }));
+                out[f.name] = list;
+                for (const t of list) if (!tags.some((x) => x.id === t.id)) tags.push(t);
+              } else if (f.kind === 'media_ref') {
+                const m = mediaOf[v];
+                out[f.name] = m ? { url: prefix + 'media/' + fileName(m.file), alt: m.name } : null;
+                if (m) usedMedia.add(m.id);
+                if (!image && out[f.name]) image = out[f.name];
+              } else out[f.name] = v ?? null;
+            }
+            return {
+              id: n.id,
+              title: n.title,
+              type: (typeOf[n.type] || {}).label || n.type,
+              type_id: n.type,
+              url: prefix + slug(n) + '/index.html',
+              path: n.alias || '',
+              created: n.created,
+              changed: n.changed,
+              body: out.body || '',
+              summary: summaryOf(values.body),
+              image,
+              tags,
+              fields: out,
+            };
+          };
+          const pages = nodes.filter((n) => n.type === 'page').sort((a, b) => a.created.localeCompare(b.created));
+          const siteVars = (prefix) => ({
+            name: site,
+            url: prefix,
+            stylesheet: prefix + 'style.css',
+            year: new Date().getUTCFullYear(),
+            menu: pages.map((p) => ({ title: p.title, url: prefix + slug(p) + '/index.html' })),
+          });
+          const templateOf = (n) => {
+            const own = templates.find((t) => t.id === n.template && t.kind === 'content' && t.type_id === n.type);
+            const def = templates.find((t) => t.kind === 'content' && t.type_id === n.type && t.is_default === 1);
+            const t = own || def;
+            if (!t) throw new Error('There is no template for ' + ((typeOf[n.type] || {}).label || n.type) + ' content. Add one on the Templates page.');
+            return t.html;
+          };
+          const only = (kind) => {
+            const t = templates.find((x) => x.kind === kind);
+            if (!t) throw new Error('The ' + kind + ' template is missing. Open the Dashboard once to add the starter templates.');
+            return t.html;
+          };
+
+          const plan = {
+            root,
+            clear: formats,
+            pages: [],
+            layout: '',
+            styles: [],
+            writes: [],
+            copies: [],
+          };
+          let files = 0;
+
+          if (formats.includes('html')) {
+            plan.layout = only('layout');
+            for (const n of nodes) {
+              const prefix = '../'.repeat(slug(n).split('/').length);
+              plan.pages.push({
+                path: 'html/' + slug(n) + '/index.html',
+                template: templateOf(n),
+                data: { node: nodeVars(n, prefix), site: siteVars(prefix) },
+                page: { title: n.title },
+              });
+            }
+            const listed = nodes.filter((n) => n.type !== 'page');
+            plan.pages.push({
+              path: 'html/index.html',
+              template: only('listing'),
+              data: { items: listed.map((n) => nodeVars(n, '')), site: siteVars('') },
+              page: { title: '' },
+            });
+            plan.styles.push({ path: 'html/style.css', template: only('stylesheet'), data: { site: siteVars('') } });
+            for (const id of usedMedia) plan.copies.push({ from: mediaOf[id].file, to: root + '/html/media/' + fileName(mediaOf[id].file) });
+            files += plan.pages.length + 1 + usedMedia.size;
+            plan.htmlFiles = plan.pages.length + 1 + usedMedia.size;
+          }
+
+          if (formats.includes('markdown')) {
+            const yaml = (v) => JSON.stringify(v);
+            const mdMedia = new Set();
+            for (const n of nodes) {
+              const values = JSON.parse(n.fields || '{}');
+              const front = ['---', 'title: ' + yaml(n.title), 'type: ' + n.type, 'date: ' + n.created, 'updated: ' + n.changed, 'alias: ' + yaml(n.alias || '')];
+              let body = '';
+              for (const f of fields.filter((x) => x.type_id === n.type)) {
+                const v = values[f.name];
+                if (v == null || v === '' || (Array.isArray(v) && !v.length)) continue;
+                if (f.name === 'body') { body = String(v); continue; }
+                if (f.kind === 'term_ref') front.push(f.name + ': ' + yaml(v.map((id) => termOf[id]).filter(Boolean).map((t) => t.name)));
+                else if (f.kind === 'media_ref') { if (mediaOf[v]) { front.push(f.name + ': ' + yaml('media/' + fileName(mediaOf[v].file))); mdMedia.add(v); } }
+                else front.push(f.name + ': ' + yaml(v));
+              }
+              front.push('---', '');
+              plan.writes.push({ path: root + '/markdown/' + slug(n) + '.md', content: front.join('\n') + body + '\n' });
+            }
+            for (const id of mdMedia) plan.copies.push({ from: mediaOf[id].file, to: root + '/markdown/media/' + fileName(mediaOf[id].file) });
+            files += nodes.length + mdMedia.size;
+          }
+
+          if (formats.includes('json')) {
+            const byType = {};
+            for (const n of nodes) {
+              const values = JSON.parse(n.fields || '{}');
+              const attributes = { drupal_internal__nid: n.id, title: n.title, status: true, created: n.created, changed: n.changed, path: { alias: n.alias || null } };
+              const relationships = {};
+              for (const f of fields.filter((x) => x.type_id === n.type)) {
+                const v = values[f.name];
+                if (f.kind === 'term_ref')
+                  relationships[f.name] = { data: (Array.isArray(v) ? v : []).filter((id) => termOf[id]).map((id) => ({ type: 'taxonomy_term--' + termOf[id].vocabulary, id: String(id), meta: { name: termOf[id].name } })) };
+                else if (f.kind === 'media_ref')
+                  relationships[f.name] = { data: mediaOf[v] ? { type: 'media--image', id: String(v), meta: { name: mediaOf[v].name } } : null };
+                else if (f.kind === 'long_text')
+                  attributes[f.name] = v ? { value: v, format: 'markdown', processed: rendered[n.id + ':' + f.name] || '' } : null;
+                else attributes[f.name] = v ?? null;
+              }
+              (byType[n.type] = byType[n.type] || []).push({ type: 'node--' + n.type, id: String(n.id), attributes, relationships });
+            }
+            for (const t of types)
+              plan.writes.push({ path: root + '/json/node--' + t.id + '.json', content: JSON.stringify({ jsonapi: { version: '1.0' }, data: byType[t.id] || [], meta: { count: (byType[t.id] || []).length } }, null, 2) + '\n' });
+            files += types.length;
+          }
+
+          const indexPath = formats.includes('html') ? root + '/html/index.html' : '';
+          plan.summary = { nodes: nodes.length, files, formats, folder: root, at, indexPath };
+          plan.lastExport = JSON.stringify(plan.summary);
+          plan.lastHtml = formats.includes('html') ? JSON.stringify({ at, indexPath, folder: root + '/html', files: plan.htmlFiles }) : '';
+          return plan;
+      destination: plan
+
+    # Each exported format replaces its own folder; the others stay as they were.
+    - group: flow
+      name: forEachLoop
+      params:
+        iterable: '{= plan.clear =}'
+        currentItem: fmt
+        actions:
+          - group: folder
+            name: delete
+            onError: continue
+            params:
+              src: '{{ plan.root }}/{{ fmt }}'
+
+    # Every HTML page: its template, then the Site layout around it.
+    - group: flow
+      name: forEachLoop
+      params:
+        iterable: '{= plan.pages =}'
+        currentItem: pg
+        actions:
+          - group: string
+            name: renderTemplate
+            params:
+              template: '{= pg.template =}'
+              data: '{= pg.data =}'
+            destination: inner
+
+          - group: string
+            name: renderTemplate
+            params:
+              template: '{= plan.layout =}'
+              data:
+                content: '{= inner =}'
+                page: '{= pg.page =}'
+                site: '{= pg.data.site =}'
+            destination: full
+
+          - group: file
+            name: write
+            params:
+              src: '{{ plan.root }}/{{ pg.path }}'
+              data: '{= full =}'
+
+    - group: flow
+      name: forEachLoop
+      params:
+        iterable: '{= plan.styles =}'
+        currentItem: pg
+        actions:
+          - group: string
+            name: renderTemplate
+            params:
+              template: '{= pg.template =}'
+              data: '{= pg.data =}'
+            destination: full
+
+          - group: file
+            name: write
+            params:
+              src: '{{ plan.root }}/{{ pg.path }}'
+              data: '{= full =}'
+
+    - group: flow
+      name: forEachLoop
+      params:
+        iterable: '{= plan.writes =}'
+        currentItem: out
+        actions:
+          - group: file
+            name: write
+            params:
+              src: '{{ out.path }}'
+              data: '{= out.content =}'
+
+    - group: flow
+      name: forEachLoop
+      params:
+        iterable: '{= plan.copies =}'
+        currentItem: out
+        actions:
+          - group: file
+            name: copy
+            params:
+              src: '{{ out.from }}'
+              dest: '{{ out.to }}'
+
+    # Remember this export (and, with HTML, the site to preview and deploy).
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          INSERT INTO meta (key, value) VALUES ('last_export', ?)
+          ON CONFLICT (key) DO UPDATE SET value = excluded.value
+        bindings: ['{= plan.lastExport =}']
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          INSERT INTO meta (key, value) VALUES ('site_name', ?)
+          ON CONFLICT (key) DO UPDATE SET value = excluded.value
+        bindings: ['{{ siteName }}']
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          INSERT INTO meta (key, value) SELECT 'last_html', ? WHERE ? != ''
+          ON CONFLICT (key) DO UPDATE SET value = excluded.value
+        bindings: ['{= plan.lastHtml =}', '{= plan.lastHtml =}']
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      name: runScript
+      params:
+        context: { plan: '{= plan =}' }
+        code: return plan.summary.indexPath;
+      destination: indexPath
+
+    - group: script
+      name: runScript
+      params:
+        context: { plan: '{= plan =}' }
+        code: return plan.summary;
+      destination: summary

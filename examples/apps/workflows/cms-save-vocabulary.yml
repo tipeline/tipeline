@@ -1,0 +1,88 @@
+version: 1.0.0
+name: 'CMS: Save Vocabulary'
+description: |
+  Adds a taxonomy vocabulary to the CMS store (`~/Tipeline/output/cms/cms.db`), or renames one. Its machine name is made from the name and can't change later.
+
+  **Inputs**
+
+  - `id` — machine name of the vocabulary to change; empty adds one
+  - `label`
+  - `description`
+
+  **Outputs**
+
+  - `vocabulary` — `{ id, label }`
+author: tipeline
+tags: [example, apps, cms, taxonomy, vocabularies]
+
+pipeline:
+  variables:
+    - { type: string, name: id, value: '', visibility: public, description: Empty adds a vocabulary. }
+    - { type: string, name: label, value: '', visibility: public, required: true, description: Name. }
+    - { type: string, name: description, value: '', visibility: public, description: What it groups. }
+    - { type: object, name: vocabulary, value: {}, visibility: public, description: The saved vocabulary. Returned to the app. }
+    - { type: dbConnection, name: db }
+    - { type: array, name: existing, value: [] }
+    - { type: object, name: save, value: {} }
+
+  actions:
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT id FROM vocabulary
+      destination: existing
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          id: '{{ id }}'
+          label: '{{ label }}'
+          description: '{{ description }}'
+          existing: '{= existing =}'
+        code: |
+          const name = String(label).trim();
+          if (!name) throw new Error('Name field is required.');
+          const ids = existing.map((v) => v.id);
+          let machine = String(id).trim();
+          if (machine) {
+            if (!ids.includes(machine)) throw new Error('The vocabulary ' + machine + ' was not found.');
+          } else {
+            machine = name.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+            if (!/^[a-z]/.test(machine)) throw new Error('The name must start with a letter.');
+            if (ids.includes(machine)) throw new Error('There is already a vocabulary called ' + name + '.');
+          }
+          return { id: machine, label: name, description: String(description).trim() };
+      destination: save
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          INSERT INTO vocabulary (id, label, description) VALUES (?, ?, ?)
+          ON CONFLICT (id) DO UPDATE SET label = excluded.label, description = excluded.description
+        bindings: ['{{ save.id }}', '{{ save.label }}', '{{ save.description }}']
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      name: runScript
+      params:
+        context: { save: '{= save =}' }
+        code: |
+          return { id: save.id, label: save.label };
+      destination: vocabulary

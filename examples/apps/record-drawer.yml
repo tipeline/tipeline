@@ -1,0 +1,157 @@
+schemaVersion: 4
+name: Record Drawer
+description: Pages shown as drawers — click a record to see and edit it in a side panel, and open filters from the left; Open modal with Show as Drawer
+author: tipeline
+
+workflows:
+  listRecords: { file: ./workflows/list-records.yml }
+  setStatus: { file: ./workflows/update-record-status.yml }
+
+# The record open in the drawer, and the status filter the left drawer sets.
+state:
+  record: null
+  statusFilter: all
+
+pages:
+  # ------------------------------------------------------------------ records
+  - id: records
+    name: Records
+    icon: PanelRight
+
+    runnables:
+      records:
+        mode: run
+        workflow: listRecords
+        trigger: load
+        inputs: { status: "{= state.statusFilter =}" }
+        outputs: [records, summary]
+        persist: false
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 9, h: 9 }
+        props:
+          markdown: true
+          content: "Click a row: the record opens in a **drawer** on the right, where you can change its status. **Filters** opens a small drawer from the left. Both are **Open modal** actions with *Show as: Drawer*."
+
+      - id: filtersButton
+        type: button
+        name: Filters
+        frame: none
+        layout: { x: 9, y: 0, w: 3, h: 9 }
+        props:
+          label: "Filters ({{ state.statusFilter }})"
+          variant: outline
+        events:
+          # Apply closes the drawer with closeModal, so the list reloads only then.
+          click:
+            - { type: openModal, page: filters, display: drawer, side: left, size: sm }
+            - { type: run, runnable: records }
+
+      - id: recordsTable
+        type: table
+        name: Records
+        layout: { x: 0, y: 9, w: 12, h: 46 }
+        props:
+          data: "{= runnables.records.outputs.records =}"
+          columns:
+            - { key: id, header: ID }
+            - { key: name, header: Name }
+            - { key: status, header: Status, format: badge }
+            - { key: amount, header: Amount, format: currency }
+            - { key: updatedAt, header: Updated, format: datetime }
+        events:
+          rowClick:
+            - { type: setState, key: record, value: "{= recordsTable.selectedRow =}" }
+            - { type: openModal, page: recordDetails, display: drawer, size: md }
+            - { type: run, runnable: records }
+
+  # ------------------------------------------------------------------ record drawer
+  - id: recordDetails
+    name: Record
+    showInMenu: false
+
+    runnables:
+      save:
+        mode: run
+        workflow: setStatus
+        inputs:
+          id: "{= state.record.id =}"
+          status: "{= newStatus.value =}"
+        outputs: [record]
+        onSuccess:
+          - { type: toast, message: "{{ result.outputs.record.name }} is now {{ result.outputs.record.status }}", variant: success }
+          - { type: closeModal }
+
+    components:
+      - id: details
+        type: keyValue
+        name: Details
+        frame: none
+        layout: { x: 0, y: 0, w: 12, h: 18 }
+        props:
+          title: "#{{ state.record.id }} {{ state.record.name }}"
+          data: "{= state.record =}"
+          fields:
+            - { key: status, label: Status, format: badge }
+            - { key: amount, label: Amount, format: currency }
+            - { key: updatedAt, label: Last updated, format: datetime }
+
+      - id: newStatus
+        type: select
+        name: New status
+        frame: none
+        layout: { x: 0, y: 18, w: 12, h: 11 }
+        props:
+          label: Change status
+          display: buttons
+          default: "{= state.record.status =}"
+          options:
+            - { value: pending, label: Pending }
+            - { value: active, label: Active }
+            - { value: closed, label: Closed }
+
+      - id: saveButton
+        type: button
+        name: Save
+        frame: none
+        layout: { x: 0, y: 29, w: 12, h: 6 }
+        props:
+          label: Save
+        events:
+          click: [{ type: run, runnable: save }]
+
+  # ------------------------------------------------------------------ filters drawer
+  - id: filters
+    name: Filters
+    showInMenu: false
+
+    components:
+      - id: statusChoice
+        type: select
+        name: Status
+        frame: none
+        layout: { x: 0, y: 0, w: 12, h: 16 }
+        props:
+          label: Status
+          display: list
+          default: "{= state.statusFilter =}"
+          options:
+            - { value: all, label: All }
+            - { value: active, label: Active }
+            - { value: pending, label: Pending }
+            - { value: closed, label: Closed }
+
+      - id: applyFilters
+        type: button
+        name: Apply
+        frame: none
+        layout: { x: 0, y: 16, w: 12, h: 6 }
+        props:
+          label: Apply
+        events:
+          click:
+            - { type: setState, key: statusFilter, value: "{= statusChoice.value =}" }
+            - { type: closeModal }

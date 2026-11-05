@@ -1,0 +1,64 @@
+version: 1.0.0
+name: Create Email Draft
+description: |
+  Writes an email as a draft and opens it in your mail app (Apple Mail or Outlook), ready to review and send.
+
+  Nothing is sent: the draft is an `.eml` file marked as unsent. macOS only, as it opens the file with `open`.
+author: Tipeline Examples
+tags: [email, draft, mail, apple mail, outlook]
+
+pipeline:
+  variables:
+    - type: string
+      name: to
+      label: To
+      description: Who the email is for, e.g. ana@example.com
+      required: true
+      value: ''
+      visibility: public
+
+    - type: string
+      name: subject
+      label: Subject
+      description: The subject line, e.g. Server versions
+      required: true
+      value: ''
+      visibility: public
+
+    - type: string
+      name: body
+      label: Message
+      description: The text of the email.
+      required: true
+      value: ''
+      visibility: public
+
+    - type: string
+      name: draftPath
+      label: Draft file
+      description: Where the draft was saved.
+      value: ~/Desktop/tipeline-email-draft.eml
+      visibility: public
+      output: true
+
+  actions:
+    - group: file
+      name: write
+      label: Write draft
+      params:
+        src: '{{ draftPath }}'
+        data: |
+          To: {{ to }}
+          Subject: {{ subject }}
+          X-Unsent: 1
+          Content-Type: text/plain; charset=utf-8
+
+          {{ body }}
+
+    - group: system
+      name: runApplication
+      label: Open in mail app
+      params:
+        command: open
+        args:
+          - '{{ draftPath }}'

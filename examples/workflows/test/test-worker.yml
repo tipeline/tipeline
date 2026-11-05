@@ -1,0 +1,35 @@
+version: 1.0.0
+name: Test Worker
+description: |
+  Prints `workerName`, then prints it 9 more times with a one-second wait each time, about 9 seconds in all. Core runs each workflow in a background worker, and this one lasts long enough to watch it, cancel it or start another run alongside it.
+author: Jose Daniel Estrada
+tags: [example, worker, loop]
+
+pipeline:
+  variables:
+    - name: workerName
+      type: string
+      value: 'Worker Name'
+  actions:
+    - group: system
+      name: message
+      params:
+        text: |
+          Worker Name: {{ workerName }}
+
+    - group: flow
+      name: simpleLoop
+      params:
+        indexValue: 1
+        indexEndValue: 10
+        incrementBy: 1
+        actions:
+          - group: system
+            name: message
+            params:
+              text: |
+                Loop - {{ workerName }}
+          - group: flow
+            name: wait
+            params:
+              timeout: 1000

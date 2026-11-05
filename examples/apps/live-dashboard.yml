@@ -1,0 +1,143 @@
+schemaVersion: 4
+name: Live Dashboard
+description: A dashboard that refreshes itself — a Timer runs the List Records workflow every few seconds, with pause, run now, a chosen interval and a one-shot countdown
+author: tipeline
+
+workflows:
+  listRecords: { file: ./workflows/list-records.yml }
+
+pages:
+  - id: live
+    name: Live
+    icon: Timer
+
+    runnables:
+      records:
+        mode: run
+        workflow: listRecords
+        trigger: load
+        inputs: { status: all }
+        outputs: [records, summary]
+        persist: false
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 9 }
+        props:
+          markdown: true
+          content: "A **Timer** fires its **tick** event every few seconds; here it runs the List Records workflow. Pause it, run it now, change how often, or switch auto-refresh off — its **Running** is bound to the switch."
+
+      # ------------------------------------------------------------ the refresh timer
+      - id: refresh
+        type: timer
+        name: Refresh
+        layout: { x: 0, y: 9, w: 4, h: 6 }
+        props:
+          label: Auto-refresh
+          interval: "{= every.value =}"
+          running: "{{ autoRefresh.value }}"
+        events:
+          tick:
+            - { type: run, runnable: records }
+
+      - id: every
+        type: select
+        name: Every
+        frame: none
+        layout: { x: 4, y: 9, w: 4, h: 6 }
+        props:
+          display: buttons
+          default: 10
+          options:
+            - { value: 5, label: Every 5 s }
+            - { value: 10, label: 10 s }
+            - { value: 30, label: 30 s }
+
+      - id: autoRefresh
+        type: checkbox
+        name: Auto-refresh
+        frame: none
+        layout: { x: 8, y: 9, w: 4, h: 6 }
+        props:
+          label: Auto-refresh on
+          default: true
+
+      # ------------------------------------------------------------ what it refreshes
+      - id: totalKpi
+        type: kpi
+        name: Total
+        layout: { x: 0, y: 15, w: 3, h: 14 }
+        props: { label: Records, value: "{= runnables.records.outputs.summary.total =}" }
+
+      - id: pendingKpi
+        type: kpi
+        name: Pending
+        layout: { x: 3, y: 15, w: 3, h: 14 }
+        props: { label: Pending, value: "{= runnables.records.outputs.summary.pending =}" }
+
+      - id: openKpi
+        type: kpi
+        name: Open amount
+        layout: { x: 6, y: 15, w: 3, h: 14 }
+        props:
+          label: Open amount
+          value: "{= runnables.records.outputs.summary.openAmount =}"
+          format: currency
+
+      - id: refreshes
+        type: kpi
+        name: Refreshes
+        layout: { x: 9, y: 15, w: 3, h: 14 }
+        props: { label: Timer ticks, value: "{= refresh.ticks =}" }
+
+      - id: records
+        type: table
+        name: Records
+        layout: { x: 0, y: 29, w: 8, h: 42 }
+        props:
+          data: "{= runnables.records.outputs.records =}"
+          columns:
+            - { key: id, header: ID }
+            - { key: name, header: Name }
+            - { key: status, header: Status, format: badge }
+            - { key: amount, header: Amount, format: currency }
+
+      # ------------------------------------------------------------ a one-shot countdown
+      - id: breakReminder
+        type: timer
+        name: Break reminder
+        layout: { x: 8, y: 29, w: 4, h: 6 }
+        props:
+          label: Break in
+          interval: 60
+          repeat: false
+        events:
+          tick:
+            - { type: toast, message: "Time for a break!" }
+
+      - id: restartReminder
+        type: button
+        name: Restart reminder
+        frame: none
+        layout: { x: 8, y: 35, w: 4, h: 6 }
+        props:
+          label: Restart the countdown
+          variant: outline
+        events:
+          click:
+            - { type: reset, component: breakReminder }
+
+      - id: howTo
+        type: text
+        name: How
+        layout: { x: 8, y: 41, w: 4, h: 30 }
+        props:
+          markdown: true
+          content: |
+            **Break in** has *Repeat* off: it counts down once, shows **done**, and a **Reset** (the button above) starts it again.
+
+            Timers keep ticking while hidden (*Visible* off) and stop when you leave the page.
+
+            Last refresh: {% if refresh.lastTick %}{{ refresh.lastTick | date: "%H:%M:%S" }}{% else %}not yet{% endif %}

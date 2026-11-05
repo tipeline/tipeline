@@ -1,0 +1,81 @@
+schemaVersion: 4
+name: Map
+description: A map of places from a workflow — markers colored by status, popups, a status filter, and the clicked place's details
+author: tipeline
+
+workflows:
+  listPlaces: { file: ./workflows/list-places.yml }
+
+pages:
+  - id: places
+    name: Places
+    icon: MapPinned
+
+    runnables:
+      places:
+        mode: run
+        workflow: listPlaces
+        trigger: load
+        inputs: { status: "{= statusFilter.value =}" }
+        outputs: [places]
+        persist: false
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 7 }
+        props:
+          markdown: true
+          content: "A **Map** of the places a workflow returns: colored by status like badges, a popup per marker, and the clicked place on the right. Map data © OpenStreetMap contributors."
+
+      - id: statusFilter
+        type: select
+        name: Status
+        frame: none
+        layout: { x: 0, y: 7, w: 8, h: 7 }
+        props:
+          display: buttons
+          default: all
+          options:
+            - { value: all, label: All }
+            - { value: active, label: Active }
+            - { value: pending, label: Pending }
+            - { value: closed, label: Closed }
+        events:
+          change: [{ type: run, runnable: places }]
+
+      - id: placesMap
+        type: map
+        name: Map
+        layout: { x: 0, y: 14, w: 8, h: 56 }
+        props:
+          title: Offices and deliveries
+          data: "{= runnables.places.outputs.places =}"
+          colorKey: status
+          popupFields: [city, status, deliveries]
+
+      - id: picked
+        type: keyValue
+        name: Selected place
+        layout: { x: 8, y: 7, w: 4, h: 30 }
+        props:
+          title: "{{ placesMap.selectedMarker.name | default: 'Click a marker' }}"
+          data: "{= placesMap.selectedMarker =}"
+          emptyText: Click a marker on the map
+          fields:
+            - { key: city, label: City }
+            - { key: status, label: Status, format: badge }
+            - { key: deliveries, label: Deliveries }
+            - { key: lat, label: Latitude }
+            - { key: lng, label: Longitude }
+
+      - id: list
+        type: table
+        name: Places
+        layout: { x: 8, y: 37, w: 4, h: 33 }
+        props:
+          data: "{= runnables.places.outputs.places =}"
+          columns:
+            - { key: name, header: Place }
+            - { key: status, header: Status, format: badge }

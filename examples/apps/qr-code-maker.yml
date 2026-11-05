@@ -1,0 +1,62 @@
+schemaVersion: 4
+name: QR Code Maker
+version: "1.0.0"
+description: The Image component — a workflow saves a QR code file, the app shows it (and reloads it after every run)
+author: tipeline
+
+workflows:
+  makeQr: { file: ./workflows/make-qr-code.yml }
+
+pages:
+  - id: qr
+    name: QR code
+    icon: QrCode
+
+    runnables:
+      make:
+        mode: run
+        workflow: makeQr
+        inputs: { text: "{= qrForm.values.text =}" }
+        outputs: [path]
+        persist: false
+
+    components:
+      - id: qrForm
+        type: form
+        name: QR form
+        layout: { x: 0, y: 0, w: 5, h: 28 }
+        props:
+          title: Make a QR code
+          submitLabel: Make it
+          fields:
+            - { name: text, label: Text or link, type: textarea, required: true, default: "https://tipeline.dev" }
+        events:
+          submit: [{ type: run, runnable: make }]
+
+      # The file the workflow saved. It's rewritten on every run with the same name —
+      # the Image reloads when the run ends, so it always shows the latest one.
+      - id: qrImage
+        type: image
+        name: QR code
+        layout: { x: 5, y: 0, w: 4, h: 40 }
+        props:
+          src: "{{ runnables.make.outputs.path }}"
+          alt: QR code
+          fit: contain
+          caption: Click to zoom
+          zoomable: true
+
+      - id: howTo
+        type: text
+        name: How it works
+        layout: { x: 9, y: 0, w: 3, h: 40 }
+        props:
+          markdown: true
+          content: |
+            **How it works**
+
+            1. Type a text or link and press **Make it**.
+            2. The *Make QR Code* workflow saves the image in `~/Tipeline/output`.
+            3. The Image shows that file — click it to zoom.
+
+            An Image also takes a web address, a `data:` URL or base64.

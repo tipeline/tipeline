@@ -1,0 +1,64 @@
+{
+  "name": "@tipeline/cli",
+  "version": "0.0.0",
+  "description": "Tipeline CLI",
+  "type": "module",
+  "bin": {
+    "tipeline": "./dist/index.js"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsc && tsc-alias -p tsconfig.json --resolve-full-paths --resolve-full-extension .js && node -e \"require('fs').chmodSync('dist/index.js', 0o755)\"",
+    "dev": "npm run build && node dist/index.js",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --write .",
+    "prepack": "rm -rf dist && npm run build"
+  },
+  "author": "José Daniel Estrada Guzmán",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@tipeline/agent": "0.0.0",
+    "@tipeline/core": "0.0.0",
+    "@tipeline/i18n": "0.0.0",
+    "@tipeline/types": "0.0.0",
+    "@tipeline/utils": "0.0.0",
+    "chalk": "^5.4.1",
+    "cli-table3": "^0.6.5",
+    "commander": "^13.1.0",
+    "fs-extra": "^11.3.0",
+    "node-ipc": "^12.0.0",
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/commander": "^2.12.0",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^22.14.1",
+    "@types/node-ipc": "^9.2.3",
+    "@types/ws": "^8.18.1",
+    "@typescript-eslint/eslint-plugin": "^8.31.1",
+    "@typescript-eslint/parser": "^8.31.1",
+    "eslint": "^9.25.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "prettier": "^3.6.2",
+    "prettier-plugin-tailwindcss": "^0.6.14",
+    "tsc-alias": "^1.8.16",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.10"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tipeline/tipeline.git",
+    "directory": "apps/cli"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "NOTICE"
+  ]
+}

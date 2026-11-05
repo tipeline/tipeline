@@ -1,0 +1,105 @@
+version: 1.0.0
+name: Script example
+description: |
+  Runs JavaScript in a sandbox with `script.runScript` and uses what it returns in the workflow.
+
+  The code runs inside a vm2 sandbox, so `require`, `process`, `global`, `module` and other Node.js internals aren't available.
+
+  **Parameters**
+
+  - `code` — the JavaScript to run; use `return` to hand back a value
+  - `context` — optional values passed in as variables: text, numbers, booleans, lists and plain objects
+
+  Use the `log` helper for debug output: `log('value:', myVar)`
+
+  **Template syntax**
+
+  - `{{ varName }}` — puts a value into text; the result is always a string
+  - `{= varName =}` — passes the value as it is (object, array, number…); it must be the field's whole value
+
+author: Jose Daniel Estrada
+tags: [example, script, javascript, code, sandbox]
+
+pipeline:
+  variables:
+    - type: string
+      name: firstName
+      value: Jose
+
+    - type: string
+      name: lastName
+      value: Tipeline
+
+    - type: number
+      name: price
+      value: 49.99
+
+    - type: number
+      name: quantity
+      value: 3
+
+    - type: array
+      name: tags
+      value: [automation, pipeline, script]
+
+    - type: object
+      name: config
+      value:
+        currency: USD
+        locale: en-US
+
+  actions:
+    # Return a plain value from the script
+    - group: script
+      name: runScript
+      params:
+        code: |
+          return 'Hello from the sandbox!';
+
+    # Use context variables — string values passed via {{ }}
+    - group: script
+      name: runScript
+      params:
+        code: |
+          const full = firstName + ' ' + lastName;
+          return full.toUpperCase();
+        context:
+          firstName: '{{ firstName }}'
+          lastName: '{{ lastName }}'
+
+    # Pass number variables via raw injection {= =} to preserve the numeric type
+    - group: script
+      name: runScript
+      params:
+        code: |
+          return price * quantity;
+        context:
+          price: '{= price =}'
+          quantity: '{= quantity =}'
+
+    # Pass an array and an object via raw injection {= =} to preserve types
+    - group: script
+      name: runScript
+      params:
+        code: |
+          const label = config.currency + ' ' + (price * quantity).toFixed(2);
+          const tagList = tags.join(', ');
+          log('tags:', tagList);
+          return { label, tagList };
+        context:
+          price: '{= price =}'
+          quantity: '{= quantity =}'
+          tags: '{= tags =}'
+          config: '{= config =}'
+
+    # Use the log helper for debug output (appears in the engine console)
+    - group: script
+      name: runScript
+      params:
+        code: |
+          log('firstName:', firstName);
+          log('lastName:', lastName);
+          return firstName + ' ' + lastName;
+        context:
+          firstName: '{{ firstName }}'
+          lastName: '{{ lastName }}'

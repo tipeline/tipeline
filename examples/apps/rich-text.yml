@@ -1,0 +1,121 @@
+schemaVersion: 4
+name: Rich Text
+description: Rich text inputs — write an email body with formatting and turn it into a draft, and keep notes as Markdown in a form
+author: tipeline
+
+workflows:
+  makeDraft: { file: ./workflows/make-email-draft.yml }
+
+state:
+  draftPath: ""
+
+pages:
+  - id: write
+    name: Write
+    icon: FilePen
+
+    runnables:
+      draft:
+        mode: run
+        workflow: makeDraft
+        inputs:
+          subject: "{{ subject.value | default: 'No subject' }}"
+          body: "{= body.value =}"
+        outputs: [path]
+        persist: false
+        onSuccess:
+          - { type: setState, key: draftPath, value: "{= result.outputs.path =}" }
+          - { type: toast, variant: success, message: Draft ready }
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 7 }
+        props:
+          markdown: true
+          content: "**Rich text** inputs: a toolbar editor whose value is HTML (an email body) or Markdown (notes). Write the body, make the draft, then open it."
+
+      - id: subject
+        type: input
+        name: Subject
+        layout: { x: 0, y: 7, w: 8, h: 11 }
+        props: { label: Subject, placeholder: Your order is on its way }
+
+      - id: makeButton
+        type: button
+        name: Make draft
+        frame: none
+        layout: { x: 8, y: 9, w: 2, h: 6 }
+        props:
+          label: Make the draft
+          icon: Mail
+        events:
+          click: [{ type: run, runnable: draft }]
+
+      - id: openButton
+        type: button
+        name: Open draft
+        frame: none
+        layout: { x: 10, y: 9, w: 2, h: 6 }
+        props:
+          label: Open it
+          icon: ExternalLink
+          variant: outline
+          disabled: "{% if state.draftPath == blank %}true{% else %}false{% endif %}"
+        events:
+          click: [{ type: openFile, path: "{{ state.draftPath }}", mode: open }]
+
+      # HTML (the default format): goes into the draft as is.
+      - id: body
+        type: input
+        name: Body
+        layout: { x: 0, y: 18, w: 8, h: 42 }
+        props:
+          inputType: richtext
+          label: Body
+          required: true
+          default: "<p>Hi <strong>Ana</strong>,</p><p>Your order <em>INV-1042</em> ships today:</p><ul><li><p>1 × Engine</p></li><li><p>10 × Cards</p></li></ul><p>Questions? <a href=\"https://example.com\">Contact us</a>.</p>"
+
+      - id: html
+        type: text
+        name: HTML value
+        layout: { x: 8, y: 18, w: 4, h: 42 }
+        props:
+          markdown: true
+          content: |
+            **The value (HTML)**
+
+            ```html
+            {{ body.value }}
+            ```
+
+      # Markdown, in a form.
+      - id: notes
+        type: form
+        name: Notes
+        layout: { x: 0, y: 60, w: 8, h: 40 }
+        props:
+          title: Notes, kept as Markdown
+          submitLabel: Save notes
+          fields:
+            - name: notes
+              label: Notes
+              type: richtext
+              format: markdown
+              default: "## Follow up\n\n- Call **Globex** on Monday\n- Send the [price list](https://example.com)"
+        events:
+          submit: [{ type: toast, variant: success, message: Notes saved }]
+
+      - id: markdownValue
+        type: text
+        name: Markdown value
+        layout: { x: 8, y: 60, w: 4, h: 40 }
+        props:
+          markdown: true
+          content: |
+            **The value (Markdown)**
+
+            ```markdown
+            {{ notes.values.notes }}
+            ```

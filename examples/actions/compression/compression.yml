@@ -1,0 +1,85 @@
+version: 1.0.0
+name: Compression Actions Test Suite
+description: |
+  Creates and extracts archives in zip, tar and tar.gz formats, from a file, a folder and a glob pattern.
+author: Jose Daniel Estrada
+tags: [example, compression, zip, tar, archive]
+pipeline:
+  variables:
+    - type: string
+      name: sourcesFolder
+      value: '{{ _global.examplesDir }}/actions/compression/test/folder'
+
+    - type: string
+      name: sourcesGlob
+      value: '{{ _global.examplesDir }}/actions/compression/test/*.txt'
+
+    - type: string
+      name: baseDir
+      value: '{{ _global.examplesDir }}/actions/compression'
+
+  actions:
+    # -------------------------------------------------------
+    # tar.gz — gzip-compressed tar (most common for transfer/backup)
+    # -------------------------------------------------------
+
+    # Archive a folder and glob into a gzip-compressed tar — level 7 trades speed for smaller output
+    - group: compression
+      name: archive
+      params:
+        path: '{{ baseDir }}/archive.tar.gz'
+        sources:
+          - '{{ sourcesFolder }}'
+          - '{{ sourcesGlob }}'
+        level: 7
+        format: tar.gz
+
+    # Extract the tar.gz archive into a dedicated output folder
+    - group: compression
+      name: unarchive
+      params:
+        path: '{{ baseDir }}/archive.tar.gz'
+        destination: '{{ baseDir }}/unarchived/tar.gz/'
+
+    # -------------------------------------------------------
+    # tar — uncompressed bundle (fast, no CPU overhead)
+    # -------------------------------------------------------
+
+    # Bundle sources into a raw tar with no compression — useful when speed matters over size
+    - group: compression
+      name: archive
+      params:
+        path: '{{ baseDir }}/archive.tar'
+        sources:
+          - '{{ sourcesFolder }}'
+          - '{{ sourcesGlob }}'
+        format: tar
+
+    # Extract the uncompressed tar into its own output folder
+    - group: compression
+      name: unarchive
+      params:
+        path: '{{ baseDir }}/archive.tar'
+        destination: '{{ baseDir }}/unarchived/tar/'
+
+    # -------------------------------------------------------
+    # zip — widely compatible compressed archive
+    # -------------------------------------------------------
+
+    # Archive sources as a zip — level 9 for maximum compression, broadly supported format
+    - group: compression
+      name: archive
+      params:
+        path: '{{ baseDir }}/archive.zip'
+        sources:
+          - '{{ sourcesFolder }}'
+          - '{{ sourcesGlob }}'
+        level: 9
+        format: zip
+
+    # Extract the zip archive into its own output folder
+    - group: compression
+      name: unarchive
+      params:
+        path: '{{ baseDir }}/archive.zip'
+        destination: '{{ baseDir }}/unarchived/zip/'

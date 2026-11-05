@@ -1,0 +1,43 @@
+version: 1.0.0
+name: Log Note
+description: |
+  Records a short note. It doesn't store anything itself: each run, kept in the run history, is the record.
+
+  Used by the Activity Log example app, which reads the notes back with a history runnable filtered by a date range.
+
+  **Inputs**
+
+  - `note` — what happened
+  - `category` — info, success or issue
+author: tipeline
+tags: [example, apps, notes, run history]
+
+pipeline:
+  variables:
+    - type: string
+      name: note
+      value: ''
+      visibility: public
+      description: What happened. Set by the app.
+
+    - type: string
+      name: category
+      value: info
+      visibility: public
+      description: info, success or issue. Set by the app.
+
+  actions:
+    # The only step, and its result is the logged entry — so a history runnable that
+    # reads action results gets exactly one row per run, with `note` and `category`.
+    # (Keep it the only step: install gives steps new identifiers, so a reader can't
+    # pick one out by a name chosen here.)
+    - group: script
+      name: runScript
+      params:
+        context:
+          note: '{{ note }}'
+          category: '{{ category }}'
+        code: |
+          if (!note.trim()) throw new Error('A note needs some text');
+          if (!['info', 'success', 'issue'].includes(category)) throw new Error('Category must be info, success or issue');
+          return { note: note.trim(), category };

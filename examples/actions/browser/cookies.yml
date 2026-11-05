@@ -1,0 +1,91 @@
+version: 1.0.0
+name: Cookie actions
+description: |
+  Reads, sets and deletes a page's cookies in the browser.
+author: Jose Daniel Estrada
+tags: [example, browser, cookies]
+pipeline:
+  variables:
+    - type: browser
+      name: browserInstance
+    - type: array
+      name: cookiesBefore
+    - type: array
+      name: cookiesAfterSet
+    - type: array
+      name: cookiesAfterDelete
+  actions:
+    - group: browser
+      name: launch
+      params:
+        headless: true
+        timeout: 30000
+        viewport:
+          width: 1280
+          height: 720
+      destination: browserInstance
+
+    - group: browser
+      name: goTo
+      params:
+        browser: '{= browserInstance =}'
+        url: 'https://www.wikipedia.org/'
+        waitUntil: domcontentloaded
+
+    # -- getCookies: read initial state --
+    - group: browser
+      name: getCookies
+      params:
+        browser: '{= browserInstance =}'
+      destination: cookiesBefore
+
+    # -- setCookies --
+    # Inject a session cookie and a tracking cookie
+    - group: browser
+      name: setCookies
+      params:
+        browser: '{= browserInstance =}'
+        cookies:
+          - name: session_id
+            value: abc123xyz
+            domain: .wikipedia.org
+
+          - name: user_pref
+            value: dark_mode
+            domain: .wikipedia.org
+
+    # -- getCookies: verify both cookies were set --
+    - group: browser
+      name: getCookies
+      params:
+        browser: '{= browserInstance =}'
+      destination: cookiesAfterSet
+
+    # -- deleteCookies --
+    # Remove only the session_id cookie
+    - group: browser
+      name: deleteCookies
+      params:
+        browser: '{= browserInstance =}'
+        cookies:
+          - name: session_id
+            domain: .wikipedia.org
+            path: /
+            value: abc123xyz
+            expires: 9999999999
+            size: 12
+            httpOnly: false
+            secure: false
+            session: false
+
+    # -- getCookies: verify session_id is gone, user_pref remains --
+    - group: browser
+      name: getCookies
+      params:
+        browser: '{= browserInstance =}'
+      destination: cookiesAfterDelete
+
+    - group: browser
+      name: close
+      params:
+        browser: '{= browserInstance =}'

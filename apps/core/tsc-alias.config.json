@@ -1,0 +1,16 @@
+{
+  "resolveFullPaths": true,
+  "resolveFullExtension": ".js",
+  "replacers": {
+    "@/*": "./dist/*",
+    "@variable/*": "./dist/variable/*",
+    "@pipeline/*": "./dist/pipeline/*",
+    "@action/*": "./dist/action/*",
+    "@task/*": "./dist/task/*",
+    "@engine/*": "./dist/engine/*",
+    "@utils/*": "./dist/utils/*",
+    "@database/*": "./dist/database/*",
+    "@validation/*": "./dist/validation/*",
+    "@translation/*": "./dist/translation/*"
+  }
+}

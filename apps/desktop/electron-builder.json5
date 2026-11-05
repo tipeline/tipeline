@@ -1,0 +1,75 @@
+// @see https://www.electron.build/configuration/configuration
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.bananacore.tipeline",
+  "asar": true,
+  "productName": "Tipeline",
+  "directories": {
+    "output": "release/${version}"
+  },
+  "files": [
+    "dist",
+    "dist-electron"
+  ],
+  // Staged core (see scripts/stage-core.mjs) — copied straight into
+  // Resources/, outside the asar archive, so native modules (e.g.
+  // better-sqlite3, ssh2) need no separate asarUnpack handling.
+  //
+  // `from` is "resources", not "resources/core": electron-builder's file
+  // matcher has a hardcoded, unconditional rule (app-builder-lib's
+  // util/filter.js) that drops any directory named exactly "node_modules"
+  // sitting directly under `from` — no filter option can override it. Using
+  // "resources" as the root makes the relative path "core/node_modules"
+  // instead of the literal string "node_modules", which sidesteps it.
+  "extraResources": [
+    {
+      "from": "resources",
+      "to": ".",
+      "filter": ["core/**/*"]
+    }
+  ],
+  // Where auto-update looks (see electron/main/utils/AppUpdater.ts).
+  "publish": {
+    "provider": "github",
+    "owner": "tipeline",
+    "repo": "tipeline"
+  },
+  "mac": {
+    // No arch list: staged native modules match the build machine only (see stage-core.mjs), so a
+    // second arch built from here would ship binaries that can't load.
+    // The zip is what auto-update downloads; the dmg is for first installs.
+    "target": ["dmg", "zip"],
+    "artifactName": "${productName}-Mac-${version}-${arch}-Installer.${ext}",
+    "category": "public.app-category.productivity",
+    // Set CSC_LINK and CSC_KEY_PASSWORD env vars, or electron-builder picks
+    // up your Developer ID certificate from Keychain automatically.
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false,
+    "entitlements": "build/entitlements.mac.plist",
+    "entitlementsInherit": "build/entitlements.mac.plist",
+    "notarize": false
+  },
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
+    "artifactName": "${productName}-Windows-${version}-Setup.${ext}"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "deleteAppDataOnUninstall": false
+  },
+  "linux": {
+    "target": [
+      "AppImage"
+    ],
+    "artifactName": "${productName}-Linux-${version}.${ext}"
+  }
+}

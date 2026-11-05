@@ -1,0 +1,52 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  worker-1:
+    build:
+      # Context is the repo root so the full workspace is available to the Dockerfile.
+      context: ../..
+      dockerfile: docker/distributed/Dockerfile
+    environment:
+      REDIS_URL: redis://redis:6379
+      WORKER_CONCURRENCY: "4"
+      WORKER_ID: worker-1
+      # Mirror the host HOME so os.homedir() resolves to the same absolute path
+      # that database.json was written with, making the DB path valid in-container.
+      HOME: ${HOME}
+    # Mount to the same absolute path as on the host so the hardcoded DB path
+    # inside database.json resolves correctly.
+    volumes:
+      - ${HOME}/Tipeline:${HOME}/Tipeline
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker-2:
+    build:
+      context: ../..
+      dockerfile: docker/distributed/Dockerfile
+    environment:
+      REDIS_URL: redis://redis:6379
+      WORKER_CONCURRENCY: "4"
+      WORKER_ID: worker-2
+      HOME: ${HOME}
+    volumes:
+      - ${HOME}/Tipeline:${HOME}/Tipeline
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  redis-data:

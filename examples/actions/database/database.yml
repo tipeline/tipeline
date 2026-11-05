@@ -1,0 +1,63 @@
+version: 1.0.0
+name: Database Actions Test Suite
+description: |
+  Connects to a database, runs SQL queries and closes the connection. It uses an in-memory SQLite database, so it runs anywhere without any setup.
+author: Jose Daniel Estrada
+tags: [example, database, sql, sqlite]
+pipeline:
+  variables:
+    - type: array
+      name: rows
+
+    - type: object
+      name: configuration
+      value:
+        client: better-sqlite3
+        connection:
+          filename: ':memory:'
+        useNullAsDefault: true
+
+    - type: dbConnection
+      name: connection
+
+  actions:
+    # -------------------------------------------------------
+    # Connection
+    # -------------------------------------------------------
+
+    # Open a SQLite connection — store the result for reuse across query and close actions
+    - group: database
+      name: connect
+      params:
+        configuration: '{= configuration =}'
+      destination: connection
+
+    # -------------------------------------------------------
+    # Queries
+    # -------------------------------------------------------
+
+    - group: database
+      name: query
+      params:
+        connection: '{= connection =}'
+        sql: CREATE TABLE fruit (name TEXT, quantity INTEGER)
+
+    - group: database
+      name: query
+      params:
+        connection: '{= connection =}'
+        sql: INSERT INTO fruit VALUES ('apple', 3), ('banana', 5)
+
+    # Run a SELECT query and capture the results for downstream processing
+    - group: database
+      name: query
+      params:
+        connection: '{= connection =}'
+        sql: SELECT * FROM fruit
+      destination: rows
+
+    # Close the connection after all queries are done — always pair with a connect
+    - group: database
+      name: close
+      params:
+        connection: '{= connection =}'

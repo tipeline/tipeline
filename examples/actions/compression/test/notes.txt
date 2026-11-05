@@ -1,0 +1,1 @@
+Dummy file for the compression example. Safe to delete or replace.

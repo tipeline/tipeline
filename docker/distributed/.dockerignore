@@ -1,0 +1,8 @@
+node_modules
+apps/core/dist
+apps/cli/dist
+apps/desktop/dist
+apps/desktop/node_modules
+.git
+.gitignore
+*.log

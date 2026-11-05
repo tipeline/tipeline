@@ -1,0 +1,140 @@
+schemaVersion: 4
+name: Page Sections
+description: Dividers and spacers — a settings page split into labeled sections, a line between two columns, the line styles, and a section that hides with a switch
+author: tipeline
+
+pages:
+  - id: settings
+    name: Settings
+    icon: SeparatorHorizontal
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 7 }
+        props:
+          markdown: true
+          content: "**Dividers** split a page into sections — with a label, across or up and down. A **Spacer** (a divider with no line) is empty room you can see in the builder."
+
+      # ---------------------------------------------------------------- Account
+      - id: accountLine
+        type: divider
+        name: Account
+        layout: { x: 0, y: 7, w: 12, h: 4 }
+        props: { label: Account, align: start }
+
+      - id: name
+        type: input
+        name: Name
+        frame: none
+        layout: { x: 0, y: 11, w: 5, h: 10 }
+        props: { label: Name, default: Ana Rojas }
+
+      - id: columnsLine
+        type: divider
+        name: Between columns
+        layout: { x: 5, y: 11, w: 2, h: 21 }
+        props: { orientation: vertical }
+
+      - id: email
+        type: input
+        name: Email
+        frame: none
+        layout: { x: 7, y: 11, w: 5, h: 10 }
+        props: { label: Email, inputType: email, default: ana@example.com }
+
+      - id: phone
+        type: input
+        name: Phone
+        frame: none
+        layout: { x: 0, y: 21, w: 5, h: 10 }
+        props: { label: Phone, inputType: phone }
+
+      - id: language
+        type: select
+        name: Language
+        frame: none
+        layout: { x: 7, y: 21, w: 5, h: 10 }
+        props:
+          label: Language
+          default: en
+          options: [{ value: en, label: English }, { value: es, label: Español }]
+
+      # ---------------------------------------------------------------- Notifications
+      - id: notificationsLine
+        type: divider
+        name: Notifications
+        layout: { x: 0, y: 32, w: 12, h: 4 }
+        props: { label: Notifications, color: blue }
+
+      - id: emailAlerts
+        type: checkbox
+        name: Email alerts
+        frame: none
+        layout: { x: 0, y: 36, w: 6, h: 5 }
+        props: { label: Email me when a run fails, default: true }
+
+      - id: showAdvanced
+        type: checkbox
+        name: Show advanced
+        frame: none
+        layout: { x: 6, y: 36, w: 6, h: 5 }
+        props: { label: Show the advanced section }
+
+      # A spacer: room between sections (outlined in the builder only).
+      - id: gap
+        type: divider
+        name: Spacer
+        layout: { x: 0, y: 41, w: 12, h: 4 }
+        props: { lineStyle: none }
+
+      # ---------------------------------------------------------------- Advanced (hides)
+      # A frameless container holds the section, so the switch hides all of it at once.
+      - id: advanced
+        type: container
+        name: Advanced section
+        frame: none
+        layout: { x: 0, y: 45, w: 12, h: 17 }
+        props:
+          visible: "{{ showAdvanced.value }}"
+
+      - id: advancedLine
+        type: divider
+        name: Advanced
+        parent: { id: advanced }
+        layout: { x: 0, y: 0, w: 12, h: 4 }
+        props: { label: Advanced, align: end, lineStyle: dashed, color: amber }
+
+      - id: retries
+        type: input
+        name: Retries
+        frame: none
+        parent: { id: advanced }
+        layout: { x: 0, y: 4, w: 4, h: 10 }
+        props: { label: Retries on failure, inputType: number, default: 2 }
+
+      # ---------------------------------------------------------------- styles
+      - id: stylesLine
+        type: divider
+        name: Line styles
+        layout: { x: 0, y: 62, w: 12, h: 4 }
+        props: { label: Line styles, lineStyle: dotted, thickness: 2 }
+
+      - id: solidLine
+        type: divider
+        name: Solid
+        layout: { x: 0, y: 66, w: 4, h: 4 }
+        props: { label: solid, thickness: 2, color: green }
+
+      - id: dashedLine
+        type: divider
+        name: Dashed
+        layout: { x: 4, y: 66, w: 4, h: 4 }
+        props: { label: dashed, lineStyle: dashed, thickness: 2, color: purple }
+
+      - id: dottedLine
+        type: divider
+        name: Dotted
+        layout: { x: 8, y: 66, w: 4, h: 4 }
+        props: { label: dotted, lineStyle: dotted, thickness: 3, color: red }

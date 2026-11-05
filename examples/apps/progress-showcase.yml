@@ -1,0 +1,134 @@
+schemaVersion: 4
+name: Progress Showcase
+description: Progress bars and rings — from a workflow's summary, from a choice, with color rules, and one per item in a list view
+author: tipeline
+
+workflows:
+  listRecords: { file: ./workflows/list-records.yml }
+
+pages:
+  - id: progress
+    name: Progress
+    icon: Gauge
+
+    runnables:
+      records:
+        mode: run
+        workflow: listRecords
+        trigger: load
+        inputs: { status: all }
+        outputs: [records, summary]
+        persist: false
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 7 }
+        props:
+          markdown: true
+          content: "**Progress** components: a value out of a maximum, as a bar or a ring. Color rules look at the percentage — try the buttons below."
+
+      # ------------------------------------------------------------ from a workflow
+      - id: activeShare
+        type: progress
+        name: Active records
+        layout: { x: 0, y: 7, w: 6, h: 11 }
+        props:
+          label: Active records
+          value: "{= runnables.records.outputs.summary.active =}"
+          max: "{= runnables.records.outputs.summary.total =}"
+          showValue: value
+          color: green
+          description: From the List Records workflow's summary
+
+      - id: pendingShare
+        type: progress
+        name: Pending records
+        layout: { x: 6, y: 7, w: 6, h: 11 }
+        props:
+          label: Pending records
+          value: "{= runnables.records.outputs.summary.pending =}"
+          max: "{= runnables.records.outputs.summary.total =}"
+          color: amber
+
+      # ------------------------------------------------------------ from a choice, with rules
+      - id: level
+        type: select
+        name: Level
+        frame: none
+        layout: { x: 0, y: 18, w: 6, h: 10 }
+        props:
+          label: Disk usage
+          display: buttons
+          default: 45
+          options:
+            - { value: 10, label: "10%" }
+            - { value: 45, label: "45%" }
+            - { value: 70, label: "70%" }
+            - { value: 95, label: "95%" }
+
+      - id: disk
+        type: progress
+        name: Disk
+        layout: { x: 0, y: 28, w: 6, h: 9 }
+        props:
+          label: Disk usage
+          value: "{= level.value =}"
+          color: green
+          # The first rule that matches wins: red from 90%, amber from 60%.
+          colorRules:
+            - { compareAs: number, operator: gte, value: 90, color: red }
+            - { compareAs: number, operator: gte, value: 60, color: amber }
+
+      - id: diskRing
+        type: progress
+        name: Disk ring
+        layout: { x: 6, y: 18, w: 3, h: 19 }
+        props:
+          label: As a ring
+          display: circle
+          value: "{= level.value =}"
+          color: green
+          colorRules:
+            - { compareAs: number, operator: gte, value: 90, color: red }
+            - { compareAs: number, operator: gte, value: 60, color: amber }
+
+      - id: stepsRing
+        type: progress
+        name: Steps
+        layout: { x: 9, y: 18, w: 3, h: 19 }
+        props:
+          label: Onboarding steps
+          display: circle
+          value: 3
+          max: 5
+          showValue: value
+          color: purple
+
+      # ------------------------------------------------------------ one per item
+      - id: amounts
+        type: listView
+        name: Amounts
+        layout: { x: 0, y: 37, w: 12, h: 34 }
+        props:
+          data: "{= runnables.records.outputs.records =}"
+          itemName: record
+          itemKey: id
+          itemsPerRow: 2
+          emptyText: Loading records…
+
+      - id: amountBar
+        type: progress
+        name: Amount
+        parent: { id: amounts }
+        frame: none
+        layout: { x: 0, y: 0, w: 12, h: 8 }
+        props:
+          label: "{{ record.name }}"
+          value: "{= record.amount =}"
+          max: 4000
+          showValue: value
+          colorRules:
+            - { compareAs: number, operator: gte, value: 75, color: blue }
+            - { compareAs: number, operator: lt, value: 25, color: gray }

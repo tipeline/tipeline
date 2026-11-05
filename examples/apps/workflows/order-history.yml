@@ -1,0 +1,96 @@
+version: 1.0.0
+name: Order History
+description: |
+  Returns one example order and what happened to it — placed, paid, packed, shipped, a delay, delivered… — each with a time (relative to now, so the history always looks recent), an icon and a status.
+
+  Used by the Order Tracking example app.
+
+  **Inputs**
+
+  - `orderId` — "A-1001", "A-1002" or "A-1003"
+
+  **Outputs**
+
+  - `order` — `{ id, customer, total, status }`
+  - `events` — `[{ id, at, title, description, icon, status, by }]`
+author: tipeline
+tags: [example, apps, orders, timeline]
+
+pipeline:
+  variables:
+    - type: string
+      name: orderId
+      value: A-1001
+      visibility: public
+      description: The order to show. Set by the app.
+
+    - type: object
+      name: order
+      value: {}
+      visibility: public
+      description: The order. Returned to the app.
+
+    - type: array
+      name: events
+      value: []
+      visibility: public
+      description: What happened to it, oldest first. Returned to the app.
+
+    - type: object
+      name: result
+      value: {}
+
+  actions:
+    - group: script
+      name: runScript
+      params:
+        context:
+          orderId: '{{ orderId }}'
+        code: |
+          const ago = (hours) => new Date(Date.now() - hours * 3600000).toISOString();
+          const step = (id, hours, title, icon, status, description = '', by = 'System') =>
+            ({ id, at: ago(hours), title, icon, status, description, by });
+          const orders = {
+            'A-1001': {
+              order: { id: 'A-1001', customer: 'Acme Corp', total: 1240, status: 'delivered' },
+              events: [
+                step(1, 76, 'Order placed', 'ShoppingCart', 'done', '3 items', 'Acme Corp'),
+                step(2, 75.5, 'Payment received', 'CreditCard', 'done', 'Card ending 4242'),
+                step(3, 52, 'Packed', 'Package', 'done', 'Warehouse San José', 'Luis'),
+                step(4, 30, 'Shipped', 'Truck', 'active', 'Tracking 1Z999AA10123456784'),
+                step(5, 2, 'Delivered', 'House', 'done', 'Signed by M. Rojas', 'Courier'),
+              ],
+            },
+            'A-1002': {
+              order: { id: 'A-1002', customer: 'Globex', total: 380, status: 'delayed' },
+              events: [
+                step(1, 50, 'Order placed', 'ShoppingCart', 'done', '1 item', 'Globex'),
+                step(2, 49, 'Payment received', 'CreditCard', 'done', 'Bank transfer'),
+                step(3, 26, 'Shipped', 'Truck', 'active', 'Tracking 1Z999AA10987654321'),
+                step(4, 4, 'Delivery delayed', 'TriangleAlert', 'warning', 'Weather on the route — new estimate tomorrow', 'Courier'),
+              ],
+            },
+            'A-1003': {
+              order: { id: 'A-1003', customer: 'Initech', total: 2900, status: 'pending' },
+              events: [
+                step(1, 1.5, 'Order placed', 'ShoppingCart', 'done', '7 items', 'Initech'),
+                step(2, 0.2, 'Waiting for payment', 'Clock', 'pending', 'Invoice sent to billing@initech.example'),
+              ],
+            },
+          };
+          const found = orders[orderId];
+          if (!found) throw new Error(`No order "${orderId}" — try A-1001, A-1002 or A-1003`);
+          return found;
+      destination: result
+
+    - group: variable
+      name: set
+      params:
+        name: order
+        value: '{= result.order =}'
+
+    - group: variable
+      name: set
+      params:
+        name: events
+        value: '{= result.events =}'

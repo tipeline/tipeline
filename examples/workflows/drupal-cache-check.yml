@@ -1,0 +1,163 @@
+# Drupal cache/CDN diagnostics — replace `siteUrl` below with your own Drupal site
+# before running. Exercises the browser cache-diagnostic actions end to end:
+# goTo (enriched response), setCacheEnabled, runJavaScript+fetch header inspection,
+# startHarCapture/stopHarCapture, and runLighthouseAudit.
+#
+# What to look for in the headers this pipeline surfaces, front to back:
+#   - Browser cache:        fromCache on goTo; entries[].cache in the HAR
+#   - CDN/edge (if any):    cf-cache-status, x-cache, x-served-by, age
+#   - Varnish (if any):     x-varnish (two ids = hit), x-cache, age incrementing
+#   - Drupal page cache:    x-drupal-cache: HIT/MISS (anonymous page cache)
+#   - Drupal dynamic cache: x-drupal-dynamic-cache: HIT/MISS (BigPipe-aware)
+#   - Cache correctness:    vary + cookies — a `SESS*` cookie on an anonymous
+#                            request usually means the response bypassed caching
+#
+# The HAR (har.log.entries[]) captures headers/timing/cache/cookies for every
+# request on the page — not just the top document — in the standard HTTP Archive
+# format, so it's also importable straight into Chrome DevTools' Network tab or
+# any other HAR-consuming tool. Response bodies are not captured.
+version: 1.0.0
+name: Drupal cache check
+description: |
+  Inspects a Drupal site's browser, CDN, Varnish and Drupal cache headers, and runs a Lighthouse caching and performance audit.
+
+  Set the `siteUrl` variable to your own site before running. The comments at the top of the file say what to look for in each header.
+author: Jose Daniel Estrada
+tags: [example, drupal, cache, cdn, varnish, lighthouse, performance, headers]
+pipeline:
+  variables:
+    - type: string
+      name: siteUrl
+      value: 'https://example.com'
+    - type: browser
+      name: browserInstance
+    - type: object
+      name: navigationResponse
+    - type: object
+      name: cacheHeaders
+    - type: array
+      name: cookies
+    - type: string
+      name: captureId
+    - type: object
+      name: har
+    - type: object
+      name: lighthouseAudit
+  actions:
+    - group: browser
+      name: launch
+      params:
+        headless: true
+        timeout: 30000
+        viewport:
+          width: 1280
+          height: 720
+      destination: browserInstance
+
+    # -- goTo --
+    # Top-level document response: status, headers (includes any Drupal/Varnish/CDN
+    # cache headers the page itself sets), remoteAddress, fromCache, timing.
+    - group: browser
+      name: goTo
+      params:
+        browser: '{= browserInstance =}'
+        url: '{{ siteUrl }}'
+        waitUntil: networkidle2
+        timeout: 30000
+      destination: navigationResponse
+
+    # -- getCookies --
+    # A SESS* cookie present on what should be an anonymous request is the classic
+    # Drupal+Varnish bug: personalized content getting cached and served to everyone.
+    - group: browser
+      name: getCookies
+      params:
+        browser: '{= browserInstance =}'
+      destination: cookies
+
+    # -- runJavaScript (fetch) --
+    # Same-origin in-page fetch with cache: 'no-store' forces a real network round trip
+    # (bypassing the browser's own cache), so these headers reflect what Varnish/the
+    # CDN/Drupal actually returned on this request — not a stale local copy.
+    - group: browser
+      name: runJavaScript
+      params:
+        browser: '{= browserInstance =}'
+        script: |
+          const res = await fetch(window.location.href, { cache: 'no-store' });
+          const headers = {};
+          for (const [key, value] of res.headers.entries()) headers[key] = value;
+          return headers;
+      destination: cacheHeaders
+
+    # -- setCacheEnabled --
+    # Disable the browser's own HTTP cache before reloading, so the network capture
+    # below can't be masked by Chrome silently serving assets from disk.
+    - group: browser
+      name: setCacheEnabled
+      params:
+        browser: '{= browserInstance =}'
+        enabled: false
+
+    # -- startHarCapture --
+    # Records every request/response on the page, not just the top-level document —
+    # this is what catches missing cache headers on CSS/JS/image sub-resources and
+    # CDN-hosted assets, with full per-resource timing.
+    - group: browser
+      name: startHarCapture
+      params:
+        browser: '{= browserInstance =}'
+      destination: captureId
+
+    # networkidle2 (≤2 concurrent connections) rather than the stricter `wait:
+    # networkidle` action (zero connections) — real sites rarely go fully quiet
+    # (analytics beacons, ad iframes, chat widgets, bot-management heartbeats), so the
+    # strict version can hang for the full 30s timeout without ever resolving.
+    - group: browser
+      name: reload
+      params:
+        browser: '{= browserInstance =}'
+        waitUntil: networkidle2
+        timeout: 30000
+
+    # -- stopHarCapture --
+    # har.log.entries[].response.headers is where to check per-asset cache-control/age/
+    # cf-cache-status; entries[].response.status catches broken (404/500) sub-resources;
+    # entries[].timings has the DNS/connect/SSL/wait/receive breakdown. The HAR object is
+    # returned either way — add a `path: /some/file.har` param here if you also want it
+    # written to disk (e.g. to open in Chrome DevTools' Network tab import).
+    - group: browser
+      name: stopHarCapture
+      params:
+        browser: '{= browserInstance =}'
+        capture: '{= captureId =}'
+      destination: har
+
+    # -- setCacheEnabled --
+    # Re-enable the browser cache now that the capture is done.
+    - group: browser
+      name: setCacheEnabled
+      params:
+        browser: '{= browserInstance =}'
+        enabled: true
+
+    # -- runLighthouseAudit --
+    # performance includes uses-long-cache-ttl (flags assets without a proper cache
+    # lifetime) and server-response-time (TTFB — reflects whether Varnish/Drupal's
+    # page cache is actually being hit fast). best-practices includes
+    # errors-in-console. Individual audits aren't selectable directly — you pick the
+    # category and get every audit that belongs to it.
+    - group: browser
+      name: runLighthouseAudit
+      params:
+        browser: '{= browserInstance =}'
+        url: '{{ siteUrl }}'
+        categories:
+          - performance
+          - best-practices
+      destination: lighthouseAudit
+
+    - group: browser
+      name: close
+      params:
+        browser: '{= browserInstance =}'

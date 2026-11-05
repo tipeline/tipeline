@@ -1,0 +1,346 @@
+version: 1.0.0
+name: 'CMS: Render Preview'
+description: |
+  Renders one page of the site the way CMS: Export Site would, for a preview in the CMS app. The page comes back as one HTML document, with its stylesheet and images inside it, so it shows without the exported files.
+
+  **Two uses**
+
+  - A template being edited (`templateId` and its unsaved `html`): shown with one item (`sampleId`, or the newest that fits). The Home page template lists the published items; the Site layout and the Stylesheet are shown around one item.
+  - Content being edited (`nodeId` or `nodeType`, its unsaved `values`, `nodeTemplate`): shown with its template, as it would be published.
+
+  **Inputs**
+
+  - `templateId` — the template being edited; empty for content
+  - `html` — its unsaved text; empty: the saved one
+  - `sampleId` — the item to show it with; 0: the newest that fits
+  - `nodeId` — content being edited; 0 for new content
+  - `nodeType` — the content type of new content
+  - `values` — the content's unsaved values (title and fields)
+  - `nodeTemplate` — the template picked for the content; empty: its default
+  - `siteName` — the site's name; empty: the one the last export used
+
+  **Outputs**
+
+  - `result` — the page
+author: tipeline
+tags: [example, apps, cms, preview, templates, liquid]
+
+pipeline:
+  variables:
+    - { type: string, name: templateId, value: '', visibility: public, description: Template being edited. }
+    - { type: string, name: html, value: '', visibility: public, description: Its unsaved text. }
+    - { type: number, name: sampleId, value: 0, visibility: public, description: Item to preview with. }
+    - { type: number, name: nodeId, value: 0, visibility: public, description: Content being edited. }
+    - { type: string, name: nodeType, value: '', visibility: public, description: Content type of new content. }
+    - { type: object, name: values, value: {}, visibility: public, description: Unsaved values of the content. }
+    - { type: string, name: nodeTemplate, value: '', visibility: public, description: Template picked for the content. }
+    - { type: string, name: siteName, value: '', visibility: public, description: "The site's name; empty: the one the last export used." }
+    - { type: string, name: result, value: '', visibility: public, description: The page. Returned to the app. }
+    - { type: dbConnection, name: db }
+    - { type: array, name: nodes, value: [] }
+    - { type: array, name: types, value: [] }
+    - { type: array, name: fields, value: [] }
+    - { type: array, name: terms, value: [] }
+    - { type: array, name: media, value: [] }
+    - { type: array, name: templates, value: [] }
+    - { type: array, name: siteRows, value: [] }
+    - { type: object, name: prep, value: {} }
+    - { type: object, name: piece, value: {} }
+    - { type: string, name: htmlOut, value: '' }
+    - { type: object, name: rendered, value: {} }
+    - { type: object, name: img, value: {} }
+    - { type: string, name: b64, value: '' }
+    - { type: object, name: images, value: {} }
+    - { type: object, name: page, value: {} }
+    - { type: string, name: css, value: '' }
+    - { type: string, name: inner, value: '' }
+
+  actions:
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT * FROM node WHERE status = 1 OR id = ? ORDER BY created DESC, id DESC
+        bindings: ['{= nodeId =}']
+      destination: nodes
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT * FROM content_type
+      destination: types
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT * FROM field ORDER BY weight, name
+      destination: fields
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT * FROM term
+      destination: terms
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT * FROM media
+      destination: media
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT * FROM template
+      destination: templates
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT value FROM meta WHERE key = 'site_name'
+      destination: siteRows
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'
+
+    # Picks the item(s) and templates, and lists what to turn into HTML and which
+    # images to read.
+    - group: script
+      name: runScript
+      params:
+        context:
+          templateId: '{{ templateId }}'
+          html: '{= html =}'
+          sampleId: '{= sampleId =}'
+          nodeId: '{= nodeId =}'
+          nodeType: '{{ nodeType }}'
+          values: '{= values =}'
+          nodeTemplate: '{{ nodeTemplate }}'
+          nodes: '{= nodes =}'
+          types: '{= types =}'
+          fields: '{= fields =}'
+          media: '{= media =}'
+          templates: '{= templates =}'
+        code: |
+          const now = new Date().toISOString();
+          const byKind = (k) => templates.find((t) => t.kind === k);
+          const defaultFor = (type) => templates.find((t) => t.kind === 'content' && t.type_id === type && t.is_default === 1);
+          const published = nodes.filter((n) => n.status === 1);
+          let kind = 'content';
+          let edited = null;
+          let sample = null;
+
+          if (templateId) {
+            edited = templates.find((t) => t.id === templateId);
+            if (!edited) throw new Error('That template was not found. It may have been deleted.');
+            kind = edited.kind;
+            const fits = kind === 'content' ? nodes.filter((n) => n.type === edited.type_id) : published;
+            sample = fits.find((n) => n.id === Number(sampleId)) || fits.find((n) => n.status === 1) || fits[0] || null;
+          } else {
+            const existing = nodes.find((n) => n.id === Number(nodeId));
+            const type = existing ? existing.type : nodeType;
+            if (!type) throw new Error('Choose a content type first');
+            const stored = existing ? JSON.parse(existing.fields || '{}') : {};
+            const v = values || {};
+            const own = {};
+            for (const f of fields.filter((x) => x.type_id === type)) own[f.name] = f.name in v ? v[f.name] : stored[f.name];
+            sample = {
+              id: existing ? existing.id : 0,
+              type,
+              title: String(v.title ?? (existing ? existing.title : '')) || 'Untitled',
+              status: 1,
+              alias: existing ? existing.alias : '',
+              fields: JSON.stringify(own),
+              created: existing ? existing.created : now,
+              changed: now,
+              template: nodeTemplate || (existing ? existing.template : null),
+            };
+          }
+
+          const contentTemplate = (n) => {
+            if (!n) return '';
+            if (kind === 'content' && edited) return html || edited.html;
+            const t = templates.find((x) => x.id === n.template && x.kind === 'content' && x.type_id === n.type) || defaultFor(n.type);
+            if (!t) throw new Error('There is no template for this content type. Add one on the Templates page.');
+            return t.html;
+          };
+          const listed = kind === 'listing' ? published.filter((n) => n.type !== 'page') : sample ? [sample] : [];
+          const pieces = [];
+          const imageIds = new Set();
+          for (const n of listed) {
+            const v = JSON.parse(n.fields || '{}');
+            for (const f of fields.filter((x) => x.type_id === n.type)) {
+              if (f.kind === 'long_text' && v[f.name]) pieces.push({ key: n.id + ':' + f.name, md: String(v[f.name]) });
+              if (f.kind === 'media_ref' && v[f.name] != null) imageIds.add(Number(v[f.name]));
+            }
+          }
+          const pick = (k) => (edited && edited.kind === k ? html || edited.html : (byKind(k) || {}).html || '');
+          return {
+            kind,
+            empty: kind !== 'listing' && !sample,
+            sample,
+            listed,
+            pieces,
+            images: media.filter((m) => imageIds.has(m.id)).map((m) => ({ id: m.id, file: m.file, mime: m.mime || 'image/png' })),
+            content: kind === 'listing' ? pick('listing') : contentTemplate(sample),
+            layout: pick('layout'),
+            stylesheet: pick('stylesheet'),
+          };
+      destination: prep
+
+    - group: flow
+      name: forEachLoop
+      params:
+        iterable: '{= prep.pieces =}'
+        currentItem: piece
+        actions:
+          - group: html
+            name: fromMarkdown
+            params:
+              markdown: '{= piece.md =}'
+            destination: htmlOut
+
+          - group: script
+            name: runScript
+            params:
+              context: { rendered: '{= rendered =}', key: '{{ piece.key }}', html: '{= htmlOut =}' }
+              code: |
+                const next = Object.assign({}, rendered);
+                next[key] = html;
+                return next;
+            destination: rendered
+
+    # Images go inside the page as data URLs, so the preview needs no files.
+    - group: flow
+      name: forEachLoop
+      params:
+        iterable: '{= prep.images =}'
+        currentItem: img
+        actions:
+          - group: file
+            name: convertFileToBase64
+            onError: continue
+            params:
+              src: '{{ img.file }}'
+            destination: b64
+
+          - group: script
+            name: runScript
+            params:
+              context: { images: '{= images =}', img: '{= img =}', b64: '{= b64 =}' }
+              code: |
+                const next = Object.assign({}, images);
+                if (b64) next[img.id] = 'data:' + img.mime + ';base64,' + b64;
+                return next;
+            destination: images
+
+    # What the templates can use, as in the export (links point nowhere in a preview).
+    - group: script
+      name: runScript
+      params:
+        context:
+          prep: '{= prep =}'
+          siteName: '{{ siteName }}'
+          siteRows: '{= siteRows =}'
+          nodes: '{= nodes =}'
+          types: '{= types =}'
+          fields: '{= fields =}'
+          terms: '{= terms =}'
+          media: '{= media =}'
+          rendered: '{= rendered =}'
+          images: '{= images =}'
+        code: |
+          const typeOf = Object.fromEntries(types.map((t) => [t.id, t]));
+          const termOf = Object.fromEntries(terms.map((t) => [t.id, t]));
+          const mediaOf = Object.fromEntries(media.map((m) => [m.id, m]));
+          const summaryOf = (md) => {
+            const lines = String(md || '').split('\n').map((l) => l.trim()).filter(Boolean);
+            const line = (lines.find((l) => !/^(#|-|\*|>|\d+\.)/.test(l)) || lines.find((l) => !/^#/.test(l)) || '').replace(/^(-|\*|>|\d+\.)\s*/, '');
+            return line.replace(/\*\*?|__?|`/g, '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+          };
+          const nodeVars = (n) => {
+            const values = JSON.parse(n.fields || '{}');
+            const out = {};
+            let image = null;
+            const tags = [];
+            for (const f of fields.filter((x) => x.type_id === n.type)) {
+              const v = values[f.name];
+              if (f.kind === 'long_text') out[f.name] = rendered[n.id + ':' + f.name] || '';
+              else if (f.kind === 'term_ref') {
+                const list = (Array.isArray(v) ? v : []).map((id) => termOf[id]).filter(Boolean).map((t) => ({ id: t.id, name: t.name }));
+                out[f.name] = list;
+                for (const t of list) if (!tags.some((x) => x.id === t.id)) tags.push(t);
+              } else if (f.kind === 'media_ref') {
+                const m = mediaOf[v];
+                out[f.name] = m ? { url: images[m.id] || '', alt: m.name } : null;
+                if (!image && out[f.name]) image = out[f.name];
+              } else out[f.name] = v ?? null;
+            }
+            return {
+              id: n.id, title: n.title, type: (typeOf[n.type] || {}).label || n.type, type_id: n.type,
+              url: '#', path: n.alias || '', created: n.created, changed: n.changed,
+              body: out.body || '', summary: summaryOf(values.body), image, tags, fields: out,
+            };
+          };
+          const site = {
+            name: (siteRows[0] && siteRows[0].value) || String(siteName).trim() || 'My Tipeline site',
+            url: '',
+            stylesheet: '',
+            year: new Date().getUTCFullYear(),
+            menu: nodes.filter((n) => n.type === 'page' && n.status === 1).sort((a, b) => a.created.localeCompare(b.created)).map((p) => ({ title: p.title, url: '#' })),
+          };
+          return prep.kind === 'listing'
+            ? { data: { items: prep.listed.map(nodeVars), site }, title: '' }
+            : { data: prep.sample ? { node: nodeVars(prep.sample), site } : { site }, title: prep.sample ? prep.sample.title : '' };
+      destination: page
+
+    - group: string
+      name: renderTemplate
+      params:
+        template: '{= prep.stylesheet =}'
+        data: '{= page.data =}'
+      destination: css
+
+    - group: string
+      name: renderTemplate
+      params:
+        template: '{= prep.content =}'
+        data: '{= page.data =}'
+      destination: inner
+
+    - group: script
+      name: runScript
+      params:
+        context: { page: '{= page =}', css: '{= css =}', prep: '{= prep =}', inner: '{= inner =}' }
+        code: |
+          const data = JSON.parse(JSON.stringify(page.data));
+          data.site.stylesheet = 'data:text/css;charset=utf-8,' + encodeURIComponent(css);
+          const content = prep.empty
+            ? '<p style="font-family:system-ui;color:#666">There is no content of this type yet to preview the template with.</p>'
+            : inner;
+          return { content, page: { title: page.title }, site: data.site };
+      destination: page
+
+    - group: string
+      name: renderTemplate
+      params:
+        template: '{= prep.layout =}'
+        data: '{= page =}'
+      destination: result

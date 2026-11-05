@@ -1,0 +1,111 @@
+schemaVersion: 4
+name: Code Input
+description: Code inputs — JSON (checked) sent to a workflow, SQL and JavaScript highlighted, and a code field in a form; full-screen editing for each
+author: tipeline
+
+workflows:
+  inspectJson: { file: ./workflows/inspect-json.yml }
+
+pages:
+  - id: code
+    name: Code
+    icon: Code
+
+    runnables:
+      inspect:
+        mode: run
+        workflow: inspectJson
+        inputs: { text: "{{ payload.value }}" }
+        outputs: [summary]
+        persist: false
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 7 }
+        props:
+          markdown: true
+          content: "**Code** inputs: an Input with type *Code* and a language. JSON is checked when you leave the editor; ⤢ opens any of them full screen. The value is the plain text."
+
+      # JSON, sent to a workflow.
+      - id: payload
+        type: input
+        name: Payload
+        layout: { x: 0, y: 7, w: 6, h: 30 }
+        props:
+          inputType: code
+          language: json
+          label: JSON payload
+          required: true
+          default: |
+            {
+              "customer": "Acme Corp",
+              "items": [{ "sku": "ENG-1", "qty": 1 }],
+              "paid": false
+            }
+
+      - id: inspectButton
+        type: button
+        name: Inspect
+        frame: none
+        layout: { x: 0, y: 37, w: 3, h: 6 }
+        props:
+          label: Inspect the JSON
+          icon: ScanSearch
+        events:
+          click: [{ type: run, runnable: inspect }]
+
+      - id: summary
+        type: text
+        name: Summary
+        layout: { x: 6, y: 7, w: 6, h: 30 }
+        props:
+          markdown: true
+          content: "{% if runnables.inspect.outputs.summary != blank %}{{ runnables.inspect.outputs.summary }}{% else %}Press **Inspect the JSON** — a workflow describes it here.{% endif %}"
+
+      # Highlighting only.
+      - id: query
+        type: input
+        name: Query
+        layout: { x: 0, y: 43, w: 6, h: 26 }
+        props:
+          inputType: code
+          language: sql
+          label: SQL query
+          default: |
+            SELECT id, name, status
+            FROM records
+            WHERE status = 'active'
+            ORDER BY name;
+
+      - id: snippet
+        type: input
+        name: Snippet
+        layout: { x: 6, y: 43, w: 6, h: 26 }
+        props:
+          inputType: code
+          language: javascript
+          label: JavaScript
+          default: |
+            // a script's code
+            return records.filter((r) => r.amount > 1000);
+
+      # In a form: grows with the code (4 to 12 lines).
+      - id: config
+        type: form
+        name: Config
+        layout: { x: 0, y: 69, w: 6, h: 40 }
+        props:
+          title: A code field in a form
+          submitLabel: Save config
+          fields:
+            - { name: name, label: Name, type: text, required: true }
+            - name: settings
+              label: Settings (YAML)
+              type: code
+              language: yaml
+              default: "retries: 3\ntimeout: 30s\n"
+        events:
+          submit:
+            - { type: toast, variant: success, message: "Saved {{ config.values.name }}" }

@@ -1,0 +1,161 @@
+version: 1.0.0
+name: Cryptography Actions Test Suite
+description: |
+  Encodes, hashes, signs and encrypts text and files: Base64, SHA-2 hashes, HMAC signatures and AES-CBC encryption.
+author: Jose Daniel Estrada
+tags: [example, cryptography, encryption, hash, base64, hmac, aes]
+pipeline:
+  variables:
+    - type: string
+      name: plainText
+      value: 'hello world'
+
+    - type: string
+      name: base64EncodedText
+      value: 'aGVsbG8gd29ybGQ='
+
+    - type: string
+      name: encryptedMessage
+      value: 'vuqe27zGld8nBuS8QOXvcA=='
+
+    - type: string
+      name: secret
+      value: 'This is a secret'
+
+    - type: string
+      name: aesKey
+      value: 'MySecretKey123456789012345678901'
+
+    - type: string
+      name: aesIv
+      value: '1234567890123456'
+
+    - type: string
+      name: baseDir
+      value: '{{ _global.examplesDir }}/actions/cryptography'
+
+  actions:
+    # -------------------------------------------------------
+    # Base64 Encode
+    # -------------------------------------------------------
+
+    # Encode a plain-text string — useful before embedding it in a data URI or HTTP header
+    - group: cryptography
+      name: base64EncodeText
+      params:
+        text: '{{ plainText }}'
+
+    # Encode an entire file — useful when attaching binary content in a JSON payload
+    - group: cryptography
+      name: base64EncodeFile
+      params:
+        filePath: '{{ baseDir }}/decodedFile.txt'
+
+    # -------------------------------------------------------
+    # Base64 Decode
+    # -------------------------------------------------------
+
+    # Decode a Base64 string back to plain text
+    - group: cryptography
+      name: base64DecodeText
+      params:
+        base64String: '{{ base64EncodedText }}'
+
+    # Decode a Base64 string and write the raw bytes directly to a file
+    - group: cryptography
+      name: base64DecodeToFile
+      params:
+        base64String: '{{ base64EncodedText }}'
+        outputFilePath: '{{ baseDir }}/decodedFile.txt'
+
+    # -------------------------------------------------------
+    # Hash
+    # -------------------------------------------------------
+
+    # Fingerprint a string with SHA-256 — useful as a cache key or dedup identifier
+    - group: cryptography
+      name: hashText
+      params:
+        text: '{{ plainText }}'
+        algorithm: sha256
+        encoding: hex
+
+    # Compute a SHA-512 digest of a file — useful to verify integrity after transfer
+    - group: cryptography
+      name: hashFile
+      params:
+        filePath: '{{ baseDir }}/decodedFile.txt'
+        algorithm: sha512
+        encoding: base64
+
+    # -------------------------------------------------------
+    # HMAC
+    # -------------------------------------------------------
+
+    # Sign a payload with HMAC-SHA256 — useful for webhook signature headers
+    - group: cryptography
+      name: hmacText
+      params:
+        text: '{{ plainText }}'
+        algorithm: sha256
+        encoding: base64
+        key: '{{ secret }}'
+
+    # Generate an HMAC for a file — useful to verify authenticity before processing
+    - group: cryptography
+      name: hmacFile
+      params:
+        filePath: '{{ baseDir }}/decodedFile.txt'
+        algorithm: sha512
+        encoding: hex
+        key: '{{ secret }}'
+
+    # -------------------------------------------------------
+    # Encrypt / Decrypt (text)
+    # -------------------------------------------------------
+
+    # Encrypt a plain-text value with AES-256-CBC — useful before storing sensitive data
+    - group: cryptography
+      name: encryptText
+      params:
+        message: '{{ plainText }}'
+        algorithm: aes-256-cbc
+        encoding: base64
+        iv: '{{ aesIv }}'
+        key: '{{ aesKey }}'
+
+    # Decrypt the ciphertext back to the original plain-text value
+    - group: cryptography
+      name: decryptText
+      params:
+        encryptedMessage: '{{ encryptedMessage }}'
+        algorithm: aes-256-cbc
+        encoding: base64
+        iv: '{{ aesIv }}'
+        key: '{{ aesKey }}'
+
+    # -------------------------------------------------------
+    # Encrypt / Decrypt (file)
+    # -------------------------------------------------------
+
+    # Encrypt a file and write the ciphertext to disk — useful before archiving or transferring
+    - group: cryptography
+      name: encryptToFile
+      params:
+        inputPath: '{{ baseDir }}/decodedFile.txt'
+        outputPath: '{{ baseDir }}/encryptedFile.txt'
+        algorithm: aes-256-cbc
+        encoding: base64
+        iv: '{{ aesIv }}'
+        key: '{{ aesKey }}'
+
+    # Decrypt the encrypted file and restore the original contents
+    - group: cryptography
+      name: decryptToFile
+      params:
+        inputPath: '{{ baseDir }}/encryptedFile.txt'
+        outputPath: '{{ baseDir }}/decryptedFile.txt'
+        algorithm: aes-256-cbc
+        encoding: base64
+        iv: '{{ aesIv }}'
+        key: '{{ aesKey }}'

@@ -1,0 +1,37 @@
+version: 1.0.0
+name: Email Actions Test Suite
+description: |
+  Sends an email over SMTP, with plain-text and HTML bodies and optional attachments.
+
+  **Environment variables**
+
+  Put these in a `.env` file next to this workflow, or in `~/Tipeline/.env`:
+
+  - `smtpHost` — SMTP server hostname, e.g. `smtp.example.com`
+  - `smtpPort` — SMTP server port, e.g. `587`
+  - `smtpUser` — SMTP login username or sender address
+  - `smtpPass` — SMTP login password
+  - `smtpFrom` — the From address
+  - `recipient` — who receives the email
+
+author: Jose Daniel Estrada
+tags: [example, email, smtp, send]
+
+pipeline:
+  actions:
+    # Send a plain-text and HTML email via SMTP with an optional file attachment
+    - group: email
+      name: send
+      params:
+        host: '{{ _env.smtpHost }}'
+        port: '{{ _env.smtpPort }}'
+        secure: false
+        user: '{{ _env.smtpUser }}'
+        pass: '{{ _env.smtpPass }}'
+        from: '{{ _env.smtpFrom }}'
+        to: '{{ _env.recipient }}'
+        subject: 'Daily Report — Sales Pipeline'
+        text: 'Pipeline run completed. See attached report for details.'
+        html: '<strong>Pipeline run completed.</strong><p>See attached report for details.</p>'
+        # attachments:
+        #   - path: /path/to/report.pdf

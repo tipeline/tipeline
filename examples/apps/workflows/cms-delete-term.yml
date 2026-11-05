@@ -1,0 +1,68 @@
+version: 1.0.0
+name: 'CMS: Delete Term'
+description: |
+  Deletes a taxonomy term from the CMS store (`~/Tipeline/output/cms/cms.db`). A term that content still uses can't be deleted: take it off that content first.
+
+  **Inputs**
+
+  - `id` — the term
+
+  **Outputs**
+
+  - `term` — `{ id, name }`
+author: tipeline
+tags: [example, apps, cms, taxonomy, delete]
+
+pipeline:
+  variables:
+    - { type: number, name: id, value: 0, visibility: public, required: true, description: The term to delete. }
+    - { type: object, name: term, value: {}, visibility: public, description: The deleted term. Returned to the app. }
+    - { type: dbConnection, name: db }
+    - { type: array, name: found, value: [] }
+
+  actions:
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          SELECT t.id, t.name,
+            (SELECT group_concat(title, ', ') FROM (
+              SELECT DISTINCT n.title FROM node n JOIN field f ON f.type_id = n.type AND f.kind = 'term_ref',
+                json_each(n.fields, '$.' || f.name) j
+              WHERE j.value = t.id ORDER BY n.title)) AS usedBy
+          FROM term t WHERE t.id = ?
+        bindings: ['{= id =}']
+      destination: found
+
+    - group: script
+      name: runScript
+      params:
+        context: { found: '{= found =}' }
+        code: |
+          const t = found[0];
+          if (!t) throw new Error('That term was not found. It may have been deleted.');
+          if (t.usedBy) throw new Error(t.name + ' is used by: ' + t.usedBy + '. Take it off that content first.');
+          return { id: t.id, name: t.name };
+      destination: term
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: DELETE FROM term WHERE id = ?
+        bindings: ['{= term.id =}']
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'

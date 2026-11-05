@@ -1,0 +1,101 @@
+version: 1.0.0
+name: 'CMS: Delete Content'
+description: |
+  Deletes content from the CMS store (`~/Tipeline/output/cms/cms.db`), with all its revisions. This can't be undone.
+
+  **Inputs**
+
+  - `ids` — node ids, or rows with an id (a table's selectedRows), at least one
+
+  **Outputs**
+
+  - `count` — how many were deleted
+  - `titles` — their titles, joined with ", "
+author: tipeline
+tags: [example, apps, cms, content, delete]
+
+pipeline:
+  variables:
+    - type: array
+      name: ids
+      value: []
+      visibility: public
+      required: true
+      description: The content to delete.
+
+    - type: number
+      name: count
+      value: 0
+      visibility: public
+      description: How many were deleted. Returned to the app.
+
+    - type: string
+      name: titles
+      value: ''
+      visibility: public
+      description: Their titles. Returned to the app.
+
+    - type: dbConnection
+      name: db
+
+    - type: string
+      name: idList
+      value: ''
+
+    - type: array
+      name: deleted
+      value: []
+
+  actions:
+    - group: script
+      name: runScript
+      params:
+        context: { ids: '{= ids =}' }
+        code: |
+          const list = (Array.isArray(ids) ? ids : [ids]).map((x) => Number(x && typeof x === 'object' ? x.id : x)).filter((n) => Number.isInteger(n) && n > 0);
+          if (!list.length) throw new Error('Choose the content to delete first');
+          return JSON.stringify(list);
+      destination: idList
+
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: DELETE FROM node_revision WHERE node_id IN (SELECT value FROM json_each(?))
+        bindings: ['{{ idList }}']
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: DELETE FROM node WHERE id IN (SELECT value FROM json_each(?)) RETURNING title
+        bindings: ['{{ idList }}']
+      destination: deleted
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      name: runScript
+      params:
+        context: { deleted: '{= deleted =}' }
+        code: return deleted.length;
+      destination: count
+
+    - group: script
+      name: runScript
+      params:
+        context: { deleted: '{= deleted =}' }
+        code: return deleted.map((d) => d.title).join(', ');
+      destination: titles

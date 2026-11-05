@@ -1,0 +1,106 @@
+version: 1.0.0
+name: Folder Actions Test Suite
+description: |
+  Works with folders from start to finish: check one exists, list its files and subfolders, create, empty, copy, move, rename and delete. It creates its own test folders and cleans them up.
+author: Jose Daniel Estrada
+tags: [example, folder, directory, files]
+pipeline:
+  variables:
+    # ------------------------------------------------------------------
+    # scope: task (default) — no scope field required
+    # ------------------------------------------------------------------
+    - type: string
+      name: src
+      value: '{{ _global.examplesDir }}/actions/folder'
+
+    - type: string
+      name: folderNew
+      value: '{{ _global.examplesDir }}/actions/folder/test-new'
+
+    - type: string
+      name: folderCopy
+      value: '{{ _global.examplesDir }}/actions/folder/test-copy'
+
+    - type: string
+      name: folderRenamed
+      value: '{{ _global.examplesDir }}/actions/folder/test-renamed'
+
+  actions:
+    # -------------------------------------------------------
+    # Inspect
+    # -------------------------------------------------------
+
+    # Verify the resource folder exists before running write operations
+    - group: folder
+      name: exists
+      params:
+        src: '{{ src }}'
+
+    # List all entries in the resource folder
+    - group: folder
+      name: getFiles
+      params:
+        src: '{{ src }}'
+
+    # List only subdirectories in the resource folder
+    - group: folder
+      name: getSubfolders
+      params:
+        src: '{{ src }}'
+
+    # -------------------------------------------------------
+    # Create & Delete
+    # -------------------------------------------------------
+
+    # Create the test folder (recursive — safe to call even if it already exists)
+    - group: folder
+      name: create
+      params:
+        src: '{{ folderNew }}'
+
+    # Clear the test folder contents without removing the folder itself
+    - group: folder
+      name: empty
+      params:
+        src: '{{ folderNew }}'
+
+    # -------------------------------------------------------
+    # Copy, Move & Rename
+    # -------------------------------------------------------
+
+    # Back up the test folder before moving it
+    - group: folder
+      name: copy
+      params:
+        src: '{{ folderNew }}'
+        dest: '{{ folderCopy }}'
+
+    # Move the copy into the renamed destination
+    - group: folder
+      name: move
+      params:
+        src: '{{ folderCopy }}'
+        dest: '{{ folderRenamed }}'
+
+    # Rename the original test folder
+    - group: folder
+      name: rename
+      params:
+        oldPath: '{{ folderNew }}'
+        newPath: '{{ folderCopy }}'
+
+    # -------------------------------------------------------
+    # Cleanup
+    # -------------------------------------------------------
+
+    # Remove the renamed test folder
+    - group: folder
+      name: delete
+      params:
+        src: '{{ folderCopy }}'
+
+    # Remove the moved destination folder
+    - group: folder
+      name: delete
+      params:
+        src: '{{ folderRenamed }}'

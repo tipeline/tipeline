@@ -1,0 +1,178 @@
+version: 1.0.0
+name: DateTime Actions Test Suite
+description: |
+  Works with dates and times: the current time, timestamps, formatting and parsing, adding and subtracting, start and end of a period, differences and comparisons.
+author: Jose Daniel Estrada
+tags: [example, datetime, date, time, timestamp]
+pipeline:
+  variables:
+    - type: date
+      name: pipelineStartedAt
+      value: '2023-01-15T10:00'
+
+    - type: date
+      name: pipelineFinishedAt
+      value: '2023-01-15T12:30'
+
+    - type: date
+      name: deadline
+      value: '2023-01-20T10:00'
+
+    - type: date
+      name: scheduledSendAt
+      value: '2023-01-14T09:00'
+
+    - type: string
+      name: exportedDate
+      value: '15/01/2023'
+
+    - type: date
+      name: userInputDate
+      value: '2023-01-15T10:00'
+
+    - type: number
+      name: unixTimestamp
+      value: 1673776800000
+
+  actions:
+    # -------------------------------------------------------
+    # Current Time
+    # -------------------------------------------------------
+
+    # Get the current local date/time — useful for timestamping pipeline runs
+    - group: datetime
+      name: getCurrentDateTime
+
+    # Get the current UTC timestamp — useful for storing event times in a normalized format
+    - group: datetime
+      name: nowISO
+
+    # -------------------------------------------------------
+    # Timestamp
+    # -------------------------------------------------------
+
+    # Convert a pipeline timestamp to Unix ms — useful for storing in external systems
+    - group: datetime
+      name: toTimestamp
+      params:
+        dateTime: '{{ pipelineStartedAt }}'
+
+    # Restore a Date from a stored Unix timestamp
+    - group: datetime
+      name: fromTimestamp
+      params:
+        timestamp: '{= unixTimestamp =}'
+
+    # -------------------------------------------------------
+    # Format & Parse
+    # -------------------------------------------------------
+
+    # Format a timestamp into a human-readable date for a report header
+    - group: datetime
+      name: format
+      params:
+        dateTime: '{{ pipelineStartedAt }}'
+        format: 'yyyy-MM-dd HH:mm'
+
+    # Parse a date string from a CSV export into a Date for further processing
+    - group: datetime
+      name: parseDate
+      params:
+        dateString: '{{ exportedDate }}'
+        format: 'dd/MM/yyyy'
+
+    # -------------------------------------------------------
+    # Arithmetic
+    # -------------------------------------------------------
+
+    # Schedule a follow-up 3 days and 2 hours after the current pipeline started
+    - group: datetime
+      name: add
+      params:
+        dateTime: '{{ pipelineStartedAt }}'
+        duration:
+          days: 3
+          hours: 2
+
+    # Compute the start of a look-back window 7 days before the current pipeline run
+    - group: datetime
+      name: subtract
+      params:
+        dateTime: '{{ pipelineStartedAt }}'
+        duration:
+          days: 7
+
+    # -------------------------------------------------------
+    # Boundaries
+    # -------------------------------------------------------
+
+    # Get the first moment of the month containing the pipeline start
+    - group: datetime
+      name: startOf
+      params:
+        dateTime: '{{ pipelineStartedAt }}'
+        unit: month
+
+    # Get the last moment of the week for a report date range
+    - group: datetime
+      name: endOf
+      params:
+        dateTime: '{{ pipelineStartedAt }}'
+        unit: week
+
+    # Get the first moment of the current day
+    - group: datetime
+      name: startOf
+      params:
+        dateTime: '{{ pipelineStartedAt }}'
+        unit: day
+
+    # Get the last moment of the current year
+    - group: datetime
+      name: endOf
+      params:
+        dateTime: '{{ pipelineStartedAt }}'
+        unit: year
+
+    # -------------------------------------------------------
+    # Difference
+    # -------------------------------------------------------
+
+    # Measure pipeline execution duration in seconds
+    - group: datetime
+      name: difference
+      params:
+        date1: '{{ pipelineFinishedAt }}'
+        date2: '{{ pipelineStartedAt }}'
+        unit: seconds
+
+    # -------------------------------------------------------
+    # Compare
+    # -------------------------------------------------------
+
+    # Guard: only proceed if the pipeline deadline has not passed
+    - group: datetime
+      name: isAfter
+      params:
+        dateTime: '{{ deadline }}'
+        dateTimeToCompare: '{{ pipelineStartedAt }}'
+
+    # Verify that the scheduled send time is still in the future
+    - group: datetime
+      name: isBefore
+      params:
+        dateTime: '{{ scheduledSendAt }}'
+        dateTimeToCompare: '{{ pipelineStartedAt }}'
+
+    # Detect duplicate pipeline runs triggered at the same timestamp
+    - group: datetime
+      name: isEqual
+      params:
+        dateTime: '{{ pipelineStartedAt }}'
+        dateTimeToCompare: '{{ pipelineStartedAt }}'
+
+    # Validate user-supplied date input before processing
+    - group: datetime
+      name: isValid
+      params:
+        dateTime: '{{ userInputDate }}'

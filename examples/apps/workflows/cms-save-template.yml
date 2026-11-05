@@ -1,0 +1,158 @@
+version: 1.0.0
+name: 'CMS: Save Template'
+description: |
+  Changes the site templates of the CMS store (`~/Tipeline/output/cms/cms.db`). The `op` input says what to do.
+
+  **Operations**
+
+  - `save` — store a template's text (`html`). A template with a Liquid error is still saved; the preview shows the error.
+  - `create` — a new template for a content type, named `name`, starting as a copy of `from` (another template) or of that type's default.
+  - `default` — make a content template its type's default.
+  - `delete` — remove a content template that isn't a default; content that used it goes back to its type's default.
+
+  **Inputs**
+
+  - `op` — save, create, default or delete
+  - `id` — the template (save, default, delete)
+  - `html` — its text (save)
+  - `name` — the new template's name (create)
+  - `type` — its content type (create)
+  - `from` — a template to copy (create; empty: the type's default)
+
+  **Outputs**
+
+  - `template` — `{ id, name }`
+author: tipeline
+tags: [example, apps, cms, templates, liquid]
+
+pipeline:
+  variables:
+    - { type: string, name: op, value: save, visibility: public, description: 'save, create, default or delete.' }
+    - { type: string, name: id, value: '', visibility: public, description: The template. }
+    - { type: string, name: html, value: '', visibility: public, description: Its text (save). }
+    - { type: string, name: name, value: '', visibility: public, description: Name of a new template. }
+    - { type: string, name: type, value: '', visibility: public, description: Content type of a new template. }
+    - { type: string, name: from, value: '', visibility: public, description: Template to copy (create). }
+    - { type: object, name: template, value: {}, visibility: public, description: The template. Returned to the app. }
+    - { type: dbConnection, name: db }
+    - { type: array, name: templates, value: [] }
+    - { type: array, name: types, value: [] }
+    - { type: object, name: plan, value: {} }
+
+  actions:
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT * FROM template
+      destination: templates
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT id, label FROM content_type
+      destination: types
+
+    # Checks the request; every write below only runs for its own op.
+    - group: script
+      name: runScript
+      params:
+        context:
+          op: '{{ op }}'
+          id: '{{ id }}'
+          html: '{= html =}'
+          name: '{{ name }}'
+          type: '{{ type }}'
+          from: '{{ from }}'
+          templates: '{= templates =}'
+          types: '{= types =}'
+        code: |
+          const t = templates.find((x) => x.id === id);
+          if (op === 'create') {
+            const label = String(name).trim();
+            if (!label) throw new Error('Name field is required.');
+            const ct = types.find((x) => x.id === type);
+            if (!ct) throw new Error('Choose the content type the template is for.');
+            const source = templates.find((x) => x.id === from) || templates.find((x) => x.kind === 'content' && x.type_id === type && x.is_default === 1);
+            const base = label.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'template';
+            let newId = base;
+            for (let i = 2; templates.some((x) => x.id === newId); i++) newId = base + '_' + i;
+            return { op, id: newId, name: label, type, html: source ? source.html : '', hasDefault: templates.some((x) => x.kind === 'content' && x.type_id === type && x.is_default === 1) ? 1 : 0 };
+          }
+          if (!t) throw new Error('That template was not found. It may have been deleted.');
+          if (op === 'save') return { op, id: t.id, name: t.name, html: String(html ?? '') };
+          if (op === 'default') {
+            if (t.kind !== 'content') throw new Error('Only content templates have a default.');
+            return { op, id: t.id, name: t.name, type: t.type_id };
+          }
+          if (op === 'delete') {
+            if (t.kind !== 'content') throw new Error('The ' + t.name + ' template is needed by every export, so it can not be deleted.');
+            if (t.is_default === 1) throw new Error(t.name + ' is the default for its content type. Make another template the default first.');
+            return { op, id: t.id, name: t.name, type: t.type_id };
+          }
+          throw new Error('Unknown operation "' + op + '"; use save, create, default or delete.');
+      destination: plan
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          UPDATE template SET html = ?, changed = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ? AND ? = 'save'
+        bindings: ['{= plan.html =}', '{{ plan.id }}', '{{ plan.op }}']
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          INSERT INTO template (id, name, kind, type_id, html, is_default, created, changed)
+          SELECT ?, ?, 'content', ?, ?, CASE WHEN ? = 1 THEN 0 ELSE 1 END, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+          WHERE ? = 'create'
+        bindings: ['{{ plan.id }}', '{{ plan.name }}', '{{ plan.type }}', '{= plan.html =}', '{= plan.hasDefault =}', '{{ plan.op }}']
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          UPDATE template SET is_default = CASE WHEN id = ? THEN 1 ELSE 0 END
+          WHERE kind = 'content' AND type_id = ? AND ? = 'default'
+        bindings: ['{{ plan.id }}', '{{ plan.type }}', '{{ plan.op }}']
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: UPDATE node SET template = NULL WHERE template = ? AND ? = 'delete'
+        bindings: ['{{ plan.id }}', '{{ plan.op }}']
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: DELETE FROM template WHERE id = ? AND ? = 'delete'
+        bindings: ['{{ plan.id }}', '{{ plan.op }}']
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      name: runScript
+      params:
+        context: { plan: '{= plan =}' }
+        code: |
+          return { id: plan.id, name: plan.name };
+      destination: template

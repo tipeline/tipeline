@@ -1,0 +1,407 @@
+version: 1.0.0
+name: Audio Actions Test
+description: |
+  Tries the audio actions on a sample file: load, get info, convert, compress, trim, join, change volume and speed, normalize, fade in and out, add silence, mix and export.
+author: Jose Daniel Estrada
+tags: [example, audio, sound, ffmpeg]
+
+pipeline:
+  variables:
+    - type: object
+      name: audioInfo
+
+    - type: audio
+      name: audio
+
+    # ------------------------------------------------------------------
+    # Placeholder paths: change src and src2 to audio files of your own
+    # before running. src should be at least 10 seconds long.
+    # ------------------------------------------------------------------
+    - type: string
+      name: src
+      value: '/path/to/your/audio.wav'
+
+    - type: string
+      name: src2
+      value: '/path/to/your/audio2.mp3'
+
+    - type: string
+      name: out
+      value: '{{ _global.examplesDir }}/actions/audio/'
+
+  actions:
+    # --------------------------------------------------
+    # Test: getInfo — probe metadata before any changes
+    # --------------------------------------------------
+    - group: audio
+      name: load
+      params:
+        input: '{{ src }}'
+      destination: audio
+
+    - group: audio
+      name: getInfo
+      params:
+        audio: '{= audio =}'
+      destination: audioInfo
+
+    # --------------------------------------------------
+    # Test: convertFormat — wav → mp3
+    # --------------------------------------------------
+    - group: audio
+      name: load
+      params:
+        input: '{{ src }}'
+      destination: audio
+
+    - group: audio
+      name: convertFormat
+      params:
+        audio: '{= audio =}'
+        format: mp3
+      destination: audio
+
+    - group: audio
+      name: export
+      params:
+        audio: '{= audio =}'
+        output: '{{ out }}test-convert.mp3'
+
+    # --------------------------------------------------
+    # Test: compress — lower bitrate to 64k
+    # --------------------------------------------------
+    - group: audio
+      name: load
+      params:
+        input: '{{ src2 }}'
+      destination: audio
+
+    - group: audio
+      name: compress
+      params:
+        audio: '{= audio =}'
+        bitrate: '64k'
+      destination: audio
+
+    - group: audio
+      name: export
+      params:
+        audio: '{= audio =}'
+        output: '{{ out }}test-compress.mp3'
+
+    # --------------------------------------------------
+    # Test: trim — extract seconds 3–8 (5 sec window)
+    # --------------------------------------------------
+    - group: audio
+      name: load
+      params:
+        input: '{{ src }}'
+      destination: audio
+
+    - group: audio
+      name: trim
+      params:
+        audio: '{= audio =}'
+        start: '00:00:03'
+        duration: '00:00:05'
+      destination: audio
+
+    - group: audio
+      name: export
+      params:
+        audio: '{= audio =}'
+        output: '{{ out }}test-trim.wav'
+
+    # --------------------------------------------------
+    # Test: concatenate — join audio.wav + audio2.mp3
+    # --------------------------------------------------
+    - group: audio
+      name: load
+      params:
+        input: '{{ src }}'
+      destination: audio
+
+    - group: audio
+      name: concatenate
+      params:
+        audio: '{= audio =}'
+        inputs:
+          - '{{ src2 }}'
+      destination: audio
+
+    - group: audio
+      name: export
+      params:
+        audio: '{= audio =}'
+        output: '{{ out }}test-concat.wav'
+
+    # --------------------------------------------------
+    # Test: changeVolume — reduce to 50%
+    # --------------------------------------------------
+    - group: audio
+      name: load
+      params:
+        input: '{{ src }}'
+      destination: audio
+
+    - group: audio
+      name: changeVolume
+      params:
+        audio: '{= audio =}'
+        volume: 0.5
+      destination: audio
+
+    - group: audio
+      name: export
+      params:
+        audio: '{= audio =}'
+        output: '{{ out }}test-volume.wav'
+
+    # --------------------------------------------------
+    # Test: normalize — EBU R128 loudnorm
+    # --------------------------------------------------
+    - group: audio
+      name: load
+      params:
+        input: '{{ src }}'
+      destination: audio
+
+    - group: audio
+      name: normalize
+      params:
+        audio: '{= audio =}'
+      destination: audio
+
+    - group: audio
+      name: export
+      params:
+        audio: '{= audio =}'
+        output: '{{ out }}test-normalize.wav'
+
+    # --------------------------------------------------
+    # Test: chained — compress + trim + changeVolume in one pipeline
+    # --------------------------------------------------
+    - group: audio
+      name: load
+      params:
+        input: '{{ src2 }}'
+      destination: audio
+
+    - group: audio
+      name: compress
+      params:
+        audio: '{= audio =}'
+        bitrate: '128k'
+      destination: audio
+
+    - group: audio
+      name: trim
+      params:
+        audio: '{= audio =}'
+        start: '00:00:00'
+        duration: '00:00:10'
+      destination: audio
+
+    - group: audio
+      name: changeVolume
+      params:
+        audio: '{= audio =}'
+        volume: 0.1
+      destination: audio
+
+    - group: audio
+      name: export
+      params:
+        audio: '{= audio =}'
+        output: '{{ out }}test-chained.mp3'
+
+    # --------------------------------------------------
+    # Test: fadeIn — 2-second fade at the beginning
+    # --------------------------------------------------
+    - group: audio
+      name: load
+      params:
+        input: '{{ src }}'
+      destination: audio
+
+    - group: audio
+      name: fadeIn
+      params:
+        audio: '{= audio =}'
+        duration: 2
+        start: 0
+      destination: audio
+
+    - group: audio
+      name: export
+      params:
+        audio: '{= audio =}'
+        output: '{{ out }}test-fadein.wav'
+
+    # --------------------------------------------------
+    # Test: fadeOut — 3-second fade starting at second 7
+    # (audio.wav should be at least 10s for this to be audible)
+    # --------------------------------------------------
+    - group: audio
+      name: load
+      params:
+        input: '{{ src }}'
+      destination: audio
+
+    - group: audio
+      name: fadeOut
+      params:
+        audio: '{= audio =}'
+        start: 7
+        duration: 3
+      destination: audio
+
+    - group: audio
+      name: export
+      params:
+        audio: '{= audio =}'
+        output: '{{ out }}test-fadeout.wav'
+
+    # --------------------------------------------------
+    # Test: fadeIn + fadeOut chained
+    # --------------------------------------------------
+    - group: audio
+      name: load
+      params:
+        input: '{{ src }}'
+      destination: audio
+
+    - group: audio
+      name: fadeIn
+      params:
+        audio: '{= audio =}'
+        duration: 2
+        start: 0
+      destination: audio
+
+    - group: audio
+      name: fadeOut
+      params:
+        audio: '{= audio =}'
+        start: 8
+        duration: 2
+      destination: audio
+
+    - group: audio
+      name: export
+      params:
+        audio: '{= audio =}'
+        output: '{{ out }}test-fade-both.wav'
+
+    # --------------------------------------------------
+    # Test: changeSpeed — 1.5x speed, pitch preserved
+    # --------------------------------------------------
+    - group: audio
+      name: load
+      params:
+        input: '{{ src }}'
+      destination: audio
+
+    - group: audio
+      name: changeSpeed
+      params:
+        audio: '{= audio =}'
+        speed: 1.5
+      destination: audio
+
+    - group: audio
+      name: export
+      params:
+        audio: '{= audio =}'
+        output: '{{ out }}test-speed.wav'
+
+    # --------------------------------------------------
+    # Test: changeSpeed — 3x (triggers multi-stage atempo chaining)
+    # --------------------------------------------------
+    - group: audio
+      name: load
+      params:
+        input: '{{ src }}'
+      destination: audio
+
+    - group: audio
+      name: changeSpeed
+      params:
+        audio: '{= audio =}'
+        speed: 3
+      destination: audio
+
+    - group: audio
+      name: export
+      params:
+        audio: '{= audio =}'
+        output: '{{ out }}test-speed-3x.wav'
+
+    # --------------------------------------------------
+    # Test: addSilence — 1 second at the start
+    # --------------------------------------------------
+    - group: audio
+      name: load
+      params:
+        input: '{{ src }}'
+      destination: audio
+
+    - group: audio
+      name: addSilence
+      params:
+        audio: '{= audio =}'
+        duration: 1
+        position: start
+      destination: audio
+
+    - group: audio
+      name: export
+      params:
+        audio: '{= audio =}'
+        output: '{{ out }}test-silence-start.wav'
+
+    # --------------------------------------------------
+    # Test: addSilence — 2 seconds at the end
+    # --------------------------------------------------
+    - group: audio
+      name: load
+      params:
+        input: '{{ src }}'
+      destination: audio
+
+    - group: audio
+      name: addSilence
+      params:
+        audio: '{= audio =}'
+        duration: 2
+        position: end
+      destination: audio
+
+    - group: audio
+      name: export
+      params:
+        audio: '{= audio =}'
+        output: '{{ out }}test-silence-end.wav'
+
+    # --------------------------------------------------
+    # Test: mixAudio — overlay audio2.mp3 at 40% volume
+    # --------------------------------------------------
+    - group: audio
+      name: load
+      params:
+        input: '{{ src }}'
+      destination: audio
+
+    - group: audio
+      name: mixAudio
+      params:
+        audio: '{= audio =}'
+        input: '{{ src2 }}'
+        volume: 0.4
+      destination: audio
+
+    - group: audio
+      name: export
+      params:
+        audio: '{= audio =}'
+        output: '{{ out }}test-mix.wav'

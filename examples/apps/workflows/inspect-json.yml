@@ -1,0 +1,51 @@
+version: 1.0.0
+name: Inspect JSON
+description: |
+  Describes a JSON text: its type, and for an object its keys with each value's type, for a list its length.
+
+  Used by the Code Input example app.
+
+  **Inputs**
+
+  - `text` — the JSON text
+
+  **Outputs**
+
+  - `summary` — a Markdown description
+author: tipeline
+tags: [example, apps, json, code]
+
+pipeline:
+  variables:
+    - type: string
+      name: text
+      value: '{"name": "Acme", "tags": ["a", "b"], "active": true}'
+      visibility: public
+      description: The JSON to describe. Set by the app.
+
+    - type: string
+      name: summary
+      value: ''
+      visibility: public
+      description: What the JSON holds, in Markdown. Returned to the app.
+
+  actions:
+    - group: script
+      name: runScript
+      params:
+        context:
+          text: '{{ text }}'
+        code: |
+          const kind = (v) => (v === null ? 'null' : Array.isArray(v) ? `list of ${v.length}` : typeof v);
+          let data;
+          try {
+            data = JSON.parse(text);
+          } catch (e) {
+            return `**Not valid JSON:** ${e.message}`;
+          }
+          if (data && typeof data === 'object' && !Array.isArray(data)) {
+            const rows = Object.entries(data).map(([k, v]) => `| \`${k}\` | ${kind(v)} |`);
+            return [`An **object** with ${rows.length} key(s):`, '', '| Key | Type |', '|---|---|', ...rows].join('\n');
+          }
+          return `A **${kind(data)}**.`;
+      destination: summary

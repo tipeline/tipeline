@@ -1,0 +1,87 @@
+version: 1.0.0
+name: Search Listings
+description: |
+  Returns example apartments whose monthly rent is inside a price range and that are at most some kilometres from the centre, cheapest first.
+
+  Used by the Slider Filters example app.
+
+  **Inputs**
+
+  - `price` — `[from, to]` monthly rent in USD
+  - `maxDistance` — kilometres from the centre
+
+  **Outputs**
+
+  - `listings` — `[{ id, name, area, rent, distance, bedrooms }]`
+  - `count` — how many matched
+author: tipeline
+tags: [example, apps, search, apartments]
+
+pipeline:
+  variables:
+    - type: array
+      name: price
+      value: [0, 2000]
+      visibility: public
+      description: Monthly rent range [from, to] in USD. Set by the app.
+
+    - type: number
+      name: maxDistance
+      value: 50
+      visibility: public
+      description: Most kilometres from the centre. Set by the app.
+
+    - type: array
+      name: listings
+      value: []
+      visibility: public
+      description: The matching apartments, cheapest first. Returned to the app.
+
+    - type: number
+      name: count
+      value: 0
+      visibility: public
+      description: How many apartments matched. Returned to the app.
+
+    - type: array
+      name: all
+      value:
+        - { id: 1, name: Studio by the park, area: Centro, rent: 450, distance: 1, bedrooms: 0 }
+        - { id: 2, name: Loft with terrace, area: Centro, rent: 1250, distance: 2, bedrooms: 1 }
+        - { id: 3, name: Family flat, area: Escazú, rent: 1650, distance: 9, bedrooms: 3 }
+        - { id: 4, name: Garden house, area: Santa Ana, rent: 1900, distance: 14, bedrooms: 3 }
+        - { id: 5, name: Shared room, area: San Pedro, rent: 300, distance: 4, bedrooms: 1 }
+        - { id: 6, name: Two-bedroom near campus, area: San Pedro, rent: 780, distance: 5, bedrooms: 2 }
+        - { id: 7, name: Mountain cabin, area: San Isidro, rent: 600, distance: 22, bedrooms: 2 }
+        - { id: 8, name: Quiet apartment, area: Heredia, rent: 820, distance: 11, bedrooms: 2 }
+        - { id: 9, name: Penthouse, area: Rohrmoser, rent: 1980, distance: 4, bedrooms: 2 }
+        - { id: 10, name: Country house, area: Atenas, rent: 1100, distance: 38, bedrooms: 4 }
+        - { id: 11, name: Small studio, area: Cartago, rent: 380, distance: 24, bedrooms: 0 }
+        - { id: 12, name: Bright one-bedroom, area: Curridabat, rent: 690, distance: 6, bedrooms: 1 }
+      visibility: private
+      description: The example apartments.
+
+  actions:
+    - group: script
+      name: runScript
+      params:
+        context:
+          all: '{= all =}'
+          price: '{= price =}'
+          maxDistance: '{= maxDistance =}'
+        code: |
+          const [from, to] = Array.isArray(price) ? price.map(Number) : [0, Infinity];
+          const far = Number(maxDistance);
+          return all
+            .filter((a) => a.rent >= from && a.rent <= to && (!Number.isFinite(far) || a.distance <= far))
+            .sort((a, b) => a.rent - b.rent);
+      destination: listings
+
+    - group: script
+      name: runScript
+      params:
+        context:
+          listings: '{= listings =}'
+        code: |
+          return listings.length;
+      destination: count

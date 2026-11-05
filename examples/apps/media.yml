@@ -1,0 +1,82 @@
+schemaVersion: 4
+name: Media
+description: Video and audio — a melody a workflow writes as a WAV file, played from the file (it reloads after each run), what the player reports (playing, time, end), and a video from the web
+author: tipeline
+
+workflows:
+  makeTone: { file: ./workflows/make-tone.yml }
+
+pages:
+  - id: player
+    name: Player
+    icon: Clapperboard
+
+    runnables:
+      tone:
+        mode: run
+        workflow: makeTone
+        trigger: load
+        inputs: { melody: "{{ melody.value }}" }
+        outputs: [path, seconds, notes]
+        persist: false
+
+    components:
+      - id: intro
+        type: text
+        name: Intro
+        layout: { x: 0, y: 0, w: 12, h: 9 }
+        props:
+          markdown: true
+          content: "A **Video / audio** component plays a web link, a data URL, or a file a workflow wrote. Pick a melody: a workflow writes it as a WAV file in ~/Tipeline/output and the player loads the new file when the run ends."
+
+      - id: melody
+        type: select
+        name: Melody
+        frame: none
+        layout: { x: 0, y: 9, w: 6, h: 10 }
+        props:
+          label: Melody
+          display: buttons
+          default: rising
+          options:
+            - { value: rising, label: Rising }
+            - { value: falling, label: Falling }
+            - { value: chime, label: Chime }
+        events:
+          change: [{ type: run, runnable: tone }]
+
+      - id: tonePlayer
+        type: media
+        name: Tone
+        layout: { x: 0, y: 19, w: 6, h: 13 }
+        props:
+          title: "{{ runnables.tone.outputs.notes | default: 'Making the melody…' }}"
+          src: "{{ runnables.tone.outputs.path }}"
+          kind: audio
+        events:
+          ended:
+            - { type: toast, message: "That was {{ runnables.tone.outputs.notes }}" }
+
+      - id: status
+        type: keyValue
+        name: What the player says
+        layout: { x: 0, y: 32, w: 6, h: 22 }
+        props:
+          title: What the player says (tonePlayer.…)
+          display: grid
+          data:
+            playing: "{{ tonePlayer.playing }}"
+            currentTime: "{{ tonePlayer.currentTime }}"
+            duration: "{{ tonePlayer.duration }}"
+            ended: "{{ tonePlayer.ended }}"
+            file: "{{ runnables.tone.outputs.path }}"
+
+      - id: video
+        type: media
+        name: Web video
+        layout: { x: 6, y: 9, w: 6, h: 45 }
+        props:
+          title: A video from the web (MDN sample, CC0)
+          src: https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4
+          muted: true
+          loop: true

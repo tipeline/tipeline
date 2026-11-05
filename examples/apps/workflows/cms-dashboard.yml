@@ -1,0 +1,123 @@
+version: 1.0.0
+name: 'CMS: Dashboard'
+description: |
+  Reads the CMS store (`~/Tipeline/output/cms/cms.db`, set up by CMS: Install) for the CMS app's Dashboard: a few counts, the drafts, what changed since the last export (not on the live site yet), and the latest changes with their revision log message.
+
+  **Outputs**
+
+  - `stats` — `{ published, drafts, media, pending, lastExport (time or empty), hasHtml, indexPath }`
+  - `drafts` — unpublished items, newest change first: `[{ id, title, type, changed }]`
+  - `pending` — changed since the last export: `[{ id, title, change, changed }]` where change is New, Edited or Unpublished
+  - `recent` — the 8 latest changed: `[{ id, title, type, status, log, changed }]`
+author: tipeline
+tags: [example, apps, cms, dashboard]
+
+pipeline:
+  variables:
+    - { type: object, name: stats, value: {}, visibility: public, description: Counts and the last export. Returned to the app. }
+    - { type: array, name: drafts, value: [], visibility: public, description: Unpublished items. Returned to the app. }
+    - { type: array, name: pending, value: [], visibility: public, description: Changes not exported yet. Returned to the app. }
+    - { type: array, name: recent, value: [], visibility: public, description: Latest changes. Returned to the app. }
+    - { type: dbConnection, name: db }
+    - { type: array, name: nodes, value: [] }
+    - { type: array, name: meta, value: [] }
+    - { type: array, name: counts, value: [] }
+    - { type: object, name: result, value: {} }
+
+  actions:
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          SELECT n.id, n.title, n.status, n.created, n.changed, COALESCE(t.label, n.type) AS type,
+            COALESCE((SELECT r.log FROM node_revision r WHERE r.id = n.revision_id), '') AS log
+          FROM node n LEFT JOIN content_type t ON t.id = n.type
+          ORDER BY n.changed DESC, n.id DESC
+      destination: nodes
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT key, value FROM meta WHERE key IN ('last_export', 'last_html')
+      destination: meta
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT (SELECT COUNT(*) FROM media) AS media
+      destination: counts
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      name: runScript
+      params:
+        context: { nodes: '{= nodes =}', meta: '{= meta =}', counts: '{= counts =}' }
+        code: |
+          const get = (k) => { const m = meta.find((x) => x.key === k); try { return m ? JSON.parse(m.value) : null; } catch (e) { return null; } };
+          const ex = get('last_export');
+          const html = get('last_html');
+          const since = ex ? ex.at : '';
+          const status = (s) => (s === 1 ? 'Published' : 'Unpublished');
+          // What the live site doesn't show yet: published items changed since the export,
+          // and items taken off since (their last revision is the "Unpublished" one).
+          // Edits to drafts don't count: drafts aren't on the site either way.
+          const pending = nodes
+            .filter((n) => !since || n.changed > since)
+            .filter((n) => n.status === 1 || (since && n.log === 'Unpublished' && n.created <= since))
+            .map((n) => ({
+              id: n.id,
+              title: n.title,
+              change: n.status !== 1 ? 'Unpublished' : !since || n.created > since ? 'New' : 'Edited',
+              changed: n.changed,
+            }));
+          return {
+            stats: {
+              published: nodes.filter((n) => n.status === 1).length,
+              drafts: nodes.filter((n) => n.status !== 1).length,
+              media: (counts[0] || {}).media || 0,
+              pending: pending.length,
+              lastExport: since,
+              hasHtml: !!html,
+              indexPath: html ? html.indexPath : '',
+            },
+            drafts: nodes.filter((n) => n.status !== 1).map((n) => ({ id: n.id, title: n.title, type: n.type, changed: n.changed })),
+            pending,
+            recent: nodes.slice(0, 8).map((n) => ({ id: n.id, title: n.title, type: n.type, status: status(n.status), log: n.log || '—', changed: n.changed })),
+          };
+      destination: result
+
+    - group: script
+      name: runScript
+      params: { context: { result: '{= result =}' }, code: return result.stats; }
+      destination: stats
+
+    - group: script
+      name: runScript
+      params: { context: { result: '{= result =}' }, code: return result.drafts; }
+      destination: drafts
+
+    - group: script
+      name: runScript
+      params: { context: { result: '{= result =}' }, code: return result.pending; }
+      destination: pending
+
+    - group: script
+      name: runScript
+      params: { context: { result: '{= result =}' }, code: return result.recent; }
+      destination: recent

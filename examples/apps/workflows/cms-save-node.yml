@@ -1,0 +1,293 @@
+version: 1.0.0
+name: 'CMS: Save Content'
+description: |
+  Saves the CMS app's node edit form (see CMS: Get Content) to the CMS store (`~/Tipeline/output/cms/cms.db`): new content, or a change to existing content. Every save adds a revision with the log message, as in Drupal.
+
+  An empty URL alias is made from the content type's pattern: `[node:title]` (as a slug), `[node:type]`, `[node:created:custom:Y]` and `[node:created:custom:m]`. When the pattern's alias is taken, -1, -2… is added; an alias typed in must be free.
+
+  **Inputs**
+
+  - `id` — the node, or 0 for new content
+  - `type` — the content type of new content
+  - `values` — the form's values: title and the type's fields
+  - `published` — true to publish
+  - `alias` — the URL alias; empty: from the type's pattern
+  - `template` — a template of the type; empty: the type's default
+  - `log` — the revision log message
+
+  **Outputs**
+
+  - `node` — `{ id, title, alias, status }`
+author: tipeline
+tags: [example, apps, cms, content, revisions]
+
+pipeline:
+  variables:
+    - type: number
+      name: id
+      value: 0
+      visibility: public
+      description: Node id, or 0 for new content.
+
+    - type: string
+      name: type
+      value: ''
+      visibility: public
+      description: Content type of new content (ignored when editing).
+
+    - type: object
+      name: values
+      value: {}
+      visibility: public
+      required: true
+      description: The edit form's values.
+
+    - type: boolean
+      name: published
+      value: false
+      visibility: public
+      description: True publishes the content.
+
+    - type: string
+      name: alias
+      value: ''
+      visibility: public
+      description: URL alias; empty uses the pattern.
+
+    - type: string
+      name: template
+      value: ''
+      visibility: public
+      description: Template of the type; empty uses its default.
+
+    - type: string
+      name: log
+      value: ''
+      visibility: public
+      description: Revision log message.
+
+    - type: array
+      name: templates
+      value: []
+
+    - type: object
+      name: node
+      value: {}
+      visibility: public
+      description: The saved node. Returned to the app.
+
+    - type: dbConnection
+      name: db
+
+    - type: array
+      name: nodes
+      value: []
+
+    - type: array
+      name: types
+      value: []
+
+    - type: array
+      name: fields
+      value: []
+
+    - type: array
+      name: aliases
+      value: []
+
+    - type: object
+      name: save
+      value: {}
+
+    - type: array
+      name: saved
+      value: []
+
+  actions:
+    - group: database
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/cms/cms.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT * FROM node WHERE id = ?
+        bindings: ['{= id =}']
+      destination: nodes
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT * FROM content_type WHERE id = COALESCE((SELECT type FROM node WHERE id = ?), ?)
+        bindings: ['{= id =}', '{{ type }}']
+      destination: types
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT * FROM field WHERE type_id = COALESCE((SELECT type FROM node WHERE id = ?), ?)
+        bindings: ['{= id =}', '{{ type }}']
+      destination: fields
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT id, alias FROM node WHERE alias IS NOT NULL AND id != ?
+        bindings: ['{= id =}']
+      destination: aliases
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT id, type_id FROM template WHERE kind = 'content'
+      destination: templates
+
+    # Checks the values and works out what to store; throws (nothing written) when
+    # something is missing.
+    - group: script
+      name: runScript
+      params:
+        context:
+          id: '{= id =}'
+          values: '{= values =}'
+          nodes: '{= nodes =}'
+          types: '{= types =}'
+          fields: '{= fields =}'
+          aliases: '{= aliases =}'
+          templates: '{= templates =}'
+          published: '{= published =}'
+          alias: '{{ alias }}'
+          template: '{{ template }}'
+          log: '{{ log }}'
+        code: |
+          const existing = nodes[0];
+          if (Number(id) > 0 && !existing) throw new Error('Content #' + id + ' was not found. It may have been deleted.');
+          const type = types[0];
+          if (!type) throw new Error('Choose a content type first');
+          const v = values || {};
+
+          const title = String(v.title ?? '').trim();
+          if (!title) throw new Error('Title field is required.');
+
+          const stored = existing ? JSON.parse(existing.fields || '{}') : {};
+          const out = {};
+          for (const f of fields) {
+            let value = v[f.name];
+            switch (f.kind) {
+              case 'number':
+                value = value === '' || value == null ? null : Number(value);
+                if (value !== null && !Number.isFinite(value)) throw new Error(f.label + ' must be a number.');
+                break;
+              case 'boolean':
+                value = value === true || value === 'true';
+                break;
+              case 'term_ref':
+                value = (Array.isArray(value) ? value : value == null || value === '' ? [] : [value]).map(Number);
+                break;
+              case 'media_ref':
+                value = value === '' || value == null ? null : Number(value);
+                break;
+              default:
+                value = value == null ? '' : String(value);
+            }
+            const empty = value === null || value === '' || (Array.isArray(value) && value.length === 0);
+            if (f.required === 1 && empty) throw new Error(f.label + ' field is required.');
+            out[f.name] = value;
+          }
+          // Values of fields the type no longer has are kept, as Drupal keeps stored data.
+          const fieldsJson = JSON.stringify({ ...stored, ...out });
+
+          const slug = (s) =>
+            String(s).toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
+              .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+          const clean = (a) => {
+            const parts = String(a).trim().split('/').map((p) => slug(p)).filter(Boolean);
+            return parts.length ? '/' + parts.join('/') : '';
+          };
+          const taken = new Set(aliases.map((a) => a.alias));
+          const created = existing ? new Date(existing.created) : new Date();
+          let path = clean(alias ?? '');
+          if (path) {
+            if (taken.has(path)) throw new Error('The alias ' + path + ' is already in use.');
+          } else if (type.alias_pattern) {
+            const base = clean(
+              type.alias_pattern
+                .replace(/\[node:title\]/g, slug(title))
+                .replace(/\[node:type\]/g, type.id)
+                .replace(/\[node:created:custom:Y\]/g, String(created.getUTCFullYear()))
+                .replace(/\[node:created:custom:m\]/g, String(created.getUTCMonth() + 1).padStart(2, '0'))
+            );
+            path = base;
+            for (let i = 1; path && taken.has(path); i++) path = base + '-' + i;
+          }
+
+          const on = published === true || published === 'true';
+          const chosen = template && templates.some((t) => t.id === template && t.type_id === type.id) ? template : null;
+          const message = String(log ?? '').trim() || (existing ? '' : 'Created');
+          return {
+            id: existing ? existing.id : 0,
+            type: type.id,
+            title,
+            status: on ? 1 : 0,
+            // Empty rather than null: a raw binding to null comes through as its own text.
+            alias: path || '',
+            fields: fieldsJson,
+            template: chosen || '',
+            log: message,
+          };
+      destination: save
+
+    # One statement for new and existing content: id 0 becomes NULL, so a new row
+    # gets the next id; an existing id updates that row.
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          INSERT INTO node (id, type, title, status, alias, fields, template, created, changed)
+          VALUES (NULLIF(?, 0), ?, ?, ?, NULLIF(?, ''), ?, NULLIF(?, ''), strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+          ON CONFLICT (id) DO UPDATE SET title = excluded.title, status = excluded.status,
+            alias = excluded.alias, fields = excluded.fields, template = excluded.template, changed = excluded.changed
+          RETURNING id, title, alias, status
+        bindings: ['{= save.id =}', '{{ save.type }}', '{{ save.title }}', '{= save.status =}', '{{ save.alias }}', '{{ save.fields }}', '{{ save.template }}']
+      destination: saved
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          INSERT INTO node_revision (node_id, title, status, alias, fields, log, created)
+          SELECT id, title, status, alias, fields, ?, changed FROM node WHERE id = ?
+        bindings: ['{{ save.log }}', '{= saved[0].id =}']
+
+    - group: database
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: UPDATE node SET revision_id = (SELECT MAX(id) FROM node_revision WHERE node_id = ?) WHERE id = ?
+        bindings: ['{= saved[0].id =}', '{= saved[0].id =}']
+
+    - group: database
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      name: runScript
+      params:
+        context: { saved: '{= saved =}' }
+        code: |
+          const n = saved[0];
+          return { id: n.id, title: n.title, alias: n.alias, status: n.status === 1 ? 'Published' : 'Unpublished' };
+      destination: node
