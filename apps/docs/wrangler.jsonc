@@ -1,6 +1,6 @@
 {
   // A static site on Cloudflare Workers: no server code runs.
-  "name": "tipeline-docs",
+  "name": "tipeline",
   "compatibility_date": "2026-11-01",
   "assets": {
     "directory": "./.vitepress/dist",
