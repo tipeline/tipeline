@@ -1371,12 +1371,15 @@
       "autoStart": "Keep running in the background",
       "autoStartHint": "Starts Core when you log in and again if it crashes, so schedules run without the app open.",
       "autoStartHintLogin": "Starts Core when you log in, so schedules run without the app open.",
-      "autoStartFailed": "Could not change this setting.",
       "autoStartNotice": "Tipeline now keeps running in the background so your schedules can run.",
       "autoStartNoticeAction": "Settings"
     },
     "hubs": {
       "title": "Hubs"
+    },
+    "autoSave": {
+      "note": "Changes are saved automatically.",
+      "failed": "Couldn't save"
     }
   },
   "connections": {
@@ -2745,9 +2748,7 @@
     "days": "days",
     "keepForever": "Keep runs forever",
     "keepForeverHint": "The database keeps growing with every run.",
-    "invalid": "Enter a whole number of days above 0.",
-    "saved": "Run history setting saved.",
-    "saveFailed": "Couldn't save the setting."
+    "invalid": "Enter a whole number of days above 0."
   },
   "cache": {
     "stepLabel": "Cache result",
@@ -2787,7 +2788,6 @@
       "maxSize": "Size limit",
       "maxSizeHint": "When the cache grows past this, the oldest results are deleted first.",
       "maxSizeInvalid": "The size limit must be a number of MB above 0.",
-      "maxSizeSaved": "Size limit saved",
       "entries": "Stored results",
       "empty": "Nothing is cached yet.",
       "workflowOutputs": "Workflow outputs",
