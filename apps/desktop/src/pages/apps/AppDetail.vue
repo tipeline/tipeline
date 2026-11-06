@@ -24,7 +24,23 @@ import { Switch } from '@/components/ui/switch';
 import { toAssetUrl } from '@/utils/assetUrl';
 import type { AppSource } from '@tipeline/schemas';
 import { Button } from '@/components/ui/button';
-import { ArrowUpCircle, Hammer, Settings2, AppWindow, TriangleAlert, ExternalLink, Download } from 'lucide-vue-next';
+import {
+  ArrowUpCircle,
+  Hammer,
+  Settings2,
+  AppWindow,
+  TriangleAlert,
+  ExternalLink,
+  Download,
+  EllipsisVertical,
+} from 'lucide-vue-next';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuShortcut,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import HubSourceBlock from '@/components/hub/HubSourceBlock.vue';
 import HubUpdateDialog from '@/components/hub/HubUpdateDialog.vue';
 import { useAppExport } from '@/composables/useAppExport';
@@ -221,33 +237,37 @@ useKeyboardShortcuts([
         :name="result.name"
         :image="result.metadata?.image"
       />
-      <Button
-        v-if="result && source"
-        variant="outline"
-        :title="t('apps.openWindowHint')"
-        @click="openInWindow"
-      >
-        <ExternalLink class="w-4 h-4" />
-        {{ t('common.openInWindow') }}
-      </Button>
-      <Button v-if="result" variant="outline" @click="openEdit">
-        <Settings2 class="w-4 h-4" />
-        {{ t('common.edit') }}
-      </Button>
-      <Button v-if="result" variant="outline" :disabled="isExporting" @click="exportApp">
-        <Download class="w-4 h-4" />
-        {{ isExporting ? t('common.exporting') : t('common.export') }}
-        <kbd
-          class="pointer-events-none ml-1 inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100"
-        >
-          <span class="text-xs">⌘</span>E
-        </kbd>
-      </Button>
-      <div v-if="result" class="w-px h-6 bg-border self-center" />
       <Button v-if="result" @click="router.push(`/apps/${identifier}/edit`)">
         <Hammer class="w-4 h-4" />
         {{ t('common.build') }}
       </Button>
+      <DropdownMenu v-if="result">
+        <DropdownMenuTrigger as-child>
+          <Button variant="outline" size="icon">
+            <EllipsisVertical class="w-4 h-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            v-if="source"
+            class="cursor-pointer"
+            :title="t('apps.openWindowHint')"
+            @click="openInWindow"
+          >
+            <ExternalLink class="size-4" />
+            {{ t('common.openInWindow') }}
+          </DropdownMenuItem>
+          <DropdownMenuItem class="cursor-pointer" @click="openEdit">
+            <Settings2 class="size-4" />
+            {{ t('common.edit') }}
+          </DropdownMenuItem>
+          <DropdownMenuItem class="cursor-pointer" :disabled="isExporting" @click="exportApp">
+            <Download class="size-4" />
+            {{ isExporting ? t('common.exporting') : t('common.export') }}
+            <DropdownMenuShortcut>⌘E</DropdownMenuShortcut>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </template>
 
     <template #content>

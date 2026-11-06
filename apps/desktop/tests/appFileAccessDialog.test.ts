@@ -24,7 +24,14 @@ describe('App Edit dialog — File access', () => {
       return {};
     });
     (window as any).ipcRenderer = { invoke, on: vi.fn(), off: vi.fn() };
-    const w = mount(AppDetail, { attachTo: document.body, global: { plugins: [i18n, createPinia()], stubs: { Page: { template: '<div><slot name="menu"/><slot name="content"/></div>' } } } });
+    const w = mount(AppDetail, { attachTo: document.body, global: { plugins: [i18n, createPinia()], stubs: {
+          Page: { template: '<div><slot name="menu"/><slot name="content"/></div>' },
+          // Render the header's ⋯ menu inline so its items can be clicked.
+          DropdownMenu: { template: '<div><slot/></div>' },
+          DropdownMenuTrigger: { template: '<div><slot/></div>' },
+          DropdownMenuContent: { template: '<div><slot/></div>' },
+          DropdownMenuItem: { emits: ['click'], template: '<button @click="$emit(\'click\')"><slot/></button>' },
+        } } });
     await flushPromises();
 
     await w.findAll('button').find((b) => b.text() === 'Edit')!.trigger('click');
