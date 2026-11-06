@@ -185,10 +185,20 @@ body {
 }
 
 .VPNav {
+  border-bottom: 1px solid var(--tl-hairline);
+}
+
+/* The blur sits on a pseudo-element: a backdrop-filter on .VPNav itself would make it
+   the containing block for the fixed mobile menu (.VPNavScreen) and squash it to nothing. */
+.VPNav::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   background: var(--vp-nav-bg-color);
   backdrop-filter: saturate(180%) blur(16px);
   -webkit-backdrop-filter: saturate(180%) blur(16px);
-  border-bottom: 1px solid var(--tl-hairline);
+  pointer-events: none;
 }
 
 .VPNavBar .divider,
