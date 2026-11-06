@@ -29,6 +29,8 @@ import { formatBytes } from '@/utils/appFiles';
 import { useSettingsStore } from '@/store/settingsStore';
 import { toast } from '@/components/ui/sonner';
 import { useErrorT } from '@/composables/useErrorT';
+import { InvalidValue, useAutoSave } from '@/composables/useAutoSave';
+import SaveStatus from '@/components/SaveStatus.vue';
 
 interface CacheEntry {
   key: string;
@@ -49,6 +51,7 @@ const DEFAULT_MAX_SIZE_MB = 100;
 const { t } = useI18n();
 const { translateError } = useErrorT();
 const settingsStore = useSettingsStore();
+const autoSave = useAutoSave();
 
 const entries = ref<CacheEntry[]>([]);
 const count = ref(0);
@@ -57,6 +60,8 @@ const maxSizeBytes = ref(DEFAULT_MAX_SIZE_MB * 1024 * 1024);
 const loading = ref(false);
 const workflowNames = ref<Record<string, string>>({});
 const maxSizeMb = ref(String(DEFAULT_MAX_SIZE_MB));
+// The field is filled from the first load only: later loads (after a save) would undo typing.
+let maxSizeFilled = false;
 const openClearAll = ref(false);
 
 const usedPercent = computed(() =>
@@ -76,7 +81,10 @@ async function load() {
     count.value = result?.count ?? 0;
     sizeBytes.value = result?.sizeBytes ?? 0;
     maxSizeBytes.value = result?.maxSizeBytes ?? maxSizeBytes.value;
-    maxSizeMb.value = String(Math.round(maxSizeBytes.value / (1024 * 1024)));
+    if (!maxSizeFilled) {
+      maxSizeMb.value = String(Math.round(maxSizeBytes.value / (1024 * 1024)));
+      maxSizeFilled = true;
+    }
     workflowNames.value = Object.fromEntries((tasks ?? []).map((task) => [task.identifier, task.name]));
   } catch (err) {
     toast.error(t('cache.settings.loadFailed'), { description: translateError(String((err as Error)?.message ?? err)) });
@@ -100,19 +108,14 @@ async function confirmClearAll() {
   await clear({});
 }
 
-async function saveMaxSize() {
-  const mb = Number(maxSizeMb.value);
-  if (!(mb > 0)) {
-    toast.error(t('cache.settings.maxSizeInvalid'));
-    return;
-  }
-  try {
+function queueMaxSize() {
+  autoSave.schedule('maxSize', async () => {
+    const mb = Number(maxSizeMb.value);
+    if (!(mb > 0)) throw new InvalidValue(t('cache.settings.maxSizeInvalid'));
     await settingsStore.set(MAX_SIZE_SETTING, String(mb));
-    toast.success(t('cache.settings.maxSizeSaved'));
+    // Core trims the cache to the new limit; show what is left.
     await load();
-  } catch (err) {
-    toast.error(t('cache.settings.maxSizeInvalid'), { description: translateError(String((err as Error)?.message ?? err)) });
-  }
+  });
 }
 
 const formatWhen = (iso: string) => new Date(iso).toLocaleString();
@@ -156,11 +159,22 @@ onMounted(load);
     <div class="space-y-1.5">
       <label for="cache-max-size" class="text-sm font-medium">{{ t('cache.settings.maxSize') }}</label>
       <div class="flex items-center gap-2">
-        <Input id="cache-max-size" v-model="maxSizeMb" type="number" min="1" class="w-32" />
+        <Input
+          id="cache-max-size"
+          v-model="maxSizeMb"
+          type="number"
+          min="1"
+          class="w-32"
+          @update:model-value="queueMaxSize"
+          @blur="autoSave.flush('maxSize')"
+          @keydown.enter="autoSave.flush('maxSize')"
+        />
         <span class="text-sm text-muted-foreground">MB</span>
-        <Button variant="outline" size="sm" @click="saveMaxSize">{{ t('common.save') }}</Button>
+        <SaveStatus v-bind="autoSave.status('maxSize')" />
       </div>
-      <p class="text-xs text-muted-foreground">{{ t('cache.settings.maxSizeHint') }}</p>
+      <p class="text-xs text-muted-foreground">
+        {{ t('cache.settings.maxSizeHint') }} {{ t('settings.autoSave.note') }}
+      </p>
     </div>
 
     <div class="space-y-2">

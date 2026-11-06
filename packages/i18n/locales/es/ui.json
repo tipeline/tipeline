@@ -1371,12 +1371,15 @@
       "autoStart": "Seguir ejecutándose en segundo plano",
       "autoStartHint": "Inicia Core al iniciar sesión y de nuevo si falla, para que las programaciones se ejecuten sin la aplicación abierta.",
       "autoStartHintLogin": "Inicia Core al iniciar sesión, para que las programaciones se ejecuten sin la aplicación abierta.",
-      "autoStartFailed": "No se pudo cambiar este ajuste.",
       "autoStartNotice": "Tipeline ahora sigue ejecutándose en segundo plano para que tus programaciones puedan ejecutarse.",
       "autoStartNoticeAction": "Ajustes"
     },
     "hubs": {
       "title": "Hubs"
+    },
+    "autoSave": {
+      "note": "Los cambios se guardan automáticamente.",
+      "failed": "No se pudo guardar"
     }
   },
   "connections": {
@@ -2745,9 +2748,7 @@
     "days": "días",
     "keepForever": "Conservar las ejecuciones para siempre",
     "keepForeverHint": "La base de datos crece con cada ejecución.",
-    "invalid": "Escribe un número entero de días mayor que 0.",
-    "saved": "Ajuste del historial guardado.",
-    "saveFailed": "No se pudo guardar el ajuste."
+    "invalid": "Escribe un número entero de días mayor que 0."
   },
   "cache": {
     "stepLabel": "Guardar resultado en caché",
@@ -2787,7 +2788,6 @@
       "maxSize": "Límite de tamaño",
       "maxSizeHint": "Cuando la caché supera este tamaño, se eliminan primero los resultados más antiguos.",
       "maxSizeInvalid": "El límite de tamaño debe ser un número de MB mayor que 0.",
-      "maxSizeSaved": "Límite de tamaño guardado",
       "entries": "Resultados guardados",
       "empty": "Todavía no hay nada en caché.",
       "workflowOutputs": "Salidas del flujo",
