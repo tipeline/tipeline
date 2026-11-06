@@ -8,7 +8,7 @@
  * builder derives the identical schema client-side from the same JSON, so
  * both sides check the same rules without ever sending a schema over IPC.
  *
- * Install: copy (or symlink) this folder to ~/Tipeline/plugins/invoicing.
+ * Install: copy (or symlink) this folder to ~/.tipeline/plugins/invoicing.
  * The core engine loads it automatically on startup (or via a hot-reload
  * call to PluginLoader.reloadSingle for this path).
  *

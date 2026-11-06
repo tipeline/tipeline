@@ -1,7 +1,7 @@
 /**
  * Greeting plugin — simple demo plugin for Tipeline's plugin system.
  *
- * Install: this folder already lives at ~/Tipeline/plugins/greeting.
+ * Install: this folder already lives at ~/.tipeline/plugins/greeting.
  * The core engine loads it automatically on startup (or via a hot-reload
  * call to PluginLoader.reloadSingle for this path).
  *

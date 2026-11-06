@@ -11,7 +11,7 @@ or your own agent — can find your workflows, run them, and draft new ones. The
 | Address | `http://127.0.0.1:4002/mcp` (change the port with `TIPELINE_MCP_PORT`) |
 | Transport | Streamable HTTP |
 | Auth | `Authorization: Bearer <token>` |
-| Token | Core's API token, saved in `~/Tipeline/.database/core.token` |
+| Token | Core's API token, saved in `~/.tipeline/.database/core.token` |
 
 Core must be running: the Desktop app starts it, or run `tipeline start`.
 
@@ -19,7 +19,7 @@ Core must be running: the Desktop app starts it, or run `tipeline start`.
 
 ```bash
 claude mcp add --transport http tipeline http://127.0.0.1:4002/mcp \
-  --header "Authorization: Bearer $(cat ~/Tipeline/.database/core.token)"
+  --header "Authorization: Bearer $(cat ~/.tipeline/.database/core.token)"
 ```
 
 ### Cursor and other clients with HTTP support

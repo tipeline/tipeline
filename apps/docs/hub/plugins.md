@@ -8,18 +8,20 @@ ones: in the builder, in workflow files, in apps and with the assistant.
 
 - **From a hub:** open **Hub → Plugins** and click **Install**, or run
   `tipeline hub install plugin <hubId> <identifier>`. See [Hubs](/hub/).
-- **By hand:** put the plugin's folder in `~/Tipeline/plugins/` (for example
-  `~/Tipeline/plugins/drupal/index.mjs`), then open **Plugins**. If it has a `package.json`
+- **By hand:** put the plugin's folder in `~/.tipeline/plugins/` (for example
+  `~/.tipeline/plugins/drupal/index.mjs`), then open **Plugins**. If it has a `package.json`
   with dependencies, run `npm install` in its folder first.
 
 A new plugin is listed **turned off**, because its code runs inside Core with full access to
 your computer. Read it, or trust where it came from, then turn it on with its switch. Its
-actions are available right away.
+actions are available right away; until then its page doesn't list them. Installing a hub
+workflow that needs a plugin offers to install and turn it on for you (see
+[Hubs](/hub/#installing)).
 
 ## Managing plugins
 
 **Plugins** in the sidebar lists every plugin, with its version, author and switch. Opening
-the page rescans `~/Tipeline/plugins/`. Turning a plugin off tells you which workflows use
+the page rescans `~/.tipeline/plugins/`. Turning a plugin off tells you which workflows use
 it: their steps can't run while it's off.
 
 | Warning | What it means | What to do |
@@ -36,7 +38,7 @@ A plugin is a folder with an `index.mjs` (or `index.js`) whose default export de
 group:
 
 ```js
-// ~/Tipeline/plugins/greeting/index.mjs
+// ~/.tipeline/plugins/greeting/index.mjs
 export default {
   group: 'greeting',                 // required — the action group, unique
   name: 'Greeting Plugin',
@@ -132,7 +134,7 @@ them from [global variables](/desktop/variables) or `_env`:
 
 ### Trying it out
 
-1. Put the folder in `~/Tipeline/plugins/`.
+1. Put the folder in `~/.tipeline/plugins/`.
 2. Open **Plugins** (it rescans the folder) and turn the plugin on.
 3. Add one of its steps in the builder, or run a workflow file with
    `tipeline workflow run`.

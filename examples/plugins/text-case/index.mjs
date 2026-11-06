@@ -1,7 +1,7 @@
 /**
  * Text Case plugin — converts strings between common case styles.
  *
- * Install: this folder already lives at ~/Tipeline/plugins/text-case.
+ * Install: this folder already lives at ~/.tipeline/plugins/text-case.
  * The core engine loads it automatically on startup (or via a hot-reload
  * call to PluginLoader.reloadSingle for this path).
  *

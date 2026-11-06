@@ -53,7 +53,7 @@ if (process.env.TIPELINE_IPC_SOCKET_ROOT) {
 function exitOnUnauthorized(socket: any) {
   socket.on('unauthorized', () => {
     Printer.printError(
-      `Tipeline core rejected this CLI's token. Check that it reads the same ${nodePath.join(homedir(), 'Tipeline', '.database', 'core.token')} as the running core.`
+      `Tipeline core rejected this CLI's token. Check that it reads the same ${nodePath.join(homedir(), '.tipeline', '.database', 'core.token')} as the running core.`
     );
     process.exit(1);
   });
@@ -64,7 +64,7 @@ function exitOnUnauthorized(socket: any) {
 // (that would require IPC to stay unauthenticated for the fetch).
 function readCoreToken(): string {
   try {
-    return fs.readFileSync(nodePath.join(homedir(), 'Tipeline', '.database', 'core.token'), 'utf8').trim();
+    return fs.readFileSync(nodePath.join(homedir(), '.tipeline', '.database', 'core.token'), 'utf8').trim();
   } catch {
     return '';
   }
@@ -1251,6 +1251,26 @@ export default class CommandService {
       Printer.printError(`Unknown type "${rawType}". Use workflow, app or plugin.`);
       return process.exit(1);
     }
+    // A workflow whose plugins aren't installed or are off would fail with "Unknown action":
+    // name them first, with the commands that fix them.
+    if (type === 'task') {
+      let missing: HubTaskPreview['missingPlugins'] = [];
+      try {
+        const preview = await CommandService.request<HubTaskPreview>('hubPreviewTask', 'onHubPreviewTask', {
+          hubId,
+          itemIdentifier,
+        });
+        missing = preview?.missingPlugins ?? [];
+      } catch {
+        // The install below reports what's wrong (unknown hub or item, unreachable hub…).
+      }
+      if (missing.length > 0) {
+        Printer.printError(`Workflow "${itemIdentifier}" uses plugins that aren't ready, so nothing was installed.`);
+        for (const plugin of missing) Printer.printError(`  ${describeMissingPlugin(plugin)}`);
+        Printer.printMessage('Then run this command again.');
+        return process.exit(1);
+      }
+    }
     const correlationId = generateIdentifier();
     const payload = await IpcMessageService.generatePayload(correlationId, { hubId, itemIdentifier });
     CommandService.connectAndHandle(channel, payload, {
@@ -1816,6 +1836,7 @@ export interface HubTaskPreview {
     group: string;
     state: 'notInstalled' | 'disabled' | 'missing' | 'notLoaded';
     pluginName?: string;
+    pluginIdentifier?: string;
     hubPlugin?: { hubId: string; hubName: string; identifier: string; name: string };
   }>;
   capabilities?: CapabilityReport;
@@ -1835,14 +1856,15 @@ function describeMissingPlugin(plugin: HubTaskPreview['missingPlugins'][number])
   const name = plugin.pluginName ?? plugin.hubPlugin?.name ?? plugin.group;
   switch (plugin.state) {
     case 'disabled':
-      return `Needs ${name}, which is turned off. Turn it on in the Desktop app under Plugins.`;
+      return `Needs ${name}, which is turned off. Turn it on with: tipeline plugin enable ${plugin.pluginIdentifier ?? plugin.group}`;
     case 'missing':
       return `Needs ${name}, but its folder can't be found.`;
     case 'notLoaded':
       return `Needs ${name}. It's installed but not loaded yet: restart Core (tipeline stop, then tipeline start).`;
     default:
       return plugin.hubPlugin
-        ? `Needs ${name}. Install it with: tipeline hub install plugin ${plugin.hubPlugin.hubId} ${plugin.hubPlugin.identifier}`
+        ? `Needs ${name}. Install it, then turn it on: tipeline hub install plugin ${plugin.hubPlugin.hubId} ${plugin.hubPlugin.identifier}` +
+            ` && tipeline plugin enable ${plugin.hubPlugin.identifier}`
         : `Needs ${name} (${plugin.group}), which isn't installed or on any of your hubs.`;
   }
 }

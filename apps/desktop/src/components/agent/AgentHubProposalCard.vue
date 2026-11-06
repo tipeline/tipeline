@@ -16,6 +16,7 @@ interface MissingPlugin {
   group: string;
   state: 'notInstalled' | 'disabled' | 'missing' | 'notLoaded';
   pluginName?: string;
+  pluginIdentifier?: string;
   hubPlugin?: { hubId: string; hubName: string; identifier: string; name: string };
 }
 interface HubTaskPreview {
@@ -84,15 +85,30 @@ function pluginLabel(plugin: MissingPlugin) {
   return plugin.pluginName ?? plugin.hubPlugin?.name ?? plugin.group;
 }
 
-async function installPlugin(plugin: MissingPlugin) {
-  if (!plugin.hubPlugin) return;
+/** Whether the card can fix this plugin itself: install it from a hub, or turn it on. */
+function pluginFix(plugin: MissingPlugin): 'install' | 'turnOn' | null {
+  if (plugin.state === 'notInstalled') return plugin.hubPlugin ? 'install' : null;
+  if (plugin.state === 'disabled' && plugin.pluginIdentifier) return 'turnOn';
+  return null;
+}
+
+const anyFixable = computed(() => (preview.value?.missingPlugins ?? []).some((plugin) => pluginFix(plugin)));
+
+async function fixPlugin(plugin: MissingPlugin) {
   installingPlugin.value = plugin.group;
   try {
-    await invokeCore(SEND.HUB_INSTALL_PLUGIN, {
-      hubId: plugin.hubPlugin.hubId,
-      itemIdentifier: plugin.hubPlugin.identifier,
-    });
-    toast.success(t('agent.hub.pluginInstalled', { name: plugin.hubPlugin.name }));
+    let identifier = plugin.pluginIdentifier;
+    if (pluginFix(plugin) === 'install' && plugin.hubPlugin) {
+      const installed = await invokeCore<{ identifier: string }>(SEND.HUB_INSTALL_PLUGIN, {
+        hubId: plugin.hubPlugin.hubId,
+        itemIdentifier: plugin.hubPlugin.identifier,
+      });
+      identifier = installed?.identifier;
+    }
+    if (!identifier) throw new Error(t('hub.plugins.failed'));
+    // The click is the consent to run the plugin's code: plugins otherwise start off.
+    await invokeCore(SEND.PLUGIN_SET_ENABLED, { identifier, enabled: true });
+    toast.success(t('agent.hub.pluginInstalled', { name: pluginLabel(plugin) }));
     await load();
   } catch (error: any) {
     toast.error(t('agent.hub.pluginInstallFailed'), { description: error?.message ?? String(error) });
@@ -170,15 +186,19 @@ async function install() {
           <div class="min-w-0 flex-1 space-y-1.5">
             <p>{{ t(`agent.hub.plugin.${plugin.state}`, { name: pluginLabel(plugin), group: plugin.group }) }}</p>
             <Button
-              v-if="plugin.state === 'notInstalled' && plugin.hubPlugin"
+              v-if="pluginFix(plugin)"
               size="sm"
               variant="outline"
               class="h-7 text-xs"
               :disabled="installingPlugin !== null"
-              @click="installPlugin(plugin)"
+              @click="fixPlugin(plugin)"
             >
               <Loader2Icon v-if="installingPlugin === plugin.group" class="w-3 h-3 mr-1 animate-spin" />
-              {{ t('agent.hub.installPlugin', { name: plugin.hubPlugin.name, hub: plugin.hubPlugin.hubName }) }}
+              {{
+                pluginFix(plugin) === 'install'
+                  ? t('hub.plugins.installAndTurnOn', { name: pluginLabel(plugin), hub: plugin.hubPlugin?.hubName })
+                  : t('hub.plugins.turnOn', { name: pluginLabel(plugin) })
+              }}
             </Button>
             <div v-else class="flex flex-wrap gap-3">
               <button
@@ -192,6 +212,7 @@ async function install() {
             </div>
           </div>
         </div>
+        <p v-if="anyFixable" class="text-[11px] text-muted-foreground">{{ t('hub.plugins.runsCode') }}</p>
       </template>
     </div>
 

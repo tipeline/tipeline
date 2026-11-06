@@ -48,10 +48,10 @@ const MCP_PORT = parseInt(process.env.TIPELINE_MCP_PORT ?? '4002', 10);
 // This machine only, unless someone asks for more: both ports accept Core's full-access token.
 const BIND_HOST = process.env.TIPELINE_BIND_HOST || '127.0.0.1';
 
-// Same directory as the SQLite DB (~/Tipeline/.database) — CLI, Desktop, and apps/server
+// Same directory as the SQLite DB (~/.tipeline/.database) — CLI, Desktop, and apps/server
 // all read the token from this fixed path rather than over IPC itself.
 function tokenFilePath(): string {
-  return path.join(os.homedir(), 'Tipeline', '.database', 'core.token');
+  return path.join(os.homedir(), '.tipeline', '.database', 'core.token');
 }
 
 function writeTokenFile(token: string): void {

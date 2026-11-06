@@ -15,7 +15,7 @@ let cachedKey: Buffer | null = null;
 function key(): Buffer {
   if (cachedKey) return cachedKey;
   const file =
-    process.env.TIPELINE_SECRET_KEY_FILE || path.join(os.homedir(), 'Tipeline', '.database', 'secret.key');
+    process.env.TIPELINE_SECRET_KEY_FILE || path.join(os.homedir(), '.tipeline', '.database', 'secret.key');
   fs.mkdirSync(path.dirname(file), { recursive: true });
   try {
     fs.writeFileSync(file, randomBytes(32).toString('base64'), { mode: 0o600, flag: 'wx' });

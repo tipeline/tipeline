@@ -65,10 +65,13 @@ saved.
 
 Open **Hub** in the sidebar to browse every enabled hub's catalog, and click **Install**.
 
-- **Workflows** are installed like any other and keep a link to their hub.
+- **Workflows** are installed like any other and keep a link to their hub. If a workflow
+  uses a plugin that isn't installed or is turned off, Tipeline lists it first, with a
+  button: **Install and turn on** (when one of your hubs has it) or **Turn on**. Clicking it
+  lets that plugin's code run; once nothing is missing, the install carries on.
 - **Apps** install the workflows they use from the same hub too (or reuse them if they're
   already installed).
-- **Plugins** are downloaded into `~/Tipeline/plugins`, and Tipeline runs `npm install` in
+- **Plugins** are downloaded into `~/.tipeline/plugins`, and Tipeline runs `npm install` in
   their folder. That runs code from the hub, so Tipeline asks first: only continue if you
   trust the hub. A new plugin starts **turned off** — turn it on in **Plugins**.
 
@@ -80,7 +83,8 @@ tipeline hub install plugin <hubId> <itemIdentifier>
 ```
 
 The [assistant](/assistant/) also searches your enabled hubs, and offers to install a
-workflow — and the plugin it needs — when that's what fits your request.
+workflow — and to install and turn on the plugin it needs — when that's what fits your
+request.
 
 ## Updates
 

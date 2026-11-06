@@ -29,7 +29,7 @@ const POLL_INTERVAL_MS = 500;
 const WAIT_TIMEOUT_MS = 25_000;
 const EXIT_TIMEOUT_MS = 15_000;
 
-const AUTO_START_MARKER = path.join(homedir(), 'Tipeline', '.auto-start-decided');
+const AUTO_START_MARKER = path.join(homedir(), '.tipeline', '.auto-start-decided');
 
 function probeSocket(): Promise<boolean> {
   return new Promise((resolve) => {

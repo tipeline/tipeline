@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export class DatabaseManager {
   private static knexInstance: Knex;
-  private static configFilePath = path.join(os.homedir(), 'Tipeline', 'database.json');
+  private static configFilePath = path.join(os.homedir(), '.tipeline', 'database.json');
 
   public static init(): Knex {
     if (this.knexInstance) return this.knexInstance;
@@ -94,7 +94,7 @@ export class DatabaseManager {
     return {
       client: 'better-sqlite3',
       connection: {
-        filename: path.join(os.homedir(), 'Tipeline', '.database', 'tipeline.db'),
+        filename: path.join(os.homedir(), '.tipeline', '.database', 'tipeline.db'),
       },
       migrations: {
         directory: path.join(__dirname, 'migrations'),

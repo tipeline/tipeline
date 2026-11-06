@@ -10,7 +10,7 @@ const CREDENTIALS_DONE_KEY = 'credentials_sealed_v1';
 
 /** Core used to log its API token on every start. */
 function scrubTokenFromLogs() {
-  const logs = path.join(os.homedir(), 'Tipeline', 'logs');
+  const logs = path.join(os.homedir(), '.tipeline', 'logs');
   if (!fs.existsSync(logs)) return;
   for (const name of fs.readdirSync(logs)) {
     const file = path.join(logs, name);

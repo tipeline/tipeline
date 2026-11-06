@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { AppWindow, Workflow, Boxes } from 'lucide-vue-next';
+import { AppWindow, Workflow, Boxes, Loader2, Puzzle } from 'lucide-vue-next';
 import { useHubStore } from '@/store/hubStore';
 import { invokeCore } from '@/utils/invoke';
 import { toAssetUrl } from '@/utils/assetUrl';
@@ -34,6 +34,16 @@ type HubCatalogItem = {
   version: string;
   image?: string;
 };
+
+// A plugin a hub workflow needs that this Core can't run yet (Core's HubWorkflowCatalog).
+type MissingPlugin = {
+  group: string;
+  state: 'notInstalled' | 'disabled' | 'missing' | 'notLoaded';
+  pluginName?: string;
+  pluginIdentifier?: string;
+  hubPlugin?: { hubId: string; hubName: string; identifier: string; name: string };
+};
+type TaskPreview = { capabilities: CapabilityReport; missingPlugins?: MissingPlugin[] };
 
 const props = defineProps<{
   itemType: 'task' | 'app' | 'plugin';
@@ -74,6 +84,13 @@ let pendingCapabilityItem: HubCatalogItem | null = null;
 // Install failures open a dialog rather than a toast: a failed checksum names
 // two full sha256 hashes, which a toast would cut off.
 const installError = ref<{ name: string; message: string } | null>(null);
+
+// Workflows whose plugins aren't installed or are turned off: listed before
+// installing, each with a button that installs and/or turns it on. Once none is
+// missing, the install carries on as usual (capabilities first).
+const pluginNeeds = ref<{ item: HubCatalogItem; plugins: MissingPlugin[] } | null>(null);
+const pluginBusy = ref<string | null>(null);
+const pluginError = ref('');
 const selectedHubName = computed(() => hubStore.enabledHubs.find((h) => h.id === selectedHubId.value)?.name ?? '—');
 
 onMounted(async () => {
@@ -145,10 +162,15 @@ async function checkCapabilities(item: HubCatalogItem) {
   if (!selectedHubId.value) return;
   checkingIdentifier.value = item.identifier;
   try {
-    const preview = await invokeCore<{ capabilities: CapabilityReport }>(SEND.HUB_PREVIEW_TASK, {
+    const preview = await invokeCore<TaskPreview>(SEND.HUB_PREVIEW_TASK, {
       hubId: selectedHubId.value,
       itemIdentifier: item.identifier,
     });
+    if (preview.missingPlugins?.length) {
+      pluginError.value = '';
+      pluginNeeds.value = { item, plugins: preview.missingPlugins };
+      return;
+    }
     const report = preview.capabilities;
     if (report.capabilities.length === 0 && report.unknownWorkflows.length === 0) {
       checkingIdentifier.value = null;
@@ -165,6 +187,52 @@ async function checkCapabilities(item: HubCatalogItem) {
   }
   capabilityItem.value = item;
   pendingCapabilityItem = item;
+}
+
+function pluginLabel(plugin: MissingPlugin) {
+  return plugin.pluginName ?? plugin.hubPlugin?.name ?? plugin.group;
+}
+
+/** Whether the dialog can fix this plugin itself: install it from a hub, or turn it on. */
+function pluginFix(plugin: MissingPlugin): 'install' | 'turnOn' | null {
+  if (plugin.state === 'notInstalled') return plugin.hubPlugin ? 'install' : null;
+  if (plugin.state === 'disabled' && plugin.pluginIdentifier) return 'turnOn';
+  return null;
+}
+
+async function fixPlugin(plugin: MissingPlugin) {
+  const needs = pluginNeeds.value;
+  if (!needs || !selectedHubId.value) return;
+  pluginBusy.value = plugin.group;
+  pluginError.value = '';
+  try {
+    let identifier = plugin.pluginIdentifier;
+    if (pluginFix(plugin) === 'install' && plugin.hubPlugin) {
+      const installed = await invokeCore<{ identifier: string }>(SEND.HUB_INSTALL_PLUGIN, {
+        hubId: plugin.hubPlugin.hubId,
+        itemIdentifier: plugin.hubPlugin.identifier,
+      });
+      identifier = installed?.identifier;
+    }
+    if (!identifier) throw new Error(t('hub.plugins.failed'));
+    // The click is the consent to run the plugin's code: plugins otherwise start off.
+    await invokeCore(SEND.PLUGIN_SET_ENABLED, { identifier, enabled: true });
+
+    const preview = await invokeCore<TaskPreview>(SEND.HUB_PREVIEW_TASK, {
+      hubId: selectedHubId.value,
+      itemIdentifier: needs.item.identifier,
+    });
+    if (preview.missingPlugins?.length) {
+      pluginNeeds.value = { item: needs.item, plugins: preview.missingPlugins };
+      return;
+    }
+    pluginNeeds.value = null;
+    await checkCapabilities(needs.item);
+  } catch (e: any) {
+    pluginError.value = e?.message ?? String(e);
+  } finally {
+    pluginBusy.value = null;
+  }
 }
 
 async function confirmCapabilityInstall() {
@@ -301,6 +369,50 @@ const placeholderIcon = computed(() => PLACEHOLDER_ICON[props.itemType]);
         <AlertDialogAction @click="confirmCapabilityInstall">
           {{ t('capabilities.install') }}
         </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+
+  <AlertDialog :open="!!pluginNeeds" @update:open="(v: boolean) => !v && !pluginBusy && (pluginNeeds = null)">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>{{ t('hub.plugins.title', { name: pluginNeeds?.item.name }) }}</AlertDialogTitle>
+        <AlertDialogDescription>{{ t('hub.plugins.intro') }}</AlertDialogDescription>
+      </AlertDialogHeader>
+      <div class="space-y-2">
+        <div
+          v-for="plugin in pluginNeeds?.plugins ?? []"
+          :key="plugin.group"
+          data-testid="needed-plugin"
+          class="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm"
+        >
+          <Puzzle class="w-4 h-4 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div class="min-w-0 flex-1 space-y-1.5">
+            <p>{{ t(`agent.hub.plugin.${plugin.state}`, { name: pluginLabel(plugin), group: plugin.group }) }}</p>
+            <Button
+              v-if="pluginFix(plugin)"
+              size="sm"
+              variant="outline"
+              class="h-7 text-xs"
+              :disabled="pluginBusy !== null"
+              @click="fixPlugin(plugin)"
+            >
+              <Loader2 v-if="pluginBusy === plugin.group" class="w-3 h-3 mr-1 animate-spin" />
+              {{
+                pluginFix(plugin) === 'install'
+                  ? t('hub.plugins.installAndTurnOn', { name: pluginLabel(plugin), hub: plugin.hubPlugin?.hubName })
+                  : t('hub.plugins.turnOn', { name: pluginLabel(plugin) })
+              }}
+            </Button>
+          </div>
+        </div>
+        <p class="text-xs text-muted-foreground">{{ t('hub.plugins.runsCode') }}</p>
+        <p v-if="pluginError" class="text-xs text-destructive whitespace-pre-wrap wrap-anywhere select-text">
+          {{ pluginError }}
+        </p>
+      </div>
+      <AlertDialogFooter>
+        <AlertDialogCancel :disabled="pluginBusy !== null">{{ t('common.close') }}</AlertDialogCancel>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>

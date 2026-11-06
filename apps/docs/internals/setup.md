@@ -96,7 +96,7 @@ npm link
 ```
 
 This installs the `tipeline` command globally, pointing at the locally built version. The first
-time you use it, create the `~/Tipeline` folders and configuration, then start Core:
+time you use it, create the `~/.tipeline` folders and configuration, then start Core:
 
 ```bash
 tipeline install
@@ -114,14 +114,14 @@ Tests use Vitest.
 
 ## Database
 
-The engine uses SQLite stored at `~/Tipeline/.database/tipeline.db`. The database and all tables are created automatically on first start via Knex migrations — no manual setup required.
+The engine uses SQLite stored at `~/.tipeline/.database/tipeline.db`. The database and all tables are created automatically on first start via Knex migrations — no manual setup required.
 
 ## Environment Variables
 
 Values already in Core's environment win. Otherwise a run loads, in order:
 
 1. The workflow's own directory (`.env` next to the YAML file, when running a file)
-2. `~/Tipeline/.env` (global fallback)
+2. `~/.tipeline/.env` (global fallback)
 
 ### Core Configuration
 
@@ -132,7 +132,7 @@ Values already in Core's environment win. Otherwise a run loads, in order:
 | `TIPELINE_IPC_SOCKET_ROOT` | node-ipc default | Folder for the IPC socket; Core and everything that connects to it must agree |
 | `TIPELINE_ALLOW_PRIVATE_HTTP` | off | `true` lets `http` actions reach private and internal addresses |
 
-Which job runner Core uses is set in `~/Tipeline/config.json`, not an environment variable.
+Which job runner Core uses is set in `~/.tipeline/config.json`, not an environment variable.
 See [Job Runners](/internals/job-runners).
 
 ## Project Structure

@@ -10,7 +10,7 @@ const CORE_ENTRY = 'dist/engine/Server.js';
 
 /** Written and removed by Core itself. CLI and Desktop only read it. */
 export function corePidFile(): string {
-  return path.join(homedir(), 'Tipeline', 'tipeline.pid');
+  return path.join(homedir(), '.tipeline', 'tipeline.pid');
 }
 
 /**
@@ -18,7 +18,7 @@ export function corePidFile(): string {
  * why it didn't start. Only means something while no Core is running.
  */
 export function newerDatabaseMarker(): string {
-  return path.join(homedir(), 'Tipeline', 'core-refused-newer-database');
+  return path.join(homedir(), '.tipeline', 'core-refused-newer-database');
 }
 
 function commandLine(pid: number): string | null {

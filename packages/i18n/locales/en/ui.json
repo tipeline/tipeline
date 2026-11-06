@@ -1023,7 +1023,7 @@
   "plugins": {
     "title": "Plugins",
     "searchPlaceholder": "Search plugins...",
-    "empty": "No plugins found. Drop a folder into ~/Tipeline/plugins/ and come back to this page.",
+    "empty": "No plugins found. Drop a folder into ~/.tipeline/plugins/ and come back to this page.",
     "disableAlert": {
       "title": "Disable plugin?",
       "cancel": "Cancel",
@@ -1049,7 +1049,8 @@
       "conflictWarning": "This plugin's group name {group} conflicts with a built-in core group and was not loaded. Rename the group field in your plugin's index.js to a unique name, then restart the core.",
       "missingWarning": "This plugin's folder could not be found at {path}. It may have been moved or deleted. Its actions are unavailable until the folder is restored, or you can remove this listing.",
       "usageDescription": "Use the {group} group in any workflow:",
-      "noActions": "This plugin has no actions available."
+      "noActions": "This plugin has no actions available.",
+      "turnOnForActions": "Turn this plugin on to see its actions."
     },
     "notFound": {
       "title": "Plugin not found",
@@ -1528,6 +1529,14 @@
     "updateFailed": "Update failed",
     "installFailed": "Install failed",
     "installFailedTitle": "Couldn't install \"{name}\"",
+    "plugins": {
+      "title": "\"{name}\" needs plugins",
+      "intro": "This workflow uses actions from plugins that aren’t ready yet. Fix each one, and the install carries on.",
+      "installAndTurnOn": "Install and turn on {name} from {hub}",
+      "turnOn": "Turn on {name}",
+      "runsCode": "Turning a plugin on lets its code run on this computer.",
+      "failed": "Couldn’t set up the plugin."
+    },
     "pluginInstallConfirm": {
       "title": "Install plugin from hub",
       "description": "This downloads \"{name}\" and runs npm install in its folder, executing code from the hub. Only continue if you trust this hub.",
@@ -1729,9 +1738,8 @@
         "missing": "Needs {name}, but its folder can't be found.",
         "notLoaded": "Needs {name}. It's installed but not loaded yet: restart Core."
       },
-      "installPlugin": "Install {name} from {hub}",
       "openPlugins": "Open Plugins",
-      "pluginInstalled": "{name} installed.",
+      "pluginInstalled": "{name} is installed and on.",
       "pluginInstallFailed": "Couldn't install the plugin.",
       "installAndContinue": "Install and continue",
       "installFailed": "Couldn't install the workflow.",

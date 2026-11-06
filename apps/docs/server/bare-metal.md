@@ -166,7 +166,7 @@ Migrations run automatically on `tipeline-server` startup. Remember: **editing a
 | Path | Contents |
 |---|---|
 | PostgreSQL `tipeline_server` | Users, tokens, webhooks, task ownership, audit log |
-| `~/Tipeline/.database/tipeline.db` (as the `tipeline` user) | Core's own database and task state |
+| `~/.tipeline/.database/tipeline.db` (as the `tipeline` user) | Core's own database and task state |
 | `/tmp/tipeline/` | IPC socket — ephemeral |
 
 ### Backups
