@@ -46,6 +46,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -530,25 +531,6 @@ useKeyboardShortcuts([
         :name="task.name"
         :image="task.metadata?.image"
       />
-      <Button v-if="task" variant="outline" @click="handleOpenEditMeta">
-        <Settings2 class="w-4 h-4" />
-        {{ t('tasks.editInfo') }}
-        <kbd
-          class="pointer-events-none ml-1 inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100"
-        >
-          <span class="text-xs">⌘</span>I
-        </kbd>
-      </Button>
-      <Button v-if="task" variant="outline" @click="exportTask">
-        <DownloadIcon class="w-4 h-4" />
-        {{ t('common.export') }}
-        <kbd
-          class="pointer-events-none ml-1 inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100"
-        >
-          <span class="text-xs">⌘</span>E
-        </kbd>
-      </Button>
-      <div v-if="task" class="w-px h-6 bg-border self-center" />
       <Button as-child type="submit">
         <RouterLink
           v-if="task"
@@ -570,6 +552,16 @@ useKeyboardShortcuts([
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem class="cursor-pointer" @click="handleOpenEditMeta">
+            <Settings2 class="size-4" />
+            {{ t('tasks.editInfo') }}
+            <DropdownMenuShortcut>⌘I</DropdownMenuShortcut>
+          </DropdownMenuItem>
+          <DropdownMenuItem class="cursor-pointer" @click="exportTask">
+            <DownloadIcon class="size-4" />
+            {{ t('common.export') }}
+            <DropdownMenuShortcut>⌘E</DropdownMenuShortcut>
+          </DropdownMenuItem>
           <DropdownMenuItem class="cursor-pointer" @click="openDuplicate">
             <Copy class="size-4" />
             {{ t('tasks.duplicate') }}
