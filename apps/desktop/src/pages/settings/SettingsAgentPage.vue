@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useSettingsStore } from '@/store/settingsStore';
+import { useAgentStore } from '@/store/agentStore';
 import { useAutoSave } from '@/composables/useAutoSave';
 import SaveStatus from '@/components/SaveStatus.vue';
 import { PROVIDERS, PROVIDER_LABELS, type ProviderName } from '@tipeline/agent/provider-names';
@@ -17,12 +18,14 @@ import { INSTRUCTIONS_SETTING } from '@tipeline/agent/instructions';
 import InstructionsTextarea from '@/components/agent/InstructionsTextarea.vue';
 
 const store = useSettingsStore();
+const agentStore = useAgentStore();
 const { t } = useI18n();
 const autoSave = useAutoSave();
 
 const DEFAULT_MCP_URL = 'http://127.0.0.1:4002/mcp';
 
-const provider = ref<ProviderName>('deepseek');
+// Empty until the user picks one: Tipeline comes with no provider.
+const provider = ref<ProviderName | ''>('');
 const anthropicApiKey = ref('');
 const anthropicModel = ref('');
 const deepseekApiKey = ref('');
@@ -39,7 +42,7 @@ const instructions = ref('');
 watch(
   () => store.settings,
   () => {
-    provider.value = (store.get('agent_provider', 'deepseek') as ProviderName) || 'deepseek';
+    provider.value = agentStore.chosenProvider() ?? '';
     anthropicApiKey.value = store.get('agent_anthropic_api_key');
     anthropicModel.value = store.get('agent_anthropic_model');
     deepseekApiKey.value = store.get('agent_deepseek_api_key');
@@ -100,7 +103,7 @@ onMounted(async () => {
         <SaveStatus v-bind="autoSave.status('agent_provider')" />
         <Select :model-value="provider" @update:model-value="saveProvider($event as ProviderName)">
           <SelectTrigger class="w-40 text-sm">
-            <SelectValue />
+            <SelectValue :placeholder="t('agent.setup.chooseProvider')" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem v-for="p in PROVIDERS" :key="p" :value="p">{{ PROVIDER_LABELS[p] }}</SelectItem>

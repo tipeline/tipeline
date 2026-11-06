@@ -1699,7 +1699,10 @@
       "hint": "Enter to send, Shift+Enter for a new line",
       "send": "Send",
       "projectInstructions": "Using the instructions of {name}",
-      "projectInstructionsTitle": "You're in this project, so its instructions go with your requests"
+      "projectInstructionsTitle": "You're in this project, so its instructions go with your requests",
+      "notSetUp": "Not set up",
+      "notSetUpTitle": "Choose an AI provider to use the Assistant",
+      "providerTitle": "Your AI provider. Change it in Settings."
     },
     "proposal": {
       "fromRequest": "from your request",
@@ -1832,10 +1835,10 @@
     },
     "setup": {
       "title": "Connect an AI provider",
-      "description": "The Assistant uses an AI provider you choose. Paste an API key and your request goes out right away.",
-      "yourRequest": "Your request",
-      "connect": "Connect and send",
-      "moreOptions": "More options in Settings"
+      "description": "Tipeline doesn't include an AI model. The Assistant uses a provider you choose with your own API key. Set one up in Settings.",
+      "chooseProvider": "Choose a provider",
+      "requestKept": "Your request stays in the box below, ready to send once you're set up.",
+      "openSettings": "Open Settings"
     },
     "schedule": {
       "create": "Create schedule",
@@ -1843,7 +1846,8 @@
       "created": "Scheduled \"{name}\": {when}.",
       "openWorkflow": "Open workflow",
       "failed": "Couldn't create the schedule."
-    }
+    },
+    "notConfiguredNoProvider": "Choose an AI provider and add its API key in Settings, and make sure Tipeline Core is running."
   },
   "jsonEditor": {
     "invalid": "Invalid JSON (line {line}): {detail}"
