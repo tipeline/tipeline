@@ -28,6 +28,8 @@ export interface MissingPlugin {
    */
   state: 'notInstalled' | 'disabled' | 'missing' | 'notLoaded';
   pluginName?: string;
+  /** The installed plugin's identifier (any state but notInstalled), e.g. to turn it on. */
+  pluginIdentifier?: string;
   /** A hub plugin that provides the group, when one of the enabled hubs lists it. */
   hubPlugin?: { hubId: string; hubName: string; identifier: string; name: string };
 }
@@ -189,6 +191,7 @@ export class HubWorkflowCatalog {
       group,
       state,
       ...(record?.name ? { pluginName: record.name } : {}),
+      ...(record?.identifier ? { pluginIdentifier: record.identifier } : {}),
       ...(hubPlugin ? { hubPlugin } : {}),
     };
   }

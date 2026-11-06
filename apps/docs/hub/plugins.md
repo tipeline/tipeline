@@ -14,7 +14,9 @@ ones: in the builder, in workflow files, in apps and with the assistant.
 
 A new plugin is listed **turned off**, because its code runs inside Core with full access to
 your computer. Read it, or trust where it came from, then turn it on with its switch. Its
-actions are available right away.
+actions are available right away; until then its page doesn't list them. Installing a hub
+workflow that needs a plugin offers to install and turn it on for you (see
+[Hubs](/hub/#installing)).
 
 ## Managing plugins
 

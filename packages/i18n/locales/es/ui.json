@@ -1049,7 +1049,8 @@
       "conflictWarning": "El nombre de grupo {group} de este plugin entra en conflicto con un grupo integrado y no fue cargado. Renombra el campo group en el index.js de tu plugin a un nombre único y reinicia el core.",
       "missingWarning": "No se encontró la carpeta de este plugin en {path}. Puede que se haya movido o eliminado. Sus acciones no estarán disponibles hasta que se restaure la carpeta, o puedes eliminar este registro.",
       "usageDescription": "Usa el grupo {group} en cualquier flujo de trabajo:",
-      "noActions": "Este plugin no tiene acciones disponibles."
+      "noActions": "Este plugin no tiene acciones disponibles.",
+      "turnOnForActions": "Activa este plugin para ver sus acciones."
     },
     "notFound": {
       "title": "Plugin no encontrado",
@@ -1528,6 +1529,14 @@
     "updateFailed": "Error al actualizar",
     "installFailed": "Error al instalar",
     "installFailedTitle": "No se pudo instalar \"{name}\"",
+    "plugins": {
+      "title": "\"{name}\" necesita plugins",
+      "intro": "Este workflow usa acciones de plugins que aún no están listos. Resuelve cada uno y la instalación continúa.",
+      "installAndTurnOn": "Instalar y activar {name} desde {hub}",
+      "turnOn": "Activar {name}",
+      "runsCode": "Activar un plugin permite que su código se ejecute en este equipo.",
+      "failed": "No se pudo preparar el plugin."
+    },
     "pluginInstallConfirm": {
       "title": "Instalar plugin desde el hub",
       "description": "Esto descarga \"{name}\" y ejecuta npm install en su carpeta, ejecutando código proveniente del hub. Continúa solo si confías en este hub.",
@@ -1729,9 +1738,8 @@
         "missing": "Necesita {name}, pero no se encuentra su carpeta.",
         "notLoaded": "Necesita {name}. Está instalado pero aún no cargado: reinicia Core."
       },
-      "installPlugin": "Instalar {name} desde {hub}",
       "openPlugins": "Abrir Plugins",
-      "pluginInstalled": "{name} instalado.",
+      "pluginInstalled": "{name} está instalado y activado.",
       "pluginInstallFailed": "No se pudo instalar el plugin.",
       "installAndContinue": "Instalar y continuar",
       "installFailed": "No se pudo instalar el flujo de trabajo.",
