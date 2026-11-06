@@ -149,6 +149,7 @@ pipeline:
   variables:
     - name: productUrl
       type: string
+      value: "https://example.com/product/123"
       required: true
       description: URL of the product page to monitor
       visibility: public

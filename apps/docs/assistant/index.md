@@ -24,7 +24,7 @@ other AI tool can use your workflows through MCP — see [Connect AI tools (MCP)
 
 ## Setting it up
 
-Open **Settings → Assistant** and pick a provider (DeepSeek until you choose another):
+Open **Settings → Assistant** and pick a provider. Tipeline doesn't include an AI model: nothing is chosen until you pick one. Until then the Assistant says it isn't set up and links here.
 
 | Provider | What to enter | Default model |
 |----------|---------------|---------------|

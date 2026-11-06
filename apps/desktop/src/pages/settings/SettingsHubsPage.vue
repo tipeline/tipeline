@@ -32,10 +32,13 @@ import { DependencyType, type Dependency } from '@/components/ui/auto-form/inter
 import { toast } from '@/components/ui/sonner';
 import { useErrorT } from '@/composables/useErrorT';
 import { useHubStore, type Hub } from '@/store/hubStore';
+import { useAutoSave } from '@/composables/useAutoSave';
+import SaveStatus from '@/components/SaveStatus.vue';
 
 const { t } = useI18n();
 const { translateError } = useErrorT();
 const store = useHubStore();
+const autoSave = useAutoSave();
 
 const schema = coreValidations.hubObject.hubSchema;
 const fieldConfig = {
@@ -113,8 +116,8 @@ async function saveEdit() {
   }
 }
 
-async function toggleEnabled(hub: Hub, enabled: boolean) {
-  await store.setEnabled(hub.id, enabled);
+function toggleEnabled(hub: Hub, enabled: boolean) {
+  void autoSave.save(`enabled:${hub.id}`, () => store.setEnabled(hub.id, enabled));
 }
 
 async function checkNow(hub: Hub) {
@@ -177,6 +180,7 @@ async function confirmRemove() {
         <Button variant="ghost" size="icon" :title="t('hub.manage.edit')" @click="openEdit(hub)">
           <Pencil class="h-4 w-4" />
         </Button>
+        <SaveStatus v-bind="autoSave.status(`enabled:${hub.id}`)" />
         <Switch :model-value="!!hub.enabled" @update:model-value="(v: boolean) => toggleEnabled(hub, v)" />
         <Button variant="ghost" size="icon" @click="removeTarget = hub">
           <Trash2 class="h-4 w-4 text-destructive" />

@@ -1371,12 +1371,15 @@
       "autoStart": "Seguir ejecutándose en segundo plano",
       "autoStartHint": "Inicia Core al iniciar sesión y de nuevo si falla, para que las programaciones se ejecuten sin la aplicación abierta.",
       "autoStartHintLogin": "Inicia Core al iniciar sesión, para que las programaciones se ejecuten sin la aplicación abierta.",
-      "autoStartFailed": "No se pudo cambiar este ajuste.",
       "autoStartNotice": "Tipeline ahora sigue ejecutándose en segundo plano para que tus programaciones puedan ejecutarse.",
       "autoStartNoticeAction": "Ajustes"
     },
     "hubs": {
       "title": "Hubs"
+    },
+    "autoSave": {
+      "note": "Los cambios se guardan automáticamente.",
+      "failed": "No se pudo guardar"
     }
   },
   "connections": {
@@ -1696,7 +1699,10 @@
       "hint": "Enter para enviar, Shift+Enter para una nueva línea",
       "send": "Enviar",
       "projectInstructions": "Usando las instrucciones de {name}",
-      "projectInstructionsTitle": "Estás en este proyecto, así que sus instrucciones van con tus peticiones"
+      "projectInstructionsTitle": "Estás en este proyecto, así que sus instrucciones van con tus peticiones",
+      "notSetUp": "Sin configurar",
+      "notSetUpTitle": "Elige un proveedor de IA para usar el Asistente",
+      "providerTitle": "Tu proveedor de IA. Cámbialo en Configuración."
     },
     "proposal": {
       "fromRequest": "de tu solicitud",
@@ -1829,10 +1835,10 @@
     },
     "setup": {
       "title": "Conecta un proveedor de IA",
-      "description": "El Asistente usa el proveedor de IA que elijas. Pega una clave API y tu solicitud se envía de inmediato.",
-      "yourRequest": "Tu solicitud",
-      "connect": "Conectar y enviar",
-      "moreOptions": "Más opciones en Configuración"
+      "description": "Tipeline no incluye un modelo de IA. El Asistente usa el proveedor que elijas con tu propia clave API. Configúralo en Configuración.",
+      "chooseProvider": "Elige un proveedor",
+      "requestKept": "Tu solicitud se queda en el cuadro de abajo, lista para enviarse cuando termines la configuración.",
+      "openSettings": "Abrir Configuración"
     },
     "schedule": {
       "create": "Crear programación",
@@ -1840,7 +1846,8 @@
       "created": "\"{name}\" programado: {when}.",
       "openWorkflow": "Abrir flujo de trabajo",
       "failed": "No se pudo crear la programación."
-    }
+    },
+    "notConfiguredNoProvider": "Elige un proveedor de IA y agrega su clave API en Configuración, y asegúrate de que Tipeline Core esté en ejecución."
   },
   "jsonEditor": {
     "invalid": "JSON no válido (línea {line}): {detail}"
@@ -2745,9 +2752,7 @@
     "days": "días",
     "keepForever": "Conservar las ejecuciones para siempre",
     "keepForeverHint": "La base de datos crece con cada ejecución.",
-    "invalid": "Escribe un número entero de días mayor que 0.",
-    "saved": "Ajuste del historial guardado.",
-    "saveFailed": "No se pudo guardar el ajuste."
+    "invalid": "Escribe un número entero de días mayor que 0."
   },
   "cache": {
     "stepLabel": "Guardar resultado en caché",
@@ -2787,7 +2792,6 @@
       "maxSize": "Límite de tamaño",
       "maxSizeHint": "Cuando la caché supera este tamaño, se eliminan primero los resultados más antiguos.",
       "maxSizeInvalid": "El límite de tamaño debe ser un número de MB mayor que 0.",
-      "maxSizeSaved": "Límite de tamaño guardado",
       "entries": "Resultados guardados",
       "empty": "Todavía no hay nada en caché.",
       "workflowOutputs": "Salidas del flujo",

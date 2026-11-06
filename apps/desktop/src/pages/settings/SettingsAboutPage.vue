@@ -4,9 +4,11 @@ import { useI18n } from 'vue-i18n';
 import { SEND } from '@/ipc-channels';
 import { invokeCore } from '@/utils/invoke';
 import { Switch } from '@/components/ui/switch';
-import { toast } from '@/components/ui/sonner';
+import { useAutoSave } from '@/composables/useAutoSave';
+import SaveStatus from '@/components/SaveStatus.vue';
 
 const { t } = useI18n();
+const autoSave = useAutoSave();
 
 const desktopVersion = ref('');
 const coreVersion = ref<string | null>(null);
@@ -14,12 +16,10 @@ const coreUnavailable = ref(false);
 
 const autoStart = ref<{ available: boolean; restartsOnCrash: boolean; enabled: boolean } | null>(null);
 
-async function setAutoStart(enabled: boolean) {
-  try {
+function setAutoStart(enabled: boolean) {
+  void autoSave.save('autoStart', async () => {
     autoStart.value = await window.ipcRenderer.invoke(SEND.AUTO_START_SET, enabled);
-  } catch {
-    toast.error(t('settings.about.autoStartFailed'));
-  }
+  });
 }
 
 onMounted(async () => {
@@ -39,7 +39,9 @@ onMounted(async () => {
   <section class="space-y-6">
     <div>
       <div class="text-sm font-medium">{{ t('settings.about.title') }}</div>
-      <div class="text-xs text-muted-foreground mt-0.5">{{ t('settings.about.description') }}</div>
+      <div class="text-xs text-muted-foreground mt-0.5">
+        {{ t('settings.about.description') }} {{ t('settings.autoSave.note') }}
+      </div>
     </div>
 
     <div class="rounded-lg border divide-y">
@@ -62,7 +64,10 @@ onMounted(async () => {
           {{ t(autoStart.restartsOnCrash ? 'settings.about.autoStartHint' : 'settings.about.autoStartHintLogin') }}
         </div>
       </div>
-      <Switch id="auto-start" :model-value="autoStart.enabled" class="shrink-0" @update:model-value="setAutoStart" />
+      <div class="flex items-center gap-3 shrink-0">
+        <SaveStatus v-bind="autoSave.status('autoStart')" />
+        <Switch id="auto-start" :model-value="autoStart.enabled" @update:model-value="setAutoStart" />
+      </div>
     </div>
   </section>
 </template>
