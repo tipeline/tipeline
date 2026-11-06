@@ -63,7 +63,7 @@ The core is an ES module Node.js application. Key subsystems:
 - **Action system** (`src/action/`) — `ActionRegistry` maps action type strings to classes; `ActionFactory` instantiates them from config. Each action lives in its own directory under `src/action/actions/` (30+ types: browser, file, email, ssh, ocr, pdf, http, script, database, etc.).
 - **Task orchestration** (`src/task/`) — `TaskFactory` loads YAML or JSON task definitions; `Task` manages variable substitution and action execution order.
 - **Pipeline** (`src/pipeline/`) — Tracks execution state (actions, variables, blocks) for a running task. Models backed by `PipelineService` (Knex + Objection ORM).
-- **Database** (`src/database/`) — SQLite via `better-sqlite3`, stored at `~/Tipeline/.database/tipeline.db`. ORM models: Task, Pipeline, PipelineAction, PipelineBlock, PipelineVariable, GlobalVariable, App. Migrations live in `/migrations`.
+- **Database** (`src/database/`) — SQLite via `better-sqlite3`, stored at `~/.tipeline/.database/tipeline.db`. ORM models: Task, Pipeline, PipelineAction, PipelineBlock, PipelineVariable, GlobalVariable, App. Migrations live in `/migrations`.
 - **Engine** (`src/engine/`) — `Core.ts` is the main API (run/exec/list); `Server.ts` is the embedded HTTP server; `IpcTaskListener.ts` handles incoming IPC messages from CLI and Desktop.
 
 Path aliases in `apps/core` (defined in tsconfig, resolved by `tsc-alias` on build):

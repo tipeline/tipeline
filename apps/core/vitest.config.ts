@@ -6,7 +6,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
-    // Tests seal values too, and must not create the real key in ~/Tipeline.
+    // Tests seal values too, and must not create the real key in ~/.tipeline.
     env: { TIPELINE_SECRET_KEY_FILE: path.join(os.tmpdir(), `tipeline-test-secret-${process.pid}.key`) },
   },
   resolve: {

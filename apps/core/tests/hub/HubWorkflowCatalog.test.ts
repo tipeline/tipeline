@@ -166,11 +166,18 @@ describe('HubWorkflowCatalog.preview', () => {
   });
 
   it('tells a turned-off plugin from one that is on but not loaded', async () => {
-    vi.mocked(PluginService.getByGroup).mockResolvedValueOnce({ name: 'Greeting', status: 'ok', enabled: false } as any);
+    vi.mocked(PluginService.getByGroup).mockResolvedValueOnce({
+      identifier: 'greeting',
+      name: 'Greeting',
+      status: 'ok',
+      enabled: false,
+    } as any);
+    // The identifier comes along, so the install dialog can turn the plugin on.
     expect((await HubWorkflowCatalog.preview('h1', 'greet')).missingPlugins[0]).toEqual({
       group: 'hubGreeting',
       state: 'disabled',
       pluginName: 'Greeting',
+      pluginIdentifier: 'greeting',
     });
 
     vi.mocked(PluginService.getByGroup).mockResolvedValueOnce({ name: 'Greeting', status: 'ok', enabled: true } as any);

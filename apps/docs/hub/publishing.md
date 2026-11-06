@@ -82,7 +82,7 @@ See [Shipping workflows with an app](/apps/#shipping-workflows-with-an-app).
 
 `file` points to a **zip** of the plugin folder: `index.mjs` (or `index.js`) at its root,
 and a `package.json` if it has dependencies. Tipeline extracts it to
-`~/Tipeline/plugins/<identifier>` and runs `npm install` there. See
+`~/.tipeline/plugins/<identifier>` and runs `npm install` there. See
 [Writing a plugin](/hub/plugins#writing-a-plugin).
 
 ### Checksums

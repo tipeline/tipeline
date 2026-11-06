@@ -143,7 +143,7 @@ wscat -c ws://localhost:4001 -H "Authorization: Bearer $TOKEN"
 
 By default Core runs tasks locally with Bree (worker threads). To distribute execution across separate Docker workers instead:
 
-**Configure Core as orchestrator-only** — edit `~/Tipeline/config.json` on the host:
+**Configure Core as orchestrator-only** — edit `~/.tipeline/config.json` on the host:
 
 ```json
 { "runner": "bullmq", "redis": "redis://redis:6379", "concurrency": 0 }

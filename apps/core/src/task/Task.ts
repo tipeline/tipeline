@@ -188,7 +188,7 @@ export class Task {
 
   // Checks valueFromEnvFile (if given) before falling back to process.env —
   // lets a task pin its own env file instead of relying on the single shared
-  // ~/Tipeline/.env or whatever happens to be set on the host process.
+  // ~/.tipeline/.env or whatever happens to be set on the host process.
   private resolveEnvValue(key: string, filePath?: string): string | undefined {
     if (filePath) {
       const resolved = filePath.startsWith('~')

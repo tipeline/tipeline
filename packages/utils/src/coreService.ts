@@ -32,7 +32,7 @@ export function coreServiceFile(platform: NodeJS.Platform = process.platform): s
   const name = serviceName();
   if (platform === 'darwin')
     return path.join(homedir(), 'Library', 'LaunchAgents', `${name}.plist`);
-  if (platform === 'win32') return path.join(homedir(), 'Tipeline', `${name}.vbs`);
+  if (platform === 'win32') return path.join(homedir(), '.tipeline', `${name}.vbs`);
   return path.join(homedir(), '.config', 'systemd', 'user', `${name}.service`);
 }
 

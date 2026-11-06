@@ -8,7 +8,7 @@ import knexFactory, { type Knex } from 'knex';
 import { Model } from 'objection';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Images live under ~/Tipeline/assets — point that at a scratch folder.
+// Images live under ~/.tipeline/assets — point that at a scratch folder.
 const tipelineDir = vi.hoisted(() => {
   const nodeFs = require('fs') as typeof import('fs');
   const nodeOs = require('os') as typeof import('os');

@@ -8,7 +8,7 @@ description: |
 
   **Setup**
 
-  Copy or symlink `examples/plugins/invoicing/` to `~/Tipeline/plugins/invoicing/`, so it's loaded when Core starts.
+  Copy or symlink `examples/plugins/invoicing/` to `~/.tipeline/plugins/invoicing/`, so it's loaded when Core starts.
 
   **Template syntax**
 

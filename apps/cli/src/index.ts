@@ -235,7 +235,7 @@ remote
   .description('Add a remote Core connection')
   .argument('<name>', 'A short name for the connection')
   .argument('<host>', 'WebSocket URL of the remote core (e.g. ws://192.168.1.10:4000)')
-  .argument('<token>', "The remote core's API token, from its ~/Tipeline/.database/core.token")
+  .argument('<token>', "The remote core's API token, from its ~/.tipeline/.database/core.token")
   .action((name, host, token) => CommandService.remoteAdd(name, host, token));
 
 remote

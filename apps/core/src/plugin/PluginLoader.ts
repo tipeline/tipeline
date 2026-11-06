@@ -13,7 +13,7 @@ import { PluginSchemaRegistry } from '@/plugin/PluginSchemaRegistry';
 import { PluginReturnsRegistry } from '@/plugin/PluginReturnsRegistry';
 import { PluginCacheableRegistry } from '@/plugin/PluginCacheableRegistry';
 
-export const PLUGINS_DIR = path.join(os.homedir(), 'Tipeline', 'plugins');
+export const PLUGINS_DIR = path.join(os.homedir(), '.tipeline', 'plugins');
 /** Where hub packages are built before they replace an installed plugin. Never scanned. */
 export const PLUGIN_STAGING_DIR = '.staging';
 
@@ -187,7 +187,7 @@ export class PluginLoader {
 
   /**
    * A plugin's `image` is either a remote URL, or a path relative to its own
-   * folder — resolved here to a path relative to `~/Tipeline` (matching how
+   * folder — resolved here to a path relative to `~/.tipeline` (matching how
    * App/Task images are stored) so the same `tipeline-asset://` protocol
    * handler can serve it.
    */

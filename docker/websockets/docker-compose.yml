@@ -17,7 +17,7 @@ services:
 
     volumes:
       # Persist the SQLite database and config across restarts
-      - tipeline-data:/root/Tipeline
+      - tipeline-data:/root/.tipeline
 
     healthcheck:
       # The container is healthy once the WebSocket port is open

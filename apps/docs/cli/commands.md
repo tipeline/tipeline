@@ -13,7 +13,7 @@ npm link   # installs `tipeline` globally
 ## Service Control
 
 ### `tipeline install`
-Create the `~/Tipeline` folders and configuration. `--force` overwrites an existing configuration.
+Create the `~/.tipeline` folders and configuration. `--force` overwrites an existing configuration.
 
 ```bash
 tipeline install
@@ -370,7 +370,7 @@ Install and update workflows, apps and plugins from [hubs](/hub/).
 | `tipeline hub remove <id>` | Remove a hub. Nothing installed from it is uninstalled |
 | `tipeline hub enable <id>` / `disable <id>` | Turn a hub on or off |
 | `tipeline hub catalog <id>` | List the workflows, apps and plugins a hub offers |
-| `tipeline hub install <type> <hubId> <itemIdentifier>` | Install an item. `type` is `workflow` (or `task`), `app` or `plugin` |
+| `tipeline hub install <type> <hubId> <itemIdentifier>` | Install an item. `type` is `workflow` (or `task`), `app` or `plugin`. A plugin is installed turned off (`tipeline plugin enable <identifier>`). A workflow whose plugins aren't installed or are off isn't installed: the command names each one with the commands that fix it |
 | `tipeline hub check [id]` | Check one hub, or all enabled hubs, for updates now instead of waiting for the hourly check. Says what each one returned, and exits with `1` if any couldn't be reached |
 | `tipeline hub updates` | List what needs you, such as a major version waiting for approval, and what was installed recently |
 | `tipeline hub update <type> <identifier>` | Install the version a hub offers, including a waiting major version. `type` is `workflow` (or `task`), `app` or `plugin` |
@@ -404,7 +404,7 @@ See [Assistant in the Terminal](/assistant/cli) for scripts, exit codes and envi
 ## Remote Connection Commands
 
 The CLI can control a **remote** Core engine over its WebSocket port (`4000`), using the API
-token saved in that machine's `~/Tipeline/.database/core.token`. That Core has to be started with
+token saved in that machine's `~/.tipeline/.database/core.token`. That Core has to be started with
 `TIPELINE_BIND_HOST` set, because it only accepts connections from its own machine by default (see
 [Security](/guide/connect-other-tools#security)).
 

@@ -22,7 +22,7 @@ export interface VariableObject {
   name: string;
   value?: any;
   valueFromEnv?: string;
-  /** Only used alongside valueFromEnv. An optional path (supports a leading `~`) to a dotenv-format file to check for valueFromEnv's key before falling back to process.env — lets a task pin its own env file instead of relying on the shared ~/Tipeline/.env or the process environment. */
+  /** Only used alongside valueFromEnv. An optional path (supports a leading `~`) to a dotenv-format file to check for valueFromEnv's key before falling back to process.env — lets a task pin its own env file instead of relying on the shared ~/.tipeline/.env or the process environment. */
   valueFromEnvFile?: string;
   valueFromGlobal?: string;
   required?: boolean;

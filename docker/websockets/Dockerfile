@@ -54,7 +54,7 @@ COPY --from=builder /build/apps/core/dist             ./apps/core/dist
 COPY package.json ./
 
 # Persistent data directory (mount a volume over this path)
-RUN mkdir -p /root/Tipeline/.database /root/Tipeline/logs
+RUN mkdir -p /root/.tipeline/.database /root/.tipeline/logs
 
 EXPOSE 4000
 

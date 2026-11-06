@@ -197,7 +197,7 @@ Core.scheduleRemove(scheduleIdentifier: string): Promise<void>
 
 ```typescript
 Core.pluginList()
-Core.pluginScan()                                   // re-read ~/Tipeline/plugins
+Core.pluginScan()                                   // re-read ~/.tipeline/plugins
 Core.pluginDetail(identifier: string)
 Core.pluginSetEnabled(identifier: string, enabled: boolean)
 Core.pluginRemove(identifier: string)

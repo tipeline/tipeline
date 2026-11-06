@@ -7,7 +7,7 @@ import { DatabaseManager } from '@database/DatabaseManager';
 
 const force = process.argv.includes('--force');
 
-const tipelineDir = path.join(os.homedir(), 'Tipeline');
+const tipelineDir = path.join(os.homedir(), '.tipeline');
 const configFilePath = path.join(tipelineDir, 'database.json');
 const runnerConfigPath = path.join(tipelineDir, 'config.json');
 

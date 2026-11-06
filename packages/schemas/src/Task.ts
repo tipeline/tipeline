@@ -69,7 +69,7 @@ export const taskMetaSchema = z.object({
     })
     .transform(normalizeTagLabels)
     .optional(),
-  // Relative path under `~/Tipeline` (e.g. "assets/tasks/<id>.png"), populated by the
+  // Relative path under `~/.tipeline` (e.g. "assets/tasks/<id>.png"), populated by the
   // image-upload IPC channel once the task already has an identifier — never submitted
   // directly by a form, hence omitted from taskMetaCreationSchema below.
   image: z.string().optional(),

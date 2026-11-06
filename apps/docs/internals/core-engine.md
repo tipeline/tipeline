@@ -14,7 +14,7 @@ The Core engine (`apps/core`) is the long-lived background process that runs eve
 | **Task orchestration** | Loads task definitions, resolves variables, sequences action execution |
 | **Pipeline persistence** | Records every run to SQLite with per-action status for history, resume and debug |
 | **Scheduling and jobs** | Runs schedules, and hands every run to a job runner (Bree or BullMQ) |
-| **Hubs and plugins** | Loads plugins from `~/Tipeline/plugins`, checks hubs for updates every hour |
+| **Hubs and plugins** | Loads plugins from `~/.tipeline/plugins`, checks hubs for updates every hour |
 | **Transports** | Answers over IPC (local), WebSocket (remote, port 4000) and MCP (AI clients, port 4002) |
 
 ## Entry Points
@@ -34,19 +34,19 @@ CLI (`tipeline start`) and Desktop (`CoreLauncher.ts`) each spawn `dist/engine/S
 detached process, so Core keeps running after they close, or through the auto-start service when
 it's on. There is no process manager of our own.
 
-- **One Core at a time.** Core claims `~/Tipeline/tipeline.pid` first thing on startup
+- **One Core at a time.** Core claims `~/.tipeline/tipeline.pid` first thing on startup
   (`engine/CoreLock.ts`), before it opens the database or the IPC socket. If another Core holds
   it, the new one exits. Launchers never write this file; they only read it, through
   `@tipeline/utils/coreProcess`.
 - **Stale files.** A hard kill or a reboot leaves the file behind. A pid only counts if that
   process's command line is a Core, so a pid reused by another program is ignored, never signaled.
 - **Fatal errors.** An uncaught exception or unhandled rejection is logged to
-  `~/Tipeline/logs/start.log` and Core exits with code 1.
+  `~/.tipeline/logs/start.log` and Core exits with code 1.
 - **Auto-start** (`@tipeline/utils/coreService`). A launchd agent on macOS, a systemd user service
   on Linux, the per-user Run key on Windows. launchd and systemd restart Core after a non-zero
   exit or a kill; a normal stop or a duplicate Core exits 0 and stays down. Windows only starts it
   at login. On by default in the packaged app, set up on first open unless the CLI already set it
-  up (`~/Tipeline/.auto-start-decided` keeps a later "off" off), never automatically in dev builds.
+  up (`~/.tipeline/.auto-start-decided` keeps a later "off" off), never automatically in dev builds.
   The service belongs to whoever set it up: Desktop neither rewrites nor starts the CLI's, and
   `tipeline start` runs the CLI's own Core when the service is Desktop's. A service-run Core has
   `TIPELINE_SUPERVISED=1` and reports `supervised` in `Core.status()`. When Desktop's auto-start is
@@ -154,7 +154,7 @@ const task = await TaskFactory.fromSource(source, correlationId, overrides);
 
 When loading from a file, the factory:
 
-1. Loads `.env` from the task directory, then falls back to `~/Tipeline/.env`
+1. Loads `.env` from the task directory, then falls back to `~/.tipeline/.env`
 2. Calls `Parser.importFromFile()` to parse YAML or JSON
 3. Runs `TaskValidator.validateFormat()` against the task schema
 4. Instantiates `Variable` objects and `Action` objects
@@ -192,7 +192,7 @@ Core.run(payload, correlationId)       // from in-memory source
 Core.exec(identifier, variables?, stepMode?, debugMode?)  // by identifier
 ```
 
-Both submit a job to the active job runner — Bree worker threads by default, or a BullMQ queue when `~/Tipeline/config.json` says so. See [Job Runners](/internals/job-runners).
+Both submit a job to the active job runner — Bree worker threads by default, or a BullMQ queue when `~/.tipeline/config.json` says so. See [Job Runners](/internals/job-runners).
 
 ### Pipeline Management
 
@@ -224,7 +224,7 @@ Core.scheduleRemove(scheduleIdentifier)
 
 ```typescript
 Core.pluginList()
-Core.pluginScan()                      // re-read ~/Tipeline/plugins
+Core.pluginScan()                      // re-read ~/.tipeline/plugins
 Core.pluginDetail(identifier)
 Core.pluginSetEnabled(identifier, enabled)
 Core.pluginRemove(identifier)

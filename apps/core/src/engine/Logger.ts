@@ -4,7 +4,7 @@ import { inspect } from 'util';
 import fs from 'fs-extra';
 import { createStream } from 'rotating-file-stream';
 
-const logsDir = path.join(homedir(), 'Tipeline', 'logs');
+const logsDir = path.join(homedir(), '.tipeline', 'logs');
 fs.ensureDirSync(logsDir);
 
 const stream = createStream('start.log', {

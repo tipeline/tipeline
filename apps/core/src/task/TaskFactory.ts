@@ -59,13 +59,13 @@ export class TaskFactory {
     return await TaskFactory.createTask(source, identifier, correlationId);
   }
 
-  // Loads .env from the task's directory first (higher precedence), then ~/Tipeline/.env.
+  // Loads .env from the task's directory first (higher precedence), then ~/.tipeline/.env.
   // dotenv.config skips keys already set in process.env, so local always wins.
   private static loadEnvFiles(taskDir?: string): void {
     if (taskDir) {
       dotenv.config({ path: path.join(taskDir, '.env') });
     }
-    dotenv.config({ path: path.join(os.homedir(), 'Tipeline', '.env') });
+    dotenv.config({ path: path.join(os.homedir(), '.tipeline', '.env') });
   }
 
   private static async createTask(parsedTask: any, identifier: string, correlationId: string) {

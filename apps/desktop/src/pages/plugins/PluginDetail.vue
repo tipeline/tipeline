@@ -227,6 +227,7 @@ async function removePlugin() {
                 <pre class="text-xs bg-muted rounded p-3 overflow-x-auto">{{ item.example }}</pre>
               </div>
             </div>
+            <p v-else-if="!plugin.enabled" class="text-sm text-muted-foreground">{{ t('plugins.detail.turnOnForActions') }}</p>
             <p v-else class="text-sm text-muted-foreground">{{ t('plugins.detail.noActions') }}</p>
           </template>
         </Card>

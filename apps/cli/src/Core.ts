@@ -118,7 +118,7 @@ export default class Core {
   }
 
   public async start(): Promise<string> {
-    const configFile = path.join(homedir(), 'Tipeline', 'database.json');
+    const configFile = path.join(homedir(), '.tipeline', 'database.json');
     if (!fs.existsSync(configFile)) {
       throw new Error("Tipeline is not configured. Run 'tipeline install' first.");
     }
@@ -131,7 +131,7 @@ export default class Core {
     Core.ensureSqlite();
 
     const serverPath = Core.serverPath();
-    const logFile = path.join(homedir(), 'Tipeline', 'logs', 'start.log');
+    const logFile = path.join(homedir(), '.tipeline', 'logs', 'start.log');
     const logStart = Core.logSize(logFile);
 
     // Desktop's service would run Desktop's Core, not the one this CLI was installed with.

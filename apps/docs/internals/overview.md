@@ -61,7 +61,7 @@ Core's database migrations live in `apps/core/src/database/migrations`; the Serv
 | **Tipeline Server** | node-ipc socket to a Core on the same machine | Server accounts and tokens, checked by the Server |
 
 The **Core API token** is created on first start and saved to
-`~/Tipeline/.database/core.token`. Anyone holding it has full access to that Core.
+`~/.tipeline/.database/core.token`. Anyone holding it has full access to that Core.
 
 ### IPC (local)
 
@@ -84,7 +84,7 @@ Runs are handed to a **job runner**:
 
 - **Bree** (default): each run is a worker thread inside Core. Nothing to install.
 - **BullMQ**: runs go on a Redis queue, and worker processes — possibly on other
-  machines — pick them up. Opt-in through `~/Tipeline/config.json`.
+  machines — pick them up. Opt-in through `~/.tipeline/config.json`.
 
 Schedules are registered with the same runner (Bree cron, interval or date jobs, or BullMQ
 repeatable and delayed jobs),

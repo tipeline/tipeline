@@ -96,8 +96,8 @@ describe('sealExistingSecrets', () => {
     await knex('hub').insert({ id: 'h-1', name: 'Team', type: 'remote', target: 'https://x.test', token: 'hub-plain', enabled: true });
     await knex('hub').insert({ id: 'h-2', name: 'Open', type: 'local_folder', target: '/tmp', token: null, enabled: true });
     await knex('connections').insert({ id: 'c-1', name: 'Prod', host: 'ws://x.test', token: 'remote-plain' });
-    fs.mkdirSync(path.join(home, 'Tipeline', 'logs'), { recursive: true });
-    fs.writeFileSync(path.join(home, 'Tipeline', 'logs', 'start.log'), 'x Tipeline Core API token: abc123\nother line\n');
+    fs.mkdirSync(path.join(home, '.tipeline', 'logs'), { recursive: true });
+    fs.writeFileSync(path.join(home, '.tipeline', 'logs', 'start.log'), 'x Tipeline Core API token: abc123\nother line\n');
     await sealExistingSecrets();
   });
 
@@ -136,7 +136,7 @@ describe('sealExistingSecrets', () => {
   });
 
   it('removes the token from old logs', () => {
-    const log = fs.readFileSync(path.join(home, 'Tipeline', 'logs', 'start.log'), 'utf8');
+    const log = fs.readFileSync(path.join(home, '.tipeline', 'logs', 'start.log'), 'utf8');
     expect(log).not.toContain('abc123');
     expect(log).toContain('other line');
   });

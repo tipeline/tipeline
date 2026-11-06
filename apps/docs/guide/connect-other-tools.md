@@ -24,7 +24,7 @@ You also need two things:
   starts, and saves it here:
 
   ```bash
-  cat ~/Tipeline/.database/core.token
+  cat ~/.tipeline/.database/core.token
   ```
 
 - **The workflow's identifier**, such as `abc123def456ghi7890xy`. Find it on the workflow's
@@ -107,7 +107,7 @@ import WebSocket from 'ws';
 import { readFileSync } from 'fs';
 import { randomUUID } from 'crypto';
 
-const token = readFileSync(`${process.env.HOME}/Tipeline/.database/core.token`, 'utf8').trim();
+const token = readFileSync(`${process.env.HOME}/.tipeline/.database/core.token`, 'utf8').trim();
 const ws = new WebSocket('ws://127.0.0.1:4000', {
   headers: { Authorization: `Bearer ${token}` },
 });
@@ -214,7 +214,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { readFileSync } from 'fs';
 
-const token = readFileSync(`${process.env.HOME}/Tipeline/.database/core.token`, 'utf8').trim();
+const token = readFileSync(`${process.env.HOME}/.tipeline/.database/core.token`, 'utf8').trim();
 const transport = new StreamableHTTPClientTransport(new URL('http://127.0.0.1:4002/mcp'), {
   requestInit: { headers: { Authorization: `Bearer ${token}` } },
 });
@@ -242,7 +242,7 @@ For Claude Code:
 
 ```bash
 claude mcp add --transport http tipeline http://127.0.0.1:4002/mcp \
-  --header "Authorization: Bearer $(cat ~/Tipeline/.database/core.token)"
+  --header "Authorization: Bearer $(cat ~/.tipeline/.database/core.token)"
 ```
 
 Setup for other tools, the full list of MCP tools (searching workflows, drafting new ones…)

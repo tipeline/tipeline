@@ -22,7 +22,7 @@ services:
       TIPELINE_IPC_SOCKET_ROOT: /tmp/tipeline/
     volumes:
       - ipc-socket:/tmp/tipeline
-      - tipeline-data:/root/Tipeline
+      - tipeline-data:/root/.tipeline
     restart: unless-stopped
 
   server:
