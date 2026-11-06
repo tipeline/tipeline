@@ -3,7 +3,6 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { BotIcon, HistoryIcon, SquarePenIcon, XIcon, ArrowUpIcon } from 'lucide-vue-next';
-import { PROVIDER_LABELS, type ProviderName } from '@tipeline/agent/provider-names';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import AgentTurnView from '@/components/agent/AgentTurnView.vue';
@@ -21,9 +20,25 @@ const draft = ref('');
 const composer = ref<InstanceType<typeof Textarea> | null>(null);
 const thread = ref<HTMLElement | null>(null);
 
-const providerLabel = computed(() => {
-  const provider = settingsStore.get('agent_provider', 'deepseek') as ProviderName;
-  return PROVIDER_LABELS[provider] ?? provider;
+// Settings may still be on their way: until they're in, show neither the provider nor setup.
+const settingsReady = ref(Object.keys(settingsStore.settings).length > 0);
+/** No provider set up yet: the panel says what's needed instead of greeting. */
+const needsSetup = computed(() => settingsReady.value && !agentStore.configured);
+/** The dashboard sent a request before setup: it's in the box, to send once a provider is set up. */
+const requestKept = ref(false);
+
+watch(
+  () => agentStore.pendingPrompt,
+  (text) => {
+    if (!text) return;
+    if (!draft.value.trim()) draft.value = text;
+    agentStore.pendingPrompt = '';
+    requestKept.value = true;
+  },
+  { immediate: true }
+);
+watch(() => agentStore.configured, (configured) => {
+  if (configured) requestKept.value = false;
 });
 
 function focusComposer() {
@@ -33,12 +48,15 @@ function focusComposer() {
 
 onMounted(async () => {
   await settingsStore.load().catch(() => {});
+  settingsReady.value = true;
   focusComposer();
 });
 
 async function send() {
   const text = draft.value.trim();
   if (!text || agentStore.busyThinking) return;
+  // Not set up: nothing can answer yet (Send is off too), so the request stays in the box.
+  if (needsSetup.value) return;
   if (await agentStore.submit(text)) draft.value = '';
 }
 
@@ -51,7 +69,7 @@ function onKeydown(e: KeyboardEvent) {
 
 // Follow the conversation as turns are added and change phase.
 watch(
-  () => agentStore.turns.map((turn) => turn.phase).join() + agentStore.pendingPrompt,
+  () => agentStore.turns.map((turn) => turn.phase).join() + String(needsSetup.value),
   async () => {
     await nextTick();
     thread.value?.scrollTo({ top: thread.value.scrollHeight, behavior: 'smooth' });
@@ -100,7 +118,22 @@ function newChat() {
       <div class="flex items-center gap-2 border-b px-4 h-14 shrink-0">
         <BotIcon class="w-4 h-4 text-muted-foreground" />
         <span class="text-sm font-medium">{{ t('agent.sidebar.title') }}</span>
-        <span class="text-[11px] text-muted-foreground border rounded-full px-2 py-0.5">{{ providerLabel }}</span>
+        <button
+          v-if="agentStore.providerLabel"
+          type="button"
+          class="text-[11px] text-muted-foreground border rounded-full px-2 py-0.5 hover:text-foreground"
+          :title="t('agent.sidebar.providerTitle')"
+          @click="router.push('/settings/agent')"
+        >
+          {{ agentStore.providerLabel }}
+        </button>
+        <span
+          v-else-if="settingsReady"
+          class="text-[11px] text-muted-foreground border border-dashed rounded-full px-2 py-0.5"
+          :title="t('agent.sidebar.notSetUpTitle')"
+        >
+          {{ t('agent.sidebar.notSetUp') }}
+        </span>
         <div class="ml-auto flex items-center gap-1">
           <Button variant="ghost" size="icon" class="h-8 w-8" :title="t('agent.sidebar.newChat')" @click="newChat">
             <SquarePenIcon class="w-4 h-4" />
@@ -115,13 +148,13 @@ function newChat() {
       </div>
 
       <div ref="thread" class="flex-1 min-h-0 overflow-y-auto scroll-fade px-4 py-4 space-y-6">
-        <div v-if="agentStore.turns.length === 0 && !agentStore.pendingPrompt" class="h-full flex flex-col items-center justify-center text-center px-6">
+        <div v-if="agentStore.turns.length === 0 && !needsSetup" class="h-full flex flex-col items-center justify-center text-center px-6">
           <BotIcon class="w-10 h-10 mb-3 text-muted-foreground/40" />
           <p class="text-sm font-medium">{{ t('agent.sidebar.emptyTitle') }}</p>
           <p class="text-xs text-muted-foreground mt-1 max-w-[30ch]">{{ t('agent.sidebar.emptyDescription') }}</p>
         </div>
         <AgentTurnView v-for="turn in agentStore.turns" :key="turn.id" :turn="turn" />
-        <AgentSetupCard v-if="agentStore.pendingPrompt" />
+        <AgentSetupCard v-if="needsSetup" :request-kept="requestKept" />
       </div>
 
       <div class="border-t p-3 space-y-2 shrink-0">
@@ -147,7 +180,7 @@ function newChat() {
         />
         <div class="flex items-center justify-between gap-2">
           <span class="text-[11px] text-muted-foreground">{{ t('agent.sidebar.hint') }}</span>
-          <Button size="sm" :disabled="!draft.trim() || agentStore.busyThinking" @click="send">
+          <Button size="sm" :disabled="!draft.trim() || agentStore.busyThinking || needsSetup" @click="send">
             <ArrowUpIcon class="w-3.5 h-3.5 mr-1" /> {{ t('agent.sidebar.send') }}
           </Button>
         </div>

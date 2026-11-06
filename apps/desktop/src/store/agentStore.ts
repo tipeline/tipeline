@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import { generateIdentifier } from '@tipeline/utils';
-import { PROVIDER_LABELS, type ProviderName } from '@tipeline/agent/provider-names';
+import { PROVIDERS, PROVIDER_LABELS, type ProviderName } from '@tipeline/agent/provider-names';
 import type { ChoiceOption, DraftOutcome, ReusedWorkflow, RunProposal, RunResult } from '@tipeline/agent';
 import {
   CHOICE_MEMORY_SETTING,
@@ -153,7 +153,7 @@ export const useAgentStore = defineStore('agent', () => {
   );
   const history = ref<AgentRunRecord[]>([]);
   const historyLoading = ref(false);
-  /** A request sent before any provider was set up: the sidebar asks for a key, then sends it. */
+  /** A request sent before any provider was set up: the sidebar puts it back in its box. */
   const pendingPrompt = ref('');
   /** The project of the page the user is on: its instructions go with their requests. */
   const activeProject = ref<ActiveProject | null>(null);
@@ -343,10 +343,33 @@ export const useAgentStore = defineStore('agent', () => {
     if (!turn(id)?.livePipeline) streamWatches.set(id, watch(() => streamStore.events.length, tryMatch));
   }
 
+  /**
+   * The provider the user picked, or else the one they gave a key to. None on a fresh
+   * install: no provider comes with Tipeline, so none is shown until the user chooses.
+   */
+  function chosenProvider(): ProviderName | null {
+    const settingsStore = useSettingsStore();
+    const stored = settingsStore.get('agent_provider') as ProviderName;
+    if ((PROVIDERS as readonly string[]).includes(stored)) return stored;
+    return PROVIDERS.find((provider) => settingsStore.get(`agent_${provider}_api_key`)) ?? null;
+  }
+
+  /** The chosen provider has a key: the Assistant can answer. */
+  const configured = computed(() => {
+    const provider = chosenProvider();
+    return !!provider && !!useSettingsStore().get(`agent_${provider}_api_key`);
+  });
+
+  /** The chosen provider's name, only once it's set up. */
+  const providerLabel = computed(() => {
+    const provider = chosenProvider();
+    return configured.value && provider ? PROVIDER_LABELS[provider] : '';
+  });
+
   async function connection(): Promise<AgentConnection | null> {
     const settingsStore = useSettingsStore();
-    const provider = settingsStore.get('agent_provider', 'deepseek') as ProviderName;
-    const apiKey = settingsStore.get(`agent_${provider}_api_key`);
+    const provider = chosenProvider();
+    const apiKey = provider ? settingsStore.get(`agent_${provider}_api_key`) : '';
     const baseURL = settingsStore.get(`agent_${provider}_base_url`) || undefined;
     const model = settingsStore.get(`agent_${provider}_model`) || undefined;
     const mcpUrl = settingsStore.get('agent_mcp_url', 'http://127.0.0.1:4002/mcp');
@@ -358,9 +381,11 @@ export const useAgentStore = defineStore('agent', () => {
       mcpToken = await settingsStore.getApiToken().catch(() => '');
     }
 
-    if (!apiKey || !mcpToken) {
+    if (!provider || !apiKey || !mcpToken) {
       toast.error(t('agent.notConfigured'), {
-        description: t('agent.notConfiguredDescription', { provider: PROVIDER_LABELS[provider] ?? provider }),
+        description: provider
+          ? t('agent.notConfiguredDescription', { provider: PROVIDER_LABELS[provider] ?? provider })
+          : t('agent.notConfiguredNoProvider'),
         action: { label: t('agent.openSettings'), onClick: () => router.push('/settings/agent') },
       });
       return null;
@@ -368,20 +393,15 @@ export const useAgentStore = defineStore('agent', () => {
     return { provider, apiKey, baseURL, model, mcpToken, mcpUrl };
   }
 
-  function hasProviderKey() {
-    const settingsStore = useSettingsStore();
-    const provider = settingsStore.get('agent_provider', 'deepseek');
-    return !!settingsStore.get(`agent_${provider}_api_key`);
-  }
-
   /**
    * Sends a request. Before any provider key is set, the request waits in `pendingPrompt`
-   * and the sidebar opens on its setup step instead of failing (returns true: it was taken).
+   * and the sidebar opens on its setup message instead of failing; the sidebar puts the
+   * request back in its box to send once set up (returns true: it was taken).
    */
   async function submit(text: string) {
     const settingsStore = useSettingsStore();
     if (!Object.keys(settingsStore.settings).length) await settingsStore.load().catch(() => {});
-    if (!hasProviderKey()) {
+    if (!configured.value) {
       pendingPrompt.value = text;
       sidebarOpen.value = true;
       return true;
@@ -409,15 +429,6 @@ export const useAgentStore = defineStore('agent', () => {
   function ask(text: string) {
     sidebarOpen.value = true;
     return submit(text);
-  }
-
-  /** The sidebar's setup step: saves the provider and its key, then sends the waiting request. */
-  async function connectProvider(provider: ProviderName, apiKey: string) {
-    const settingsStore = useSettingsStore();
-    await settingsStore.set('agent_provider', provider);
-    await settingsStore.set(`agent_${provider}_api_key`, apiKey.trim());
-    const text = pendingPrompt.value;
-    if (text) await submit(text);
   }
 
   /** Runs a proposal with the values from its form. */
@@ -629,6 +640,9 @@ export const useAgentStore = defineStore('agent', () => {
   }
 
   return {
+    configured,
+    providerLabel,
+    chosenProvider,
     turns,
     sidebarOpen,
     sidebarWidth,
@@ -641,7 +655,6 @@ export const useAgentStore = defineStore('agent', () => {
     refreshActiveProject,
     submit,
     ask,
-    connectProvider,
     runProposal,
     scheduleProposal,
     dismissProposal,
