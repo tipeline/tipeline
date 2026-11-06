@@ -1,7 +1,7 @@
 # Job Runners
 
 Core never runs a workflow inline: it hands each run to a **job runner**. Which one is
-chosen when Core starts, from `~/Tipeline/config.json` (`src/engine/runner/JobRunnerFactory.ts`).
+chosen when Core starts, from `~/.tipeline/config.json` (`src/engine/runner/JobRunnerFactory.ts`).
 
 | Runner | When | What it does |
 |--------|------|--------------|
@@ -10,7 +10,7 @@ chosen when Core starts, from `~/Tipeline/config.json` (`src/engine/runner/JobRu
 
 ## Configuration
 
-`~/Tipeline/config.json`:
+`~/.tipeline/config.json`:
 
 ```json
 { "runner": "bree", "concurrency": 10 }
@@ -42,7 +42,7 @@ Both runners take the same schedules (`src/engine/runner/scheduleTiming.ts`):
 
 `docker/distributed/` has a Docker Compose setup with Redis and two worker containers.
 
-1. Make your local Core an orchestrator. In `~/Tipeline/config.json`:
+1. Make your local Core an orchestrator. In `~/.tipeline/config.json`:
 
    ```json
    { "runner": "bullmq", "redis": "redis://localhost:6379", "concurrency": 0 }
@@ -65,7 +65,7 @@ Both runners take the same schedules (`src/engine/runner/scheduleTiming.ts`):
 
 5. Stop everything with `docker compose down`.
 
-The workers mount `~/Tipeline` at the same absolute path as the host, so the database path
+The workers mount `~/.tipeline` at the same absolute path as the host, so the database path
 stored in `database.json` resolves inside the container too. Each worker reads
 `REDIS_URL`, `WORKER_CONCURRENCY` and `WORKER_ID`.
 

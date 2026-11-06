@@ -68,7 +68,7 @@ Open **Hub** in the sidebar to browse every enabled hub's catalog, and click **I
 - **Workflows** are installed like any other and keep a link to their hub.
 - **Apps** install the workflows they use from the same hub too (or reuse them if they're
   already installed).
-- **Plugins** are downloaded into `~/Tipeline/plugins`, and Tipeline runs `npm install` in
+- **Plugins** are downloaded into `~/.tipeline/plugins`, and Tipeline runs `npm install` in
   their folder. That runs code from the hub, so Tipeline asks first: only continue if you
   trust the hub. A new plugin starts **turned off** — turn it on in **Plugins**.
 

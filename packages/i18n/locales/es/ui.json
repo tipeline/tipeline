@@ -1023,7 +1023,7 @@
   "plugins": {
     "title": "Plugins",
     "searchPlaceholder": "Buscar plugins...",
-    "empty": "No se encontraron plugins. Coloca una carpeta en ~/Tipeline/plugins/ y vuelve a esta página.",
+    "empty": "No se encontraron plugins. Coloca una carpeta en ~/.tipeline/plugins/ y vuelve a esta página.",
     "disableAlert": {
       "title": "¿Desactivar plugin?",
       "cancel": "Cancelar",

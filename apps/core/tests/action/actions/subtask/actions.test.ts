@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // and then Task.run() (which unconditionally persists a pipeline record via more DB
 // services). The file-path branch resolves a child task through TaskFactory.fromFile.
 // Both are mocked at the module boundary so this suite never touches the real
-// ~/Tipeline/.database/tipeline.db or the real filesystem — we're testing GroupSubtask's
+// ~/.tipeline/.database/tipeline.db or the real filesystem — we're testing GroupSubtask's
 // own orchestration logic (circular-call detection, props/outputs propagation, error
 // handling), not the full nested Task/Pipeline execution engine.
 vi.mock('@database/services/TaskService', () => ({

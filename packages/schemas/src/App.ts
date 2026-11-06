@@ -47,7 +47,7 @@ export const appMetaSchema = z.object({
     })
     .min(1, 'app.platform.required')
     .optional(),
-  // Relative path under `~/Tipeline` (e.g. "assets/apps/<id>.png"), populated by the
+  // Relative path under `~/.tipeline` (e.g. "assets/apps/<id>.png"), populated by the
   // image-upload IPC channel once the app already has an identifier — never submitted
   // directly by a form, hence omitted from appMetaCreationSchema below.
   image: z.string().optional(),

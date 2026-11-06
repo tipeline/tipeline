@@ -4,7 +4,7 @@
 In the app and user docs, tasks are called **workflows** (and subtasks **sub-workflows**). The code, database, IPC messages and CLI keep the original `task` naming, which is what this page uses.
 :::
 
-Tipeline uses **SQLite** (via `better-sqlite3`) stored at `~/Tipeline/.database/tipeline.db`. Schema is managed with **Knex** migrations and the ORM layer uses **Objection.js**.
+Tipeline uses **SQLite** (via `better-sqlite3`) stored at `~/.tipeline/.database/tipeline.db`. Schema is managed with **Knex** migrations and the ORM layer uses **Objection.js**.
 
 ## Tables
 
@@ -203,7 +203,7 @@ rescan or a source save never overwrites it.
 | `group` | string | The action group the plugin provides |
 | `name`, `description`, `author`, `version`, `image` | string | From the plugin's export |
 | `enabled` | boolean | New plugins start disabled |
-| `path` | string | Its folder under `~/Tipeline/plugins` |
+| `path` | string | Its folder under `~/.tipeline/plugins` |
 | `status` | string | e.g. `missing` when its folder is gone |
 | `created_at`, `updated_at` | datetime | |
 

@@ -32,7 +32,7 @@ can't be global.
 | Scope | Where defined | Lifetime |
 |-------|--------------|---------|
 | `task` | Task YAML `variables` section | For the duration of the pipeline run |
-| `env` (read as `_env.KEY`) | `.env` files (task dir or `~/Tipeline/.env`) | Process lifetime |
+| `env` (read as `_env.KEY`) | `.env` files (task dir or `~/.tipeline/.env`) | Process lifetime |
 | `global` (read and written as `_global.name`) | Database `global_variable` table | Persistent across runs |
 | `core` | Set internally by the engine | Pipeline run |
 
@@ -214,10 +214,10 @@ config, counters), not live process handles.
 
 ## Environment Variables
 
-Load a `.env` file next to your task YAML for per-task secrets, or use `~/Tipeline/.env` for global defaults:
+Load a `.env` file next to your task YAML for per-task secrets, or use `~/.tipeline/.env` for global defaults:
 
 ```ini
-# ~/Tipeline/.env
+# ~/.tipeline/.env
 API_KEY=secret123
 DB_PASSWORD=hunter2
 ```

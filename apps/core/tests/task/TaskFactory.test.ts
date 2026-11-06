@@ -119,7 +119,7 @@ describe('TaskFactory', () => {
       const expectedTaskDir = path.dirname(path.resolve('./tasks/nested/example.yml'));
       expect(dotenv.config).toHaveBeenNthCalledWith(1, { path: path.join(expectedTaskDir, '.env') });
       expect(dotenv.config).toHaveBeenNthCalledWith(2, {
-        path: path.join(os.homedir(), 'Tipeline', '.env'),
+        path: path.join(os.homedir(), '.tipeline', '.env'),
       });
       expect(dotenv.config).toHaveBeenCalledTimes(2);
     });
@@ -132,7 +132,7 @@ describe('TaskFactory', () => {
       await TaskFactory.fromSource(fixture, 'id', 'corr');
 
       expect(dotenv.config).toHaveBeenCalledTimes(1);
-      expect(dotenv.config).toHaveBeenCalledWith({ path: path.join(os.homedir(), 'Tipeline', '.env') });
+      expect(dotenv.config).toHaveBeenCalledWith({ path: path.join(os.homedir(), '.tipeline', '.env') });
     });
 
     it('delegates to the same createTask path as fromFile (validates + builds a Task)', async () => {

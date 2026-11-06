@@ -83,10 +83,10 @@ further on.
 1. the environment Core was started with,
 2. a `.env` file next to the workflow file (only when you run a file, e.g.
    `tipeline workflow run report.yaml`),
-3. `~/Tipeline/.env`.
+3. `~/.tipeline/.env`.
 
 ```ini
-# ~/Tipeline/.env
+# ~/.tipeline/.env
 SMTP_HOST=smtp.gmail.com
 API_KEY=your-key-here
 ```
@@ -115,7 +115,7 @@ A value passed in when the run starts (a run form, `--var`, an app) wins over th
   as that workflow wrote it. Keep tokens in a secret global variable instead.
 - **On a Tipeline Server**, viewers see secret values as empty, and only admins can read API keys and
   tokens ([who can see what](/server/#who-can-see-credentials)).
-- The key is in `~/Tipeline/.database/secret.key`. It protects the database when it's copied on its
+- The key is in `~/.tipeline/.database/secret.key`. It protects the database when it's copied on its
   own, not from someone who can read your whole home folder. Back it up along with the database:
   without it, encrypted values can't be read and have to be set again.
 - A value **written into the workflow** (`value:` on a secret variable) stays readable in the saved

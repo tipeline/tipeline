@@ -1023,7 +1023,7 @@
   "plugins": {
     "title": "Plugins",
     "searchPlaceholder": "Search plugins...",
-    "empty": "No plugins found. Drop a folder into ~/Tipeline/plugins/ and come back to this page.",
+    "empty": "No plugins found. Drop a folder into ~/.tipeline/plugins/ and come back to this page.",
     "disableAlert": {
       "title": "Disable plugin?",
       "cancel": "Cancel",

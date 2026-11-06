@@ -26,7 +26,7 @@ services:
     # Mount to the same absolute path as on the host so the hardcoded DB path
     # inside database.json resolves correctly.
     volumes:
-      - ${HOME}/Tipeline:${HOME}/Tipeline
+      - ${HOME}/.tipeline:${HOME}/.tipeline
     depends_on:
       redis:
         condition: service_healthy
@@ -42,7 +42,7 @@ services:
       WORKER_ID: worker-2
       HOME: ${HOME}
     volumes:
-      - ${HOME}/Tipeline:${HOME}/Tipeline
+      - ${HOME}/.tipeline:${HOME}/.tipeline
     depends_on:
       redis:
         condition: service_healthy

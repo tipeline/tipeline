@@ -15,7 +15,7 @@ tipeline install   # first time only
 tipeline start
 ```
 
-`tipeline install` creates the `~/Tipeline` folders and configuration. Core then starts its IPC socket, its WebSocket server (port 4000) and its MCP server (port 4002). It keeps running in the background — you can close the terminal and it will continue.
+`tipeline install` creates the `~/.tipeline` folders and configuration. Core then starts its IPC socket, its WebSocket server (port 4000) and its MCP server (port 4002). It keeps running in the background — you can close the terminal and it will continue.
 
 ## 2. Write a Workflow File
 
@@ -107,7 +107,7 @@ tipeline workflow run my-first-workflow.yaml --var url=https://github.com
 |--------|-------------|
 | `{{ varName }}` | String interpolation (LiquidJS template) |
 | `{= varName =}` | Raw injection — keeps the original type (object, array, browser handle, …) |
-| `{{ _env.KEY }}` | A value from a `.env` file next to the workflow, `~/Tipeline/.env`, or the environment |
+| `{{ _env.KEY }}` | A value from a `.env` file next to the workflow, `~/.tipeline/.env`, or the environment |
 | `{{ _global.name }}` | A global variable |
 | `{{ _previous }}` | The previous step's result |
 

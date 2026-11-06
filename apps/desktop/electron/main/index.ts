@@ -17,18 +17,25 @@ import { mediaResponse, playableMediaFile } from './utils/appMedia';
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Serves images stored on disk under `~/Tipeline` (App/Task uploads, Plugin
-// icons) to the renderer as `tipeline-asset://<path relative to ~/Tipeline>`.
-// A protocol handler (rather than base64-over-IPC) so a card grid can rely on
-// the browser's normal <img> caching instead of re-reading/re-encoding the
-// same file from disk on every render. Must be registered as privileged
-// before app.whenReady() resolves.
+// Serves files a workflow wrote under `~/Tipeline` (an app's Image, PDF, Embed)
+// to the renderer as `tipeline-asset://<path>`. Protocol handlers (rather than
+// base64-over-IPC) so a card grid can rely on the browser's normal <img> caching
+// instead of re-reading/re-encoding the same file from disk on every render.
+// Must be registered as privileged before app.whenReady() resolves.
 const TIPELINE_ASSET_SCHEME = 'tipeline-asset';
 const TIPELINE_DIR = path.join(os.homedir(), 'Tipeline');
+// Core's own images in its data folder (App/Task uploads, Plugin icons), as
+// `tipeline-data://<path relative to ~/.tipeline>` — only from its assets and
+// plugins folders. Apps can't name this scheme: their sources accept file paths,
+// which go to tipeline-asset://.
+const TIPELINE_DATA_SCHEME = 'tipeline-data';
+const DATA_DIR = path.join(os.homedir(), '.tipeline');
+const DATA_SERVED_DIRS = ['assets', 'plugins'].map((dir) => path.join(DATA_DIR, dir) + path.sep);
 // An app's video and audio files (see utils/appMedia): streamed, so players can seek.
 const TIPELINE_MEDIA_SCHEME = 'tipeline-media';
 protocol.registerSchemesAsPrivileged([
   { scheme: TIPELINE_ASSET_SCHEME, privileges: { secure: true, supportFetchAPI: true } },
+  { scheme: TIPELINE_DATA_SCHEME, privileges: { secure: true, supportFetchAPI: true } },
   { scheme: TIPELINE_MEDIA_SCHEME, privileges: { secure: true, stream: true } },
 ]);
 
@@ -64,6 +71,17 @@ function registerAssetProtocol() {
     const relativePath = raw.startsWith('~/') ? path.join(os.homedir(), raw.slice(2)) : raw;
     const resolved = path.resolve(TIPELINE_DIR, relativePath);
     if (!resolved.startsWith(TIPELINE_DIR + path.sep) || !fs.existsSync(resolved)) {
+      return new Response(null, { status: 404 });
+    }
+    return net.fetch(pathToFileURL(resolved).toString());
+  });
+}
+
+function registerDataProtocol() {
+  protocol.handle(TIPELINE_DATA_SCHEME, (request) => {
+    const raw = decodeURIComponent(request.url.replace(`${TIPELINE_DATA_SCHEME}://`, '').split('?')[0]);
+    const resolved = path.resolve(DATA_DIR, raw);
+    if (!DATA_SERVED_DIRS.some((dir) => resolved.startsWith(dir)) || !fs.existsSync(resolved)) {
       return new Response(null, { status: 404 });
     }
     return net.fetch(pathToFileURL(resolved).toString());
@@ -175,6 +193,7 @@ function fencePermissions() {
 app.whenReady().then(() => {
   fencePermissions();
   registerAssetProtocol();
+  registerDataProtocol();
   registerMediaProtocol();
   createWindow();
   startAppUpdater(() => win).catch((err) => console.warn('[AppUpdater]', err?.message ?? err));

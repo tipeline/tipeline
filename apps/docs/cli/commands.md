@@ -13,7 +13,7 @@ npm link   # installs `tipeline` globally
 ## Service Control
 
 ### `tipeline install`
-Create the `~/Tipeline` folders and configuration. `--force` overwrites an existing configuration.
+Create the `~/.tipeline` folders and configuration. `--force` overwrites an existing configuration.
 
 ```bash
 tipeline install
@@ -404,7 +404,7 @@ See [Assistant in the Terminal](/assistant/cli) for scripts, exit codes and envi
 ## Remote Connection Commands
 
 The CLI can control a **remote** Core engine over its WebSocket port (`4000`), using the API
-token saved in that machine's `~/Tipeline/.database/core.token`. That Core has to be started with
+token saved in that machine's `~/.tipeline/.database/core.token`. That Core has to be started with
 `TIPELINE_BIND_HOST` set, because it only accepts connections from its own machine by default (see
 [Security](/guide/connect-other-tools#security)).
 

@@ -31,10 +31,10 @@ const ws = new WebSocket('ws://host:4000', {
 ```
 
 The token is created on first start and stored in the `settings` table (`apiToken`). Core
-prints it every time it starts, and writes it to `~/Tipeline/.database/core.token`:
+prints it every time it starts, and writes it to `~/.tipeline/.database/core.token`:
 
 ```bash
-cat ~/Tipeline/.database/core.token
+cat ~/.tipeline/.database/core.token
 ```
 
 A connection without the right token is closed with code `4001` (`Unauthorized`).

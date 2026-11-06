@@ -8,7 +8,7 @@ import path from 'path';
 // (that would require IPC to stay unauthenticated for the fetch).
 function readCoreToken(): string {
   try {
-    return fs.readFileSync(path.join(os.homedir(), 'Tipeline', '.database', 'core.token'), 'utf8').trim();
+    return fs.readFileSync(path.join(os.homedir(), '.tipeline', '.database', 'core.token'), 'utf8').trim();
   } catch {
     return '';
   }

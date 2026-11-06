@@ -11,7 +11,7 @@ interface RunnerConfig {
   concurrency?: number;
 }
 
-const CONFIG_PATH = path.join(os.homedir(), 'Tipeline', 'config.json');
+const CONFIG_PATH = path.join(os.homedir(), '.tipeline', 'config.json');
 
 let instance: IJobRunner | null = null;
 
@@ -30,7 +30,7 @@ export function initJobRunner(overrides?: RunnerConfig): IJobRunner {
   const config = { ...loadConfig(), ...overrides };
 
   if (config.runner === 'bullmq') {
-    if (!config.redis) throw new Error('BullMQ runner requires a "redis" URL in ~/Tipeline/config.json');
+    if (!config.redis) throw new Error('BullMQ runner requires a "redis" URL in ~/.tipeline/config.json');
     instance = new BullMQRunner(config.redis, config.concurrency ?? 4);
   } else {
     instance = new BreeRunner(config.concurrency ?? 10);

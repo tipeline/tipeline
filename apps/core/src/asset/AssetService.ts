@@ -2,8 +2,8 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs';
 
-export const ASSETS_DIR = path.join(os.homedir(), 'Tipeline', 'assets');
-export const TIPELINE_DIR = path.join(os.homedir(), 'Tipeline');
+export const ASSETS_DIR = path.join(os.homedir(), '.tipeline', 'assets');
+export const TIPELINE_DIR = path.join(os.homedir(), '.tipeline');
 
 const MIME_EXTENSIONS: Record<string, string> = {
   'image/png': 'png',
@@ -20,9 +20,9 @@ export type AssetKind = 'apps' | 'tasks' | 'plugins';
 export class AssetService {
   /**
    * Decodes a `data:<mime>;base64,...` upload, validates its type/size, and
-   * writes it to `~/Tipeline/assets/<kind>/<identifier>.<ext>` — overwriting
+   * writes it to `~/.tipeline/assets/<kind>/<identifier>.<ext>` — overwriting
    * any previously-saved image for that identifier regardless of its old
-   * extension. Returns the path relative to `~/Tipeline`.
+   * extension. Returns the path relative to `~/.tipeline`.
    */
   static saveImage(kind: AssetKind, identifier: string, dataUrl: string): string {
     const match = DATA_URL_PATTERN.exec(dataUrl);
@@ -72,7 +72,7 @@ export class AssetService {
     }
   }
 
-  /** Resolves a path relative to `~/Tipeline`, guarding against traversal outside it. */
+  /** Resolves a path relative to `~/.tipeline`, guarding against traversal outside it. */
   static resolveAbsolutePath(relativePath: string): string {
     const resolved = path.resolve(TIPELINE_DIR, relativePath);
     if (!resolved.startsWith(TIPELINE_DIR + path.sep)) {

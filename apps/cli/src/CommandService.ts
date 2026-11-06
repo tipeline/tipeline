@@ -53,7 +53,7 @@ if (process.env.TIPELINE_IPC_SOCKET_ROOT) {
 function exitOnUnauthorized(socket: any) {
   socket.on('unauthorized', () => {
     Printer.printError(
-      `Tipeline core rejected this CLI's token. Check that it reads the same ${nodePath.join(homedir(), 'Tipeline', '.database', 'core.token')} as the running core.`
+      `Tipeline core rejected this CLI's token. Check that it reads the same ${nodePath.join(homedir(), '.tipeline', '.database', 'core.token')} as the running core.`
     );
     process.exit(1);
   });
@@ -64,7 +64,7 @@ function exitOnUnauthorized(socket: any) {
 // (that would require IPC to stay unauthenticated for the fetch).
 function readCoreToken(): string {
   try {
-    return fs.readFileSync(nodePath.join(homedir(), 'Tipeline', '.database', 'core.token'), 'utf8').trim();
+    return fs.readFileSync(nodePath.join(homedir(), '.tipeline', '.database', 'core.token'), 'utf8').trim();
   } catch {
     return '';
   }

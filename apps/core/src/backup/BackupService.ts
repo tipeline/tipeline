@@ -22,7 +22,7 @@ import { TIPELINE_DIR } from '@/asset/AssetService';
  *   tasks/<workflow-name>.yml — workflow sources (the same file "Export" writes)
  *   apps/<app-name>.yml      — app sources, workflows still referenced by `{ identifier }`
  *   globals.yml              — global variables (secrets redacted unless asked for)
- *   assets/{tasks,apps}/…    — images, at the same path they have under ~/Tipeline
+ *   assets/{tasks,apps}/…    — images, at the same path they have under ~/.tipeline
  *
  * File names come from the names (clashing ones get the start of the identifier
  * added); the manifest says which file is whose. Everything keeps its identifier,
@@ -659,7 +659,7 @@ export class BackupService {
       }
     });
 
-    // Files last: a failed transaction leaves ~/Tipeline untouched.
+    // Files last: a failed transaction leaves ~/.tipeline untouched.
     for (const image of imagesToWrite) {
       const [, kind, identifier] = IMAGE_PATH.exec(image)!;
       const dir = nodePath.join(TIPELINE_DIR, 'assets', kind);

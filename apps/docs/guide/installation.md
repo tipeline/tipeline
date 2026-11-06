@@ -47,16 +47,16 @@ In the meantime, see the [Developer Setup](/internals/setup) guide to run Tipeli
 
 The first time Tipeline starts, it automatically:
 
-1. Creates the data directory at `~/Tipeline/`
-2. Sets up the SQLite database (`~/Tipeline/.database/tipeline.db`)
+1. Creates the data directory at `~/.tipeline/`
+2. Sets up the SQLite database (`~/.tipeline/.database/tipeline.db`)
 3. Runs all database migrations
-4. Creates Core's API token, used by remote clients and AI tools (saved in `~/Tipeline/.database/core.token`)
+4. Creates Core's API token, used by remote clients and AI tools (saved in `~/.tipeline/.database/core.token`)
 
 No manual database setup is needed.
 
 ### Optional: Global Environment File
 
-Create a `.env` file at `~/Tipeline/.env` to define environment variables available across all workflows:
+Create a `.env` file at `~/.tipeline/.env` to define environment variables available across all workflows:
 
 ```ini
 SMTP_HOST=smtp.gmail.com
