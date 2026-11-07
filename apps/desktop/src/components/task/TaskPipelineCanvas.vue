@@ -130,6 +130,7 @@ const [parentRef, items] = useDragAndDrop(localItems, {
   // doesn't cause a values/nodes count mismatch, while still sitting inside the
   // <ul> so that elementFromPoint correctly resolves to the <ul> drop zone.
   draggable: (el) => !el.classList.contains('canvas-empty-state'),
+  dragImage: buildDragImage,
   handleNodeDrop: function () {
     markDirty();
     // Use nextTick so FormKit has finished updating items.value before we read it.
@@ -215,19 +216,32 @@ watch(
   { deep: true }
 );
 
-// FormKit's native drag image is just `setDragImage(li, ...)` — a snapshot of
-// the live element, which would include the row-number badge and, for actions
-// with subitems, the entire nested-children block. We hide both right before
-// the browser takes that snapshot (capture phase runs before FormKit's own
-// dragstart handling on the node) and restore them a tick later, once the
-// snapshot has already been captured — the li itself is untouched afterward.
-function onDocumentDragStart(event) {
+// FormKit's default drag image is `setDragImage(li, ...)` — a snapshot of the
+// live row, which would include the row-number badge and, for loops/ifs, the
+// whole nested-children block. The picture is built from an off-screen copy
+// with both removed instead. The live row must not change during dragstart:
+// hiding a block's nested-children there collapses the layout under the
+// cursor, and Chromium then cancels the drag — so loops and ifs couldn't be
+// moved at all. FormKit removes the returned element on the next tick.
+function buildDragImage(data) {
+  const source = data.targetData.node.el;
+  const image = source.cloneNode(true);
+  image.querySelectorAll('.row-number, .nested-children').forEach((el) => el.remove());
+  Object.assign(image.style, {
+    position: 'fixed',
+    top: '-10000px',
+    left: '-10000px',
+    width: `${source.offsetWidth}px`,
+    pointerEvents: 'none',
+    listStyle: 'none',
+  });
+  document.body.appendChild(image);
+  data.e.dataTransfer.setDragImage(image, data.e.offsetX, data.e.offsetY);
+  return image;
+}
+
+function onDocumentDragStart() {
   isDragging = true;
-  const el = event.target?.closest?.('.draggable-item');
-  if (el) {
-    el.classList.add('dnd-ghost-slim');
-    setTimeout(() => el.classList.remove('dnd-ghost-slim'), 0);
-  }
 }
 function onDocumentDragEnd() { isDragging = false; }
 
@@ -244,8 +258,7 @@ watch(
 
 onMounted(() => {
   parentRef.value = containerRef.value;
-  // Capture phase: must run before the dragstart listener FormKit attaches to
-  // the node itself, since that's where it calls setDragImage.
+  // Capture phase, so isDragging is set before FormKit starts moving items.
   document.addEventListener('dragstart', onDocumentDragStart, true);
   document.addEventListener('dragend', onDocumentDragEnd);
   tryReopenPendingAction();
@@ -482,16 +495,6 @@ function onOpenSubtaskBuilder(item) {
 <style scoped>
 .draggable-item.dragging {
   opacity: 0.5;
-}
-
-/* Briefly applied around dragstart only, to keep the native drag-image
-   snapshot to just the action's own card — see onDocumentDragStart.
-   display:none (not visibility:hidden) so .nested-children also stops
-   reserving its own layout space — otherwise its margin/padding still
-   show up as blank area in the dragged snapshot. */
-.draggable-item.dnd-ghost-slim .row-number,
-.draggable-item.dnd-ghost-slim .nested-children {
-  display: none;
 }
 
 .nested-children {

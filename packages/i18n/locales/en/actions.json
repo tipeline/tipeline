@@ -95,6 +95,20 @@
           }
         }
       },
+      "basicAuth": {
+        "label": "HTTP Basic Auth",
+        "description": "Base64-encodes a username/password pair for HTTP Basic Auth. No network call is made — use the result as \"Authorization: Basic {'{'}{'{'} yourVar {'}'}{'}'}\" in any subsequent request.",
+        "fields": {
+          "username": {
+            "label": "Username",
+            "description": "Username for HTTP Basic Auth."
+          },
+          "password": {
+            "label": "Password",
+            "description": "Password for HTTP Basic Auth."
+          }
+        }
+      },
       "request": {
         "label": "Direct API Call",
         "description": "Make a direct API call with authentication token and parameters.",
@@ -363,6 +377,218 @@
           "array": {
             "label": "Array",
             "description": "The array to compact by removing all falsy values."
+          }
+        }
+      },
+      "find": {
+        "label": "Find",
+        "description": "Find the first element matching a condition.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array to search."
+          },
+          "key": {
+            "label": "Property",
+            "description": "Property path to read from each element (e.g. \"address.city\"). Omit to compare the element itself."
+          },
+          "compareAs": {
+            "label": "Compare as",
+            "description": "How both values are read before comparing: text, number, date, boolean, array or object."
+          },
+          "operator": {
+            "label": "Operator",
+            "description": "The comparison to make. The list depends on \"Compare as\"."
+          },
+          "value": {
+            "label": "Compare with",
+            "description": "What to compare each element (or element property) with. An element whose value can't be read as the chosen type doesn't match."
+          },
+          "ignoreCase": {
+            "label": "Ignore case",
+            "description": "Text comparisons treat upper and lower case as the same."
+          }
+        }
+      },
+      "filter": {
+        "label": "Filter",
+        "description": "Keep only the elements that match a condition.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array to filter."
+          },
+          "key": {
+            "label": "Property",
+            "description": "Property path to read from each element (e.g. \"address.city\"). Omit to compare the element itself."
+          },
+          "compareAs": {
+            "label": "Compare as",
+            "description": "How both values are read before comparing: text, number, date, boolean, array or object."
+          },
+          "operator": {
+            "label": "Operator",
+            "description": "The comparison to make. The list depends on \"Compare as\"."
+          },
+          "value": {
+            "label": "Compare with",
+            "description": "What to compare each element (or element property) with. An element whose value can't be read as the chosen type doesn't match."
+          },
+          "ignoreCase": {
+            "label": "Ignore case",
+            "description": "Text comparisons treat upper and lower case as the same."
+          }
+        }
+      },
+      "some": {
+        "label": "Some",
+        "description": "Check if at least one element matches a condition.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array to check."
+          },
+          "key": {
+            "label": "Property",
+            "description": "Property path to read from each element (e.g. \"address.city\"). Omit to compare the element itself."
+          },
+          "compareAs": {
+            "label": "Compare as",
+            "description": "How both values are read before comparing: text, number, date, boolean, array or object."
+          },
+          "operator": {
+            "label": "Operator",
+            "description": "The comparison to make. The list depends on \"Compare as\"."
+          },
+          "value": {
+            "label": "Compare with",
+            "description": "What to compare each element (or element property) with. An element whose value can't be read as the chosen type doesn't match."
+          },
+          "ignoreCase": {
+            "label": "Ignore case",
+            "description": "Text comparisons treat upper and lower case as the same."
+          }
+        }
+      },
+      "every": {
+        "label": "Every",
+        "description": "Check if all elements match a condition.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array to check."
+          },
+          "key": {
+            "label": "Property",
+            "description": "Property path to read from each element (e.g. \"address.city\"). Omit to compare the element itself."
+          },
+          "compareAs": {
+            "label": "Compare as",
+            "description": "How both values are read before comparing: text, number, date, boolean, array or object."
+          },
+          "operator": {
+            "label": "Operator",
+            "description": "The comparison to make. The list depends on \"Compare as\"."
+          },
+          "value": {
+            "label": "Compare with",
+            "description": "What to compare each element (or element property) with. An element whose value can't be read as the chosen type doesn't match."
+          },
+          "ignoreCase": {
+            "label": "Ignore case",
+            "description": "Text comparisons treat upper and lower case as the same."
+          }
+        }
+      },
+      "count": {
+        "label": "Count",
+        "description": "Count the elements that match a condition.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array to check."
+          },
+          "key": {
+            "label": "Property",
+            "description": "Property path to read from each element (e.g. \"address.city\"). Omit to compare the element itself."
+          },
+          "compareAs": {
+            "label": "Compare as",
+            "description": "How both values are read before comparing: text, number, date, boolean, array or object."
+          },
+          "operator": {
+            "label": "Operator",
+            "description": "The comparison to make. The list depends on \"Compare as\"."
+          },
+          "value": {
+            "label": "Compare with",
+            "description": "What to compare each element (or element property) with. An element whose value can't be read as the chosen type doesn't match."
+          },
+          "ignoreCase": {
+            "label": "Ignore case",
+            "description": "Text comparisons treat upper and lower case as the same."
+          }
+        }
+      },
+      "pluck": {
+        "label": "Pluck",
+        "description": "Extract a single property from each element into a new array.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array of objects to pluck from."
+          },
+          "key": {
+            "label": "Property",
+            "description": "Property path to extract from each element (e.g. \"address.city\")."
+          }
+        }
+      },
+      "groupBy": {
+        "label": "Group By",
+        "description": "Group elements into buckets keyed by a property value.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array of objects to group."
+          },
+          "key": {
+            "label": "Property",
+            "description": "Property path to group by (e.g. \"status\")."
+          }
+        }
+      },
+      "keyBy": {
+        "label": "Key By",
+        "description": "Index elements into an object keyed by a property value (last element wins).",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array of objects to index."
+          },
+          "key": {
+            "label": "Property",
+            "description": "Property path to key by (e.g. \"id\")."
+          }
+        }
+      },
+      "shuffle": {
+        "label": "Shuffle",
+        "description": "Randomize the order of elements in an array.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array to shuffle."
+          }
+        }
+      },
+      "sample": {
+        "label": "Sample",
+        "description": "Pick a single random element from an array.",
+        "fields": {
+          "array": {
+            "label": "Array",
+            "description": "The array to sample from."
           }
         }
       },
@@ -1627,11 +1853,11 @@
           },
           "start": {
             "label": "Start",
-            "description": "Starting coordinates {x, y} for the drag."
+            "description": "Starting coordinates {'{'}x, y{'}'} for the drag."
           },
           "target": {
             "label": "Target",
-            "description": "Target coordinates {x, y} to drop at."
+            "description": "Target coordinates {'{'}x, y{'}'} to drop at."
           },
           "steps": {
             "label": "Steps",
@@ -2109,7 +2335,7 @@
           },
           "duration": {
             "label": "Duration",
-            "description": "Duration object with time unit keys and numeric values (e.g. { days: 1, hours: 2 })."
+            "description": "Duration object with time unit keys and numeric values (e.g. {'{'} days: 1, hours: 2 {'}'})."
           }
         }
       },
@@ -2123,7 +2349,7 @@
           },
           "duration": {
             "label": "Duration",
-            "description": "Duration object with time unit keys and numeric values (e.g. { days: 1, hours: 2 })."
+            "description": "Duration object with time unit keys and numeric values (e.g. {'{'} days: 1, hours: 2 {'}'})."
           }
         }
       },
@@ -2812,7 +3038,7 @@
           },
           "schema": {
             "label": "Schema",
-            "description": "Object mapping field names to CSS selectors (e.g. { title: \"h1\", price: \".price\" })."
+            "description": "Object mapping field names to CSS selectors (e.g. {'{'} title: \"h1\", price: \".price\" {'}'})."
           }
         }
       },
