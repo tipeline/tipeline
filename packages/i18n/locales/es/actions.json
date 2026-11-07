@@ -15,6 +15,10 @@
         "label": "Autenticación OAuth2",
         "description": "Autentica usando el flujo OAuth2 con credenciales de cliente y scopes."
       },
+      "basicAuth": {
+        "label": "Autenticación HTTP Basic",
+        "description": "Codifica en Base64 un usuario y contraseña para HTTP Basic Auth. No hace ninguna llamada de red: usa el resultado como \"Authorization: Basic {'{'}{'{'} tuVariable {'}'}{'}'}\" en las peticiones siguientes."
+      },
       "request": {
         "label": "Llamada API Directa",
         "description": "Realiza una llamada directa a una API con token de autenticación y parámetros."
@@ -79,6 +83,46 @@
       "compact": {
         "label": "Compactar",
         "description": "Elimina valores falsy del arreglo."
+      },
+      "find": {
+        "label": "Buscar",
+        "description": "Encuentra el primer elemento que cumple una condición."
+      },
+      "filter": {
+        "label": "Filtrar",
+        "description": "Conserva solo los elementos que cumplen una condición."
+      },
+      "some": {
+        "label": "Alguno",
+        "description": "Comprueba si al menos un elemento cumple una condición."
+      },
+      "every": {
+        "label": "Todos",
+        "description": "Comprueba si todos los elementos cumplen una condición."
+      },
+      "count": {
+        "label": "Contar",
+        "description": "Cuenta los elementos que cumplen una condición."
+      },
+      "pluck": {
+        "label": "Extraer propiedad",
+        "description": "Extrae una propiedad de cada elemento en un nuevo arreglo."
+      },
+      "groupBy": {
+        "label": "Agrupar por",
+        "description": "Agrupa los elementos según el valor de una propiedad."
+      },
+      "keyBy": {
+        "label": "Indexar por",
+        "description": "Crea un objeto con los elementos indexados por el valor de una propiedad (gana el último)."
+      },
+      "shuffle": {
+        "label": "Mezclar",
+        "description": "Ordena los elementos del arreglo al azar."
+      },
+      "sample": {
+        "label": "Muestra aleatoria",
+        "description": "Elige un elemento al azar del arreglo."
       },
       "chunk": {
         "label": "Dividir en Grupos",
