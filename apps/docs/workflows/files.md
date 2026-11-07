@@ -163,6 +163,19 @@ pipeline:
       type: string
       value: "pricing@company.com"
 
+    - name: smtpHost
+      type: string
+      valueFromEnv: SMTP_HOST
+
+    - name: smtpUser
+      type: string
+      valueFromEnv: SMTP_USER
+
+    - name: smtpPassword
+      type: string
+      secret: true
+      valueFromGlobal: smtpPassword
+
     - name: browser
       type: browser
 
@@ -253,10 +266,10 @@ pipeline:
           - group: email
             name: send
             params:
-              host: "{{ _env.SMTP_HOST }}"
+              host: "{{ smtpHost }}"
               port: 587
-              user: "{{ _env.SMTP_USER }}"
-              pass: "{{ _env.SMTP_PASSWORD }}"
+              user: "{{ smtpUser }}"
+              pass: "{{ smtpPassword }}"
               from: "automation@company.com"
               to: "{{ alertEmail }}"
               subject: "Price Alert: ${{ price }}"
@@ -303,15 +316,66 @@ tipeline workflow run monitor.yaml \
 
 ## Environment Variables
 
-Create a `.env` file next to your workflow YAML:
+Keep credentials out of the workflow itself. A variable can take its default value from the
+environment or from a global variable:
 
-```ini
-SMTP_HOST=smtp.gmail.com
-SMTP_USER=user@gmail.com
-SMTP_PASSWORD=app-specific-password
+```yaml
+variables:
+  - name: smtpHost
+    type: string
+    valueFromEnv: SMTP_HOST          # read from the environment
+
+  - name: smtpPassword
+    type: string
+    secret: true
+    valueFromGlobal: smtpPassword    # read from a global variable
 ```
 
-Reference in templates: `{{ _env.SMTP_HOST }}`
+- **`valueFromGlobal`** reads a global variable (set on the Variables page).
+  If that global is secret, the workflow variable is treated as secret too. Use this for
+  passwords and API keys.
+- **`valueFromEnv`** reads an environment value. Put shared values in `~/.tipeline/.env`:
+
+  ```ini
+  SMTP_HOST=smtp.gmail.com
+  SMTP_USER=user@gmail.com
+  ```
+
+  Add `valueFromEnvFile: ~/path/to/.env` to read the key from a file of your own first.
+
+A value passed in when the run starts (`--var`, a run form, an app) wins over both.
+
+### Reading the environment with `_env`
+
+A step can also read an environment value directly, without declaring a variable:
+
+```yaml
+- group: email
+  name: send
+  params:
+    host: "{{ _env.SMTP_HOST }}"
+```
+
+At the start of each run, Core looks for each key in this order and uses the first value it
+finds:
+
+1. the environment Core itself was started with (for example `SMTP_HOST=... tipeline start`);
+2. a `.env` file in the same folder as the workflow file. This is only read when you run the
+   file itself (`tipeline workflow run monitor.yaml`), not for workflows saved in Desktop;
+3. `~/.tipeline/.env`.
+
+Things to know:
+
+- The files are read again for every run, so an edit applies from the next run on.
+- Values are always text. Inside other text, `{{ _env.KEY }}` gives an empty string when
+  the key isn't set; `{= _env.KEY =}` on its own leaves the `{= _env.KEY =}` text unchanged.
+  Neither stops the run, so a misspelled key shows up later as a failed step.
+- Tipeline doesn't know an `_env` value is a secret, so it isn't hidden like a secret
+  variable. Use a secret variable for passwords and keys.
+- On a [Tipeline Server](/server/), the environment is the one on the machine Core runs on,
+  not yours.
+
+See [Environment files](/workflows/variables#environment-files) for more.
 
 ## JSON Format
 
