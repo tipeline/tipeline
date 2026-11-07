@@ -15,6 +15,8 @@ import { useAutoSave } from '@/composables/useAutoSave';
 import SaveStatus from '@/components/SaveStatus.vue';
 
 const mode = useColorMode();
+// mode.value is the resolved theme (light/dark); the user's choice, including 'auto', is in the store.
+const selectedTheme = mode.store;
 const { t } = useI18n();
 const { currentLocale, setLocale } = useLocale();
 const { appTimezone, setTimezone } = useTimezone();
@@ -50,7 +52,7 @@ const THEMES = [
             v-for="theme in THEMES"
             :key="theme.value"
             class="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md transition-colors"
-            :class="mode === theme.value
+            :class="selectedTheme === theme.value
               ? 'bg-foreground text-background'
               : 'hover:bg-accent text-muted-foreground'"
             @click="setTheme(theme.value)"
