@@ -1,0 +1,506 @@
+schemaVersion: 4
+version: "1.0.0"
+
+workflows:
+  setup: { identifier: roastSetup }
+  dashboard: { identifier: roastDashboard }
+  listOrders: { identifier: roastListOrders }
+  addOrder: { identifier: roastAddOrder }
+  setStatus: { identifier: roastSetOrderStatus }
+  inventory: { identifier: roastListInventory }
+  recordRoast: { identifier: roastRecordRoast }
+  alerts: { identifier: roastDataAlerts }
+  lowStockCheck: { identifier: roastLowStockCheck }
+  dailyReport: { identifier: roastDailyReport }
+
+state: {}
+
+pages:
+  # ---------------------------------------------------------------- dashboard
+  - id: dashboard
+    name: Dashboard
+    icon: LayoutDashboard
+
+    runnables:
+      # Creates the store and the sample data the first time; then loads the numbers.
+      setup:
+        mode: run
+        workflow: setup
+        trigger: load
+        outputs: [seeded]
+        persist: false
+        onSuccess: [{ type: run, runnable: stats }]
+
+      stats:
+        mode: run
+        workflow: dashboard
+        outputs: [summary, byDay, byChannel, topBeans, lowStock]
+        persist: false
+
+    components:
+      - id: revenueKpi
+        type: kpi
+        name: Revenue
+        layout: { x: 0, y: 0, w: 3, h: 14 }
+        props:
+          label: Revenue, last 30 days
+          value: "{= runnables.stats.outputs.summary.revenue30 =}"
+          format: currency
+          trend: "{= runnables.stats.outputs.summary.revenueTrend =}"
+          spark: "{= runnables.stats.outputs.byDay =}"
+          sparkKey: revenue
+
+      - id: todayKpi
+        type: kpi
+        name: Orders today
+        layout: { x: 3, y: 0, w: 3, h: 14 }
+        props:
+          label: Orders today
+          value: "{= runnables.stats.outputs.summary.ordersToday =}"
+          spark: "{= runnables.stats.outputs.byDay =}"
+          sparkKey: orders
+
+      - id: openKpi
+        type: kpi
+        name: Open orders
+        layout: { x: 6, y: 0, w: 3, h: 14 }
+        props:
+          label: Open orders
+          value: "{= runnables.stats.outputs.summary.openOrders =}"
+          linkText: See open orders →
+        events:
+          click: [{ type: navigate, page: orders }]
+
+      - id: lowKpi
+        type: kpi
+        name: Low stock
+        layout: { x: 9, y: 0, w: 3, h: 14 }
+        props:
+          label: Coffees running low
+          value: "{= runnables.stats.outputs.summary.lowStock =}"
+          colorRules:
+            - { compareAs: number, operator: gt, value: 0, color: amber }
+          linkText: Go to inventory →
+        events:
+          click: [{ type: navigate, page: inventory }]
+
+      - id: salesChart
+        type: chart
+        name: Sales by day
+        layout: { x: 0, y: 14, w: 8, h: 42 }
+        props:
+          chartType: area
+          title: Revenue by day (last 3 weeks)
+          data: "{= runnables.stats.outputs.byDay =}"
+          xKey: day
+          series: [{ key: revenue, label: Revenue }]
+          format: currency
+
+      - id: channelChart
+        type: chart
+        name: By channel
+        layout: { x: 8, y: 14, w: 4, h: 42 }
+        props:
+          chartType: doughnut
+          title: Revenue by channel
+          data: "{= runnables.stats.outputs.byChannel =}"
+          xKey: channel
+          series: [{ key: revenue, label: Revenue }]
+          format: currency
+
+      - id: topChart
+        type: chart
+        name: Best sellers
+        layout: { x: 0, y: 56, w: 7, h: 42 }
+        props:
+          chartType: hbar
+          title: Best sellers (kg, last 30 days)
+          data: "{= runnables.stats.outputs.topBeans =}"
+          xKey: name
+          series: [{ key: kg, label: kg sold }]
+
+      - id: lowTable
+        type: table
+        name: Running low
+        layout: { x: 7, y: 56, w: 5, h: 42 }
+        props:
+          data: "{= runnables.stats.outputs.lowStock =}"
+          columns:
+            - { key: name, header: Coffee }
+            - { key: origin, header: Origin }
+            - key: stock_kg
+              header: Stock (kg)
+              highlight:
+                - { compareAs: number, operator: lte, value: 0, color: red }
+                - { compareAs: number, operator: lt, value: 8, color: amber }
+
+  # ------------------------------------------------------------------- orders
+  - id: orders
+    name: Orders
+    icon: ShoppingBag
+
+    runnables:
+      list:
+        mode: run
+        workflow: listOrders
+        trigger: load
+        inputs: { status: "{= statusFilter.value =}", days: 0 }
+        outputs: [orders, counts]
+        persist: false
+
+      roastMany:
+        mode: run
+        workflow: setStatus
+        inputs: { ids: "{= ordersTable.selectedRows =}", status: roasting }
+        outputs: [count]
+        onSuccess:
+          - { type: toast, message: "{{ result.outputs.count }} order(s) roasting", variant: success }
+          - { type: reset, component: ordersTable }
+          - { type: run, runnable: list }
+
+      shipMany:
+        mode: run
+        workflow: setStatus
+        inputs: { ids: "{= ordersTable.selectedRows =}", status: shipped }
+        outputs: [count]
+        onSuccess:
+          - { type: toast, message: "{{ result.outputs.count }} order(s) shipped", variant: success }
+          - { type: reset, component: ordersTable }
+          - { type: run, runnable: list }
+
+      cancelMany:
+        mode: run
+        workflow: setStatus
+        confirm: "Cancel {{ ordersTable.selectedRows | size }} order(s)? Unshipped coffee goes back in stock."
+        inputs: { ids: "{= ordersTable.selectedRows =}", status: cancelled }
+        outputs: [count]
+        onSuccess:
+          - { type: toast, message: "{{ result.outputs.count }} order(s) cancelled", variant: success }
+          - { type: reset, component: ordersTable }
+          - { type: run, runnable: list }
+
+      shipOne:
+        mode: run
+        workflow: setStatus
+        inputs: { ids: ["{= ordersTable.selectedRow.id =}"], status: shipped }
+        outputs: [count]
+        onSuccess:
+          - { type: toast, message: "Order #{{ ordersTable.selectedRow.id }} shipped", variant: success }
+          - { type: run, runnable: list }
+
+    components:
+      - id: newKpi
+        type: kpi
+        name: New
+        layout: { x: 0, y: 0, w: 3, h: 14 }
+        props: { label: New, value: "{= runnables.list.outputs.counts.new =}", color: blue }
+
+      - id: roastingKpi
+        type: kpi
+        name: Roasting
+        layout: { x: 3, y: 0, w: 3, h: 14 }
+        props: { label: Roasting, value: "{= runnables.list.outputs.counts.roasting =}", color: amber }
+
+      - id: shippedKpi
+        type: kpi
+        name: Shipped
+        layout: { x: 6, y: 0, w: 3, h: 14 }
+        props: { label: Shipped, value: "{= runnables.list.outputs.counts.shipped =}", color: green }
+
+      - id: cancelledKpi
+        type: kpi
+        name: Cancelled
+        layout: { x: 9, y: 0, w: 3, h: 14 }
+        props: { label: Cancelled, value: "{= runnables.list.outputs.counts.cancelled =}" }
+
+      - id: statusFilter
+        type: select
+        name: Status filter
+        layout: { x: 0, y: 14, w: 9, h: 14 }
+        props:
+          label: Show
+          default: open
+          display: buttons
+          options:
+            - { value: open, label: Open }
+            - { value: new, label: New }
+            - { value: roasting, label: Roasting }
+            - { value: shipped, label: Shipped }
+            - { value: cancelled, label: Cancelled }
+            - { value: all, label: All }
+        events:
+          change: [{ type: run, runnable: list }]
+
+      - id: newOrderButton
+        type: button
+        name: New order
+        layout: { x: 9, y: 14, w: 3, h: 7 }
+        props: { label: New order, icon: Plus }
+        events:
+          click:
+            - { type: openModal, page: newOrder, display: drawer, size: md }
+            - { type: run, runnable: list }
+
+      - id: ordersTable
+        type: table
+        name: Orders
+        layout: { x: 0, y: 28, w: 12, h: 63 }
+        fill: true
+        props:
+          data: "{= runnables.list.outputs.orders =}"
+          rowKey: id
+          searchable: true
+          exportable: true
+          pageSize: 15
+          columns:
+            - { key: id, header: "#", sortable: false }
+            - { key: created_at, header: Placed, format: datetime }
+            - { key: customer, header: Customer }
+            - { key: channel, header: Channel, format: badge, colors: { web: blue, cafe: purple, wholesale: gray } }
+            - { key: bean, header: Coffee }
+            - { key: kg, header: kg }
+            - { key: total, header: Total, format: currency }
+            - { key: status, header: Status, format: badge, colors: { New: blue, Roasting: amber, Shipped: green, Cancelled: gray } }
+          rowActions:
+            - { id: ship, label: Ship, variant: outline }
+          bulkActions:
+            - { id: roast, label: Start roasting }
+            - { id: ship, label: Mark shipped }
+            - { id: cancel, label: Cancel, variant: destructive }
+        events:
+          "action:ship": [{ type: run, runnable: shipOne }]
+          "bulk:roast": [{ type: run, runnable: roastMany }]
+          "bulk:ship": [{ type: run, runnable: shipMany }]
+          "bulk:cancel": [{ type: run, runnable: cancelMany }]
+
+  # ---------------------------------------------------------- new order drawer
+  - id: newOrder
+    name: New order
+    showInMenu: false
+
+    runnables:
+      beans:
+        mode: run
+        workflow: inventory
+        trigger: load
+        outputs: [beanOptions]
+        persist: false
+
+      add:
+        mode: run
+        workflow: addOrder
+        inputs:
+          customer: "{= orderForm.values.customer =}"
+          channel: "{= orderForm.values.channel =}"
+          beanId: "{= orderForm.values.beanId =}"
+          kg: "{= orderForm.values.kg =}"
+        outputs: [order]
+        onSuccess:
+          - { type: toast, message: "Order #{{ result.outputs.order.id }} for {{ result.outputs.order.customer }} saved", variant: success }
+          - { type: closeModal }
+
+    components:
+      - id: orderForm
+        type: form
+        name: Order
+        layout: { x: 0, y: 0, w: 12, h: 56 }
+        props:
+          title: New order
+          submitLabel: Save order
+          fields:
+            - { name: customer, label: Customer, type: text, required: true, placeholder: e.g. Corner Café }
+            - name: channel
+              label: Channel
+              type: select
+              default: web
+              options:
+                - { value: web, label: Web shop }
+                - { value: cafe, label: Café counter }
+                - { value: wholesale, label: Wholesale }
+            - { name: beanId, label: Coffee, type: select, required: true, options: "{= runnables.beans.outputs.beanOptions =}" }
+            - { name: kg, label: kg, type: number, required: true, default: 1 }
+        events:
+          submit: [{ type: run, runnable: add }]
+
+      - id: addError
+        type: alert
+        name: Add error
+        layout: { x: 0, y: 56, w: 12, h: 7 }
+        props:
+          message: "{{ runnables.add.error }}"
+          variant: error
+          visible: "{% if runnables.add.error %}true{% else %}false{% endif %}"
+
+  # ---------------------------------------------------------------- inventory
+  - id: inventory
+    name: Inventory
+    icon: Package
+
+    runnables:
+      stock:
+        mode: run
+        workflow: inventory
+        trigger: load
+        outputs: [beans, beanOptions, roasts]
+        persist: false
+
+      roast:
+        mode: run
+        workflow: recordRoast
+        inputs:
+          beanId: "{= roastForm.values.beanId =}"
+          kg: "{= roastForm.values.kg =}"
+          roaster: "{= roastForm.values.roaster =}"
+          notes: "{= roastForm.values.notes =}"
+        outputs: [bean]
+        onSuccess:
+          - { type: toast, message: "{{ result.outputs.bean.name }} now has {{ result.outputs.bean.stock_kg }} kg", variant: success }
+          - { type: reset, component: roastForm }
+          - { type: run, runnable: stock }
+
+    components:
+      - id: beansTable
+        type: table
+        name: Coffees
+        layout: { x: 0, y: 0, w: 8, h: 49 }
+        props:
+          data: "{= runnables.stock.outputs.beans =}"
+          searchable: true
+          columns:
+            - { key: name, header: Coffee }
+            - { key: origin, header: Origin }
+            - { key: process, header: Process }
+            - { key: roast, header: Roast }
+            - { key: price_per_kg, header: Price / kg, format: currency }
+            - { key: stock_kg, header: Stock (kg) }
+            - { key: status, header: Status, format: badge, colors: { In stock: green, Low: amber, Out: red } }
+            - { key: lastRoast, header: Last roast, format: date }
+
+      - id: roastForm
+        type: form
+        name: Record a roast
+        layout: { x: 8, y: 0, w: 4, h: 49 }
+        props:
+          title: Record a roast
+          submitLabel: Add to stock
+          fields:
+            - { name: beanId, label: Coffee, type: select, required: true, options: "{= runnables.stock.outputs.beanOptions =}" }
+            - { name: kg, label: Roasted kg, type: number, required: true, default: 12 }
+            - { name: roaster, label: Roaster, type: text, placeholder: e.g. Lee }
+            - { name: notes, label: Notes, type: textarea, placeholder: "Profile, first crack, tasting…" }
+        events:
+          submit: [{ type: run, runnable: roast }]
+
+      - id: originMap
+        type: map
+        name: Origins
+        layout: { x: 0, y: 49, w: 6, h: 42 }
+        props:
+          title: Where the coffee comes from
+          data: "{= runnables.stock.outputs.beans =}"
+          colorKey: status
+          colors: { In stock: green, Low: amber, Out: red }
+          popupFields: [origin, process, stock_kg]
+
+      - id: roastsTable
+        type: table
+        name: Recent roasts
+        layout: { x: 6, y: 49, w: 6, h: 42 }
+        props:
+          data: "{= runnables.stock.outputs.roasts =}"
+          columns:
+            - { key: roasted_at, header: Roasted, format: date }
+            - { key: bean, header: Coffee }
+            - { key: kg, header: kg }
+            - { key: roaster, header: Roaster }
+            - { key: notes, header: Notes }
+
+  # ------------------------------------------------------------------- alerts
+  - id: alerts
+    name: Alerts
+    icon: Bell
+
+    runnables:
+      list:
+        mode: run
+        workflow: alerts
+        trigger: load
+        inputs: { level: "{= levelFilter.value =}" }
+        outputs: [alerts, lastCheck]
+        persist: false
+
+      checkNow:
+        mode: run
+        workflow: lowStockCheck
+        outputs: [summary]
+        onSuccess:
+          - { type: toast, message: "{{ result.outputs.summary }}", variant: success }
+          - { type: run, runnable: list }
+
+      reportNow:
+        mode: run
+        workflow: dailyReport
+        inputs: { daysAgo: 0 }
+        outputs: [path]
+        onSuccess:
+          - { type: toast, message: "Report written to {{ result.outputs.path }}", variant: success }
+          - { type: run, runnable: list }
+
+    components:
+      - id: lastCheckText
+        type: text
+        name: Last check
+        layout: { x: 0, y: 0, w: 6, h: 14 }
+        props:
+          markdown: true
+          content: "{% if runnables.list.outputs.lastCheck.at %}**Last stock check:** {{ runnables.list.outputs.lastCheck.summary }}{% else %}No stock check yet — it runs every hour, or check now.{% endif %}"
+
+      - id: actionButtons
+        type: buttonGroup
+        name: Run now
+        layout: { x: 6, y: 0, w: 6, h: 7 }
+        props:
+          items:
+            - { id: check, label: Check stock now, icon: PackageSearch }
+            - { id: report, label: Write today's report, icon: FileText, variant: outline }
+        events:
+          "action:check": [{ type: run, runnable: checkNow }]
+          "action:report": [{ type: run, runnable: reportNow }]
+
+      - id: levelFilter
+        type: select
+        name: Level
+        layout: { x: 0, y: 14, w: 6, h: 14 }
+        props:
+          label: Show
+          default: all
+          display: buttons
+          options:
+            - { value: all, label: All }
+            - { value: warning, label: Warnings }
+            - { value: info, label: Info }
+            - { value: error, label: Errors }
+        events:
+          change: [{ type: run, runnable: list }]
+
+      - id: alertsTable
+        type: table
+        name: Alerts
+        layout: { x: 0, y: 28, w: 7, h: 63 }
+        props:
+          data: "{= runnables.list.outputs.alerts =}"
+          pageSize: 12
+          columns:
+            - { key: created_at, header: When, format: datetime }
+            - { key: level, header: Level, format: badge, colors: { Info: blue, Warning: amber, Error: red } }
+            - { key: message, header: Message }
+            - { key: source, header: From }
+
+      - id: scheduledRuns
+        type: runs
+        name: Scheduled runs
+        layout: { x: 7, y: 28, w: 5, h: 63 }
+        props:
+          title: Stock checks and reports
+          workflows: [lowStockCheck, dailyReport]
+          limit: 15

@@ -1,0 +1,70 @@
+version: 1.0.0
+name: 'Data: Roastery Alerts'
+description: |
+  The alerts the roastery workflows sent through Roastery: Notify Team, newest first, and the result of the last low-stock check (the `roasteryLastStockCheck` global).
+
+  **Inputs**
+
+  - `level` — `all`, `info`, `warning` or `error`
+
+  **Outputs**
+
+  - `alerts` — `[{ id, level, message, source, created_at }]`, at most 100
+  - `lastCheck` — `{ at, count, beans, summary }`, empty before the first check
+author: Jose Daniel Estrada
+tags: [roastery, alerts, data]
+
+pipeline:
+  variables:
+    - { type: string, name: level, value: all, visibility: public, description: Which alerts to list. }
+    - { type: array, name: alerts, value: [], visibility: public, output: true, description: The alerts, newest first. }
+    - { type: object, name: lastCheck, value: {}, visibility: public, output: true, description: The last low-stock check. }
+    - { type: dbConnection, name: db }
+    - { type: array, name: rows, value: [] }
+
+  actions:
+    - group: database
+      identifier: J3ZYh5uMP5vw3nCpxlgcT
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/roastery/roastery.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      identifier: Gec-0YcxJ8VgZ_ypLLJF3
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          SELECT id, level, message, source, created_at FROM alert
+          WHERE ? = 'all' OR level = ? ORDER BY created_at DESC, id DESC LIMIT 100
+        bindings: ['{{ level }}', '{{ level }}']
+      destination: rows
+
+    - group: database
+      identifier: BYl9C0xwryoKDl4BwZ1Y4
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      identifier: DWYqYpYl7kRE15m71RJqi
+      name: runScript
+      params:
+        context: { rows: '{= rows =}' }
+        code: |
+          const label = { info: 'Info', warning: 'Warning', error: 'Error' };
+          return rows.map((a) => ({ ...a, level: label[a.level] || a.level }));
+      destination: alerts
+
+    - group: script
+      identifier: xZ6X0HiU2M5RdCmc0IlLJ
+      name: runScript
+      params:
+        context: { check: '{= _global.roasteryLastStockCheck =}' }
+        code: |
+          return check && typeof check === 'object' ? check : {};
+      destination: lastCheck

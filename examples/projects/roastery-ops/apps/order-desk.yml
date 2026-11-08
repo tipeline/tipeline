@@ -1,0 +1,91 @@
+schemaVersion: 4
+version: "1.0.0"
+
+workflows:
+  inventory: { identifier: roastListInventory }
+  addOrder: { identifier: roastAddOrder }
+  listOrders: { identifier: roastListOrders }
+
+state: {}
+
+pages:
+  - id: desk
+    name: Counter
+    icon: Coffee
+
+    runnables:
+      beans:
+        mode: run
+        workflow: inventory
+        trigger: load
+        outputs: [beanOptions]
+        persist: false
+
+      today:
+        mode: run
+        workflow: listOrders
+        trigger: load
+        inputs: { status: all, days: 1 }
+        outputs: [orders]
+        persist: false
+
+      add:
+        mode: run
+        workflow: addOrder
+        inputs:
+          customer: "{= counterForm.values.customer =}"
+          channel: cafe
+          beanId: "{= counterForm.values.beanId =}"
+          kg: "{= counterForm.values.kg =}"
+        outputs: [order]
+        onSuccess:
+          - { type: toast, message: "#{{ result.outputs.order.id }} · {{ result.outputs.order.kg }} kg {{ result.outputs.order.bean }} — ${{ result.outputs.order.total }}", variant: success }
+          - { type: reset, component: counterForm }
+          - { type: run, runnable: today }
+          - { type: run, runnable: beans }
+
+    components:
+      - id: counterForm
+        type: form
+        name: Take an order
+        layout: { x: 0, y: 0, w: 4, h: 49 }
+        props:
+          title: Take an order
+          submitLabel: Ring it up
+          fields:
+            - { name: customer, label: Name, type: text, required: true, default: Walk-in }
+            - { name: beanId, label: Coffee, type: select, required: true, options: "{= runnables.beans.outputs.beanOptions =}" }
+            - name: kg
+              label: Bag
+              type: select
+              default: 0.25
+              options:
+                - { value: 0.25, label: 250 g }
+                - { value: 0.5, label: 500 g }
+                - { value: 1, label: 1 kg }
+        events:
+          submit: [{ type: run, runnable: add }]
+
+      - id: addError
+        type: alert
+        name: Add error
+        layout: { x: 0, y: 49, w: 4, h: 7 }
+        props:
+          message: "{{ runnables.add.error }}"
+          variant: error
+          visible: "{% if runnables.add.error %}true{% else %}false{% endif %}"
+
+      - id: todayTable
+        type: table
+        name: Last 24 hours
+        layout: { x: 4, y: 0, w: 8, h: 56 }
+        props:
+          data: "{= runnables.today.outputs.orders =}"
+          searchable: true
+          columns:
+            - { key: created_at, header: Time, format: datetime }
+            - { key: customer, header: Customer }
+            - { key: bean, header: Coffee }
+            - { key: kg, header: kg }
+            - { key: total, header: Total, format: currency }
+            - { key: status, header: Status, format: badge, colors: { New: blue, Roasting: amber, Shipped: green, Cancelled: gray } }

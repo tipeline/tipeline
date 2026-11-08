@@ -1,0 +1,26 @@
+# Global variables the Roastery Ops workflows use (restored with the project).
+variables:
+  - name: roasteryShopName
+    description: Shown in reports and team alerts.
+    type: string
+    value: Bean & Brew Roastery
+    secret: false
+    readonly: false
+  - name: roasteryLowStockKg
+    description: A coffee under this many kg of roasted stock counts as running low.
+    type: number
+    value: 8
+    secret: false
+    readonly: false
+  - name: roasteryAlertWebhook
+    description: Optional Slack (or other chat) webhook URL for team alerts. Leave empty to keep alerts in the app only.
+    type: string
+    value: ''
+    secret: true
+    readonly: false
+  - name: roasteryLastStockCheck
+    description: 'Written by Roastery: Low Stock Check — when it last ran and what was low.'
+    type: object
+    value: {}
+    secret: false
+    readonly: false

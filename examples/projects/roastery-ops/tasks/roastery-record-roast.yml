@@ -1,0 +1,87 @@
+version: 1.0.0
+name: 'Roastery: Record Roast'
+description: |
+  Logs a roast batch and adds the roasted coffee to its stock.
+
+  **Inputs**
+
+  - `beanId` — the coffee roasted
+  - `kg` — roasted weight, more than 0 and at most 60
+  - `roaster` — who roasted it
+  - `notes` — optional tasting or profile notes
+
+  **Outputs**
+
+  - `bean` — the coffee after the roast: `{ id, name, stock_kg }`
+author: Jose Daniel Estrada
+tags: [roastery, inventory, roasting, sqlite]
+
+pipeline:
+  variables:
+    - { type: number, name: beanId, value: 0, visibility: public, required: true, description: The coffee roasted. }
+    - { type: number, name: kg, value: 0, visibility: public, required: true, description: Roasted weight in kg. }
+    - { type: string, name: roaster, value: '', visibility: public, description: Who roasted it. }
+    - { type: string, name: notes, value: '', visibility: public, description: Tasting or profile notes. }
+    - { type: object, name: bean, value: {}, visibility: public, output: true, description: The coffee with its new stock. }
+    - { type: dbConnection, name: db }
+    - { type: object, name: input, value: {} }
+    - { type: array, name: rows, value: [] }
+
+  actions:
+    - group: script
+      identifier: zqpmNzoLJYeWCQsIPkT4g
+      name: runScript
+      params:
+        context: { beanId: '{= beanId =}', kg: '{= kg =}', roaster: '{{ roaster }}', notes: '{{ notes }}' }
+        code: |
+          const id = Number(beanId);
+          const weight = Number(kg);
+          if (!Number.isInteger(id) || id < 1) throw new Error('Pick the coffee you roasted');
+          if (!(weight > 0) || weight > 60) throw new Error('A roast is between 0 and 60 kg');
+          return { id, kg: Math.round(weight * 100) / 100, roaster: roaster.trim() || 'Unknown', notes: notes.trim() };
+      destination: input
+
+    - group: database
+      identifier: 2Ou__BhoPtnHmG0bIRc_I
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/roastery/roastery.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      identifier: utZW7UQ7awKfNwujiocuE
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          INSERT INTO roast (bean_id, kg, roaster, notes, roasted_at)
+          SELECT id, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now') FROM bean WHERE id = ?
+        bindings: ['{= input.kg =}', '{{ input.roaster }}', '{{ input.notes }}', '{= input.id =}']
+
+    - group: database
+      identifier: oLnvRfbaU0WQO9kigpsvZ
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: UPDATE bean SET stock_kg = ROUND(stock_kg + ?, 2) WHERE id = ? RETURNING id, name, stock_kg
+        bindings: ['{= input.kg =}', '{= input.id =}']
+      destination: rows
+
+    - group: database
+      identifier: sghwcl-SJdTMcIHnp1-Eo
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      identifier: TWfKOgyQreblyi2gPF_3r
+      name: runScript
+      params:
+        context: { rows: '{= rows =}' }
+        code: |
+          if (!rows.length) throw new Error('That coffee is not in the store');
+          return rows[0];
+      destination: bean
