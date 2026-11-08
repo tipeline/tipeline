@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import Breadcrumb from '@/components/Breadcrumb.vue';
+import NavButtons from '@/components/NavButtons.vue';
 import SearchModal from '@/components/SearchModal.vue';
 import { SearchIcon, Bot as BotIcon } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ useKeyboardShortcuts([
   <div class="flex items-center justify-between">
     <div class="flex items-center gap-4">
       <SidebarTrigger />
+      <NavButtons />
       <Breadcrumb />
     </div>
     <div class="flex items-center gap-4">

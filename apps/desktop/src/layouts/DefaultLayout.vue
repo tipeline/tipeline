@@ -9,6 +9,7 @@ import { useAgentStore } from '@/store/agentStore';
 import { useConnectionStore } from '@/store/connectionStore';
 import { useI18n } from 'vue-i18n';
 import { toast } from '@/components/ui/sonner';
+import { resetHistory } from '@/router/navHistory';
 
 const route = useRoute();
 const router = useRouter();
@@ -21,6 +22,8 @@ const connectionStore = useConnectionStore();
 function onWorkspaceChanged(_event: unknown, data?: { closedWindows?: number }) {
   // Windows opened on their own showed the previous workspace; the main process closed them.
   if (data?.closedWindows) toast.info(t('windows.closedOnSwitch', { count: data.closedWindows }));
+  // Earlier pages belong to the previous workspace: Back must not lead to them.
+  resetHistory();
   // A page showing a single item may point at something the new workspace doesn't have,
   // so go back to its list instead of reloading it.
   const fallback = route.matched.findLast((r) => r.meta.workspaceFallback)?.meta.workspaceFallback;

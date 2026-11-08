@@ -13,7 +13,8 @@ import { useProjectStore } from '@/store/project';
 import { usePluginStore } from '@/store/pluginStore';
 import { useConnectionStore } from '@/store/connectionStore';
 import { useRoute, RouteRecordNormalized } from 'vue-router';
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
+import { navHistory, setCurrentLabel } from '@/router/navHistory';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 
@@ -113,6 +114,13 @@ const breadcrumbs = computed(() => {
 
   return crumbs;
 });
+
+// Names this history entry after the page, for the Back/Forward tooltips in the header.
+watch(
+  [() => breadcrumbs.value.at(-1)?.label || t('nav.dashboard'), () => navHistory.position],
+  ([label]) => setCurrentLabel(label),
+  { immediate: true }
+);
 </script>
 <template>
   <Breadcrumb>

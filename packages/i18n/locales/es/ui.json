@@ -20,7 +20,11 @@
     "settings": "Configuración",
     "help": "Ayuda",
     "approvals": "Aprobaciones",
-    "trash": "Papelera"
+    "trash": "Papelera",
+    "back": "Atrás",
+    "forward": "Adelante",
+    "backTo": "Volver a {page}",
+    "forwardTo": "Ir a {page}"
   },
   "common": {
     "save": "Guardar",
