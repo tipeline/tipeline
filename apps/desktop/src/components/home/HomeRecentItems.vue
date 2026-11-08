@@ -9,6 +9,7 @@ import StarButton from '@/components/StarButton.vue';
 import { useRecentItemsStore, recentItemPath } from '@/store/recentItems';
 import { useLiveItems } from '@/composables/useLiveItems';
 import { toAssetUrl } from '@/utils/assetUrl';
+import { ENTITY_COLORS } from '@/config/entityColors';
 
 // A compact list, so it reads as history next to the Starred tiles; it scrolls after ~7 rows.
 // The store keeps more, so deleted items don't leave the list short.
@@ -25,9 +26,9 @@ const items = computed(() =>
 
 const typeIcons = { task: Workflow, project: Folders, app: AppWindow } as const;
 const typeTint = {
-  task: 'bg-blue-500/10 text-blue-500',
-  project: 'bg-violet-500/10 text-violet-500',
-  app: 'bg-amber-500/10 text-amber-500',
+  task: ENTITY_COLORS.workflow.tint,
+  project: ENTITY_COLORS.project.tint,
+  app: ENTITY_COLORS.app.tint,
 } as const;
 </script>
 

@@ -37,7 +37,7 @@ const VIEWER_ALLOWED = new Set([
   // Without credentials: see routeHidingSecrets.
   'settingsList',
   'pluginList', 'pluginDetail', 'pluginUsage',
-  'projectList', 'projectDetail',
+  'projectList', 'projectDetail', 'projectMap',
   'agentRunList',
   'hubList', 'hubCatalog', 'hubUpdateEvents',
 ]);
@@ -165,7 +165,7 @@ const ALLOWED_COMMANDS = new Set([
   // Projects
   'projectList', 'projectNew', 'projectDetail', 'projectUpdate', 'projectDelete', 'projectDeletePreview',
   'projectAssignTask', 'projectUnassignTask', 'projectAssignApp', 'projectUnassignApp',
-  'projectExport', 'projectImport',
+  'projectExport', 'projectImport', 'projectMap', 'projectMapSave', 'projectMapLink',
   // Agent
   'agentPrompt', 'agentRunList', 'agentRunSetPipeline',
   // Connections

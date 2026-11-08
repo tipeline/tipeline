@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
 import DataTable from '@/components/DataTable.vue';
 import Card from '@/components/Card.vue';
 import Page from '@/components/Page.vue';
@@ -31,6 +32,7 @@ import { deleteEach, type BulkDeleteItem } from '@/utils/bulkDelete';
 
 const { t } = useI18n();
 const scheduleText = useScheduleText();
+const router = useRouter();
 
 type ScheduleFormInstance = InstanceType<typeof ScheduleForm>;
 
@@ -45,7 +47,7 @@ const scheduleToDelete = ref<ScheduleItem | null>(null);
 const { data: result, refetch: refetchSchedules } = useQuery<ScheduleItem[]>(SEND.SCHEDULE_LIST);
 
 const columns = computed<ColumnDef<ScheduleItem>[]>(() =>
-  createColumns(t, scheduleText, handleEdit, handleDelete, handleToggle)
+  createColumns(t, scheduleText, router, handleEdit, handleDelete, handleToggle)
 );
 
 function handleClose() {
@@ -164,7 +166,7 @@ const confirmDelete = async () => {
             :columns="columns"
             :data="result ?? []"
             :flat="true"
-            :filters="[{ column: 'taskIdentifier', placeholder: t('schedules.searchPlaceholder') }]"
+            :filters="[{ column: 'taskName', placeholder: t('schedules.searchPlaceholder') }]"
             selectable
             :row-key="(item: ScheduleItem) => item.scheduleIdentifier"
             v-model:selection="selection"

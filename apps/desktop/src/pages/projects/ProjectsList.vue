@@ -17,7 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Loader2, Upload } from 'lucide-vue-next';
+import { Plus, Loader2, Upload, Network } from 'lucide-vue-next';
 import { useQuery } from '@/composables/useQuery';
 import { SEND } from '@/ipc-channels';
 import { invokeCore } from '@/utils/invoke';
@@ -161,6 +161,9 @@ async function confirmImport() {
   <Page>
     <template #title>{{ t('projects.title') }}</template>
     <template #menu>
+      <Button variant="outline" @click="router.push('/projects/map')">
+        <Network class="w-4 h-4" /> {{ t('projectMap.all.open') }}
+      </Button>
       <Button variant="outline" :disabled="isImporting" @click="handleImport">
         <Upload class="w-4 h-4" /> {{ isImporting ? t('projects.importing') : t('projects.import') }}
       </Button>
@@ -169,7 +172,7 @@ async function confirmImport() {
       </Button>
     </template>
     <template #content>
-      <div class="p-4">
+      <div class="flex-1 min-h-0 overflow-y-auto scroll-fade p-4 pb-6">
         <p class="text-sm text-muted-foreground" v-if="!projects?.length">
           {{ t('projects.empty') }}
         </p>

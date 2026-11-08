@@ -37,3 +37,4 @@ export * from './schedule';
 export * from './fileName';
 export * from './projectDelete';
 export * from './version';
+export * from './projectMap';

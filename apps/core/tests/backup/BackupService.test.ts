@@ -25,7 +25,7 @@ import { Parser } from '@utils/Parser';
 // with every identifier — and so every app/schedule → workflow link — intact.
 let knex: Knex;
 
-const TABLES = ['schedule', 'task_tag', 'tag', 'app', 'task', 'project', 'global_variable'];
+const TABLES = ['project_map', 'schedule', 'task_tag', 'tag', 'app', 'task', 'project', 'global_variable'];
 
 const workflowSource = (name: string) =>
   JSON.stringify({ name, version: '1.0.0', tags: ['ops'], pipeline: { actions: [{ type: 'log.info', message: 'hi' }] } });
@@ -43,6 +43,20 @@ async function seed() {
     description: 'Deals',
     color: '#f00',
     instructions: 'Prod is crm-01.',
+  });
+  // The project map's plan goes with the project.
+  await knex('project_map').insert({
+    project_id: sales,
+    data: JSON.stringify({
+      version: 1,
+      nodes: [{ id: 'n1', kind: 'workflow', name: 'Warm cache', inputs: ['tag'], outputs: [] }],
+      edges: [{ id: 'e1', from: 'plan:n1', to: 'app:app-deals', kind: 'runs' }],
+      positions: { 'plan:n1': { x: 40, y: 40 } },
+      meta: { 'task:wf-crm': { owner: 'Ana', readyAt: '2026-11-01T10:00:00.000Z', readyBy: 'Ana' } },
+      lanes: ['TAM'],
+      ignored: [],
+      notes: [{ id: 's1', text: 'Ask the AM team', x: 10, y: 20, w: 220, color: 'yellow' }],
+    }),
   });
   const [crm] = await knex('task').insert({
     identifier: 'wf-crm',
@@ -117,11 +131,18 @@ async function snapshot() {
     .join('task', 'task.id', 'schedule.task_id')
     .select('schedule.identifier', 'task.identifier as workflow', 'schedule.cron', 'schedule.run_at', 'schedule.variables')
     .orderBy('schedule.identifier');
+  const maps = (
+    await knex('project_map')
+      .join('project', 'project.id', 'project_map.project_id')
+      .select('project.identifier', 'project_map.data')
+      .orderBy('project.identifier')
+  ).map((m: any) => ({ project: m.identifier, data: JSON.parse(m.data) }));
   const variables = (await knex('global_variable').select('name', 'type', 'value', 'secret', 'readonly').orderBy('name')).map(
     (v: any) => ({ ...v, value: unseal(v.value) })
   );
   return {
     projects,
+    maps,
     tasks: tasks.map((t) => ({ ...t, metadata: JSON.parse(t.metadata ?? 'null'), source: JSON.parse(t.source) })),
     tags,
     apps: apps.map((a) => ({ ...a, metadata: JSON.parse(a.metadata ?? 'null'), source: JSON.parse(a.source) })),

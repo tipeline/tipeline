@@ -36,6 +36,7 @@ import { useQuery } from '@/composables/useQuery';
 import { toast } from '@/components/ui/sonner';
 import { useErrorT } from '@/composables/useErrorT';
 import { beautifyObjectName } from '@/components/ui/auto-form/utils';
+import { assignToProject } from '@/utils/projectAssign';
 
 const PLATFORM_OPTIONS = ['windows', 'linux', 'macos'] as const;
 
@@ -96,10 +97,7 @@ async function saveEdit() {
     const prevProject = props.item.project_identifier ?? '__none__';
     if (selectedProject.value !== prevProject) {
       if (selectedProject.value && selectedProject.value !== '__none__') {
-        await invokeCore(SEND.PROJECT_ASSIGN_TASK, {
-          projectIdentifier: selectedProject.value,
-          taskIdentifier: props.item.identifier,
-        });
+        await assignToProject('task', selectedProject.value, props.item.identifier);
       } else {
         await invokeCore(SEND.PROJECT_UNASSIGN_TASK, { taskIdentifier: props.item.identifier });
       }

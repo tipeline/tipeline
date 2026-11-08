@@ -1,4 +1,5 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -84,6 +85,36 @@ describe('installing a workflow checks its step params', () => {
     await expect(Core.taskInstallFromContent(content, '/tmp')).rejects.toThrow('file.read');
     expect(taskInstall).not.toHaveBeenCalled();
     taskInstall.mockRestore();
+  });
+});
+
+describe('installing sub-workflows named by file', () => {
+  it('installs a file used by several steps once, and points every step at it', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tipeline-sub-'));
+    fs.writeFileSync(path.join(dir, 'child.yml'), workflow([message('child')]));
+    const exec = { group: 'subtask', name: 'exec', params: { path: './child.yml' } };
+    fs.writeFileSync(
+      path.join(dir, 'parent.yml'),
+      workflow([exec, {
+        group: 'flow',
+        name: 'ifConditional',
+        params: { firstOperand: 'a', compareAs: 'string', operator: 'eq', secondOperand: 'a', actions: [exec] },
+      }, exec])
+    );
+    let next = 0;
+    vi.mocked(TaskService.install).mockImplementation(
+      async (data: any) => ({ identifier: `wf-${++next}`, name: data.name }) as any
+    );
+
+    await Core.taskInstall(path.join(dir, 'parent.yml'));
+
+    const names = vi.mocked(TaskService.install).mock.calls.map(([data]: any) => data.name);
+    expect(names).toEqual(['Check', 'Check']);
+    const parent = JSON.parse((vi.mocked(TaskService.install).mock.calls[1][0] as any).source);
+    const ids = JSON.stringify(parent.pipeline.actions).match(/"identifier":"wf-1"/g);
+    expect(ids).toHaveLength(3);
+    expect(JSON.stringify(parent.pipeline.actions)).not.toContain('child.yml');
+    fs.rmSync(dir, { recursive: true, force: true });
   });
 });
 

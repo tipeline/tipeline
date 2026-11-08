@@ -2,7 +2,12 @@ import { Project as ProjectModel } from '@/database/models/Project';
 import { Task as TaskModel } from '@/database/models/Task';
 import { App as AppModel } from '@/database/models/App';
 import { TrashService } from '@/database/services/TrashService';
-import { WorkflowUsageService, type WorkflowUsage } from '@/database/services/WorkflowUsageService';
+import {
+  WorkflowUsageService,
+  appWorkflowIdentifiers,
+  calledWorkflowIdentifiers,
+  type WorkflowUsage,
+} from '@/database/services/WorkflowUsageService';
 import { generateIdentifier } from '@tipeline/utils';
 
 type CreateProjectData = {
@@ -139,12 +144,41 @@ export class ProjectService {
     const project = await ProjectModel.query().findOne({ identifier: projectIdentifier });
     if (!project) throw new Error(`Project not found: ${projectIdentifier}`);
 
-    const count = await TaskModel.query()
-      .patch({ project_id: project.id })
-      .where({ identifier: taskIdentifier });
+    const task = await TaskModel.query().findOne({ identifier: taskIdentifier });
+    if (!task) throw new Error(`Workflow not found: ${taskIdentifier}`);
+    await TaskModel.query().patch({ project_id: project.id }).where({ identifier: taskIdentifier });
 
-    if (!count) throw new Error(`Workflow not found: ${taskIdentifier}`);
-    return TaskModel.query().findOne({ identifier: taskIdentifier });
+    const alsoAdded = await ProjectService.adoptSubWorkflows(project.id, calledWorkflowIdentifiers(task.source));
+    const record = await TaskModel.query().findOne({ identifier: taskIdentifier });
+    return { ...record, alsoAdded };
+  }
+
+  /**
+   * The sub-workflows these workflows run, at any depth, that are in no project join
+   * `projectId`: installed along with their parent, they belong with it. One that
+   * already has a project stays there (a workflow has one owner; others borrow it).
+   */
+  private static async adoptSubWorkflows(
+    projectId: number,
+    identifiers: string[]
+  ): Promise<{ identifier: string; name: string }[]> {
+    const adopted: { identifier: string; name: string }[] = [];
+    const seen = new Set<string>();
+    let queue = identifiers;
+    while (queue.length) {
+      const fresh = queue.filter((id) => !seen.has(id));
+      fresh.forEach((id) => seen.add(id));
+      if (!fresh.length) break;
+      const rows: any[] = await TaskModel.query().whereIn('identifier', fresh).select('id', 'identifier', 'name', 'project_id', 'source');
+      const orphans = rows.filter((r) => r.project_id === null || r.project_id === undefined);
+      if (orphans.length) {
+        await TaskModel.query().patch({ project_id: projectId }).whereIn('id', orphans.map((r) => r.id));
+        adopted.push(...orphans.map((r) => ({ identifier: r.identifier, name: r.name })));
+      }
+      // Only follow the ones that joined: a borrowed workflow's own sub-workflows are its project's.
+      queue = orphans.flatMap((r) => calledWorkflowIdentifiers(r.source));
+    }
+    return adopted;
   }
 
   static async unassignTask(taskIdentifier: string) {
@@ -160,12 +194,14 @@ export class ProjectService {
     const project = await ProjectModel.query().findOne({ identifier: projectIdentifier });
     if (!project) throw new Error(`Project not found: ${projectIdentifier}`);
 
-    const count = await AppModel.query()
-      .patch({ project_id: project.id })
-      .where({ identifier: appIdentifier });
+    const app = await AppModel.query().findOne({ identifier: appIdentifier });
+    if (!app) throw new Error(`App not found: ${appIdentifier}`);
+    await AppModel.query().patch({ project_id: project.id }).where({ identifier: appIdentifier });
 
-    if (!count) throw new Error(`App not found: ${appIdentifier}`);
-    return AppModel.query().findOne({ identifier: appIdentifier });
+    // The app's own workflows (and what they run) in no project come with it, like a parent's sub-workflows.
+    const alsoAdded = await ProjectService.adoptSubWorkflows(project.id, appWorkflowIdentifiers((app as any).source));
+    const record = await AppModel.query().findOne({ identifier: appIdentifier });
+    return { ...record, alsoAdded };
   }
 
   static async unassignApp(appIdentifier: string) {

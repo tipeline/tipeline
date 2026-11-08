@@ -90,6 +90,8 @@ export interface AgentTurn {
   error?: string;
   /** The instructions the request was sent with; drafting from it uses the same ones. */
   instructions?: AgentInstructions;
+  /** Drafted from a planned node of a project map: the draft joins the project and becomes that node. */
+  mapLink?: { projectIdentifier: string; nodeId: string };
 }
 
 /** The project the user is in (its page, or one of its workflows or apps). */
@@ -258,6 +260,7 @@ export const useAgentStore = defineStore('agent', () => {
         entry.draft = response.draft;
         stopListening(id);
         void loadHistory();
+        if (entry.mapLink) void linkToMap(entry.mapLink, response.draft.identifier);
         // Straight to the builder to test it, as the request asked.
         router.push(`/tasks/${response.draft.identifier}/edit`);
         break;
@@ -423,6 +426,44 @@ export const useAgentStore = defineStore('agent', () => {
       payload: JSON.parse(JSON.stringify({ ...config, prompt: text, rememberedChoices, instructions })),
     });
     return true;
+  }
+
+  /**
+   * From a planned node of a project map: opens the sidebar on a draft offer built from the
+   * map (the brief and the workflows to reuse), for the user to check and send. Nothing is
+   * sent to the model until they do.
+   */
+  async function draftFromMap(
+    brief: string,
+    reuse: ReusedWorkflow[],
+    mapLink: { projectIdentifier: string; nodeId: string }
+  ) {
+    const id = generateIdentifier();
+    turns.value.push({
+      id,
+      prompt: brief,
+      phase: 'nomatch',
+      text: t('projectMap.assistant.offer'),
+      draftRequest: brief,
+      reuse: JSON.parse(JSON.stringify(reuse)),
+      instructions: await currentInstructions(),
+      mapLink: { ...mapLink },
+    });
+    sidebarOpen.value = true;
+  }
+
+  /** The draft joins the map's project and takes the planned node's place. */
+  async function linkToMap(mapLink: { projectIdentifier: string; nodeId: string }, taskIdentifier: string) {
+    try {
+      await invokeCore(SEND.PROJECT_ASSIGN_TASK, { projectIdentifier: mapLink.projectIdentifier, taskIdentifier });
+      await invokeCore(SEND.PROJECT_MAP_LINK, {
+        identifier: mapLink.projectIdentifier,
+        nodeId: mapLink.nodeId,
+        key: `task:${taskIdentifier}`,
+      });
+    } catch (error: any) {
+      toast.error(t('projectMap.assistant.linkFailed'), { description: error?.message ?? String(error) });
+    }
   }
 
   /** Opens the sidebar with a request already sent: the dashboard's box. */
@@ -661,6 +702,7 @@ export const useAgentStore = defineStore('agent', () => {
     switchProposal,
     choose,
     draft,
+    draftFromMap,
     adoptInstalled,
     removeReuse,
     adoptInstalledReuse,

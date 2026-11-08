@@ -15,13 +15,11 @@ export class TagService {
     const knex = TagModel.knex();
     const ids: number[] = [];
     for (const label of normalized) {
-      const existing = await knex('tag').where({ label }).first();
-      if (existing) {
-        ids.push(existing.id);
-        continue;
-      }
-      const [id] = await knex('tag').insert({ label });
-      ids.push(id);
+      // Insert-or-skip, then read: two saves creating the same new tag at once
+      // would otherwise both miss it and the second hit the unique label.
+      await knex('tag').insert({ label }).onConflict('label').ignore();
+      const row = await knex('tag').where({ label }).first();
+      ids.push(row.id);
     }
     return ids;
   }

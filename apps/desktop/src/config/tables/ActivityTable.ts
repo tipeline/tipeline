@@ -6,6 +6,7 @@ import type { Item } from '@/config/tables/HomeRecentActivity';
 import { ExternalLink } from 'lucide-vue-next';
 import { openInWindow, windowPaths } from '@/utils/detachedWindows';
 import CancelRunButton from '@/components/CancelRunButton.vue';
+import { TRIGGER_BADGE } from '@/config/entityColors';
 
 function formatDuration(startedAt: string, finishedAt: string): string {
   const ms = new Date(finishedAt).getTime() - new Date(startedAt).getTime();
@@ -35,12 +36,6 @@ function statusDot(status: string) {
   return h('span', { class: `h-2 w-2 rounded-full shrink-0 ${colors[status] ?? 'bg-gray-400'}` });
 }
 
-const TRIGGER_BADGE: Record<string, string> = {
-  webhook: 'bg-violet-500/10 text-violet-600 border border-violet-500/20',
-  schedule: 'bg-amber-500/10 text-amber-600 border border-amber-500/20',
-  user: 'bg-blue-500/10 text-blue-500 border border-blue-500/20',
-  app: 'bg-teal-500/10 text-teal-600 border border-teal-500/20',
-};
 
 function failureReasonLabel(metadata: Item['metadata']): string | null {
   if (!metadata?.reason) return null;

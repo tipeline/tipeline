@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/sonner';
 import { useErrorT } from '@/composables/useErrorT';
 import { useQuery } from '@/composables/useQuery';
@@ -29,11 +30,19 @@ import { invokeCore } from '@/utils/invoke';
 import { SEND } from '@/ipc-channels';
 import { renderMarkdown } from '@/utils/appMarkdown';
 import { descriptionSummary, fileSlug } from '@tipeline/utils';
-import { Pencil, Trash2, Workflow, AppWindow, Plus, X, Loader2, Link2, Download, BotIcon } from 'lucide-vue-next';
+import { Pencil, Trash2, Workflow, AppWindow, Plus, X, Link2, Download, BotIcon, EllipsisVertical, Network } from 'lucide-vue-next';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { openNewAppDialog, openNewTaskDialog } from '@/composables/useNewItemDialogs';
 import { useAgentStore } from '@/store/agentStore';
 import type { TaskItem } from '@/config/tables/TasksList';
 import type { AppItem } from '@/config/tables/AppsList';
+import { assignToProject } from '@/utils/projectAssign';
 
 const route = useRoute();
 const router = useRouter();
@@ -64,6 +73,18 @@ const { data: allApps } = useQuery<AppItem[]>(SEND.APP_LIST);
 const assignedTaskIds = computed(() => new Set((project.value?.tasks ?? []).map((t: any) => t.identifier)));
 const assignedAppIds = computed(() => new Set((project.value?.apps ?? []).map((a: any) => a.identifier)));
 
+// The filter box only shows once the list is long enough to need it.
+const TASK_FILTER_MIN = 8;
+const taskFilter = ref('');
+const filteredTasks = computed(() => {
+  const tasks = project.value?.tasks ?? [];
+  const q = taskFilter.value.trim().toLowerCase();
+  if (!q) return tasks;
+  return tasks.filter((t: any) =>
+    [t.name, t.identifier, t.description].some((v) => typeof v === 'string' && v.toLowerCase().includes(q))
+  );
+});
+
 const availableTasks = computed(() =>
   (allTasks.value ?? []).filter((t) => !assignedTaskIds.value.has(t.identifier))
 );
@@ -85,7 +106,7 @@ function onDeleted() {
 async function assignTask(taskIdentifier: string) {
   assigning.value = taskIdentifier;
   try {
-    await invokeCore(SEND.PROJECT_ASSIGN_TASK, { projectIdentifier: identifier, taskIdentifier });
+    await assignToProject('task', identifier, taskIdentifier);
     await refetch();
   } finally {
     assigning.value = null;
@@ -101,7 +122,7 @@ async function unassignTask(taskIdentifier: string) {
 async function assignApp(appIdentifier: string) {
   assigning.value = appIdentifier;
   try {
-    await invokeCore(SEND.PROJECT_ASSIGN_APP, { projectIdentifier: identifier, appIdentifier });
+    await assignToProject('app', identifier, appIdentifier);
     await refetch();
   } finally {
     assigning.value = null;
@@ -211,22 +232,39 @@ async function confirmExport() {
       </div>
     </template>
 
+    <!-- Like a workflow's overview: one main button (Map, like Build) and the rest in a menu -->
     <template v-if="project" #menu>
-      <Button variant="outline" size="sm" @click="openNewTaskDialog(identifier)">
-        <Plus class="w-3.5 h-3.5" /> {{ t('tasks.new') }}
+      <Button as-child>
+        <RouterLink :to="{ name: 'ProjectMapEditor', params: { pid: identifier } }">
+          <Network class="w-4 h-4" /> {{ t('projects.openMap') }}
+        </RouterLink>
       </Button>
-      <Button variant="outline" size="sm" @click="openNewAppDialog(identifier)">
-        <Plus class="w-3.5 h-3.5" /> {{ t('apps.new') }}
-      </Button>
-      <Button variant="outline" size="sm" @click="openEdit = true">
-        <Pencil class="w-3.5 h-3.5" /> {{ t('common.edit') }}
-      </Button>
-      <Button variant="outline" size="sm" :disabled="isExporting" @click="handleExport">
-        <Download class="w-3.5 h-3.5" /> {{ isExporting ? t('projects.exporting') : t('common.export') }}
-      </Button>
-      <Button variant="destructive" size="sm" @click="openDelete = true">
-        <Trash2 class="w-3.5 h-3.5" /> {{ t('common.delete') }}
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger as-child>
+          <Button variant="outline" size="icon" :aria-label="t('projects.moreActions')">
+            <EllipsisVertical class="w-4 h-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem class="cursor-pointer" @click="openNewTaskDialog(identifier)">
+            <Plus class="size-4" /> {{ t('tasks.new') }}
+          </DropdownMenuItem>
+          <DropdownMenuItem class="cursor-pointer" @click="openNewAppDialog(identifier)">
+            <Plus class="size-4" /> {{ t('apps.new') }}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem class="cursor-pointer" @click="openEdit = true">
+            <Pencil class="size-4" /> {{ t('common.edit') }}
+          </DropdownMenuItem>
+          <DropdownMenuItem class="cursor-pointer" :disabled="isExporting" @click="handleExport">
+            <Download class="size-4" /> {{ isExporting ? t('projects.exporting') : t('common.export') }}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem class="cursor-pointer text-destructive focus:text-destructive" @click="openDelete = true">
+            <Trash2 class="size-4" /> {{ t('common.delete') }}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </template>
 
     <template #content>
@@ -237,7 +275,7 @@ async function confirmExport() {
         :back-label="t('projects.notFound.back')"
         :back-to="{ name: 'Projects' }"
       />
-      <div v-else-if="project" class="p-4 space-y-6">
+      <div v-else-if="project" class="flex-1 min-h-0 overflow-y-auto scroll-fade p-4 pb-6 space-y-6">
         <!-- eslint-disable-next-line vue/no-v-html -- sanitized in renderMarkdown -->
         <div v-if="project?.description" class="app-markdown text-sm text-muted-foreground" v-html="renderMarkdown(project.description)" />
 
@@ -254,103 +292,32 @@ async function confirmExport() {
           <p class="whitespace-pre-wrap font-mono text-xs">{{ project.instructions }}</p>
         </div>
 
-        <!-- Tasks -->
-        <div>
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="flex items-center gap-2 text-sm font-semibold">
-              <Workflow class="w-4 h-4" /> {{ t('projects.tasks') }}
-            </h3>
-            <Button variant="outline" size="sm" @click="openAddTasks = true">
-              <Plus class="w-3.5 h-3.5" /> {{ t('projects.addTasks') }}
-            </Button>
-          </div>
-          <div v-if="project?.tasks?.length" class="space-y-2">
-            <div
-              v-for="task in project.tasks"
-              :key="task.identifier"
-              class="flex items-center justify-between rounded-lg border p-3 hover:bg-accent cursor-pointer transition-colors group"
-              @click="router.push(`/tasks/${task.identifier}`)"
-            >
-              <div class="min-w-0">
-                <p class="text-sm font-medium">{{ task.name }}</p>
-                <p v-if="task.description" class="text-xs text-muted-foreground truncate">{{ descriptionSummary(task.description) }}</p>
-              </div>
-              <button
-                type="button"
-                class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all shrink-0"
-                :title="t('projects.removeFromProject')"
-                @click.stop="unassignTask(task.identifier)"
-              >
-                <X class="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-          <p v-else class="text-sm text-muted-foreground">{{ t('projects.noTasks') }}</p>
-        </div>
-
-        <!-- Workflows this project's apps use that live elsewhere: shown, not assigned -->
-        <div v-if="project?.shared_tasks?.length">
-          <div class="mb-3">
-            <h3 class="flex items-center gap-2 text-sm font-semibold">
-              <Link2 class="w-4 h-4" /> {{ t('projects.sharedTasks') }}
-            </h3>
-            <p class="text-xs text-muted-foreground mt-1">{{ t('projects.sharedTasksHint') }}</p>
-          </div>
-          <div class="space-y-2">
-            <div
-              v-for="task in project.shared_tasks"
-              :key="task.identifier"
-              class="flex items-center justify-between gap-3 rounded-lg border border-dashed p-3 hover:bg-accent cursor-pointer transition-colors"
-              @click="router.push(`/tasks/${task.identifier}`)"
-            >
-              <div class="min-w-0">
-                <p class="text-sm font-medium">{{ task.name }}</p>
-                <p class="text-xs text-muted-foreground truncate">
-                  {{ t('projects.usedByApps', { apps: task.apps.map((a: any) => a.name).join(', ') }) }}
-                </p>
-              </div>
-              <button
-                v-if="task.project_identifier"
-                type="button"
-                class="inline-flex items-center gap-1.5 shrink-0 px-2 py-0.5 rounded border text-xs hover:bg-background transition-colors"
-                @click.stop="router.push(`/projects/${task.project_identifier}`)"
-              >
-                <span
-                  v-if="task.project_color"
-                  class="w-2 h-2 rounded-full shrink-0"
-                  :style="{ backgroundColor: task.project_color }"
-                />
-                {{ task.project_name }}
-              </button>
-              <span v-else class="shrink-0 text-xs text-muted-foreground">{{ t('projects.noProject') }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Apps -->
-        <div>
-          <div class="flex items-center justify-between mb-3">
+        <!-- Apps first: usually only a few, and they would sink under a long workflow list -->
+        <section>
+          <div class="flex items-center justify-between mb-2">
             <h3 class="flex items-center gap-2 text-sm font-semibold">
               <AppWindow class="w-4 h-4" /> {{ t('projects.apps') }}
+              <span class="text-xs font-normal text-muted-foreground">{{ project.apps?.length ?? 0 }}</span>
             </h3>
             <Button variant="outline" size="sm" @click="openAddApps = true">
               <Plus class="w-3.5 h-3.5" /> {{ t('projects.addApps') }}
             </Button>
           </div>
-          <div v-if="project?.apps?.length" class="space-y-2">
+          <div v-if="project.apps?.length" class="grid gap-2 grid-cols-[repeat(auto-fill,minmax(14rem,1fr))]">
             <div
               v-for="app in project.apps"
               :key="app.identifier"
-              class="flex items-center justify-between rounded-lg border p-3 hover:bg-accent cursor-pointer transition-colors group"
+              class="group relative flex flex-col gap-0.5 rounded-lg border bg-card px-3 py-2 hover:bg-accent cursor-pointer transition-colors"
               @click="router.push(`/apps/${app.identifier}`)"
             >
-              <div class="min-w-0">
-                <p class="text-sm font-medium">{{ app.name }}</p>
-                <p v-if="app.description" class="text-xs text-muted-foreground truncate">{{ descriptionSummary(app.description) }}</p>
-              </div>
+              <p class="flex items-center gap-1.5 pr-5 text-sm font-medium min-w-0">
+                <AppWindow class="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                <span class="truncate">{{ app.name }}</span>
+              </p>
+              <p v-if="app.description" class="text-xs text-muted-foreground line-clamp-2">{{ descriptionSummary(app.description) }}</p>
               <button
                 type="button"
-                class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all shrink-0"
+                class="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
                 :title="t('projects.removeFromProject')"
                 @click.stop="unassignApp(app.identifier)"
               >
@@ -359,7 +326,92 @@ async function confirmExport() {
             </div>
           </div>
           <p v-else class="text-sm text-muted-foreground">{{ t('projects.noApps') }}</p>
-        </div>
+        </section>
+
+        <section>
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <h3 class="flex items-center gap-2 text-sm font-semibold shrink-0">
+              <Workflow class="w-4 h-4" /> {{ t('projects.tasks') }}
+              <span class="text-xs font-normal text-muted-foreground">{{ project.tasks?.length ?? 0 }}</span>
+            </h3>
+            <div class="flex items-center gap-2 min-w-0">
+              <Input
+                v-if="(project.tasks?.length ?? 0) > TASK_FILTER_MIN"
+                v-model="taskFilter"
+                :placeholder="t('tasks.searchPlaceholder')"
+                class="h-8 w-56 min-w-0"
+              />
+              <Button variant="outline" size="sm" @click="openAddTasks = true">
+                <Plus class="w-3.5 h-3.5" /> {{ t('projects.addTasks') }}
+              </Button>
+            </div>
+          </div>
+          <div v-if="filteredTasks.length" class="grid gap-2 grid-cols-[repeat(auto-fill,minmax(14rem,1fr))]">
+            <div
+              v-for="task in filteredTasks"
+              :key="task.identifier"
+              class="group relative flex flex-col gap-0.5 rounded-lg border bg-card px-3 py-2 hover:bg-accent cursor-pointer transition-colors"
+              @click="router.push(`/tasks/${task.identifier}`)"
+            >
+              <p class="flex items-center gap-1.5 pr-5 text-sm font-medium min-w-0">
+                <Workflow class="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                <span class="truncate">{{ task.name }}</span>
+              </p>
+              <p v-if="task.description" class="text-xs text-muted-foreground line-clamp-2">{{ descriptionSummary(task.description) }}</p>
+              <button
+                type="button"
+                class="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                :title="t('projects.removeFromProject')"
+                @click.stop="unassignTask(task.identifier)"
+              >
+                <X class="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+          <p v-else-if="project.tasks?.length" class="text-sm text-muted-foreground">{{ t('common.noResults') }}</p>
+          <p v-else class="text-sm text-muted-foreground">{{ t('projects.noTasks') }}</p>
+        </section>
+
+        <!-- Workflows this project's apps use that live elsewhere: shown, not assigned -->
+        <section v-if="project.shared_tasks?.length">
+          <div class="mb-2">
+            <h3 class="flex items-center gap-2 text-sm font-semibold">
+              <Link2 class="w-4 h-4" /> {{ t('projects.sharedTasks') }}
+              <span class="text-xs font-normal text-muted-foreground">{{ project.shared_tasks.length }}</span>
+            </h3>
+            <p class="text-xs text-muted-foreground mt-1">{{ t('projects.sharedTasksHint') }}</p>
+          </div>
+          <div class="grid gap-2 grid-cols-[repeat(auto-fill,minmax(14rem,1fr))]">
+            <div
+              v-for="task in project.shared_tasks"
+              :key="task.identifier"
+              class="flex flex-col gap-1 rounded-lg border border-dashed px-3 py-2 hover:bg-accent cursor-pointer transition-colors"
+              @click="router.push(`/tasks/${task.identifier}`)"
+            >
+              <p class="flex items-center gap-1.5 text-sm font-medium min-w-0">
+                <Workflow class="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                <span class="truncate">{{ task.name }}</span>
+              </p>
+              <p class="text-xs text-muted-foreground line-clamp-2">
+                {{ t('projects.usedByApps', { apps: task.apps.map((a: any) => a.name).join(', ') }) }}
+              </p>
+              <button
+                v-if="task.project_identifier"
+                type="button"
+                class="inline-flex items-center gap-1.5 self-start max-w-full px-2 py-0.5 rounded border text-xs hover:bg-background transition-colors"
+                @click.stop="router.push(`/projects/${task.project_identifier}`)"
+              >
+                <span
+                  v-if="task.project_color"
+                  class="w-2 h-2 rounded-full shrink-0"
+                  :style="{ backgroundColor: task.project_color }"
+                />
+                <span class="truncate">{{ task.project_name }}</span>
+              </button>
+              <span v-else class="text-xs text-muted-foreground">{{ t('projects.noProject') }}</span>
+            </div>
+          </div>
+        </section>
       </div>
     </template>
   </Page>
