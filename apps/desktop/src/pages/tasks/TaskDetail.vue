@@ -74,6 +74,7 @@ import {
 import { beautifyObjectName } from '@/components/ui/auto-form/utils';
 import { dump } from 'js-yaml';
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
+import { assignToProject } from '@/utils/projectAssign';
 
 const PLATFORM_OPTIONS = ['windows', 'linux', 'macos'] as const;
 
@@ -222,10 +223,7 @@ const saveEditMeta = handleMetaSubmit(
       const nextProject = editProject.value === '__none__' ? '' : editProject.value;
       if (nextProject !== prevProject) {
         if (nextProject) {
-          await invokeCore(SEND.PROJECT_ASSIGN_TASK, {
-            projectIdentifier: nextProject,
-            taskIdentifier: task.value.identifier,
-          });
+          await assignToProject('task', nextProject, task.value.identifier);
         } else {
           await invokeCore(SEND.PROJECT_UNASSIGN_TASK, { taskIdentifier: task.value.identifier });
         }

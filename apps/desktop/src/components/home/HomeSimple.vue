@@ -11,6 +11,7 @@ import { useConnectionStore } from '@/store/connectionStore';
 import { useRecentItemsStore, recentItemPath } from '@/store/recentItems';
 import { useLiveItems } from '@/composables/useLiveItems';
 import { openNewAppDialog, openNewTaskDialog } from '@/composables/useNewItemDialogs';
+import { ENTITY_COLORS } from '@/config/entityColors';
 
 // The calm first dashboard: one question, three ways to start, and the last few things
 // opened. The box only hands the request to the Assistant sidebar; the conversation
@@ -46,7 +47,7 @@ const starts = computed(() => [
   {
     key: 'workflow',
     icon: Workflow,
-    tint: 'bg-blue-500/10 text-blue-500',
+    tint: ENTITY_COLORS.workflow.tint,
     title: t('dashboard.simple.newWorkflow.title'),
     description: t('dashboard.simple.newWorkflow.description'),
     open: () => openNewTaskDialog(),
@@ -62,7 +63,7 @@ const starts = computed(() => [
   {
     key: 'app',
     icon: AppWindow,
-    tint: 'bg-amber-500/10 text-amber-500',
+    tint: ENTITY_COLORS.app.tint,
     title: t('dashboard.simple.newApp.title'),
     description: t('dashboard.simple.newApp.description'),
     open: () => openNewAppDialog(),

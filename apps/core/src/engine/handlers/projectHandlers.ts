@@ -107,4 +107,34 @@ export const registerProjectHandlers = (transport: ITransport) => {
       transport.emit(client, 'onProjectUnassignApp', IPCMessage.failure(error.message, message.correlationId));
     }
   });
+  transport.on('projectMap', async (message: any, client: any) => {
+    if (!client) return;
+    try {
+      const result = await Core.projectMap(message.payload?.identifier ?? null);
+      transport.emit(client, 'onProjectMap', IPCMessage.success(result, message.correlationId));
+    } catch (error: any) {
+      transport.emit(client, 'onProjectMap', IPCMessage.failure(error.message, message.correlationId));
+    }
+  });
+
+  transport.on('projectMapSave', async (message: any, client: any) => {
+    if (!client) return;
+    try {
+      const result = await Core.projectMapSave(message.payload.identifier, message.payload.plan);
+      transport.emit(client, 'onProjectMapSave', IPCMessage.success(result, message.correlationId));
+    } catch (error: any) {
+      transport.emit(client, 'onProjectMapSave', IPCMessage.failure(error.message, message.correlationId));
+    }
+  });
+
+  transport.on('projectMapLink', async (message: any, client: any) => {
+    if (!client) return;
+    try {
+      const { identifier, nodeId, key } = message.payload;
+      const result = await Core.projectMapLink(identifier, nodeId, key);
+      transport.emit(client, 'onProjectMapLink', IPCMessage.success(result, message.correlationId));
+    } catch (error: any) {
+      transport.emit(client, 'onProjectMapLink', IPCMessage.failure(error.message, message.correlationId));
+    }
+  });
 };

@@ -138,6 +138,9 @@ export const SEND = {
   PROJECT_UNASSIGN_APP: 'projectUnassignApp',
   PROJECT_EXPORT: 'projectExport',
   PROJECT_IMPORT: 'projectImport',
+  PROJECT_MAP: 'projectMap',
+  PROJECT_MAP_SAVE: 'projectMapSave',
+  PROJECT_MAP_LINK: 'projectMapLink',
   // Server auth (login to remote Tipeline Server to get a token)
   SERVER_LOGIN: 'serverLogin',
   SERVER_LOGIN_MFA: 'serverLoginMfa',

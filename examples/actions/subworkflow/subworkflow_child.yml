@@ -1,25 +1,28 @@
 version: 1.0.0
-name: Subtask Child Task
+name: Sub-workflow Child Workflow
 description: |
-  The child workflow that `subtask.yml` calls. It takes `rawInput` from the parent, changes it and exposes `processedResult` and `itemCount` for the parent to read.
+  The child workflow that `subworkflow.yml` calls. It takes `rawInput` from the parent, changes it and exposes `processedResult` and `itemCount` for the parent to read.
 
 author: Jose Daniel Estrada
-tags: [example, subtask, sub-workflow]
+tags: [example, sub-workflow]
 
 pipeline:
   variables:
-    # Populated by the parent via props before this task runs
+    # Populated by the parent via props before this workflow runs
     - type: string
       name: rawInput
+      visibility: public
       value: ''
 
-    # Computed inside this task; exported back to the parent via outputs
+    # Computed inside this workflow; exported back to the parent via outputs
     - type: string
       name: processedResult
+      visibility: public
       value: ''
 
     - type: number
       name: itemCount
+      visibility: public
       value: 0
 
   actions:

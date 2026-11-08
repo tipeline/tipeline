@@ -1059,6 +1059,9 @@
     }
   },
   "projects": {
+    "alsoAdded": {
+      "title": "También se añadió {count} flujo de trabajo que usa y que no estaba en ningún proyecto | También se añadieron {count} flujos de trabajo que usa y que no estaban en ningún proyecto"
+    },
     "title": "Proyectos",
     "new": "Nuevo Proyecto",
     "empty": "Aún no hay proyectos. Crea uno para empezar a organizar tus flujos de trabajo y apps.",
@@ -1153,7 +1156,9 @@
     "importFailed": "Error al importar",
     "open": "Abrir",
     "instructions": "Instrucciones para el asistente",
-    "instructionsHint": "El asistente las sigue cuando le pides algo desde este proyecto."
+    "instructionsHint": "El asistente las sigue cuando le pides algo desde este proyecto.",
+    "openMap": "Mapa",
+    "moreActions": "Más acciones"
   },
   "variable": {
     "title": "Variables Globales",
@@ -3019,5 +3024,348 @@
     "clear": "Borrar",
     "seeAll": "Ver todos",
     "opened": "Abierto {time}"
+  },
+  "projectMap": {
+    "kind": {
+      "workflow": "Flujo de trabajo",
+      "subworkflow": "Subflujo",
+      "helper": "Auxiliar",
+      "app": "Aplicación",
+      "global": "Global",
+      "schedule": "Programación"
+    },
+    "status": {
+      "idea": "Idea",
+      "drafting": "En borrador",
+      "built": "Construido",
+      "tested": "Probado",
+      "ready": "Listo"
+    },
+    "node": {
+      "differences": "{count} diferencia | {count} diferencias",
+      "missingGlobal": "No existe",
+      "noProject": "Sin proyecto"
+    },
+    "connectFrom": "Trazar una línea desde {name}",
+    "connectHint": "Arrastra desde el punto de un nodo hasta otro para conectarlos",
+    "edge": {
+      "runs": "ejecuta",
+      "writes": "escribe",
+      "reads": "lee",
+      "triggers": "inicia",
+      "missing": "planeado, no encontrado",
+      "unplanned": "fuera del plan",
+      "planned": "{label} (planeado)",
+      "many": "{label} ×{count}",
+      "calls": "ejecuta"
+    },
+    "lanes": {
+      "unassigned": "Sin carril",
+      "title": "Carriles:",
+      "remove": "Quitar el carril {name}",
+      "placeholder": "p. ej. TAM",
+      "add": "Agregar",
+      "noOwner": "Sin responsable",
+      "groupBy": "Agrupar por",
+      "by": {
+        "owner": "Responsable",
+        "status": "Estado",
+        "kind": "Tipo",
+        "custom": "Personalizado"
+      },
+      "from": {
+        "owner": "Un carril por responsable. Arrastra un nodo a otro carril para cambiar su responsable, o cámbialo en sus detalles.",
+        "status": "Un carril por estado. Los carriles siguen el estado de cada nodo, así que no se puede arrastrar entre ellos.",
+        "kind": "Un carril por tipo: flujos de trabajo, auxiliares, aplicaciones, globales, programaciones."
+      },
+      "hint": {
+        "custom": "Aún no hay carriles personalizados. Agrégalos en la barra lateral izquierda, o agrupa por responsable.",
+        "owner": "Nadie es responsable de nada todavía. Elige un nodo y ponle un responsable: cada responsable tiene su carril.",
+        "useOwner": "Agrupar por responsable",
+        "useCustom": "Usar carriles personalizados"
+      }
+    },
+    "details": {
+      "planned": "{kind} planeado",
+      "fromProject": "Del proyecto {name}",
+      "noProject": "En ningún proyecto",
+      "adopt": "Añadir a este proyecto",
+      "adoptHint": "No está en ningún proyecto. Al añadirlo aquí tendrá un estado en este mapa.",
+      "adoptFailed": "No se pudo añadir al proyecto",
+      "missingGlobal": "Hay flujos de trabajo que usan esta global, pero no existe. Créala en Variables.",
+      "linkMissing": "Estaba vinculado a algo que ya no existe.",
+      "name": "Nombre",
+      "description": "Qué debe hacer",
+      "descriptionPlaceholder": "Descríbelo en una o dos frases. El asistente redacta a partir de esto.",
+      "status": "Estado",
+      "owner": "Responsable",
+      "ownerPlaceholder": "Quién lo construye",
+      "lane": "Carril",
+      "plannedInputs": "Entradas planeadas",
+      "plannedOutputs": "Salidas planeadas",
+      "listPlaceholder": "Nombres separados por comas",
+      "inputsOutputs": "Entradas y salidas",
+      "in": "entrada: {name}",
+      "out": "salida: {name}",
+      "plannedLine": "planeada",
+      "removeLine": "Quitar esta línea planeada",
+      "removeLineFromPlan": "Quitar del plan (la conexión real se mantiene)",
+      "noLinesPlan": "Aún no hay líneas. Arrastra desde el punto del borde derecho hasta otro nodo.",
+      "noLines": "Nada se conecta con él.",
+      "dynamic": "{count} flujo de trabajo arma nombres de globales mientras se ejecuta, así que sus globales no aparecen en el mapa. | {count} flujos de trabajo arman nombres de globales mientras se ejecutan, así que sus globales no aparecen en el mapa.",
+      "dynamicSelf": "Este flujo de trabajo arma un nombre de global mientras se ejecuta, así que algunas de sus globales no se pueden mostrar.",
+      "build": "Construirlo con el asistente",
+      "createApp": "Crear la aplicación",
+      "createGlobal": "Crear la global",
+      "createSchedule": "Crear la programación",
+      "linkExisting": "Vincular con uno existente",
+      "linkPick": "Elige uno…",
+      "linkNone": "Aún no hay nada que vincular",
+      "removePlanned": "Quitar del plan",
+      "open": "Abrir",
+      "unlink": "Desvincular del plan",
+      "createGlobalHint": "Crea la global {name} en Variables y vincula este nodo con ella.",
+      "globalNameInvalid": "Cámbiale el nombre primero: el nombre de una global solo usa letras, números y _, y empieza con una letra o un número.",
+      "globalType": "Tipo",
+      "scheduleNeedsLine": "Conecta esta programación con el flujo de trabajo que debe iniciar (arrastra desde su punto hasta el flujo de trabajo) y créala aquí.",
+      "scheduleTargetPlanned": "{name} todavía está planeado. Constrúyelo primero y luego crea la programación.",
+      "scheduleWhen": "¿Cuándo debe iniciar {name}?",
+      "scheduleWhenPlaceholder": "p. ej. cada día laborable a las 8am",
+      "lastChange": "Último cambio",
+      "lastSuccess": "Última ejecución exitosa",
+      "never": "nunca"
+    },
+    "connections": {
+      "calls": {
+        "out": "Ejecuta como subflujos",
+        "in": "Lo ejecuta como subflujo"
+      },
+      "runs": {
+        "out": "Ejecuta flujos de trabajo",
+        "in": "Lo ejecutan las aplicaciones"
+      },
+      "writes": {
+        "out": "Escribe",
+        "in": "Escrita por"
+      },
+      "reads": {
+        "out": "Lee",
+        "in": "Leída por"
+      },
+      "triggers": {
+        "out": "Inicia",
+        "in": "Iniciado por"
+      }
+    },
+    "overview": {
+      "title": "Resumen",
+      "hint": "Los nodos sólidos existen; los punteados son ideas, igual que las líneas trazadas a mano. Cuando algo ya está construido, sus líneas salen de su definición. Haz clic en un nodo para ver qué depende de él.",
+      "show": "Ver resumen"
+    },
+    "progress": "{ready} de {total} listos",
+    "differences": {
+      "heading": "Revisión del plan",
+      "count": "{count} discrepancia | {count} discrepancias",
+      "hint": "Compara lo planeado (líneas, entradas y salidas) con los flujos de trabajo, apps y programaciones reales. Las ideas no se revisan hasta que se construyen.",
+      "empty": "Lo construido coincide con lo planeado.",
+      "none": "ninguna",
+      "show": "Mostrar",
+      "removeFromPlan": "Quitar del plan",
+      "addToPlan": "Agregar al plan",
+      "ignore": "Ignorar",
+      "updatePlan": "Actualizar el plan",
+      "linkMissing": "{name} estaba vinculado a algo que se eliminó.",
+      "inputs": "{name} se planeó con las entradas {planned}. El flujo de trabajo tiene {actual}.",
+      "outputs": "{name} se planeó con las salidas {planned}. El flujo de trabajo tiene {actual}.",
+      "title": {
+        "missing-link": "Falta una conexión",
+        "not-on-plan": "Fuera del plan",
+        "inputs": "Cambiaron las entradas",
+        "outputs": "Cambiaron las salidas",
+        "link-missing": "Vínculo roto"
+      },
+      "missing": {
+        "calls": "El plan dice que {from} ejecuta {to} como subflujo, pero no lo hace.",
+        "runs": "El plan dice que {from} ejecuta {to}, pero nada en la aplicación está conectado a él.",
+        "writes": "El plan dice que {from} escribe {to}, pero ninguno de sus pasos lo hace.",
+        "reads": "El plan dice que {from} lee {to}, pero no la usa.",
+        "triggers": "El plan dice que {from} inicia {to}, pero inicia otra cosa."
+      },
+      "unplanned": {
+        "calls": "{from} ejecuta {to} como subflujo, y eso no está en el plan.",
+        "runs": "{from} ejecuta {to}, y eso no está en el plan.",
+        "writes": "{from} escribe {to}, y eso no está en el plan.",
+        "reads": "{from} lee {to}, y eso no está en el plan.",
+        "triggers": "{from} inicia {to}, y eso no está en el plan."
+      }
+    },
+    "legend": {
+      "title": "Líneas",
+      "subworkflows": "Ejecuta un subflujo",
+      "apps": "Una aplicación ejecuta un flujo de trabajo",
+      "globalsWrite": "Escribe una global (flecha rellena)",
+      "globalsRead": "Lee una global (flecha abierta, también apunta a la global)",
+      "schedules": "Una programación inicia un flujo de trabajo",
+      "dashed": "Punteadas: planeadas, trazadas a mano",
+      "amber": "Ámbar: el plan dice una cosa y la definición otra",
+      "unplanned": "Naranja: existe, pero no está en el plan",
+      "external": "{count} nodo de fuera del proyecto se muestra atenuado. | {count} nodos de fuera del proyecto se muestran atenuados.",
+      "direction": "Cada línea va de lo que hace algo a aquello sobre lo que lo hace: una aplicación ejecuta un flujo, un flujo ejecuta un subflujo.",
+      "readHint": "Para indicar que algo lee una global, arrastra desde la global hasta ello."
+    },
+    "assistant": {
+      "offer": "Esto es lo que el mapa dice que debe hacer este flujo de trabajo. Revísalo y luego redáctalo.",
+      "linkFailed": "El borrador se guardó, pero no se pudo vincular al mapa"
+    },
+    "saveFailed": "No se pudo guardar el mapa",
+    "cantConnect": "Un nodo de tipo {from} no se puede conectar con uno de tipo {to}",
+    "newName": {
+      "workflow": "Nuevo flujo de trabajo",
+      "helper": "Nuevo auxiliar",
+      "app": "Nueva aplicación",
+      "global": "nuevaGlobal",
+      "schedule": "Nueva programación"
+    },
+    "liveHint": "Solo lectura, trazado a partir de las definiciones",
+    "addPlanned": "Agregar planeado",
+    "layoutLabel": "Disposición",
+    "layout": {
+      "flow": "Flujo",
+      "lanes": "Carriles"
+    },
+    "zoomOut": "Alejar",
+    "zoomIn": "Acercar",
+    "zoomReset": "Volver al 100 %",
+    "resetLayout": "Reordenar",
+    "resetLayoutHint": "Olvidar dónde se arrastraron los nodos y ordenarlos de nuevo",
+    "refresh": "Actualizar",
+    "empty": {
+      "title": "Aún no hay nada en el mapa",
+      "description": "Agrega flujos de trabajo y aplicaciones al proyecto, o empieza a planear: agrega los flujos de trabajo y aplicaciones que necesita una idea y conéctalos.",
+      "start": "Agregar un flujo de trabajo planeado"
+    },
+    "all": {
+      "title": "Todos los proyectos",
+      "description": "Cada proyecto en su propio recuadro. Lo que usa más de un proyecto va en un recuadro aparte.",
+      "empty": "Aún no hay flujos de trabajo ni aplicaciones.",
+      "projects": "Proyectos",
+      "hint": "Se planea en el mapa de cada proyecto. Abre uno para agregar nodos planeados.",
+      "shared": "Compartido o sin proyecto",
+      "open": "Mapa de todos los proyectos"
+    },
+    "cluster": {
+      "title": "{count} flujo de trabajo | {count} flujos de trabajo",
+      "open": "Mostrarlos",
+      "close": "Juntarlos en una tarjeta",
+      "only": {
+        "calls": {
+          "in": "cada uno ejecuta {name} como subflujo",
+          "out": "solo los ejecuta {name} como subflujos"
+        },
+        "runs": {
+          "in": "solo conectados a {name}",
+          "out": "solo los ejecuta {name}"
+        },
+        "writes": {
+          "in": "solo escriben {name}",
+          "out": "solo conectados a {name}"
+        },
+        "reads": {
+          "in": "solo leen {name}",
+          "out": "solo conectados a {name}"
+        },
+        "triggers": {
+          "in": "solo conectados a {name}",
+          "out": "solo los inicia {name}"
+        }
+      }
+    },
+    "save": {
+      "saving": "Guardando…",
+      "saved": "Mapa guardado",
+      "error": "Mapa no guardado.",
+      "retry": "Reintentar"
+    },
+    "created": "Se creó {name} y quedó vinculado al mapa",
+    "createFailed": "No se pudo crear",
+    "statusWhy": {
+      "planned": "Por ahora solo está en el mapa. Constrúyelo, créalo o vincúlalo con algo real.",
+      "missingGlobal": "Hay flujos de trabajo que usan esta global, pero todavía no se creó.",
+      "draft": "Un borrador del asistente que nadie ha marcado como listo. Revísalo en el editor.",
+      "neverRun": "Existe, pero nunca se ha ejecutado con éxito. Ejecútalo una vez para pasar a Probado.",
+      "changedSinceRun": "Cambió desde su última ejecución exitosa. Ejecútalo de nuevo para volver a Probado.",
+      "ranSinceChange": "Se ejecutó con éxito después de su último cambio.",
+      "appUntested": "Algunos de los flujos de trabajo que ejecuta aún no están probados.",
+      "appTested": "Todos los flujos de trabajo que ejecuta están probados.",
+      "appEmpty": "Todavía no ejecuta ningún flujo de trabajo.",
+      "exists": "Existe. Una global se puede marcar como lista cuando hayas revisado su valor.",
+      "scheduleOff": "Desactivada: no iniciará nada.",
+      "scheduleUntested": "Activada, pero el flujo de trabajo que inicia aún no está probado.",
+      "scheduleTested": "Activada, y el flujo de trabajo que inicia está probado.",
+      "signedOff": "Probado y aprobado como listo."
+    },
+    "ready": {
+      "mark": "Marcar como listo",
+      "unmark": "Quitar Listo",
+      "on": "Marcado como listo el {date}",
+      "byOn": "Marcado como listo por {name}, {date}",
+      "stale": "Estaba marcado como listo, pero cambió (o dejó de funcionar) desde entonces. Revísalo de nuevo."
+    },
+    "editor": {
+      "title": "Mapa",
+      "back": "Volver al proyecto",
+      "details": "Detalles",
+      "search": "Buscar en el mapa",
+      "add": "Agregar al mapa",
+      "addHint": "Haz clic para agregarlo junto a lo seleccionado, o arrástralo al mapa.",
+      "lanesHint": "De arriba abajo. Arrastra un nodo a un carril, o elige su carril en sus detalles.",
+      "laneUp": "Subir {name}",
+      "laneDown": "Bajar {name}",
+      "newLane": "Nuevo carril",
+      "attentionTitle": "Necesita atención",
+      "attention": {
+        "readyStale": "cambió desde Listo",
+        "draft": "borrador",
+        "neverRun": "nunca ejecutado",
+        "changedSinceRun": "cambió desde la última ejecución",
+        "missingGlobal": "no existe"
+      },
+      "onMap": "En este mapa",
+      "groups": {
+        "workflows": "Flujos de trabajo",
+        "apps": "Aplicaciones",
+        "globals": "Globales",
+        "schedules": "Programaciones",
+        "borrowed": "De otros proyectos"
+      },
+      "nothing": "No hay coincidencias.",
+      "differences": "{count} diferencia | {count} diferencias"
+    },
+    "notes": {
+      "tile": "Nota",
+      "label": "Nota",
+      "placeholder": "Escribe una nota…",
+      "remove": "Borrar esta nota",
+      "resize": "Arrastra para cambiar el tamaño",
+      "color": {
+        "yellow": "Amarillo",
+        "blue": "Azul",
+        "green": "Verde",
+        "pink": "Rosa"
+      },
+      "hasNote": "Tiene una nota",
+      "nodeLabel": "Nota",
+      "nodePlaceholder": "Para el equipo: decisiones, preguntas abiertas, enlaces…"
+    },
+    "ideas": {
+      "label": "Mostrar ideas",
+      "hint": "Apagado: solo lo que existe. Las ideas y las líneas planeadas se ocultan; las notas se quedan."
+    },
+    "schedule": {
+      "oneWorkflow": "Una programación inicia un solo flujo de trabajo, así que {name} tiene ahora su propia programación planeada.",
+      "planSeparate": "Planear otra programación",
+      "tooMany": "Esta programación está conectada a {count} flujos de trabajo, pero una programación inicia solo uno. Primero dale a cada flujo su propia programación.",
+      "split": "Una programación por flujo"
+    }
   }
 }

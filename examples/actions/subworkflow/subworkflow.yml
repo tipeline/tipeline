@@ -1,5 +1,5 @@
 version: 1.0.0
-name: Subtask Actions Test Suite
+name: Sub-workflow Actions Test Suite
 description: |
   Runs a child workflow and waits for it to finish before going on, passing values in with `props` and copying results back with `outputs`.
 
@@ -30,7 +30,7 @@ description: |
   - `{{ _global.varName }}` — a global variable, no declaration needed
 
 author: Jose Daniel Estrada
-tags: [example, subtask, sub-workflow, props, outputs]
+tags: [example, sub-workflow, props, outputs]
 
 pipeline:
   variables:
@@ -51,15 +51,15 @@ pipeline:
 
   actions:
     # ------------------------------------------------------------------
-    # path — run a file-based subtask, inject a prop, pull two outputs
+    # path — run a file-based sub-workflow, inject a prop, pull two outputs
     # ------------------------------------------------------------------
 
-    # Runs subtask_child.yml; passes 'inputValue' in as 'rawInput' inside the child,
+    # Runs subworkflow_child.yml; passes 'inputValue' in as 'rawInput' inside the child,
     # then copies 'processedResult' and 'itemCount' back into this pipeline.
     - group: subtask
       name: exec
       params:
-        path: ./subtask_child.yml
+        path: ./subworkflow_child.yml
         props:
           rawInput: '{{ inputValue }}'
         outputs:
@@ -78,23 +78,23 @@ pipeline:
     # path — no props, no outputs (fire and forget)
     # ------------------------------------------------------------------
 
-    # Runs the child as a plain side-effect task; results stay inside the child.
+    # Runs the child as a plain side-effect workflow; results stay inside the child.
     - group: subtask
       name: exec
       params:
-        path: ./subtask_child.yml
+        path: ./subworkflow_child.yml
 
     # ------------------------------------------------------------------
-    # identifier — run a database-backed subtask without persisting
+    # identifier — run a database-backed sub-workflow without persisting
     # ------------------------------------------------------------------
 
-    # Uncomment and set 'identifier' to a task that exists in your database.
+    # Uncomment and set 'identifier' to a workflow that exists in your database.
     # persist: false skips creating a pipeline record, behaving like a file-based call.
     #
     # - group: subtask
     #   name: exec
     #   params:
-    #     identifier: my-registered-task
+    #     identifier: my-registered-workflow
     #     persist: false
     #     props:
     #       inputValue: '{{ inputValue }}'

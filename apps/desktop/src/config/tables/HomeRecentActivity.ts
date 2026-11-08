@@ -2,13 +2,8 @@ import { h } from 'vue';
 import type { ColumnDef } from '@tanstack/vue-table';
 import type { Router } from 'vue-router';
 import { formatDistanceToNow } from 'date-fns';
+import { TRIGGER_BADGE } from '@/config/entityColors';
 
-const TRIGGER_BADGE: Record<string, string> = {
-  webhook: 'bg-violet-500/10 text-violet-600 border border-violet-500/20',
-  schedule: 'bg-amber-500/10 text-amber-600 border border-amber-500/20',
-  user: 'bg-blue-500/10 text-blue-500 border border-blue-500/20',
-  app: 'bg-teal-500/10 text-teal-600 border border-teal-500/20',
-};
 
 export type Item = {
   identifier: string;

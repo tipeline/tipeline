@@ -4,7 +4,7 @@ import nodePath from 'path';
 import archiver from 'archiver';
 import decompress from 'decompress';
 import type { Knex } from 'knex';
-import { generateIdentifier, readableFileNames } from '@tipeline/utils';
+import { generateIdentifier, parsePlan, readableFileNames } from '@tipeline/utils';
 import { Task as TaskModel } from '@database/models/Task';
 import { TagService } from '@database/services/TagService';
 import { TaskRevisionService } from '@database/services/TaskRevisionService';
@@ -66,6 +66,8 @@ type ProjectEntry = {
   description?: string | null;
   color?: string | null;
   instructions?: string | null;
+  /** The project map's plan (planned nodes, hand-drawn lines, notes); absent when it has none. */
+  map?: unknown;
 };
 type TaskEntry = {
   identifier: string;
@@ -181,7 +183,11 @@ export class BackupService {
       projectRows = [project];
       rows = scopeToProject(project.id, rows);
     }
-    const projects: ProjectEntry[] = projectRows.map(({ id: _id, ...p }: any) => p);
+    const mapRows: any[] = await knex('project_map').whereIn('project_id', projectRows.map((p: any) => p.id)).select('project_id', 'data');
+    const mapOf = new Map<number, unknown>(mapRows.map((m) => [m.project_id, parseJson(m.data)]));
+    const projects: ProjectEntry[] = projectRows.map(({ id, ...p }: any) =>
+      mapOf.get(id) ? { ...p, map: mapOf.get(id) } : p
+    );
 
     const tagRows = await knex('task_tag').join('tag', 'tag.id', 'task_tag.tag_id').select('task_tag.task_id', 'tag.label');
     const tagsOf = new Map<number, string[]>();
@@ -527,10 +533,13 @@ export class BackupService {
           const [id] = await trx('project').insert({ identifier: p.identifier, ...data });
           projectId.set(p.identifier, id);
           result.projects.added++;
+          if (p.map) await trx('project_map').insert({ project_id: id, data: JSON.stringify(parsePlan(p.map)) });
         } else {
           projectId.set(p.identifier, existing.id);
           if (mode === 'replace') {
             await trx('project').where({ id: existing.id }).update({ ...data, updated_at: trx.fn.now() });
+            await trx('project_map').where({ project_id: existing.id }).delete();
+            if (p.map) await trx('project_map').insert({ project_id: existing.id, data: JSON.stringify(parsePlan(p.map)) });
             result.projects.replaced++;
           } else result.projects.skipped++;
         }

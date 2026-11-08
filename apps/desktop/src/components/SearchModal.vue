@@ -11,6 +11,7 @@ import { SEND } from '@/ipc-channels';
 import { searchAll, type SearchKind, type SearchResult, type SearchSources } from '@/utils/searchIndex';
 import { useStarredItemsStore } from '@/store/starredItems';
 import { useRecentItemsStore, recentItemPath } from '@/store/recentItems';
+import { ENTITY_COLORS } from '@/config/entityColors';
 
 const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ 'update:open': [value: boolean] }>();
@@ -73,6 +74,12 @@ const groups = computed<Group[]>(() => {
 const flat = computed(() => groups.value.flatMap((g) => g.items));
 
 const kindIcons = { task: Workflow, app: AppWindow, project: Folders, tag: TagIcon } as const;
+const kindTone: Record<string, string> = {
+  task: ENTITY_COLORS.workflow.text,
+  app: ENTITY_COLORS.app.text,
+  project: ENTITY_COLORS.project.text,
+  tag: 'text-muted-foreground',
+};
 
 async function load() {
   const [tasks, apps, projects] = await Promise.all([
@@ -168,7 +175,7 @@ const indexOf = (result: SearchResult) => flat.value.indexOf(result);
                     class="w-2.5 h-2.5 rounded-full"
                     :style="{ backgroundColor: result.color }"
                   />
-                  <component :is="kindIcons[result.kind]" v-else class="w-4 h-4 text-muted-foreground" />
+                  <component :is="kindIcons[result.kind]" v-else class="w-4 h-4" :class="kindTone[result.kind]" />
                 </div>
                 <div class="min-w-0 flex-1">
                   <div class="font-medium truncate">{{ result.title }}</div>

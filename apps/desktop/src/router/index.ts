@@ -37,6 +37,8 @@ const PluginsList = () => import('@/pages/plugins/PluginsList.vue');
 const PluginDetail = () => import('@/pages/plugins/PluginDetail.vue');
 import ProjectsList from '@/pages/projects/ProjectsList.vue';
 import ProjectDetail from '@/pages/projects/ProjectDetail.vue';
+import ProjectsMap from '@/pages/projects/ProjectsMap.vue';
+import ProjectMapEditor from '@/pages/projects/ProjectMapEditor.vue';
 import TasksList from '@/pages/tasks/TasksList.vue';
 import TaskDetail from '@/pages/tasks/TaskDetail.vue';
 import TaskEdit from '@/pages/tasks/TaskEdit.vue';
@@ -84,6 +86,19 @@ const routes = [
     name: 'Projects',
     component: ProjectsList,
     meta: { breadcrumb: 'Projects', layout: 'DefaultLayout' },
+  },
+  {
+    path: '/projects/map',
+    name: 'ProjectsMap',
+    component: ProjectsMap,
+    meta: { breadcrumb: 'Map', layout: 'DefaultLayout' },
+  },
+  // A project's map, full page like the workflow builder (EditLayout) — before '/projects/:pid'
+  {
+    path: '/projects/:pid/map',
+    name: 'ProjectMapEditor',
+    component: ProjectMapEditor,
+    meta: { breadcrumb: () => 'Map', showProjectName: true, layout: 'EditLayout' },
   },
   {
     path: '/projects/:pid',

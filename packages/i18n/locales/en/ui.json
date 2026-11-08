@@ -1059,6 +1059,9 @@
     }
   },
   "projects": {
+    "alsoAdded": {
+      "title": "Also added {count} workflow it uses, which was in no project | Also added {count} workflows it uses, which were in no project"
+    },
     "title": "Projects",
     "new": "New Project",
     "empty": "No projects yet. Create one to start organizing your workflows and apps.",
@@ -1153,7 +1156,9 @@
     "importFailed": "Import failed",
     "open": "Open",
     "instructions": "Assistant instructions",
-    "instructionsHint": "The assistant follows these when you ask it from this project."
+    "instructionsHint": "The assistant follows these when you ask it from this project.",
+    "openMap": "Map",
+    "moreActions": "More actions"
   },
   "variable": {
     "title": "Global Variables",
@@ -3019,5 +3024,348 @@
     "clear": "Clear",
     "seeAll": "See all",
     "opened": "Opened {time}"
+  },
+  "projectMap": {
+    "kind": {
+      "workflow": "Workflow",
+      "subworkflow": "Sub-workflow",
+      "helper": "Helper",
+      "app": "App",
+      "global": "Global",
+      "schedule": "Schedule"
+    },
+    "status": {
+      "idea": "Idea",
+      "drafting": "Drafting",
+      "built": "Built",
+      "tested": "Tested",
+      "ready": "Ready"
+    },
+    "node": {
+      "differences": "{count} difference | {count} differences",
+      "missingGlobal": "Doesn't exist",
+      "noProject": "No project"
+    },
+    "connectFrom": "Draw a line from {name}",
+    "connectHint": "Drag from a node's dot to another node to connect them",
+    "edge": {
+      "runs": "runs",
+      "writes": "writes",
+      "reads": "reads",
+      "triggers": "starts",
+      "missing": "planned, not found",
+      "unplanned": "not on plan",
+      "planned": "{label} (planned)",
+      "many": "{label} ×{count}",
+      "calls": "runs"
+    },
+    "lanes": {
+      "unassigned": "No lane",
+      "title": "Lanes:",
+      "remove": "Remove lane {name}",
+      "placeholder": "e.g. TAM",
+      "add": "Add",
+      "noOwner": "No owner",
+      "groupBy": "Group by",
+      "by": {
+        "owner": "Owner",
+        "status": "Status",
+        "kind": "Kind",
+        "custom": "Custom"
+      },
+      "from": {
+        "owner": "One lane per owner. Drag a node to another lane to change its owner, or set it in its details.",
+        "status": "One lane per status. Lanes follow each node's status, so they can't be dragged between.",
+        "kind": "One lane per kind: workflows, helpers, apps, globals, schedules."
+      },
+      "hint": {
+        "custom": "No custom lanes yet. Add them in the left sidebar, or group by owner.",
+        "owner": "Nobody owns anything yet. Pick a node and set its owner: each owner gets a lane.",
+        "useOwner": "Group by owner",
+        "useCustom": "Use custom lanes"
+      }
+    },
+    "details": {
+      "planned": "Planned {kind}",
+      "fromProject": "From the project {name}",
+      "noProject": "In no project",
+      "adopt": "Add to this project",
+      "adoptHint": "It's in no project. Adding it here gives it a status on this map.",
+      "adoptFailed": "Couldn't add it to the project",
+      "missingGlobal": "Workflows use this global, but it doesn't exist. Create it in Variables.",
+      "linkMissing": "This was linked to something that no longer exists.",
+      "name": "Name",
+      "description": "What it should do",
+      "descriptionPlaceholder": "Describe it in a sentence or two. The Assistant drafts from this.",
+      "status": "Status",
+      "owner": "Owner",
+      "ownerPlaceholder": "Who builds it",
+      "lane": "Lane",
+      "plannedInputs": "Planned inputs",
+      "plannedOutputs": "Planned outputs",
+      "listPlaceholder": "Names, separated by commas",
+      "inputsOutputs": "Inputs and outputs",
+      "in": "in: {name}",
+      "out": "out: {name}",
+      "plannedLine": "planned",
+      "removeLine": "Remove this planned line",
+      "removeLineFromPlan": "Remove from plan (the real connection stays)",
+      "noLinesPlan": "No lines yet. Drag from the dot on its right edge to another node.",
+      "noLines": "Nothing connects to it.",
+      "dynamic": "{count} workflow builds global names while it runs, so its globals aren't on the map. | {count} workflows build global names while they run, so their globals aren't on the map.",
+      "dynamicSelf": "This workflow builds a global name while it runs, so some of its globals can't be shown.",
+      "build": "Build this with the Assistant",
+      "createApp": "Create the app",
+      "createGlobal": "Create the global",
+      "createSchedule": "Create the schedule",
+      "linkExisting": "Link to an existing one",
+      "linkPick": "Pick one…",
+      "linkNone": "Nothing to link yet",
+      "removePlanned": "Remove from the plan",
+      "open": "Open",
+      "unlink": "Unlink from the plan",
+      "createGlobalHint": "Creates the global {name} in Variables and links this node to it.",
+      "globalNameInvalid": "Rename it first: a global's name uses letters, digits and _ only, and starts with a letter or digit.",
+      "globalType": "Type",
+      "scheduleNeedsLine": "Connect this schedule to the workflow it should start (drag from its dot to the workflow), then create it here.",
+      "scheduleTargetPlanned": "{name} is still planned. Build it first, then create the schedule.",
+      "scheduleWhen": "When should it start {name}?",
+      "scheduleWhenPlaceholder": "e.g. every weekday at 8am",
+      "lastChange": "Last change",
+      "lastSuccess": "Last successful run",
+      "never": "never"
+    },
+    "connections": {
+      "calls": {
+        "out": "Runs as sub-workflows",
+        "in": "Run as a sub-workflow by"
+      },
+      "runs": {
+        "out": "Runs workflows",
+        "in": "Run by apps"
+      },
+      "writes": {
+        "out": "Writes",
+        "in": "Written by"
+      },
+      "reads": {
+        "out": "Reads",
+        "in": "Read by"
+      },
+      "triggers": {
+        "out": "Starts",
+        "in": "Started by"
+      }
+    },
+    "overview": {
+      "title": "Overview",
+      "hint": "Solid nodes exist; dashed ones are ideas, and so are lines drawn by hand. Once something is built, its lines come from its definition. Click a node to see what depends on it.",
+      "show": "Show overview"
+    },
+    "progress": "{ready} of {total} ready",
+    "differences": {
+      "heading": "Plan check",
+      "count": "{count} mismatch | {count} mismatches",
+      "hint": "Compares what you planned (lines, inputs and outputs) with the real workflows, apps and schedules. Ideas aren't checked until they're built.",
+      "empty": "What's built matches what you planned.",
+      "none": "none",
+      "show": "Show",
+      "removeFromPlan": "Remove from plan",
+      "addToPlan": "Add to plan",
+      "ignore": "Ignore",
+      "updatePlan": "Update the plan",
+      "linkMissing": "{name} was linked to something that was deleted.",
+      "inputs": "{name} was planned with the inputs {planned}. The workflow has {actual}.",
+      "outputs": "{name} was planned with the outputs {planned}. The workflow has {actual}.",
+      "title": {
+        "missing-link": "Missing link",
+        "not-on-plan": "Not on the plan",
+        "inputs": "Inputs changed",
+        "outputs": "Outputs changed",
+        "link-missing": "Link broken"
+      },
+      "missing": {
+        "calls": "The plan says {from} runs {to} as a sub-workflow, but it doesn't.",
+        "runs": "The plan says {from} runs {to}, but nothing in the app is wired to it.",
+        "writes": "The plan says {from} writes {to}, but none of its steps do.",
+        "reads": "The plan says {from} reads {to}, but it doesn't use it.",
+        "triggers": "The plan says {from} starts {to}, but it starts something else."
+      },
+      "unplanned": {
+        "calls": "{from} runs {to} as a sub-workflow, which isn't on the plan.",
+        "runs": "{from} runs {to}, which isn't on the plan.",
+        "writes": "{from} writes {to}, which isn't on the plan.",
+        "reads": "{from} reads {to}, which isn't on the plan.",
+        "triggers": "{from} starts {to}, which isn't on the plan."
+      }
+    },
+    "legend": {
+      "title": "Lines",
+      "subworkflows": "Runs a sub-workflow",
+      "apps": "An app runs a workflow",
+      "globalsWrite": "Writes a global (filled arrow)",
+      "globalsRead": "Reads a global (open arrow, still pointing at the global)",
+      "schedules": "A schedule starts a workflow",
+      "dashed": "Dashed: planned, drawn by hand",
+      "amber": "Amber: the plan says one thing, the definition another",
+      "unplanned": "Orange: exists, but isn't on the plan",
+      "external": "{count} node from outside this project is shown faded. | {count} nodes from outside this project are shown faded.",
+      "direction": "Each line goes from what does something to what it does it to: an app runs a workflow, a workflow runs a sub-workflow.",
+      "readHint": "To show that something reads a global, drag from the global to it."
+    },
+    "assistant": {
+      "offer": "Here's what the map says this workflow should do. Check it, then draft it.",
+      "linkFailed": "The draft was saved, but couldn't be linked to the map"
+    },
+    "saveFailed": "Couldn't save the map",
+    "cantConnect": "A {from} can't connect to a {to}",
+    "newName": {
+      "workflow": "New workflow",
+      "helper": "New helper",
+      "app": "New app",
+      "global": "newGlobal",
+      "schedule": "New schedule"
+    },
+    "liveHint": "Read-only, drawn from the definitions",
+    "addPlanned": "Add planned",
+    "layoutLabel": "Layout",
+    "layout": {
+      "flow": "Flow",
+      "lanes": "Lanes"
+    },
+    "zoomOut": "Zoom out",
+    "zoomIn": "Zoom in",
+    "zoomReset": "Back to 100%",
+    "resetLayout": "Reset layout",
+    "resetLayoutHint": "Forget where nodes were dragged and arrange them again",
+    "refresh": "Refresh",
+    "empty": {
+      "title": "Nothing on the map yet",
+      "description": "Add workflows and apps to this project, or start planning: add the workflows and apps an idea needs, then connect them.",
+      "start": "Add a planned workflow"
+    },
+    "all": {
+      "title": "All projects",
+      "description": "Every project in its own box. Things more than one project uses sit in a box of their own.",
+      "empty": "No workflows or apps yet.",
+      "projects": "Projects",
+      "hint": "Plan on a project's own map. Open one to add planned nodes.",
+      "shared": "Shared or in no project",
+      "open": "Map of all projects"
+    },
+    "cluster": {
+      "title": "{count} workflow | {count} workflows",
+      "open": "Show them",
+      "close": "Fold them into one card",
+      "only": {
+        "calls": {
+          "in": "each runs {name} as a sub-workflow",
+          "out": "only run as sub-workflows of {name}"
+        },
+        "runs": {
+          "in": "only connected to {name}",
+          "out": "only run by {name}"
+        },
+        "writes": {
+          "in": "only write {name}",
+          "out": "only connected to {name}"
+        },
+        "reads": {
+          "in": "only read {name}",
+          "out": "only connected to {name}"
+        },
+        "triggers": {
+          "in": "only connected to {name}",
+          "out": "only started by {name}"
+        }
+      }
+    },
+    "save": {
+      "saving": "Saving…",
+      "saved": "Map saved",
+      "error": "Map not saved.",
+      "retry": "Try again"
+    },
+    "created": "{name} was created and linked to the map",
+    "createFailed": "Couldn't create it",
+    "statusWhy": {
+      "planned": "Only on the map so far. Build it, create it or link it to something real.",
+      "missingGlobal": "Workflows use this global, but it hasn't been created yet.",
+      "draft": "An Assistant draft nobody has marked ready yet. Check it in the builder.",
+      "neverRun": "Exists, but has never run successfully. Run it once to get to Tested.",
+      "changedSinceRun": "Changed since its last successful run. Run it again to get back to Tested.",
+      "ranSinceChange": "Ran successfully after its last change.",
+      "appUntested": "Some of the workflows it runs aren't tested yet.",
+      "appTested": "Every workflow it runs is tested.",
+      "appEmpty": "Runs no workflows yet.",
+      "exists": "Exists. A global can be marked ready once you've checked its value.",
+      "scheduleOff": "Switched off: it won't start anything.",
+      "scheduleUntested": "On, but the workflow it starts isn't tested yet.",
+      "scheduleTested": "On, and the workflow it starts is tested.",
+      "signedOff": "Tested and signed off as ready."
+    },
+    "ready": {
+      "mark": "Mark ready",
+      "unmark": "Take back Ready",
+      "on": "Marked ready {date}",
+      "byOn": "Marked ready by {name}, {date}",
+      "stale": "Was marked ready, but it changed (or stopped passing) since. Check it again."
+    },
+    "editor": {
+      "title": "Map",
+      "back": "Back to the project",
+      "details": "Details",
+      "search": "Search the map",
+      "add": "Add to the map",
+      "addHint": "Click to add beside what's selected, or drag onto the map.",
+      "lanesHint": "Top to bottom. Drag a node into a lane, or pick its lane in its details.",
+      "laneUp": "Move {name} up",
+      "laneDown": "Move {name} down",
+      "newLane": "New lane",
+      "attentionTitle": "Needs attention",
+      "attention": {
+        "readyStale": "changed since Ready",
+        "draft": "draft",
+        "neverRun": "never run",
+        "changedSinceRun": "changed since last run",
+        "missingGlobal": "doesn't exist"
+      },
+      "onMap": "On this map",
+      "groups": {
+        "workflows": "Workflows",
+        "apps": "Apps",
+        "globals": "Globals",
+        "schedules": "Schedules",
+        "borrowed": "From other projects"
+      },
+      "nothing": "Nothing matches.",
+      "differences": "{count} difference | {count} differences"
+    },
+    "notes": {
+      "tile": "Note",
+      "label": "Note",
+      "placeholder": "Write a note…",
+      "remove": "Delete this note",
+      "resize": "Drag to resize",
+      "color": {
+        "yellow": "Yellow",
+        "blue": "Blue",
+        "green": "Green",
+        "pink": "Pink"
+      },
+      "hasNote": "Has a note",
+      "nodeLabel": "Note",
+      "nodePlaceholder": "For the team: decisions, open questions, links…"
+    },
+    "ideas": {
+      "label": "Show ideas",
+      "hint": "Off: only what exists. Ideas and planned lines hide; notes stay."
+    },
+    "schedule": {
+      "oneWorkflow": "A schedule starts one workflow, so {name} got a new planned schedule of its own.",
+      "planSeparate": "Plan a separate schedule",
+      "tooMany": "This schedule is drawn to {count} workflows, but a schedule starts only one. Give each workflow its own schedule first.",
+      "split": "One schedule per workflow"
+    }
   }
 }
