@@ -1,0 +1,175 @@
+version: 1.0.0
+name: 'Roastery: Setup'
+description: |
+  Sets up the roastery store, a SQLite database at `~/Tipeline/output/roastery/roastery.db`: the beans, roasts, orders and alerts tables, then (only the first time) eight coffees and about six weeks of sample orders.
+
+  Safe to run again: it never changes data once the tables have rows. The Roastery Manager app runs it when the Dashboard opens.
+
+  **Outputs**
+
+  - `seeded` — true when this run added the sample data
+author: Jose Daniel Estrada
+tags: [roastery, setup, sqlite]
+
+pipeline:
+  variables:
+    - { type: boolean, name: seeded, value: false, visibility: public, output: true, description: True when this run added the sample data. }
+    - { type: dbConnection, name: db }
+    - { type: object, name: seed, value: {} }
+    - { type: array, name: counts, value: [] }
+
+  actions:
+    # better-sqlite3 creates the database file, not its folder.
+    - group: folder
+      identifier: ZCQw7lqCmh3o58QOxHc8A
+      name: create
+      params:
+        src: '{{ _env.HOME }}/Tipeline/output/roastery/reports'
+
+    - group: database
+      identifier: diAqLMQbp1aGvFnPKN63i
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/roastery/roastery.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      identifier: bBeqXJZayfC29I_lvUi9M
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          CREATE TABLE IF NOT EXISTS bean (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, origin TEXT NOT NULL,
+            process TEXT NOT NULL, roast TEXT NOT NULL, price_per_kg REAL NOT NULL,
+            stock_kg REAL NOT NULL DEFAULT 0, lat REAL, lng REAL)
+
+    - group: database
+      identifier: VQZG3-7R60UxTjFFbK89f
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          CREATE TABLE IF NOT EXISTS roast (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, bean_id INTEGER NOT NULL, kg REAL NOT NULL,
+            roaster TEXT NOT NULL DEFAULT '', notes TEXT NOT NULL DEFAULT '', roasted_at TEXT NOT NULL)
+
+    - group: database
+      identifier: r_gfYIIi77kgJPOa1az7y
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, customer TEXT NOT NULL, channel TEXT NOT NULL,
+            bean_id INTEGER NOT NULL, kg REAL NOT NULL, total REAL NOT NULL,
+            status TEXT NOT NULL DEFAULT 'new', created_at TEXT NOT NULL)
+
+    - group: database
+      identifier: rC2AU-q864NFkDWdtYdLB
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          CREATE TABLE IF NOT EXISTS alert (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, level TEXT NOT NULL, message TEXT NOT NULL,
+            source TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL)
+
+    - group: database
+      identifier: 4ZohxkNcICOHpcmgojMZi
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT (SELECT COUNT(*) FROM bean) AS beans, (SELECT COUNT(*) FROM orders) AS orders
+      destination: counts
+
+    # The sample data, made up here so every install gets orders up to today.
+    - group: script
+      identifier: vurYPbetxDSirE2G6MLq4
+      name: runScript
+      params:
+        context: { counts: '{= counts =}' }
+        code: |
+          const beans = [
+            ['Yirgacheffe Kochere', 'Ethiopia', 'Washed', 'Light', 34, 22, 6.16, 38.2],
+            ['Huila La Esperanza', 'Colombia', 'Washed', 'Medium', 28, 31, 2.53, -75.53],
+            ['Cerrado Mineiro', 'Brazil', 'Natural', 'Medium-dark', 21, 46, -18.9, -47.0],
+            ['Antigua Finca Bella', 'Guatemala', 'Washed', 'Medium', 30, 6.5, 14.56, -90.73],
+            ['Kirinyaga AA', 'Kenya', 'Washed', 'Light', 39, 4, -0.5, 37.28],
+            ['Tarrazú Honey', 'Costa Rica', 'Honey', 'Light-medium', 33, 18, 9.66, -84.02],
+            ['Sumatra Gayo', 'Indonesia', 'Wet-hulled', 'Dark', 26, 12, 4.62, 96.85],
+            ['House Espresso Blend', 'Blend', 'Mixed', 'Dark', 24, 55, null, null],
+          ].map(([name, origin, process, roast, price_per_kg, stock_kg, lat, lng]) => ({ name, origin, process, roast, price_per_kg, stock_kg, lat, lng }));
+          const customers = ['Corner Café', 'Luna Bakery', 'Northside Office', 'Ana Morales', 'Ben Carter', 'Hotel Aurora', 'Priya Shah', 'The Reading Room', 'Kai Nakamura', 'Greenway Co-op'];
+          const channels = ['web', 'web', 'web', 'cafe', 'cafe', 'wholesale'];
+          // A small seeded random, so the sample looks the same on every machine.
+          let s = 42;
+          const rand = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+          const pick = (list) => list[Math.floor(rand() * list.length)];
+          const orders = [];
+          const now = Date.now();
+          for (let day = 42; day >= 0; day--) {
+            const n = 2 + Math.floor(rand() * 5) + (day % 7 === 1 ? 3 : 0);
+            for (let i = 0; i < n; i++) {
+              const bean = 1 + Math.floor(rand() * beans.length);
+              const channel = pick(channels);
+              const kg = channel === 'wholesale' ? 5 + Math.floor(rand() * 4) * 5 : [0.25, 0.5, 1, 1, 2][Math.floor(rand() * 5)];
+              const at = new Date(now - day * 86400000 - Math.floor(rand() * 10) * 3600000);
+              const status = day > 3 ? (rand() < 0.06 ? 'cancelled' : 'shipped') : day > 1 ? pick(['roasting', 'shipped']) : pick(['new', 'new', 'roasting']);
+              orders.push({ customer: pick(customers), channel, bean_id: bean, kg, total: Math.round(kg * beans[bean - 1].price_per_kg * 100) / 100, status, created_at: at.toISOString() });
+            }
+          }
+          const roasts = [1, 2, 3, 6, 8, 3, 8].map((bean_id, i) => ({ bean_id, kg: 12 + (i % 3) * 6, roaster: i % 2 ? 'Sam' : 'Lee', notes: i === 4 ? 'First crack at 9:10, a little fast' : '', roasted_at: new Date(now - (i * 4 + 1) * 86400000).toISOString() }));
+          const empty = (counts[0] || {}).beans === 0;
+          return { empty, beans: JSON.stringify(beans), orders: JSON.stringify(orders), roasts: JSON.stringify(roasts) };
+      destination: seed
+
+    - group: database
+      identifier: nYTBWD7clDwFJvM0Ba6ty
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          INSERT INTO bean (name, origin, process, roast, price_per_kg, stock_kg, lat, lng)
+          SELECT j.value ->> 'name', j.value ->> 'origin', j.value ->> 'process', j.value ->> 'roast',
+            j.value ->> 'price_per_kg', j.value ->> 'stock_kg', j.value ->> 'lat', j.value ->> 'lng'
+          FROM json_each(?) j WHERE NOT EXISTS (SELECT 1 FROM bean)
+        bindings: ['{{ seed.beans }}']
+
+    - group: database
+      identifier: Qq2AuaL1BOAz_2OCno_sT
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          INSERT INTO orders (customer, channel, bean_id, kg, total, status, created_at)
+          SELECT j.value ->> 'customer', j.value ->> 'channel', j.value ->> 'bean_id', j.value ->> 'kg',
+            j.value ->> 'total', j.value ->> 'status', j.value ->> 'created_at'
+          FROM json_each(?) j WHERE NOT EXISTS (SELECT 1 FROM orders)
+        bindings: ['{{ seed.orders }}']
+
+    - group: database
+      identifier: rvaqfnYV4RPZm_LXHLe1U
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          INSERT INTO roast (bean_id, kg, roaster, notes, roasted_at)
+          SELECT j.value ->> 'bean_id', j.value ->> 'kg', j.value ->> 'roaster', j.value ->> 'notes', j.value ->> 'roasted_at'
+          FROM json_each(?) j WHERE NOT EXISTS (SELECT 1 FROM roast)
+        bindings: ['{{ seed.roasts }}']
+
+    - group: database
+      identifier: Duw3swnHaPrlzCqZdM22d
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      identifier: PktV4quVvEwutW_yazRVq
+      name: runScript
+      params: { context: { seed: '{= seed =}' }, code: return seed.empty; }
+      destination: seeded

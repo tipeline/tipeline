@@ -25,8 +25,10 @@ import { useAppInit, type CoreUpdateOffer } from '@/composables/useAppInit';
 import { useSettingsStore } from '@/store/settingsStore';
 import { applyLocaleFromStorage, applyStoredLocale } from '@/composables/useLocale';
 import { applyStoredTimezone } from '@/composables/useTimezone';
+import { useNavHistoryInput } from '@/composables/useNavHistoryInput';
 
 const route = useRoute();
+useNavHistoryInput();
 const router = useRouter();
 const { t } = useI18n();
 const streamStore = useStreamStore();

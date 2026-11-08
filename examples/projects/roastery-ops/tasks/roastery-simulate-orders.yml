@@ -1,0 +1,71 @@
+version: 1.0.0
+name: 'Roastery: Simulate Orders'
+description: |
+  Demo helper: places one made-up order through Roastery: Add Order, for a coffee that has enough stock, so the dashboards keep moving. Its schedule (every 20 minutes) is off — switch it on in Schedules to watch the numbers change.
+
+  **Outputs**
+
+  - `order` — the order placed
+author: Jose Daniel Estrada
+tags: [roastery, orders, demo, scheduled]
+
+pipeline:
+  variables:
+    - { type: object, name: order, value: {}, visibility: public, output: true, description: The order placed. }
+    - { type: dbConnection, name: db }
+    - { type: array, name: beans, value: [] }
+    - { type: object, name: pick, value: {} }
+
+  actions:
+    - group: database
+      identifier: OGF402WwK38qbqKzR65XT
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/roastery/roastery.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      identifier: oltXf-SJz5UWPR6r7SR67
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT id, stock_kg FROM bean WHERE stock_kg >= 2
+      destination: beans
+
+    - group: database
+      identifier: u1a42w_OqgJzwSCxmeLXY
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      identifier: aJ0D-_n8ZPmQZwS7kVsHo
+      name: runScript
+      params:
+        context: { beans: '{= beans =}' }
+        code: |
+          if (!beans.length) throw new Error('Every coffee is nearly out — record a roast first');
+          const any = (list) => list[Math.floor(Math.random() * list.length)];
+          return {
+            beanId: any(beans).id,
+            customer: any(['Corner Café', 'Luna Bakery', 'Ana Morales', 'Ben Carter', 'Priya Shah', 'Kai Nakamura', 'Walk-in']),
+            channel: any(['web', 'web', 'cafe']),
+            kg: any([0.25, 0.5, 1, 1, 2]),
+          };
+      destination: pick
+
+    - group: subtask
+      identifier: Af_1S0QAgwjbXpCaK-N-5
+      name: exec
+      params:
+        identifier: roastAddOrder
+        props:
+          customer: '{{ pick.customer }}'
+          channel: '{{ pick.channel }}'
+          beanId: '{= pick.beanId =}'
+          kg: '{= pick.kg =}'
+        outputs:
+          order: order

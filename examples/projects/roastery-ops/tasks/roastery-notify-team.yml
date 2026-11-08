@@ -1,0 +1,73 @@
+version: 1.0.0
+name: 'Roastery: Notify Team'
+description: |
+  Helper used by the other roastery workflows: saves an alert in the store (the Roastery Manager's Alerts page shows them) and, when the `roasteryAlertWebhook` secret global has a URL, posts it there too as `{ "text": … }` (Slack and most chat tools take that).
+
+  **Inputs**
+
+  - `message` — what to tell the team
+  - `level` — `info`, `warning` or `error`
+  - `source` — the workflow sending it
+author: Jose Daniel Estrada
+tags: [roastery, alerts, helper]
+helper: true
+
+pipeline:
+  variables:
+    - { type: string, name: message, value: '', visibility: public, required: true, description: What to tell the team. }
+    - { type: string, name: level, value: info, visibility: public, description: info, warning or error. }
+    - { type: string, name: source, value: '', visibility: public, description: The workflow sending it. }
+    - { type: dbConnection, name: db }
+    - { type: object, name: response, value: {} }
+
+  actions:
+    - group: database
+      identifier: 520O2CLz8-3FFVE-YrFoo
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/roastery/roastery.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      identifier: bB6rMg-ZOPjczqRCjPv7h
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          INSERT INTO alert (level, message, source, created_at)
+          VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+        bindings: ['{{ level }}', '{{ message }}', '{{ source }}']
+
+    - group: database
+      identifier: n48Trt42nHjy6Gf7UXNSE
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: system
+      identifier: RuqhZkzchN6gQIc3LZ8K2
+      name: message
+      params:
+        text: '[{{ level }}] {{ message }}'
+
+    - group: flow
+      identifier: yH8VqcIQiTEuUBTDPGMAv
+      name: ifConditional
+      params:
+        firstOperand: '{{ _global.roasteryAlertWebhook }}'
+        compareAs: string
+        operator: notEmpty
+        actions:
+          - group: http
+            identifier: glFaD68oq6qGVuXYSb5Z_
+            name: request
+            params:
+              url: '{{ _global.roasteryAlertWebhook }}'
+              method: post
+              headers: { Content-Type: application/json }
+              data: { text: '{{ _global.roasteryShopName }} — {{ message }}' }
+              timeout: 10000
+            destination: response

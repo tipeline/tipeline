@@ -1,0 +1,84 @@
+version: 1.0.0
+name: 'Roastery: Set Order Status'
+description: |
+  Moves orders to a new status. Cancelling an order that hasn't shipped puts its coffee back in stock.
+
+  **Inputs**
+
+  - `ids` — order ids, or rows with an id (a table's selectedRows)
+  - `status` — `new`, `roasting`, `shipped` or `cancelled`
+
+  **Outputs**
+
+  - `count` — how many orders changed
+author: Jose Daniel Estrada
+tags: [roastery, orders, sqlite]
+
+pipeline:
+  variables:
+    - { type: array, name: ids, value: [], visibility: public, required: true, description: The orders to change. }
+    - { type: string, name: status, value: shipped, visibility: public, required: true, description: The new status. }
+    - { type: number, name: count, value: 0, visibility: public, output: true, description: How many orders changed. }
+    - { type: dbConnection, name: db }
+    - { type: object, name: plan, value: {} }
+    - { type: array, name: changed, value: [] }
+
+  actions:
+    - group: script
+      identifier: cRCXL1nVocxSh8_qZSzg_
+      name: runScript
+      params:
+        context: { ids: '{= ids =}', status: '{{ status }}' }
+        code: |
+          const list = (Array.isArray(ids) ? ids : [ids]).map((x) => Number(x && typeof x === 'object' ? x.id : x)).filter((n) => Number.isInteger(n) && n > 0);
+          if (!list.length) throw new Error('Choose the orders to change first');
+          const next = status.toLowerCase();
+          if (!['new', 'roasting', 'shipped', 'cancelled'].includes(next)) throw new Error(`Unknown status: ${status}`);
+          return { ids: JSON.stringify(list), status: next };
+      destination: plan
+
+    - group: database
+      identifier: Q_OQkXq8QLEo-PR74omGd
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/roastery/roastery.db' }
+          useNullAsDefault: true
+      destination: db
+
+    # Cancelled before shipping: the coffee goes back on the shelf.
+    - group: database
+      identifier: QGPbHHNF-t01F5GC1fbjk
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          UPDATE bean SET stock_kg = ROUND(stock_kg + COALESCE((
+            SELECT SUM(o.kg) FROM orders o
+            WHERE o.bean_id = bean.id AND o.id IN (SELECT value FROM json_each(?))
+              AND o.status IN ('new', 'roasting') AND ? = 'cancelled'), 0), 2)
+        bindings: ['{{ plan.ids }}', '{{ plan.status }}']
+
+    - group: database
+      identifier: oMblOUQ76HJUJVlJbWth4
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          UPDATE orders SET status = ?
+          WHERE id IN (SELECT value FROM json_each(?)) AND status != ? RETURNING id
+        bindings: ['{{ plan.status }}', '{{ plan.ids }}', '{{ plan.status }}']
+      destination: changed
+
+    - group: database
+      identifier: ISeQJiLTDmkY_ZucUbn-i
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      identifier: fmUvljrCntEZbeRMB_Par
+      name: runScript
+      params: { context: { changed: '{= changed =}' }, code: return changed.length; }
+      destination: count

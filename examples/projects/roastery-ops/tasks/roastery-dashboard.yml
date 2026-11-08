@@ -1,0 +1,115 @@
+version: 1.0.0
+name: 'Roastery: Dashboard'
+description: |
+  Reads the roastery store for the Roastery Manager's Dashboard: the headline numbers, sales by day, sales by channel, the best-selling coffees and the coffees running low.
+
+  A coffee is low when its stock is under the `roasteryLowStockKg` global.
+
+  **Outputs**
+
+  - `summary` — `{ revenue30, revenuePrev30, revenueTrend, ordersToday, openOrders, lowStock, kgSold30 }`
+  - `byDay` — the last 21 days: `[{ day, revenue, orders }]`
+  - `byChannel` — `[{ channel, revenue }]`, last 30 days
+  - `topBeans` — the 6 best sellers by kg, last 30 days: `[{ name, kg, revenue }]`
+  - `lowStock` — `[{ id, name, origin, stock_kg }]`
+author: Jose Daniel Estrada
+tags: [roastery, dashboard, sales, sqlite]
+
+pipeline:
+  variables:
+    - { type: object, name: summary, value: {}, visibility: public, output: true, description: Headline numbers. }
+    - { type: array, name: byDay, value: [], visibility: public, output: true, description: Revenue and orders per day, last 21 days. }
+    - { type: array, name: byChannel, value: [], visibility: public, output: true, description: Revenue per sales channel, last 30 days. }
+    - { type: array, name: topBeans, value: [], visibility: public, output: true, description: Best-selling coffees, last 30 days. }
+    - { type: array, name: lowStock, value: [], visibility: public, output: true, description: Coffees under the low-stock line. }
+    - { type: dbConnection, name: db }
+    - { type: array, name: orders, value: [] }
+    - { type: array, name: beans, value: [] }
+    - { type: object, name: result, value: {} }
+
+  actions:
+    - group: database
+      identifier: ez4-VQrmrySRstzYf5yiQ
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/roastery/roastery.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      identifier: y6vgJu1EB2ZlnAWpQINfZ
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          SELECT o.id, o.channel, o.kg, o.total, o.status, o.created_at, b.name AS bean
+          FROM orders o JOIN bean b ON b.id = o.bean_id
+          WHERE o.created_at >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-60 days')
+      destination: orders
+
+    - group: database
+      identifier: aOy9nMfn1cx0EVr4D3JA9
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT id, name, origin, stock_kg FROM bean ORDER BY stock_kg
+      destination: beans
+
+    - group: database
+      identifier: 3fHLlyk9Y0EILX7r5VHLh
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      identifier: 09px1TYjbTMZA4-di0Gky
+      name: runScript
+      params:
+        context: { orders: '{= orders =}', beans: '{= beans =}', threshold: '{= _global.roasteryLowStockKg =}' }
+        code: |
+          const DAY = 86400000;
+          const now = Date.now();
+          const sold = orders.filter((o) => o.status !== 'cancelled');
+          const within = (o, from, to) => { const t = Date.parse(o.created_at); return t >= now - from * DAY && t < now - to * DAY; };
+          const sum = (list, key) => Math.round(list.reduce((a, o) => a + Number(o[key] || 0), 0) * 100) / 100;
+          const last30 = sold.filter((o) => within(o, 30, 0));
+          const prev30 = sold.filter((o) => within(o, 60, 30));
+          const today = new Date().toISOString().slice(0, 10);
+          const revenue30 = sum(last30, 'total');
+          const revenuePrev30 = sum(prev30, 'total');
+          const byDay = [];
+          for (let d = 20; d >= 0; d--) {
+            const day = new Date(now - d * DAY).toISOString().slice(0, 10);
+            const rows = sold.filter((o) => o.created_at.slice(0, 10) === day);
+            byDay.push({ day: day.slice(5), revenue: sum(rows, 'total'), orders: rows.length });
+          }
+          const group = (list, key) => {
+            const m = new Map();
+            for (const o of list) { const g = m.get(o[key]) || { kg: 0, revenue: 0 }; g.kg += o.kg; g.revenue += o.total; m.set(o[key], g); }
+            return [...m.entries()].map(([k, v]) => ({ [key]: k, kg: Math.round(v.kg * 100) / 100, revenue: Math.round(v.revenue * 100) / 100 }));
+          };
+          const limit = Number(threshold) || 8;
+          return {
+            summary: {
+              revenue30,
+              revenuePrev30,
+              revenueTrend: revenuePrev30 ? Math.round(((revenue30 - revenuePrev30) / revenuePrev30) * 1000) / 10 : null,
+              ordersToday: sold.filter((o) => o.created_at.slice(0, 10) === today).length,
+              openOrders: orders.filter((o) => o.status === 'new' || o.status === 'roasting').length,
+              lowStock: beans.filter((b) => b.stock_kg < limit).length,
+              kgSold30: sum(last30, 'kg'),
+            },
+            byDay,
+            byChannel: group(last30, 'channel').map(({ channel, revenue }) => ({ channel, revenue })),
+            topBeans: group(last30, 'bean').sort((a, b) => b.kg - a.kg).slice(0, 6).map(({ bean, kg, revenue }) => ({ name: bean, kg, revenue })),
+            lowStock: beans.filter((b) => b.stock_kg < limit),
+          };
+      destination: result
+
+    - { identifier: E1wlsREFm13HINmbvRCDP, group: script, name: runScript, params: { context: { result: '{= result =}' }, code: return result.summary; }, destination: summary }
+    - { identifier: USpT_tFIDy7I61Nh-YOkB, group: script, name: runScript, params: { context: { result: '{= result =}' }, code: return result.byDay; }, destination: byDay }
+    - { identifier: 48ENnKyh1BOSAx7QEQfNr, group: script, name: runScript, params: { context: { result: '{= result =}' }, code: return result.byChannel; }, destination: byChannel }
+    - { identifier: 8py2M0XHV6e-gDtS96aK4, group: script, name: runScript, params: { context: { result: '{= result =}' }, code: return result.topBeans; }, destination: topBeans }
+    - { identifier: R4KKpNYwvKeseKvIPvgga, group: script, name: runScript, params: { context: { result: '{= result =}' }, code: return result.lowStock; }, destination: lowStock }

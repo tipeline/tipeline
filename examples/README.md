@@ -8,6 +8,7 @@ not part of the shipped app or CLI package.
 | `actions/` | One folder per action group (`browser/`, `file/`, `ssh/`, …) exercising its actions |
 | `workflows/` | Complete workflows, including `test/` (engine test workflows), `async-subtask/`, `assistant-instructions/`, `assistant-subworkflows/` and provisioning examples |
 | `apps/` | Example apps; the workflows they bundle live in `apps/workflows/` |
+| `projects/` | Whole projects as backup-archive folders (workflows, apps, schedules, globals, project map); zip one and use Settings → Restore. See `projects/roastery-ops/README.md` |
 | `plugins/` | Example plugins |
 
 Examples that need credentials use `CHANGE_ME_…` placeholders or `{{ _env.KEY }}`. Put your own

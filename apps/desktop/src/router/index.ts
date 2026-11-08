@@ -1,4 +1,5 @@
 import { createMemoryHistory, createRouter } from 'vue-router';
+import { trackHistory } from '@/router/navHistory';
 
 // Pages
 import Dashboard from '@/pages/Dashboard.vue';
@@ -371,7 +372,7 @@ const routes = [
 ];
 
 const router = createRouter({
-  history: createMemoryHistory(),
+  history: trackHistory(createMemoryHistory()),
   routes,
 });
 

@@ -1,0 +1,86 @@
+version: 1.0.0
+name: 'Roastery: List Orders'
+description: |
+  Lists the orders in the roastery store, newest first.
+
+  **Inputs**
+
+  - `status` — `all`, `open` (new or roasting), `new`, `roasting`, `shipped` or `cancelled`
+  - `days` — only orders from the last this many days; 0 for all
+
+  **Outputs**
+
+  - `orders` — `[{ id, customer, channel, bean, kg, total, status, created_at }]`
+  - `counts` — orders per status: `{ new, roasting, shipped, cancelled }`
+author: Jose Daniel Estrada
+tags: [roastery, orders, sqlite]
+
+pipeline:
+  variables:
+    - { type: string, name: status, value: open, visibility: public, description: Which orders to list. }
+    - { type: number, name: days, value: 0, visibility: public, description: Only the last this many days; 0 for all. }
+    - { type: array, name: orders, value: [], visibility: public, output: true, description: The matching orders. }
+    - { type: object, name: counts, value: {}, visibility: public, output: true, description: Orders per status. }
+    - { type: dbConnection, name: db }
+    - { type: array, name: rows, value: [] }
+    - { type: array, name: statusRows, value: [] }
+
+  actions:
+    - group: database
+      identifier: i0mPMSJmn4w9a9oL8aaiY
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/roastery/roastery.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      identifier: t_XckkKBUljifqGAn231H
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          SELECT o.id, o.customer, o.channel, b.name AS bean, o.kg, o.total, o.status, o.created_at
+          FROM orders o JOIN bean b ON b.id = o.bean_id
+          WHERE (? = 'all' OR o.status = ? OR (? = 'open' AND o.status IN ('new', 'roasting')))
+            AND (? = 0 OR o.created_at >= strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-' || ? || ' days'))
+          ORDER BY o.created_at DESC, o.id DESC
+        bindings: ['{{ status }}', '{{ status }}', '{{ status }}', '{= days =}', '{= days =}']
+      destination: rows
+
+    - group: database
+      identifier: iG5ju0agrPZnkOnT05SWD
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT status, COUNT(*) AS n FROM orders GROUP BY status
+      destination: statusRows
+
+    - group: database
+      identifier: 8jLVIk0RC1TzCK5e8yw1u
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      identifier: imun2q48Z9nkzE8n1dbQZ
+      name: runScript
+      params:
+        context: { rows: '{= rows =}' }
+        code: |
+          const label = { new: 'New', roasting: 'Roasting', shipped: 'Shipped', cancelled: 'Cancelled' };
+          return rows.map((o) => ({ ...o, status: label[o.status] || o.status }));
+      destination: orders
+
+    - group: script
+      identifier: TcrH8Dte4XfWdm5_PkoE7
+      name: runScript
+      params:
+        context: { statusRows: '{= statusRows =}' }
+        code: |
+          const counts = { new: 0, roasting: 0, shipped: 0, cancelled: 0 };
+          for (const r of statusRows) counts[r.status] = r.n;
+          return counts;
+      destination: counts

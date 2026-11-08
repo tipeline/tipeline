@@ -1,0 +1,112 @@
+version: 1.0.0
+name: 'Roastery: Daily Sales Report'
+description: |
+  Writes yesterday's sales report as a Markdown file in `~/Tipeline/output/roastery/reports/` (`sales-YYYY-MM-DD.md`) and tells the team it's ready. Runs every morning at 8:00 on a schedule.
+
+  **Inputs**
+
+  - `daysAgo` — which day to report on: 1 is yesterday (the default), 0 is today so far
+
+  **Outputs**
+
+  - `report` — `{ day, orders, revenue, kg, topBean, byChannel }`
+  - `path` — the report file
+author: Jose Daniel Estrada
+tags: [roastery, sales, report, scheduled]
+
+pipeline:
+  variables:
+    - { type: number, name: daysAgo, value: 1, visibility: public, description: '1 is yesterday, 0 is today so far.' }
+    - { type: object, name: report, value: {}, visibility: public, output: true, description: The day's numbers. }
+    - { type: string, name: path, value: '', visibility: public, output: true, description: The report file. }
+    - { type: dbConnection, name: db }
+    - { type: array, name: rows, value: [] }
+    - { type: object, name: doc, value: {} }
+
+  actions:
+    - group: database
+      identifier: RE7lItEzqQtC1Xjv-FjHw
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/roastery/roastery.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      identifier: _uyrjQW1Ctm8u9pWLbV0p
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          SELECT o.customer, o.channel, o.kg, o.total, b.name AS bean
+          FROM orders o JOIN bean b ON b.id = o.bean_id
+          WHERE o.status != 'cancelled' AND substr(o.created_at, 1, 10) = date('now', '-' || ? || ' days')
+        bindings: ['{= daysAgo =}']
+      destination: rows
+
+    - group: database
+      identifier: zAhsnV5HbxoDfePXZBoe9
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      identifier: WbR15AzW--1lRSeGH-fO0
+      name: runScript
+      params:
+        context: { rows: '{= rows =}', daysAgo: '{= daysAgo =}', shop: '{{ _global.roasteryShopName }}', folder: '{{ _env.HOME }}/Tipeline/output/roastery' }
+        code: |
+          const day = new Date(Date.now() - Number(daysAgo) * 86400000).toISOString().slice(0, 10);
+          const round = (n) => Math.round(n * 100) / 100;
+          const revenue = round(rows.reduce((a, o) => a + o.total, 0));
+          const kg = round(rows.reduce((a, o) => a + o.kg, 0));
+          const tally = (key, value) => rows.reduce((m, o) => ((m[o[key]] = round((m[o[key]] || 0) + o[value])), m), {});
+          const byBean = Object.entries(tally('bean', 'kg')).sort((a, b) => b[1] - a[1]);
+          const byChannel = tally('channel', 'total');
+          const report = { day, orders: rows.length, revenue, kg, topBean: byBean.length ? byBean[0][0] : '—', byChannel };
+          const md = [
+            `# ${shop} — sales for ${day}`,
+            '',
+            `- **Orders:** ${rows.length}`,
+            `- **Revenue:** $${revenue.toFixed(2)}`,
+            `- **Coffee sold:** ${kg} kg`,
+            `- **Best seller:** ${report.topBean}`,
+            '',
+            '## By channel',
+            '',
+            '| Channel | Revenue |',
+            '| --- | ---: |',
+            ...Object.entries(byChannel).map(([c, v]) => `| ${c} | $${v.toFixed(2)} |`),
+            '',
+            '## By coffee',
+            '',
+            '| Coffee | kg |',
+            '| --- | ---: |',
+            ...byBean.map(([b, v]) => `| ${b} | ${v} |`),
+            '',
+          ].join('\n');
+          return { report, md, path: `${folder}/reports/sales-${day}.md`, line: `Sales report for ${day}: ${rows.length} orders, $${revenue.toFixed(2)}` };
+      destination: doc
+
+    - group: file
+      identifier: URfphveUO4ygpVoqWxjGg
+      name: write
+      params:
+        src: '{{ doc.path }}'
+        data: '{{ doc.md }}'
+
+    - { identifier: l54zMAi-E6T-yKTguv0Ow, group: script, name: runScript, params: { context: { doc: '{= doc =}' }, code: return doc.report; }, destination: report }
+    - { identifier: dDJT04i_HVhd9ioTMAM4_, group: script, name: runScript, params: { context: { doc: '{= doc =}' }, code: return doc.path; }, destination: path }
+
+    - group: subtask
+      identifier: pPJGhTsNqCsBWRTN00c6u
+      name: exec
+      params:
+        identifier: roastNotifyTeam
+        persist: false
+        props:
+          message: '{{ doc.line }}'
+          level: info
+          source: 'Roastery: Daily Sales Report'
