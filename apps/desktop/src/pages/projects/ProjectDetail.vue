@@ -31,6 +31,7 @@ import { SEND } from '@/ipc-channels';
 import { renderMarkdown } from '@/utils/appMarkdown';
 import { descriptionSummary, fileSlug } from '@tipeline/utils';
 import { Pencil, Trash2, Workflow, AppWindow, Plus, X, Link2, Download, BotIcon, EllipsisVertical, Network } from 'lucide-vue-next';
+import { ENTITY_COLORS } from '@/config/entityColors';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -311,7 +312,7 @@ async function confirmExport() {
               @click="router.push(`/apps/${app.identifier}`)"
             >
               <p class="flex items-center gap-1.5 pr-5 text-sm font-medium min-w-0">
-                <AppWindow class="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                <AppWindow class="w-3.5 h-3.5 shrink-0" :class="ENTITY_COLORS.app.text" />
                 <span class="truncate">{{ app.name }}</span>
               </p>
               <p v-if="app.description" class="text-xs text-muted-foreground line-clamp-2">{{ descriptionSummary(app.description) }}</p>
@@ -354,7 +355,7 @@ async function confirmExport() {
               @click="router.push(`/tasks/${task.identifier}`)"
             >
               <p class="flex items-center gap-1.5 pr-5 text-sm font-medium min-w-0">
-                <Workflow class="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                <Workflow class="w-3.5 h-3.5 shrink-0" :class="ENTITY_COLORS.workflow.text" />
                 <span class="truncate">{{ task.name }}</span>
               </p>
               <p v-if="task.description" class="text-xs text-muted-foreground line-clamp-2">{{ descriptionSummary(task.description) }}</p>
@@ -389,7 +390,7 @@ async function confirmExport() {
               @click="router.push(`/tasks/${task.identifier}`)"
             >
               <p class="flex items-center gap-1.5 text-sm font-medium min-w-0">
-                <Workflow class="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                <Workflow class="w-3.5 h-3.5 shrink-0" :class="ENTITY_COLORS.workflow.text" />
                 <span class="truncate">{{ task.name }}</span>
               </p>
               <p class="text-xs text-muted-foreground line-clamp-2">

@@ -171,6 +171,7 @@ export default defineConfig({
             { text: 'Workflow Builder', link: '/desktop/builder' },
             { text: 'Runs', link: '/desktop/pipelines' },
             { text: 'Projects', link: '/desktop/projects' },
+            { text: 'Project Map', link: '/desktop/project-map' },
             { text: 'Schedules', link: '/desktop/schedules' },
             { text: 'Global Variables', link: '/desktop/variables' },
             { text: 'Settings & Workspaces', link: '/desktop/settings' },
