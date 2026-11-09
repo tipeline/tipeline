@@ -3343,7 +3343,9 @@
         "borrowed": "From other projects"
       },
       "nothing": "Nothing matches.",
-      "differences": "{count} difference | {count} differences"
+      "differences": "{count} difference | {count} differences",
+      "undo": "Undo",
+      "redo": "Redo"
     },
     "notes": {
       "tile": "Note",
@@ -3370,6 +3372,7 @@
       "planSeparate": "Plan a separate schedule",
       "tooMany": "This schedule is drawn to {count} workflows, but a schedule starts only one. Give each workflow its own schedule first.",
       "split": "One schedule per workflow"
-    }
+    },
+    "copyName": "{name} (copy)"
   }
 }
