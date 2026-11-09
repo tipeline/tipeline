@@ -3343,7 +3343,9 @@
         "borrowed": "De otros proyectos"
       },
       "nothing": "No hay coincidencias.",
-      "differences": "{count} diferencia | {count} diferencias"
+      "differences": "{count} diferencia | {count} diferencias",
+      "undo": "Deshacer",
+      "redo": "Rehacer"
     },
     "notes": {
       "tile": "Nota",
@@ -3370,6 +3372,7 @@
       "planSeparate": "Planear otra programación",
       "tooMany": "Esta programación está conectada a {count} flujos de trabajo, pero una programación inicia solo uno. Primero dale a cada flujo su propia programación.",
       "split": "Una programación por flujo"
-    }
+    },
+    "copyName": "{name} (copia)"
   }
 }

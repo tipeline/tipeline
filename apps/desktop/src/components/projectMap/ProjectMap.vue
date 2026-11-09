@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
-import { ArrowLeft, Check, Loader2, Plus, RefreshCw, RotateCcw, X } from 'lucide-vue-next';
+import { ArrowLeft, Check, Loader2, Plus, Redo2, RefreshCw, RotateCcw, Undo2, X } from 'lucide-vue-next';
 import {
   applyPositions,
   clusterLeaves,
@@ -48,6 +48,8 @@ import MapOverviewPanel from './MapOverviewPanel.vue';
 import MapSidebar from './MapSidebar.vue';
 import type { MapDropKind } from './mapDrag';
 import { assignToProject } from '@/utils/projectAssign';
+import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
+import { mapClipboard, type MapClip } from './mapClipboard';
 
 /**
  * The map editor: a full page like the workflow builder. Left, what to add and what's on
@@ -111,7 +113,14 @@ async function load() {
     live.value = result.live;
     candidates.value = result.candidates ?? [];
     // A save still waiting would be lost: keep the local plan then.
-    if (!saveTimer) plan.value = parsePlan(result.plan);
+    if (!saveTimer) {
+      const stored = parsePlan(result.plan);
+      // Changed somewhere else (the Assistant linking a draft, say): undo can't go back past that.
+      if (!committed || JSON.stringify(stored) !== JSON.stringify(parsePlan(snapshot()))) {
+        plan.value = stored;
+        resetHistory();
+      }
+    }
   } catch (error: any) {
     loadError.value = error?.message ?? String(error);
   } finally {
@@ -147,11 +156,15 @@ onBeforeUnmount(() => {
 });
 
 // The plan saves itself shortly after each change; the toolbar says how that went.
+// "Saved" fades after a moment; "Couldn't save" stays until it's retried.
 const saveState = ref<'idle' | 'saving' | 'saved' | 'error'>('idle');
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
+let savedTimer: ReturnType<typeof setTimeout> | null = null;
 async function flush() {
   if (saveTimer) clearTimeout(saveTimer);
+  if (savedTimer) clearTimeout(savedTimer);
   saveTimer = null;
+  savedTimer = null;
   saveState.value = 'saving';
   try {
     await invokeCore(SEND.PROJECT_MAP_SAVE, {
@@ -159,20 +172,87 @@ async function flush() {
       plan: JSON.parse(JSON.stringify(plan.value)),
     });
     saveState.value = 'saved';
+    savedTimer = setTimeout(() => {
+      savedTimer = null;
+      if (saveState.value === 'saved') saveState.value = 'idle';
+    }, 2000);
   } catch (error: any) {
     saveState.value = 'error';
     toast.error(t('projectMap.saveFailed'), { description: error?.message ?? String(error) });
   }
 }
+/** Every edit ends here: records an undo step (once per tick) and saves shortly after. */
 function save() {
+  if (!commitQueued) {
+    commitQueued = true;
+    queueMicrotask(commitHistory);
+  }
+  queueSave();
+}
+function queueSave() {
   if (saveTimer) clearTimeout(saveTimer);
+  if (savedTimer) clearTimeout(savedTimer);
+  savedTimer = null;
   saveState.value = 'saving';
   saveTimer = setTimeout(() => void flush(), 400);
 }
 onBeforeUnmount(() => {
   window.removeEventListener('focus', onFocus);
+  if (savedTimer) clearTimeout(savedTimer);
   if (saveTimer) void flush();
 });
+
+// ---- Undo / redo ---------------------------------------------------------------------
+// JSON snapshots of the plan, like the app builder: everything one interaction changes (one
+// tick) is one step. Only the plan goes back; things made for real (Create, Join project,
+// a draft) stay, so those start the history over.
+const HISTORY_LIMIT = 100;
+const undoStack = ref<string[]>([]);
+const redoStack = ref<string[]>([]);
+let committed = '';
+let commitQueued = false;
+const snapshot = () => JSON.stringify(plan.value);
+
+function commitHistory() {
+  commitQueued = false;
+  const now = snapshot();
+  if (now === committed) return;
+  if (committed) {
+    undoStack.value.push(committed);
+    if (undoStack.value.length > HISTORY_LIMIT) undoStack.value.shift();
+    redoStack.value = [];
+  }
+  committed = now;
+}
+
+function resetHistory() {
+  commitQueued = false;
+  undoStack.value = [];
+  redoStack.value = [];
+  committed = snapshot();
+}
+
+function restore(json: string) {
+  plan.value = JSON.parse(json);
+  committed = json;
+  queueSave();
+}
+
+function undo() {
+  if (commitQueued) commitHistory();
+  const previous = undoStack.value.pop();
+  if (previous === undefined) return;
+  redoStack.value.push(snapshot());
+  restore(previous);
+}
+
+function redo() {
+  if (commitQueued) commitHistory();
+  const next = redoStack.value.pop();
+  if (next === undefined) return;
+  undoStack.value.push(snapshot());
+  restore(next);
+}
 
 /** One map: what exists, with the plan's ideas and lines laid over it. */
 const merged = computed(() => mergeMap(live.value, plan.value));
@@ -553,6 +633,7 @@ async function adopt(node: MapNode) {
   try {
     await assignToProject(node.kind === 'app' ? 'app' : 'task', props.projectIdentifier, node.ref);
     await load();
+    resetHistory();
   } catch (error: any) {
     toast.error(t('projectMap.details.adoptFailed'), { description: error?.message ?? String(error) });
   }
@@ -609,6 +690,7 @@ async function create(node: MapNode, options: { type?: string; when?: string }) 
     link(node, key);
     await flush();
     await load();
+    resetHistory();
     toast.success(t('projectMap.created', { name: planNode.name }));
   } catch (error: any) {
     toast.error(t('projectMap.createFailed'), { description: error?.message ?? String(error) });
@@ -626,6 +708,78 @@ async function build(node: MapNode) {
     nodeId: node.planId,
   });
 }
+
+// ---- Copy, paste, duplicate ---------------------------------------------------------
+// A copy is always an idea: copying a workflow that exists plans another one like it.
+
+function clipOf(node: MapNode): MapClip {
+  const planNode = planNodeOf(node);
+  const clip: MapClip['node'] = {
+    kind: node.kind,
+    name: node.name,
+    inputs: [...(planNode?.inputs ?? node.inputs)],
+    outputs: [...(planNode?.outputs ?? node.outputs)],
+  };
+  const description = planNode?.description ?? node.description ?? undefined;
+  if (description) clip.description = description;
+  if (node.owner) clip.owner = node.owner;
+  if (node.lane) clip.lane = node.lane;
+  if (node.note) clip.note = node.note;
+  return { node: clip, from: node.key };
+}
+
+function copySelected() {
+  if (selectedNode.value) mapClipboard.value = clipOf(selectedNode.value);
+}
+
+/** Adds the clip as a new idea, a step down and right from the node it came from (or the selected one). */
+function pasteClip(clip: MapClip) {
+  const id = newId();
+  const node: PlanNode = { ...JSON.parse(JSON.stringify(clip.node)), id, name: t('projectMap.copyName', { name: clip.node.name }) };
+  const base = layout.value.positions[clip.from] ?? (selected.value ? layout.value.positions[selected.value] : undefined);
+  if (base && layoutMode.value === 'flow') {
+    // Past any copies already pasted there.
+    const taken = Object.values(layout.value.positions);
+    let point = { x: base.x + 40, y: base.y + 40 };
+    while (taken.some((p) => Math.abs(p.x - point.x) < 10 && Math.abs(p.y - point.y) < 10)) {
+      point = { x: point.x + 40, y: point.y + 40 };
+    }
+    plan.value.positions[planKey(id)] = point;
+  }
+  plan.value.nodes.push(node);
+  showIdeas.value = true;
+  selected.value = planKey(id);
+  save();
+}
+
+function paste() {
+  if (mapClipboard.value) pasteClip(mapClipboard.value);
+}
+
+function duplicateSelected() {
+  if (selectedNode.value) pasteClip(clipOf(selectedNode.value));
+}
+
+/** Delete removes an idea only: what exists is deleted where it lives, not from the map. */
+function deleteSelected() {
+  const node = selectedNode.value;
+  if (node?.planned) removePlanned(node);
+}
+
+// Like the app builder. Text fields keep their own undo, copy and paste; an open menu,
+// list or dialog keeps its keys too.
+const onCanvas = () => !document.activeElement?.closest('[role="dialog"], [role="menu"], [role="listbox"]');
+const hasSelection = () => onCanvas() && !!selectedNode.value;
+useKeyboardShortcuts([
+  { key: 'z', meta: true, skipWhenEditable: true, enabled: onCanvas, handler: undo },
+  { key: 'z', meta: true, shift: true, skipWhenEditable: true, enabled: onCanvas, handler: redo },
+  { key: 'c', meta: true, skipWhenEditable: true, enabled: hasSelection, handler: copySelected },
+  { key: 'v', meta: true, skipWhenEditable: true, enabled: () => onCanvas() && !!mapClipboard.value, handler: paste },
+  { key: 'd', meta: true, skipWhenEditable: true, enabled: hasSelection, handler: duplicateSelected },
+  { key: 'Delete', skipWhenEditable: true, enabled: () => hasSelection() && !!selectedNode.value?.planned, handler: deleteSelected },
+  { key: 'Backspace', skipWhenEditable: true, enabled: () => hasSelection() && !!selectedNode.value?.planned, handler: deleteSelected },
+  { key: 'Escape', skipWhenEditable: true, enabled: hasSelection, handler: () => (selected.value = null) },
+]);
 
 const isEmpty = computed(() => !loading.value && !visibleNodes.value.length);
 </script>
@@ -695,6 +849,15 @@ const isEmpty = computed(() => !loading.value && !visibleNodes.value.length);
         </label>
 
         <div class="flex-1" />
+
+        <div class="flex items-center">
+          <Button size="icon" variant="ghost" class="size-8" :disabled="!undoStack.length" :title="t('projectMap.editor.undo')" :aria-label="t('projectMap.editor.undo')" @click="undo">
+            <Undo2 class="size-4" />
+          </Button>
+          <Button size="icon" variant="ghost" class="size-8" :disabled="!redoStack.length" :title="t('projectMap.editor.redo')" :aria-label="t('projectMap.editor.redo')" @click="redo">
+            <Redo2 class="size-4" />
+          </Button>
+        </div>
 
         <span
           v-if="saveState !== 'idle'"
