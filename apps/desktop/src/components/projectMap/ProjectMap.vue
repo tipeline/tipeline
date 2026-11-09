@@ -9,6 +9,7 @@ import {
   clusterSize,
   draftBrief,
   drawnEdge,
+  edgeKey,
   emptyPlan,
   generateIdentifier,
   linkableKinds,
@@ -44,6 +45,7 @@ import { useAgentStore } from '@/store/agentStore';
 import { useNewItemDefaults } from '@/composables/useNewItemDefaults';
 import MapCanvas from './MapCanvas.vue';
 import MapDetailsPanel from './MapDetailsPanel.vue';
+import AssistantButton from '@/components/agent/AssistantButton.vue';
 import MapOverviewPanel from './MapOverviewPanel.vue';
 import MapSidebar from './MapSidebar.vue';
 import type { MapDropKind } from './mapDrag';
@@ -61,7 +63,7 @@ const router = useRouter();
 const canvasRef = ref<InstanceType<typeof MapCanvas> | null>(null);
 const nudge = ref(0);
 
-type LinkCandidate = { key: string; kind: LinkKind; name: string; project: string | null };
+type LinkCandidate = { key: string; kind: LinkKind; name: string; project: string | null; starts?: string };
 
 const { t } = useI18n();
 const agentStore = useAgentStore();
@@ -334,7 +336,14 @@ const linkTargets = computed(() => {
   if (!node?.planned) return [];
   const taken = new Set(plan.value.nodes.map((n) => n.link).filter(Boolean));
   const kinds = linkableKinds(node.kind);
-  return candidates.value.filter((c) => kinds.includes(c.kind) && !taken.has(c.key));
+  // A schedule starts one workflow: one already drawn to a workflow only links to schedules of that workflow.
+  const starts =
+    node.kind === 'schedule'
+      ? merged.value.edges.find((e) => e.from === node.key && e.kind === 'triggers')?.to
+      : undefined;
+  return candidates.value.filter(
+    (c) => kinds.includes(c.kind) && !taken.has(c.key) && (!starts || c.starts === starts)
+  );
 });
 
 const selectedNode = computed(() => merged.value.nodes.find((n) => n.key === selected.value) ?? null);
@@ -475,9 +484,37 @@ function link(node: MapNode, key: string) {
   if (plan.value.positions[from] && !plan.value.positions[key]) plan.value.positions[key] = plan.value.positions[from];
   delete plan.value.positions[from];
   selected.value = key;
-  save();
+  if (live.value.nodes.some((n) => n.key === key)) {
+    adoptLiveEdges(key);
+    save();
+    return;
+  }
   // Something from outside this map shows once Core knows it's linked.
-  if (!live.value.nodes.some((n) => n.key === key)) void flush().then(load);
+  save();
+  void flush()
+    .then(load)
+    .then(() => {
+      if (adoptLiveEdges(key)) save();
+    });
+}
+
+/**
+ * Linking to something already built: its real lines go on the plan as they are, so the
+ * Plan check only flags lines that change after linking. Returns whether any were added.
+ */
+function adoptLiveEdges(key: string): boolean {
+  const onMap = new Set(live.value.nodes.map((n) => n.key));
+  // Lines drawn while it was planned are stored by plan key: compare after the link resolves them.
+  const planned = new Set(merged.value.edges.filter((e) => e.source !== 'live').map((e) => e.key));
+  let added = false;
+  for (const e of live.value.edges) {
+    if (e.from !== key && e.to !== key) continue;
+    if (!onMap.has(e.from) || !onMap.has(e.to)) continue;
+    if (planned.has(edgeKey(e.from, e.to, e.kind))) continue;
+    plan.value.edges.push({ id: generateIdentifier().slice(0, 12), from: e.from, to: e.to, kind: e.kind });
+    added = true;
+  }
+  return added;
 }
 
 function unlink(nodeKey: string) {
@@ -487,6 +524,9 @@ function unlink(nodeKey: string) {
   delete planNode.link;
   selected.value = planKey(planNode.id);
   save();
+  // What came onto the map only through the link (a schedule and the workflow it starts,
+  // say) goes once Core knows it's unlinked, not at the next reload.
+  void flush().then(load);
 }
 
 /** Where a node's lines are stored: its plan key while planned, else its live key. */
@@ -899,6 +939,8 @@ const isEmpty = computed(() => !loading.value && !visibleNodes.value.length);
         <Button size="icon" variant="ghost" :aria-label="t('projectMap.refresh')" :title="t('projectMap.refresh')" @click="load">
           <RefreshCw class="size-3.5" />
         </Button>
+        <div class="h-5 w-px bg-border" />
+        <AssistantButton />
       </div>
 
       <div v-if="loading" class="flex flex-1 items-center justify-center text-muted-foreground">
@@ -995,6 +1037,7 @@ const isEmpty = computed(() => !loading.value && !visibleNodes.value.length);
           @build="build(selectedNode)"
           @create="create(selectedNode, $event)"
           @split-schedule="splitSchedule(selectedNode)"
+          @changed="load"
           @adopt="adopt(selectedNode)"
         />
         <MapOverviewPanel

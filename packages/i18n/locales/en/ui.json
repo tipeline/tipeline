@@ -296,6 +296,13 @@
     "paused": "Paused",
     "done": "Done",
     "once": "Once, {date}",
+    "details": {
+      "cron": "Cron",
+      "lastRun": "Last run",
+      "never": "never",
+      "parameters": "Parameters",
+      "missing": "This schedule no longer exists."
+    },
     "ranAt": "Ran {date}",
     "toggleFailed": "Couldn't change the schedule.",
     "deleteFailed": "Couldn't delete the schedule.",
@@ -1161,7 +1168,7 @@
     "open": "Open",
     "instructions": "Assistant instructions",
     "instructionsHint": "The assistant follows these when you ask it from this project.",
-    "openMap": "Map",
+    "openMap": "Project map",
     "moreActions": "More actions"
   },
   "variable": {
@@ -3048,7 +3055,8 @@
     "node": {
       "differences": "{count} difference | {count} differences",
       "missingGlobal": "Doesn't exist",
-      "noProject": "No project"
+      "noProject": "No project",
+      "dependency": "Not on the plan: shown because it's connected to something that is"
     },
     "connectFrom": "Draw a line from {name}",
     "connectHint": "Drag from a node's dot to another node to connect them",
@@ -3124,7 +3132,6 @@
       "createSchedule": "Create the schedule",
       "linkExisting": "Link to an existing one",
       "linkPick": "Pick one…",
-      "linkNone": "Nothing to link yet",
       "removePlanned": "Remove from the plan",
       "open": "Open",
       "unlink": "Unlink from the plan",

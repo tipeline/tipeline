@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import ScheduleDetails from '@/components/schedule/ScheduleDetails.vue';
 
 const props = defineProps<{
   node: MapNode;
@@ -52,6 +53,8 @@ const emit = defineEmits<{
   (e: 'adopt'): void;
   /** A planned schedule drawn to several workflows: one schedule each. */
   (e: 'split-schedule'): void;
+  /** A real schedule was edited or switched on/off here: the map should reload. */
+  (e: 'changed'): void;
 }>();
 
 const { t } = useI18n();
@@ -158,7 +161,16 @@ const scheduleTarget = computed(() => {
           {{ node.planned ? t('projectMap.details.planned', { kind: t(`projectMap.kind.${node.kind}`) }) : t(`projectMap.kind.${node.kind}`) }}
         </div>
         <h3 class="mt-0.5 break-words text-base font-semibold" :class="node.kind === 'global' ? 'font-mono' : ''">
-          {{ node.kind === 'global' && !node.planned ? `_global.${node.name}` : node.name }}
+          <!-- A built workflow or app: its name opens it. -->
+          <RouterLink
+            v-if="openTarget && (isWorkflow || node.kind === 'app')"
+            :to="openTarget"
+            class="hover:underline"
+            :title="t('projectMap.details.open')"
+          >
+            {{ node.name }}<ExternalLink class="ml-1 inline size-3.5 align-[-1px] text-muted-foreground" />
+          </RouterLink>
+          <template v-else>{{ node.kind === 'global' && !node.planned ? `_global.${node.name}` : node.name }}</template>
         </h3>
         <p v-if="node.external" class="text-xs text-muted-foreground">
           {{ node.project ? t('projectMap.details.fromProject', { name: node.project.name }) : t('projectMap.details.noProject') }}
@@ -236,6 +248,13 @@ const scheduleTarget = computed(() => {
         </Button>
       </div>
     </div>
+
+    <!-- A real schedule: when it runs, on or off, and editing it right here -->
+    <ScheduleDetails
+      v-if="node.kind === 'schedule' && !node.planned && node.ref"
+      :schedule-identifier="node.ref"
+      @changed="emit('changed')"
+    />
 
     <!-- A note pinned to the node, in either mode: for the team, not the definition -->
     <label class="flex flex-col gap-1.5 text-xs font-semibold">
@@ -373,11 +392,12 @@ const scheduleTarget = computed(() => {
           </Button>
         </form>
       </template>
-      <label class="mt-1 flex flex-col gap-1.5 text-xs font-semibold">
+      <!-- Nothing to link to: no section, rather than a dropdown that can't open. -->
+      <label v-if="linkTargets.length" class="mt-1 flex flex-col gap-1.5 text-xs font-semibold">
         <span class="flex items-center gap-1.5"><Link2 class="size-3.5" /> {{ t('projectMap.details.linkExisting') }}</span>
         <Select :model-value="undefined" @update:model-value="emit('link', String($event))">
-          <SelectTrigger class="w-full" :disabled="!linkTargets.length">
-            <SelectValue :placeholder="linkTargets.length ? t('projectMap.details.linkPick') : t('projectMap.details.linkNone')" />
+          <SelectTrigger class="w-full">
+            <SelectValue :placeholder="t('projectMap.details.linkPick')" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem v-for="n in linkTargets" :key="n.key" :value="n.key">

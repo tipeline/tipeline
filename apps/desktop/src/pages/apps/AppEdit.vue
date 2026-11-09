@@ -33,6 +33,7 @@ import { useRecentItemsStore } from '@/store/recentItems';
 import { useErrorT } from '@/composables/useErrorT';
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
 import { toast } from '@/components/ui/sonner';
+import AssistantButton from '@/components/agent/AssistantButton.vue';
 
 const { t } = useI18n();
 const { translateError } = useErrorT();
@@ -273,6 +274,8 @@ function handleClear() {
           <Save class="w-3.5 h-3.5 mr-1" />
           {{ t('common.save') }}
         </Button>
+        <div class="w-px h-5 bg-border" />
+        <AssistantButton />
       </div>
 
       <!-- YAML -->

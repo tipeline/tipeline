@@ -161,6 +161,7 @@ const selectedNode = computed<MapNode | null>(() => merged.value.nodes.find((n) 
             :lanes="[]"
             @select="selected = $event"
             @close="selected = null"
+            @changed="load"
           />
           <aside v-else class="flex h-full flex-col gap-3 rounded-xl border bg-card p-4 text-sm">
             <h3 class="text-base font-semibold">{{ t('projectMap.all.projects') }}</h3>
