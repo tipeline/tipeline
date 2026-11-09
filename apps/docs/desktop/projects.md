@@ -9,6 +9,8 @@ apps to it from the project's page.
   `billing invoice` finds the invoice workflows in the Billing project.
 - Deleting a project keeps its workflows and apps by default; they stay, without a
   project. See [Deleting a project](#deleting-a-project) to delete them too.
+- **Map** on a project's page draws its workflows, apps, globals and schedules and how they
+  connect, and lets you plan what it still needs. See [Project Map](/desktop/project-map).
 
 ## Assistant instructions
 
