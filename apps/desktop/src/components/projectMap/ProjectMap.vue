@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
-import { ArrowLeft, Check, Loader2, Plus, Redo2, RefreshCw, RotateCcw, Undo2, X } from 'lucide-vue-next';
+import { ArrowLeft, Check, Loader2, Plus, Redo2, RefreshCw, RotateCcw, TriangleAlert, Undo2, X } from 'lucide-vue-next';
 import {
   applyPositions,
   clusterLeaves,
@@ -850,97 +850,107 @@ const isEmpty = computed(() => !loading.value && !visibleNodes.value.length);
 
     <div class="flex min-w-0 flex-1 flex-col">
       <!-- Same order as the builders: back, name, view switches | save state, status -->
-      <div class="flex h-12 shrink-0 items-center gap-2 border-b px-3 text-sm">
-        <Button variant="ghost" size="icon" :aria-label="t('projectMap.editor.back')" @click="router.push(`/projects/${projectIdentifier}`)">
-          <ArrowLeft class="size-4" />
-        </Button>
-        <div class="h-5 w-px bg-border" />
-        <span class="truncate text-muted-foreground">{{ projectName }}</span>
-        <span class="text-muted-foreground/60">/</span>
-        <span class="font-semibold">{{ t('projectMap.editor.title') }}</span>
+      <!--
+        Sized by its own width (the Assistant panel narrows it, not just the window): the left side
+        shrinks and drops labels first, the right side never shrinks, so the Assistant button stays put.
+      -->
+      <div class="@container flex h-12 shrink-0 items-center gap-2 border-b px-3 text-sm">
+        <div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+          <Button variant="ghost" size="icon" class="shrink-0" :aria-label="t('projectMap.editor.back')" @click="router.push(`/projects/${projectIdentifier}`)">
+            <ArrowLeft class="size-4" />
+          </Button>
+          <div class="h-5 w-px shrink-0 bg-border" />
+          <span class="hidden min-w-0 truncate text-muted-foreground @5xl:inline">{{ projectName }}</span>
+          <span class="hidden text-muted-foreground/60 @5xl:inline">/</span>
+          <span class="hidden shrink-0 font-semibold @3xl:inline">{{ t('projectMap.editor.title') }}</span>
 
-        <div role="group" :aria-label="t('projectMap.layoutLabel')" class="ml-3 flex items-center rounded-md border p-0.5">
-          <Button
-            v-for="l in (['flow', 'lanes'] as LayoutMode[])"
-            :key="l"
-            size="sm"
-            :variant="layoutMode === l ? 'secondary' : 'ghost'"
-            class="h-7 px-2.5"
-            :aria-pressed="layoutMode === l"
-            @click="layoutMode = l"
+          <div role="group" :aria-label="t('projectMap.layoutLabel')" class="flex shrink-0 items-center rounded-md border p-0.5 @3xl:ml-3">
+            <Button
+              v-for="l in (['flow', 'lanes'] as LayoutMode[])"
+              :key="l"
+              size="sm"
+              :variant="layoutMode === l ? 'secondary' : 'ghost'"
+              class="h-7 px-2.5"
+              :aria-pressed="layoutMode === l"
+              @click="layoutMode = l"
+            >
+              {{ t(`projectMap.layout.${l}`) }}
+            </Button>
+          </div>
+
+          <Select v-if="layoutMode === 'lanes'" :model-value="laneBy" @update:model-value="setLaneBy($event as LaneBy)">
+            <SelectTrigger class="ml-1 h-8 w-auto shrink-0 gap-1.5 text-xs" :aria-label="t('projectMap.lanes.groupBy')">
+              <span class="hidden text-muted-foreground @4xl:inline">{{ t('projectMap.lanes.groupBy') }}</span>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="by in LANE_BY" :key="by" :value="by">{{ t(`projectMap.lanes.by.${by}`) }}</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <label class="ml-2 flex shrink-0 cursor-pointer items-center gap-2 text-xs text-muted-foreground" :title="t('projectMap.ideas.hint')">
+            <Switch v-model="showIdeas" :aria-label="t('projectMap.ideas.label')" />
+            <span class="hidden whitespace-nowrap @4xl:inline">{{ t('projectMap.ideas.label') }}</span>
+          </label>
+        </div>
+
+        <div class="flex shrink-0 items-center gap-2">
+          <div class="flex items-center">
+            <Button size="icon" variant="ghost" class="size-8" :disabled="!undoStack.length" :title="t('projectMap.editor.undo')" :aria-label="t('projectMap.editor.undo')" @click="undo">
+              <Undo2 class="size-4" />
+            </Button>
+            <Button size="icon" variant="ghost" class="size-8" :disabled="!redoStack.length" :title="t('projectMap.editor.redo')" :aria-label="t('projectMap.editor.redo')" @click="redo">
+              <Redo2 class="size-4" />
+            </Button>
+          </div>
+
+          <span
+            v-if="saveState !== 'idle'"
+            class="flex items-center gap-1 text-xs"
+            :class="saveState === 'error' ? 'text-destructive' : 'text-muted-foreground'"
+            role="status"
           >
-            {{ t(`projectMap.layout.${l}`) }}
+            <Check v-if="saveState === 'saved'" class="size-3 text-green-500" />
+            <Loader2 v-else-if="saveState === 'saving'" class="size-3 animate-spin @4xl:hidden" />
+            <span class="whitespace-nowrap" :class="saveState === 'error' ? '' : 'sr-only @4xl:not-sr-only'">{{ t(`projectMap.save.${saveState}`) }}</span>
+            <button v-if="saveState === 'error'" type="button" class="underline" @click="flush">{{ t('projectMap.save.retry') }}</button>
+          </span>
+          <component
+            :is="selectedNode ? 'button' : 'span'"
+            v-if="merged.progress.total"
+            v-bind="overviewPillAttrs"
+            class="rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-900 dark:bg-green-950 dark:text-green-300"
+            :class="selectedNode && 'hover:bg-green-200 dark:hover:bg-green-900'"
+          >
+            <span class="sr-only whitespace-nowrap @4xl:not-sr-only">{{ t('projectMap.progress', { ready: merged.progress.ready, total: merged.progress.total }) }}</span>
+            <span aria-hidden="true" class="@4xl:hidden">{{ merged.progress.ready }}/{{ merged.progress.total }}</span>
+          </component>
+          <component
+            :is="selectedNode ? 'button' : 'span'"
+            v-if="merged.differences.length"
+            v-bind="overviewPillAttrs"
+            class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900 dark:bg-amber-950 dark:text-amber-300"
+            :class="selectedNode && 'hover:bg-amber-200 dark:hover:bg-amber-900'"
+          >
+            <span class="sr-only whitespace-nowrap @4xl:not-sr-only">{{ t('projectMap.editor.differences', { count: merged.differences.length }, merged.differences.length) }}</span>
+            <span aria-hidden="true" class="inline-flex items-center gap-1 @4xl:hidden"><TriangleAlert class="size-3" />{{ merged.differences.length }}</span>
+          </component>
+          <Button
+            v-if="layoutMode === 'flow' && Object.keys(plan.positions).length"
+            size="sm"
+            variant="ghost"
+            :title="t('projectMap.resetLayoutHint')"
+            :aria-label="t('projectMap.resetLayout')"
+            @click="resetLayout"
+          >
+            <RotateCcw class="size-3.5" /> <span class="hidden @5xl:inline">{{ t('projectMap.resetLayout') }}</span>
           </Button>
+          <Button size="icon" variant="ghost" :aria-label="t('projectMap.refresh')" :title="t('projectMap.refresh')" @click="load">
+            <RefreshCw class="size-3.5" />
+          </Button>
+          <div class="h-5 w-px bg-border" />
+          <AssistantButton />
         </div>
-
-        <Select v-if="layoutMode === 'lanes'" :model-value="laneBy" @update:model-value="setLaneBy($event as LaneBy)">
-          <SelectTrigger class="ml-1 h-8 w-auto gap-1.5 text-xs" :aria-label="t('projectMap.lanes.groupBy')">
-            <span class="text-muted-foreground">{{ t('projectMap.lanes.groupBy') }}</span>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem v-for="by in LANE_BY" :key="by" :value="by">{{ t(`projectMap.lanes.by.${by}`) }}</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <label class="ml-2 flex cursor-pointer items-center gap-2 text-xs text-muted-foreground" :title="t('projectMap.ideas.hint')">
-          <Switch v-model="showIdeas" />
-          {{ t('projectMap.ideas.label') }}
-        </label>
-
-        <div class="flex-1" />
-
-        <div class="flex items-center">
-          <Button size="icon" variant="ghost" class="size-8" :disabled="!undoStack.length" :title="t('projectMap.editor.undo')" :aria-label="t('projectMap.editor.undo')" @click="undo">
-            <Undo2 class="size-4" />
-          </Button>
-          <Button size="icon" variant="ghost" class="size-8" :disabled="!redoStack.length" :title="t('projectMap.editor.redo')" :aria-label="t('projectMap.editor.redo')" @click="redo">
-            <Redo2 class="size-4" />
-          </Button>
-        </div>
-
-        <span
-          v-if="saveState !== 'idle'"
-          class="flex items-center gap-1 text-xs"
-          :class="saveState === 'error' ? 'text-destructive' : 'text-muted-foreground'"
-          role="status"
-        >
-          <Check v-if="saveState === 'saved'" class="size-3 text-green-500" />
-          {{ t(`projectMap.save.${saveState}`) }}
-          <button v-if="saveState === 'error'" type="button" class="underline" @click="flush">{{ t('projectMap.save.retry') }}</button>
-        </span>
-        <component
-          :is="selectedNode ? 'button' : 'span'"
-          v-if="merged.progress.total"
-          v-bind="overviewPillAttrs"
-          class="rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-900 dark:bg-green-950 dark:text-green-300"
-          :class="selectedNode && 'hover:bg-green-200 dark:hover:bg-green-900'"
-        >
-          {{ t('projectMap.progress', { ready: merged.progress.ready, total: merged.progress.total }) }}
-        </component>
-        <component
-          :is="selectedNode ? 'button' : 'span'"
-          v-if="merged.differences.length"
-          v-bind="overviewPillAttrs"
-          class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900 dark:bg-amber-950 dark:text-amber-300"
-          :class="selectedNode && 'hover:bg-amber-200 dark:hover:bg-amber-900'"
-        >
-          {{ t('projectMap.editor.differences', { count: merged.differences.length }, merged.differences.length) }}
-        </component>
-        <Button
-          v-if="layoutMode === 'flow' && Object.keys(plan.positions).length"
-          size="sm"
-          variant="ghost"
-          :title="t('projectMap.resetLayoutHint')"
-          @click="resetLayout"
-        >
-          <RotateCcw class="size-3.5" /> {{ t('projectMap.resetLayout') }}
-        </Button>
-        <Button size="icon" variant="ghost" :aria-label="t('projectMap.refresh')" :title="t('projectMap.refresh')" @click="load">
-          <RefreshCw class="size-3.5" />
-        </Button>
-        <div class="h-5 w-px bg-border" />
-        <AssistantButton />
       </div>
 
       <div v-if="loading" class="flex flex-1 items-center justify-center text-muted-foreground">
