@@ -280,8 +280,15 @@ export class ProjectMapService {
         .filter((n) => (n.kind !== 'global' && n.kind !== 'schedule' ? n.project?.identifier === projectIdentifier : false))
         .map((n) => n.key)
     );
-    // What the plan's nodes were linked to belongs on this map, wherever it lives.
-    for (const key of linked) if (full.nodes.some((n) => n.key === key)) own.add(key);
+    // What the plan's nodes were linked to belongs on this map, wherever it lives. Only
+    // what it uses comes with it (the sub-workflows it runs, the globals it touches), not
+    // who else uses it: a popular workflow would drag in every app and schedule that runs it.
+    const borrowed = new Set<string>();
+    for (const key of linked) {
+      if (own.has(key) || !full.nodes.some((n) => n.key === key)) continue;
+      own.add(key);
+      borrowed.add(key);
+    }
     // A global nobody uses yet isn't in the full map: a linked one still shows.
     for (const key of linked) {
       if (!key.startsWith('global:') || full.nodes.some((n) => n.key === key)) continue;
@@ -292,10 +299,13 @@ export class ProjectMapService {
         own.add(key);
       }
     }
+    // The map shows what the project uses, wherever it lives, and the schedules that start
+    // its workflows. Apps and workflows elsewhere that run one of ours stay off: adding a
+    // workflow to the project would otherwise bring in every outside app that uses it.
     const included = new Set(own);
     for (const e of full.edges) {
       if (own.has(e.from)) included.add(e.to);
-      if (own.has(e.to)) included.add(e.from);
+      if (own.has(e.to) && !borrowed.has(e.to) && e.kind === 'triggers') included.add(e.from);
     }
     const nodes = full.nodes
       .filter((n) => included.has(n.key))
@@ -315,7 +325,9 @@ export class ProjectMapService {
    * Everything a planned node could be linked to: every workflow, app, global and
    * schedule in Tipeline, not only what's on this project's map.
    */
-  static async linkCandidates(): Promise<{ key: string; kind: LiveMapNode['kind']; name: string; project: string | null }[]> {
+  static async linkCandidates(): Promise<
+    { key: string; kind: LiveMapNode['kind']; name: string; project: string | null; starts?: string }[]
+  > {
     const knex = ProjectModel.knex();
     const [tasks, apps, globals, schedules] = await Promise.all([
       knex('task').leftJoin('project', 'project.id', 'task.project_id').select('task.identifier', 'task.name', 'task.source', 'project.name as project'),
@@ -323,7 +335,14 @@ export class ProjectMapService {
       knex('global_variable').select('name'),
       knex('schedule')
         .join('task', 'task.id', 'schedule.task_id')
-        .select('schedule.identifier', 'schedule.cron', 'schedule.run_at', 'schedule.every_seconds', 'task.name as task_name'),
+        .select(
+          'schedule.identifier',
+          'schedule.cron',
+          'schedule.run_at',
+          'schedule.every_seconds',
+          'task.name as task_name',
+          'task.identifier as task_identifier'
+        ),
     ]);
     return [
       ...tasks.map((t: any) => ({
@@ -339,6 +358,8 @@ export class ProjectMapService {
         kind: 'schedule' as const,
         name: `${scheduleTiming(s)} · ${s.task_name}`,
         project: null,
+        // The workflow it starts: a planned schedule already drawn to one can only become a schedule of that one.
+        starts: `task:${s.task_identifier}`,
       })),
     ].sort((a, b) => a.name.localeCompare(b.name));
   }

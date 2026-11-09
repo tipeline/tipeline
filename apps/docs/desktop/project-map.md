@@ -60,6 +60,10 @@ until it's built. The plan is saved with the project as you work.
 A schedule starts one workflow, so drawing a planned schedule to a second workflow gives
 that workflow a planned schedule of its own.
 
+Selecting a real schedule shows its details: when it runs, the workflow it starts, its
+next and last run, and a switch to turn it on or off. **Edit** changes it without leaving
+the map.
+
 ### Turning ideas into real things
 
 A planned node's details offer a way to make it real:
@@ -71,8 +75,17 @@ A planned node's details offer a way to make it real:
 | Global | **Create the global**, with its type, in Variables |
 | Schedule | **Create the schedule**, once it's connected to a built workflow: say when, in plain words ("every weekday at 8am") |
 
-**Link to an existing one** links the node to something already built instead.
+**Link to an existing one** links the node to something already built instead. When
+that's from another project (or in none), the map brings in what it uses (the
+sub-workflows it runs, the globals it writes or reads) but not the other apps and
+schedules that use it. Its lines as they are go on the plan with it, so the
+[Plan check](#plan-check) only lists what changes after that.
 **Unlink from the plan** or **Remove from the plan** takes it back off.
+
+A node from outside the project that isn't on the plan (a sub-workflow a linked
+workflow runs, say) has a small arrow badge in its top-left corner: it's on the map only
+because it's connected to something that is. Link it to a planned node to give it planned
+inputs and outputs.
 
 A workflow or app that's in no project shows with **Add to this project** in its
 details. Adding a workflow or app to a project also brings in the sub-workflows it runs

@@ -296,6 +296,13 @@
     "paused": "En pausa",
     "done": "Hecha",
     "once": "Una vez, {date}",
+    "details": {
+      "cron": "Cron",
+      "lastRun": "Última ejecución",
+      "never": "nunca",
+      "parameters": "Parámetros",
+      "missing": "Esta programación ya no existe."
+    },
     "ranAt": "Se ejecutó {date}",
     "toggleFailed": "No se pudo cambiar la programación.",
     "deleteFailed": "No se pudo eliminar la programación.",
@@ -1161,7 +1168,7 @@
     "open": "Abrir",
     "instructions": "Instrucciones para el asistente",
     "instructionsHint": "El asistente las sigue cuando le pides algo desde este proyecto.",
-    "openMap": "Mapa",
+    "openMap": "Mapa del proyecto",
     "moreActions": "Más acciones"
   },
   "variable": {
@@ -3048,7 +3055,8 @@
     "node": {
       "differences": "{count} diferencia | {count} diferencias",
       "missingGlobal": "No existe",
-      "noProject": "Sin proyecto"
+      "noProject": "Sin proyecto",
+      "dependency": "No está en el plan: aparece porque está conectado con algo que sí lo está"
     },
     "connectFrom": "Trazar una línea desde {name}",
     "connectHint": "Arrastra desde el punto de un nodo hasta otro para conectarlos",
@@ -3124,7 +3132,6 @@
       "createSchedule": "Crear la programación",
       "linkExisting": "Vincular con uno existente",
       "linkPick": "Elige uno…",
-      "linkNone": "Aún no hay nada que vincular",
       "removePlanned": "Quitar del plan",
       "open": "Abrir",
       "unlink": "Desvincular del plan",

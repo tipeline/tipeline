@@ -18,11 +18,13 @@ pipeline:
     - type: string
       name: processedResult
       visibility: public
+      output: true
       value: ''
 
     - type: number
       name: itemCount
       visibility: public
+      output: true
       value: 0
 
   actions:

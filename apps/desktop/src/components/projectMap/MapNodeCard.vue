@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Handle, Position } from '@vue-flow/core';
-import { AppWindow, Clock, Database, Globe, StickyNote, TriangleAlert, Workflow } from 'lucide-vue-next';
+import { AppWindow, Clock, Database, Globe, CornerDownRight, StickyNote, TriangleAlert, Workflow } from 'lucide-vue-next';
 import { MAP_NODE_H, MAP_NODE_W, type MapNode } from '@tipeline/utils';
 import { ENTITY_COLORS, type Entity } from '@/config/entityColors';
 
@@ -46,6 +46,9 @@ const tone = computed(() => {
   const planned = props.node.planned || props.node.missing;
   return planned ? `border-2 border-dashed ${colors.border} bg-background` : `border ${colors.card}`;
 });
+
+/** From outside the project and not on the plan: here only because it's connected to something that is. */
+const dependency = computed(() => props.node.external && !props.node.planId);
 
 const iconTone = computed(() =>
   flagged.value ? 'text-amber-600 dark:text-amber-400' : ENTITY_COLORS[entity.value].text
@@ -97,7 +100,7 @@ const subline = computed(() => {
       <div class="truncate text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
         {{ kindLabel }}
         <template v-if="editable && !flagged">
-          · <span :class="statusTone">{{ t(`projectMap.status.${node.status}`) }}</span>
+          · <span :class="statusTone" :title="t(`projectMap.statusWhy.${node.statusWhy}`)">{{ t(`projectMap.status.${node.status}`) }}</span>
         </template>
       </div>
       <div
@@ -109,6 +112,14 @@ const subline = computed(() => {
       </div>
       <div v-if="subline" class="truncate text-[11px] text-muted-foreground">{{ subline }}</div>
     </div>
+    <span
+      v-if="dependency"
+      class="absolute -top-2 -left-2 flex size-5 items-center justify-center rounded-full border bg-background text-muted-foreground"
+      :title="t('projectMap.node.dependency')"
+      :aria-label="t('projectMap.node.dependency')"
+    >
+      <CornerDownRight class="size-3" />
+    </span>
     <span
       v-if="node.note"
       class="absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full border border-yellow-300 bg-yellow-100 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-300"
