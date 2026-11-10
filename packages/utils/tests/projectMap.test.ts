@@ -15,6 +15,7 @@ import {
   laneOfNode,
   laneOrder,
   mergeMap,
+  otherGlobalKind,
   parsePlan,
   placeNode,
   MAP_NODE_H,
@@ -121,6 +122,47 @@ describe('mergeMap', () => {
       expect.objectContaining({ kind: 'missing-link', from: 'app:console', to: 'task:purge', planEdgeId: 'e1' }),
     ]);
     expect(m.nodes.find((n) => n.key === 'app:console')!.differences).toBe(1);
+  });
+
+  it('a planned write where the workflow only reads the global names the real kind', () => {
+    const reader: LiveMap = {
+      nodes: [
+        { key: 'task:list', kind: 'workflow', name: 'List orders', ref: 'list', project },
+        { key: 'global:folder', kind: 'global', name: 'folder', ref: 'folder', project: null },
+      ],
+      edges: [{ from: 'task:list', to: 'global:folder', kind: 'reads' }],
+    };
+    const m = mergeMap(
+      reader,
+      plan({
+        // Drawn to a planned global that was then linked to the real one.
+        nodes: [{ id: 'g', kind: 'global', name: 'newGlobal', inputs: [], outputs: [], link: 'global:folder' }],
+        edges: [{ id: 'e1', from: 'task:list', to: 'plan:g', kind: 'writes' }],
+      })
+    );
+    expect(m.edges.find((e) => e.planEdgeId === 'e1')).toMatchObject({
+      to: 'global:folder',
+      difference: 'missing',
+      actualKind: 'reads',
+    });
+    // The real read isn't on the plan either: switching the planned line's kind settles both.
+    expect(m.differences).toEqual([
+      expect.objectContaining({ kind: 'missing-link', edgeKind: 'writes', actualKind: 'reads' }),
+      expect.objectContaining({ kind: 'not-on-plan', edgeKind: 'reads' }),
+    ]);
+  });
+
+  it('a planned global line with no real line at all has no real kind', () => {
+    const m = mergeMap(live, plan({ edges: [{ id: 'e1', from: 'task:purge', to: 'global:cacheTtl', kind: 'reads' }] }));
+    expect(m.edges.find((e) => e.planEdgeId === 'e1')).toMatchObject({ difference: 'missing' });
+    expect(m.edges.find((e) => e.planEdgeId === 'e1')!.actualKind).toBeUndefined();
+  });
+
+  it('only a workflow-to-global line can switch between reads and writes', () => {
+    expect(otherGlobalKind('workflow', 'global', 'writes')).toBe('reads');
+    expect(otherGlobalKind('helper', 'global', 'reads')).toBe('writes');
+    expect(otherGlobalKind('app', 'global', 'reads')).toBeNull();
+    expect(otherGlobalKind('workflow', 'workflow', 'calls')).toBeNull();
   });
 
   it('a planned line to a planned node is just planned, not a difference', () => {

@@ -2,10 +2,11 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
-import { BadgeCheck, ExternalLink, Link2, Link2Off, Loader2, Sparkles, StickyNote, Trash2, X } from 'lucide-vue-next';
+import { ArrowLeftRight, BadgeCheck, ExternalLink, Link2, Link2Off, Loader2, Sparkles, StickyNote, Trash2, X } from 'lucide-vue-next';
 import {
   descriptionSummary,
   linkableKinds,
+  otherGlobalKind,
   type MapEdge,
   type MapEdgeKind,
   type MapNode,
@@ -46,6 +47,8 @@ const emit = defineEmits<{
   (e: 'link', key: string): void;
   (e: 'unlink'): void;
   (e: 'remove-edge', planEdgeId: string): void;
+  /** A planned workflow–global line switched between reads and writes. */
+  (e: 'set-edge-kind', planEdgeId: string, kind: MapEdgeKind): void;
   (e: 'build'): void;
   /** Make the planned app, global or schedule for real (`type` for a global, `when` for a schedule). */
   (e: 'create', options: { type?: string; when?: string }): void;
@@ -64,7 +67,7 @@ const byKey = computed(() => new Map(props.map.nodes.map((n) => [n.key, n])));
 
 const NONE = '__none__';
 
-type Connection = { edge: MapEdge; other: MapNode; outgoing: boolean };
+type Connection = { edge: MapEdge; other: MapNode; outgoing: boolean; /** The kind a planned line can switch to. */ switchTo: MapEdgeKind | null };
 
 /** Lines in and out, grouped under a heading per kind and direction ("Read by", "Writes"…). */
 const groups = computed(() => {
@@ -75,7 +78,10 @@ const groups = computed(() => {
     const other = byKey.value.get(outgoing ? edge.to : edge.from);
     if (!other) continue;
     const heading = `${edge.kind}.${outgoing ? 'out' : 'in'}`;
-    out.set(heading, [...(out.get(heading) ?? []), { edge, other, outgoing }]);
+    const [from, to] = outgoing ? [props.node, other] : [other, props.node];
+    // Only a line that's on the plan alone: one that matches the definition is right as it is.
+    const switchTo = edge.source === 'plan' && edge.planEdgeId ? otherGlobalKind(from.kind, to.kind, edge.kind) : null;
+    out.set(heading, [...(out.get(heading) ?? []), { edge, other, outgoing, switchTo }]);
   }
   return [...out.entries()].map(([heading, items]) => ({ heading, items }));
 });
@@ -320,6 +326,16 @@ const scheduleTarget = computed(() => {
           <button type="button" class="min-w-0 truncate text-left text-primary hover:underline" @click="emit('select', item.other.key)">
             {{ item.other.kind === 'global' ? `_global.${item.other.name}` : item.other.name }}
             <span v-if="item.edge.source === 'plan'" class="text-xs text-muted-foreground"> · {{ t('projectMap.details.plannedLine') }}</span>
+          </button>
+          <button
+            v-if="editable && item.switchTo"
+            type="button"
+            class="ml-auto shrink-0 rounded p-0.5 text-muted-foreground opacity-0 hover:text-foreground group-hover:opacity-100 focus:opacity-100"
+            :aria-label="t(`projectMap.differences.makeKind.${item.switchTo}`)"
+            :title="t(`projectMap.differences.makeKind.${item.switchTo}`)"
+            @click="emit('set-edge-kind', item.edge.planEdgeId!, item.switchTo)"
+          >
+            <ArrowLeftRight class="size-3.5" />
           </button>
           <button
             v-if="editable && item.edge.planEdgeId"

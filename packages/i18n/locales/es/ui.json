@@ -3066,6 +3066,7 @@
       "reads": "lee",
       "triggers": "inicia",
       "missing": "planeado, no encontrado",
+      "wrongKind": "planeado: {planned}; real: {actual}",
       "unplanned": "fuera del plan",
       "planned": "{label} (planeado)",
       "many": "{label} ×{count}",
@@ -3183,6 +3184,14 @@
       "none": "ninguna",
       "show": "Mostrar",
       "removeFromPlan": "Quitar del plan",
+      "makeKind": {
+        "reads": "Convertir en línea de lectura",
+        "writes": "Convertir en línea de escritura"
+      },
+      "wrongKind": {
+        "writes": "El plan dice que {from} escribe {to}, pero solo la lee.",
+        "reads": "El plan dice que {from} lee {to}, pero la escribe."
+      },
       "addToPlan": "Agregar al plan",
       "ignore": "Ignorar",
       "updatePlan": "Actualizar el plan",

@@ -233,6 +233,17 @@ export function drawnEdge(from: MapNodeKind, to: MapNodeKind): { kind: MapEdgeKi
   return null;
 }
 
+/**
+ * The other kind a planned line could be: a workflow either reads or writes a global, and
+ * dragging can only guess which. Null for every other line.
+ */
+export function otherGlobalKind(fromKind: MapNodeKind, toKind: MapNodeKind, kind: MapEdgeKind): MapEdgeKind | null {
+  if (!isWorkflowKind(fromKind) || toKind !== 'global') return null;
+  if (kind === 'writes') return 'reads';
+  if (kind === 'reads') return 'writes';
+  return null;
+}
+
 /** Plan nodes of these kinds can be linked to live nodes of these kinds. */
 export function linkableKinds(kind: MapNodeKind): MapNodeKind[] {
   return isWorkflowKind(kind) ? ['workflow', 'helper'] : [kind];
@@ -293,12 +304,24 @@ export type MapEdge = {
   planEdgeId?: string;
   /** `missing`: planned between built things, but not in the definitions; `unplanned`: real, not on the plan. */
   difference?: 'missing' | 'unplanned';
+  /** A missing line whose two ends are joined for real by the other kind (planned writes, it reads). */
+  actualKind?: MapEdgeKind;
   /** A line standing for several (a box of workflows): how many. */
   count?: number;
 };
 
 export type MapDifference =
-  | { kind: 'missing-link'; key: string; edgeKey: string; planEdgeId: string; from: string; to: string; edgeKind: MapEdgeKind }
+  | {
+      kind: 'missing-link';
+      key: string;
+      edgeKey: string;
+      planEdgeId: string;
+      from: string;
+      to: string;
+      edgeKind: MapEdgeKind;
+      /** The kind the real line between them has, when it's the other one (see `otherGlobalKind`). */
+      actualKind?: MapEdgeKind;
+    }
   | { kind: 'not-on-plan'; key: string; edgeKey: string; from: string; to: string; edgeKind: MapEdgeKind }
   | { kind: 'inputs' | 'outputs'; key: string; nodeKey: string; planned: string[]; actual: string[] }
   | { kind: 'link-missing'; key: string; nodeKey: string; link: string };
@@ -452,6 +475,7 @@ export function mergeMap(live: LiveMap, plan: ProjectMapPlan): MergedMap {
     const key = edgeKey(e.from, e.to, e.kind);
     edges.set(key, { key, from: e.from, to: e.to, kind: e.kind, source: 'live' });
   }
+  const liveKeys = new Set(edges.keys());
   const plannedKeys = new Set<string>();
   for (const e of plan.edges) {
     const from = resolveEnd(e.from);
@@ -470,7 +494,10 @@ export function mergeMap(live: LiveMap, plan: ProjectMapPlan): MergedMap {
     // Both ends exist, so this line should be in the definitions by now.
     if (!nodes.get(from)!.planned && !nodes.get(to)!.planned && !liveByKey.get(from)?.missing && !liveByKey.get(to)?.missing) {
       edge.difference = 'missing';
-      addDifference({ kind: 'missing-link', key: `missing|${key}`, edgeKey: key, planEdgeId: e.id, from, to, edgeKind: e.kind });
+      const other = otherGlobalKind(nodes.get(from)!.kind, nodes.get(to)!.kind, e.kind);
+      const actualKind = other && liveKeys.has(edgeKey(from, to, other)) ? other : undefined;
+      if (actualKind) edge.actualKind = actualKind;
+      addDifference({ kind: 'missing-link', key: `missing|${key}`, edgeKey: key, planEdgeId: e.id, from, to, edgeKind: e.kind, actualKind });
     }
   }
 

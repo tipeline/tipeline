@@ -3066,6 +3066,7 @@
       "reads": "reads",
       "triggers": "starts",
       "missing": "planned, not found",
+      "wrongKind": "planned {planned}, it {actual}",
       "unplanned": "not on plan",
       "planned": "{label} (planned)",
       "many": "{label} ×{count}",
@@ -3183,6 +3184,14 @@
       "none": "none",
       "show": "Show",
       "removeFromPlan": "Remove from plan",
+      "makeKind": {
+        "reads": "Make it a reads line",
+        "writes": "Make it a writes line"
+      },
+      "wrongKind": {
+        "writes": "The plan says {from} writes {to}, but it only reads it.",
+        "reads": "The plan says {from} reads {to}, but it writes it."
+      },
       "addToPlan": "Add to plan",
       "ignore": "Ignore",
       "updatePlan": "Update the plan",

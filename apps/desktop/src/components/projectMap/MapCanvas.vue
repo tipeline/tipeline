@@ -245,7 +245,11 @@ const flowNodes = computed<Node[]>(() => {
 });
 
 function edgeLabel(edge: MapEdge) {
-  if (props.editable && edge.difference === 'missing') return t('projectMap.edge.missing');
+  if (props.editable && edge.difference === 'missing') {
+    return edge.actualKind
+      ? t('projectMap.edge.wrongKind', { planned: t(`projectMap.edge.${edge.kind}`), actual: t(`projectMap.edge.${edge.actualKind}`) })
+      : t('projectMap.edge.missing');
+  }
   if (props.editable && edge.difference === 'unplanned') return t('projectMap.edge.unplanned');
   const label = t(`projectMap.edge.${edge.kind}`);
   if (edge.count) return t('projectMap.edge.many', { label, count: edge.count });
