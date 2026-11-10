@@ -41,6 +41,12 @@ const schedules = ref<ScheduleItem[]>([]);
 const openNew = ref(false);
 const editing = ref<ScheduleItem | null>(null);
 const deleting = ref<ScheduleItem | null>(null);
+// The dialog's action button closes it (clearing `deleting`) before our click handler runs,
+// so the handler works from this copy taken when the dialog opened.
+let pendingDelete: ScheduleItem | null = null;
+watch(deleting, (v) => {
+  if (v) pendingDelete = v;
+});
 const newFormRef = ref<ScheduleFormInstance | null>(null);
 const editFormRef = ref<ScheduleFormInstance | null>(null);
 
@@ -92,9 +98,11 @@ async function toggle(schedule: ScheduleItem, enabled: boolean) {
 }
 
 async function confirmDelete() {
-  if (!deleting.value) return;
+  const schedule = pendingDelete;
+  pendingDelete = null;
+  if (!schedule) return;
   try {
-    await invokeCore(SEND.SCHEDULE_REMOVE, { scheduleIdentifier: deleting.value.scheduleIdentifier });
+    await invokeCore(SEND.SCHEDULE_REMOVE, { scheduleIdentifier: schedule.scheduleIdentifier });
   } catch (error: any) {
     toast.error(t('schedules.deleteFailed'), { description: error?.message ?? String(error) });
   }

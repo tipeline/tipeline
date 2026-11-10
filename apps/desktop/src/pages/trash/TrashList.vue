@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { format } from 'date-fns';
@@ -47,6 +47,12 @@ const confirmOpen = computed({
   },
 });
 const isDeleting = ref(false);
+// The dialog's action button closes it (clearing `toDelete`) before our click handler runs,
+// so the handler works from this copy taken when the dialog opened.
+let pendingDelete: TrashItem | 'all' | null = null;
+watch(toDelete, (v) => {
+  if (v) pendingDelete = v;
+});
 
 function formatDate(date: string) {
   try {
@@ -80,7 +86,8 @@ async function restore(item: TrashItem) {
 }
 
 async function confirmDelete() {
-  const target = toDelete.value;
+  const target = pendingDelete;
+  pendingDelete = null;
   if (!target) return;
   isDeleting.value = true;
   try {

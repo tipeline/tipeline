@@ -3405,10 +3405,17 @@
       "split": "Una programación por flujo"
     },
     "copyName": "{name} (copia)",
+    "unlinkSchedule": {
+      "title": "¿Desvincular y eliminar \"{name}\"?",
+      "description": "Si no, la programación seguiría iniciando su flujo de trabajo, así que al desvincularla se elimina. No se puede deshacer. La tarjeta queda como idea.",
+      "confirm": "Desvincular y eliminar"
+    },
     "unlinked": {
       "removed": "\"{name}\" salió de este proyecto",
       "removedDescription": "Entró con el enlace, así que al desvincularlo salió. Se conserva y sigue en cualquier otro proyecto en el que esté.",
-      "kept": "\"{name}\" sigue en este proyecto: ya estaba aquí antes de enlazarlo."
+      "kept": "\"{name}\" sigue en este proyecto: ya estaba aquí antes de enlazarlo.",
+      "globalUsed": "\"{name}\" sigue en el mapa: los flujos de trabajo del proyecto la usan.",
+      "scheduleDeleted": "Programación \"{name}\" eliminada"
     },
     "removeFromProject": {
       "title": "¿Quitar \"{name}\" de este proyecto?",

@@ -547,8 +547,22 @@ function unlink(nodeKey: string) {
   const node = merged.value.nodes.find((n) => n.key === nodeKey);
   const planNode = planNodeOf(node ?? null);
   if (!node || !planNode) return;
-  // Core takes out of the project what the link brought in; what was here before stays.
-  const member = !!planNode.link && (planNode.link.startsWith('task:') || planNode.link.startsWith('app:'));
+  // A schedule stays on the map while it starts one of the project's workflows: unlinking
+  // deletes it (asked first), so only the idea is left, as for a workflow.
+  if (planNode.link?.startsWith('schedule:') && !node.linkMissing) {
+    pendingScheduleUnlink = node;
+    unlinkingSchedule.value = node;
+    return;
+  }
+  detach(node, planNode);
+}
+
+/**
+ * Takes the link off. Core takes out of the project what the link brought in; what was in
+ * it before stays, and a global the project's workflows use stays on the map: both are said.
+ */
+function detach(node: MapNode, planNode: PlanNode, after?: () => void) {
+  const link = planNode.link;
   const kept = !!planNode.alreadyIn;
   delete planNode.link;
   delete planNode.alreadyIn;
@@ -559,10 +573,42 @@ function unlink(nodeKey: string) {
   void flush()
     .then(load)
     .then(() => {
-      if (!member) return;
-      if (kept) toast.info(t('projectMap.unlinked.kept', { name: node.name }));
-      else toast.success(t('projectMap.unlinked.removed', { name: node.name }), { description: t('projectMap.unlinked.removedDescription') });
+      if (after) return after();
+      if (!link) return;
+      const member = link.startsWith('task:') || link.startsWith('app:');
+      const stays = live.value.nodes.some((n) => n.key === link);
+      if (member && kept) toast.info(t('projectMap.unlinked.kept', { name: node.name }));
+      else if (member) {
+        toast.success(t('projectMap.unlinked.removed', { name: node.name }), {
+          description: t('projectMap.unlinked.removedDescription'),
+        });
+      } else if (link.startsWith('global:') && stays) toast.info(t('projectMap.unlinked.globalUsed', { name: node.name }));
     });
+}
+
+/** A linked schedule being unlinked: asked first, since unlinking deletes it. */
+const unlinkingSchedule = ref<MapNode | null>(null);
+// The dialog's action button closes it (clearing `unlinkingSchedule`) before our click
+// handler runs, so the handler works from this copy taken when the dialog opened.
+let pendingScheduleUnlink: MapNode | null = null;
+async function confirmUnlinkSchedule() {
+  const node = pendingScheduleUnlink;
+  pendingScheduleUnlink = null;
+  unlinkingSchedule.value = null;
+  const planNode = planNodeOf(node);
+  const link = planNode?.link;
+  if (!node || !planNode || !link) return;
+  try {
+    await invokeCore(SEND.SCHEDULE_REMOVE, { scheduleIdentifier: link.slice('schedule:'.length) });
+  } catch (error: any) {
+    toast.error(t('schedules.deleteFailed'), { description: error?.message ?? String(error) });
+    return;
+  }
+  // Undo can't bring the schedule back: history starts again from here.
+  detach(node, planNode, () => {
+    resetHistory();
+    toast.success(t('projectMap.unlinked.scheduleDeleted', { name: node.name }));
+  });
 }
 
 /** Where a node's lines are stored: its plan key while planned, else its live key. */
@@ -1162,6 +1208,23 @@ const isEmpty = computed(() => !loading.value && !visibleNodes.value.length);
         />
       </div>
     </aside>
+    <AlertDialog :open="!!unlinkingSchedule" @update:open="(v) => !v && (unlinkingSchedule = null)">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{{ t('projectMap.unlinkSchedule.title', { name: unlinkingSchedule?.name ?? '' }) }}</AlertDialogTitle>
+          <AlertDialogDescription>{{ t('projectMap.unlinkSchedule.description') }}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
+          <AlertDialogAction
+            class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            @click="confirmUnlinkSchedule"
+          >
+            {{ t('projectMap.unlinkSchedule.confirm') }}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     <AlertDialog :open="!!removing" @update:open="(v) => !v && (removing = null)">
       <AlertDialogContent>
         <AlertDialogHeader>
