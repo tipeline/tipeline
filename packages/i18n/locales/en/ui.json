@@ -3405,10 +3405,17 @@
       "split": "One schedule per workflow"
     },
     "copyName": "{name} (copy)",
+    "unlinkSchedule": {
+      "title": "Unlink and delete \"{name}\"?",
+      "description": "The schedule would keep starting its workflow otherwise, so unlinking deletes it. This can't be undone. The card stays as an idea.",
+      "confirm": "Unlink and delete"
+    },
     "unlinked": {
       "removed": "\"{name}\" left this project",
       "removedDescription": "The link brought it in, so unlinking took it out. It's kept, and stays in any other projects it's in.",
-      "kept": "\"{name}\" stays in this project: it was here before you linked it."
+      "kept": "\"{name}\" stays in this project: it was here before you linked it.",
+      "globalUsed": "\"{name}\" stays on the map: the project's workflows use it.",
+      "scheduleDeleted": "Schedule \"{name}\" deleted"
     },
     "removeFromProject": {
       "title": "Take \"{name}\" out of this project?",
