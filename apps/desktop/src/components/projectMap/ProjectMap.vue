@@ -609,6 +609,22 @@ function removeEdge(planEdgeId: string) {
   save();
 }
 
+/**
+ * A planned workflow–global line switched between reads and writes. When the plan already
+ * has that line (drawn to the linked global directly, say), this one just goes.
+ */
+function setEdgeKind(planEdgeId: string, kind: MapEdgeKind) {
+  const edge = plan.value.edges.find((e) => e.id === planEdgeId);
+  const drawn = merged.value.edges.find((e) => e.planEdgeId === planEdgeId);
+  if (!edge || !drawn) return;
+  const twin = merged.value.edges.find(
+    (e) => e.planEdgeId && e.planEdgeId !== planEdgeId && e.key === edgeKey(drawn.from, drawn.to, kind)
+  );
+  if (twin) plan.value.edges = plan.value.edges.filter((e) => e.id !== planEdgeId);
+  else edge.kind = kind;
+  save();
+}
+
 function ignore(differenceKey: string) {
   if (!plan.value.ignored.includes(differenceKey)) plan.value.ignored.push(differenceKey);
   save();
@@ -1048,6 +1064,7 @@ const isEmpty = computed(() => !loading.value && !visibleNodes.value.length);
           @link="link(selectedNode, $event)"
           @unlink="unlink(selectedNode.key)"
           @remove-edge="removeEdge"
+          @set-edge-kind="setEdgeKind"
           @build="build(selectedNode)"
           @create="create(selectedNode, $event)"
           @split-schedule="splitSchedule(selectedNode)"
@@ -1060,6 +1077,7 @@ const isEmpty = computed(() => !loading.value && !visibleNodes.value.length);
           :hide-title="true"
           @select="pick"
           @remove-edge="removeEdge"
+          @set-edge-kind="setEdgeKind"
           @new-schedule="moveToNewSchedule"
           @add-edge="addEdge"
           @ignore="ignore"

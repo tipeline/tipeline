@@ -11,6 +11,8 @@ const props = defineProps<{ map: MergedMap; /** Inside a sidebar that shows the 
 const emit = defineEmits<{
   (e: 'select', key: string): void;
   (e: 'remove-edge', planEdgeId: string): void;
+  /** A planned workflow–global line switched to the kind the real line has. */
+  (e: 'set-edge-kind', planEdgeId: string, kind: MapEdgeKind): void;
   /** A planned "starts" line moved onto a new planned schedule: a schedule starts one workflow. */
   (e: 'new-schedule', planEdgeId: string): void;
   (e: 'add-edge', from: string, to: string, kind: MapEdgeKind): void;
@@ -33,6 +35,9 @@ const externalCount = computed(() => props.map.nodes.filter((n) => n.external).l
 function sentence(d: MapDifference) {
   switch (d.kind) {
     case 'missing-link':
+      if (d.actualKind) {
+        return t(`projectMap.differences.wrongKind.${d.edgeKind}`, { from: nameOf(d.from), to: nameOf(d.to) });
+      }
       return t(`projectMap.differences.missing.${d.edgeKind}`, { from: nameOf(d.from), to: nameOf(d.to) });
     case 'not-on-plan':
       return t(`projectMap.differences.unplanned.${d.edgeKind}`, { from: nameOf(d.from), to: nameOf(d.to) });
@@ -123,7 +128,10 @@ const unplanned = (d: MapDifference) => d.kind === 'not-on-plan';
         <p>{{ sentence(d) }}</p>
         <div class="flex flex-wrap gap-2">
           <template v-if="d.kind === 'missing-link'">
-            <Button size="sm" @click="emit('select', d.to)">{{ t('projectMap.differences.show') }}</Button>
+            <Button v-if="d.actualKind" size="sm" @click="emit('set-edge-kind', d.planEdgeId, d.actualKind)">
+              {{ t(`projectMap.differences.makeKind.${d.actualKind}`) }}
+            </Button>
+            <Button size="sm" :variant="d.actualKind ? 'outline' : 'default'" @click="emit('select', d.to)">{{ t('projectMap.differences.show') }}</Button>
             <Button v-if="d.edgeKind === 'triggers'" size="sm" variant="outline" @click="emit('new-schedule', d.planEdgeId)">
               {{ t('projectMap.schedule.planSeparate') }}
             </Button>

@@ -61,13 +61,13 @@ export const ENTITY_COLORS: Record<Entity, EntityColor> = {
     hex: '#06b6d4',
   },
   global: {
-    text: 'text-pink-600 dark:text-pink-400',
-    tint: 'bg-pink-500/10 text-pink-500',
-    badge: 'bg-pink-500/10 text-pink-600 border border-pink-500/20',
-    card: 'border-pink-300 dark:border-pink-800 bg-pink-50 dark:bg-pink-950',
-    border: 'border-pink-300 dark:border-pink-800',
-    fill: 'bg-pink-50 dark:bg-pink-950',
-    hex: '#ec4899',
+    text: 'text-lime-600 dark:text-lime-400',
+    tint: 'bg-lime-500/10 text-lime-500',
+    badge: 'bg-lime-500/10 text-lime-600 border border-lime-500/20',
+    card: 'border-lime-300 dark:border-lime-800 bg-lime-50 dark:bg-lime-950',
+    border: 'border-lime-300 dark:border-lime-800',
+    fill: 'bg-lime-50 dark:bg-lime-950',
+    hex: '#84cc16',
   },
   // Each project has its own color; as a kind it stays neutral.
   project: {
