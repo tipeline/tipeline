@@ -129,11 +129,21 @@ async function checkNow(hub: Hub) {
   }
 }
 
+// The dialog's action button closes it (clearing `removeTarget`) before our click handler
+// runs, so the handler works from this copy taken when the dialog opened.
+let pendingRemove: Hub | null = null;
+function askRemove(hub: Hub) {
+  pendingRemove = hub;
+  removeTarget.value = hub;
+}
+
 async function confirmRemove() {
-  if (!removeTarget.value) return;
+  const hub = pendingRemove;
+  pendingRemove = null;
+  if (!hub) return;
   removing.value = true;
   try {
-    await store.remove(removeTarget.value.id);
+    await store.remove(hub.id);
     removeTarget.value = null;
   } catch (e: any) {
     toast.error(t('hub.manage.deleteFailed'), { description: translateError(e?.message ?? String(e)) });
@@ -182,7 +192,7 @@ async function confirmRemove() {
         </Button>
         <SaveStatus v-bind="autoSave.status(`enabled:${hub.id}`)" />
         <Switch :model-value="!!hub.enabled" @update:model-value="(v: boolean) => toggleEnabled(hub, v)" />
-        <Button variant="ghost" size="icon" @click="removeTarget = hub">
+        <Button variant="ghost" size="icon" @click="askRemove(hub)">
           <Trash2 class="h-4 w-4 text-destructive" />
         </Button>
       </div>

@@ -90,6 +90,11 @@ export const planNodeSchema = z.object({
   outputs: z.array(z.string().max(200)).max(100).default([]),
   /** The live node it became: once linked, its lines come from the definition. */
   link: z.string().max(300).optional(),
+  /**
+   * Core's note, not the person's: what it's linked to was in the project before the link,
+   * so unlinking leaves it there. Without it, the link brought it in and unlinking takes it out.
+   */
+  alreadyIn: z.boolean().optional(),
   /** Signed off as ready (ISO time), and by whom. */
   readyAt: z.string().max(40).optional(),
   readyBy: z.string().max(200).optional(),

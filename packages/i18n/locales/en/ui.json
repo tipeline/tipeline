@@ -3405,6 +3405,11 @@
       "split": "One schedule per workflow"
     },
     "copyName": "{name} (copy)",
+    "unlinked": {
+      "removed": "\"{name}\" left this project",
+      "removedDescription": "The link brought it in, so unlinking took it out. It's kept, and stays in any other projects it's in.",
+      "kept": "\"{name}\" stays in this project: it was here before you linked it."
+    },
     "removeFromProject": {
       "title": "Take \"{name}\" out of this project?",
       "description": "It leaves this map. The workflow itself is kept, and stays in any other projects it's in.",
