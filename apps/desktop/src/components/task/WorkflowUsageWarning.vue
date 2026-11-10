@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import { TriangleAlert, LayoutGrid, Workflow, CalendarClock } from 'lucide-vue-next';
-import { useWorkflowUsage } from '@/composables/useWorkflowUsage';
+import { useWorkflowUsage, userLabel } from '@/composables/useWorkflowUsage';
 import { useScheduleText } from '@/composables/useScheduleText';
 
 // Shown in the delete dialogs: the apps and workflows that would lose this workflow,
@@ -23,10 +23,13 @@ const { usage, used } = useWorkflowUsage(() => props.identifier);
         <ul class="text-xs text-muted-foreground space-y-0.5">
           <li v-for="app in usage.apps" :key="app.identifier" class="flex items-center gap-1.5 min-w-0">
             <LayoutGrid class="w-3 h-3 shrink-0" />
-            <span v-if="app.project_color" class="w-2 h-2 rounded-full shrink-0" :style="{ backgroundColor: app.project_color }" />
-            <span class="truncate">
-              {{ app.name }}<template v-if="app.project_name"> · {{ app.project_name }}</template>
-            </span>
+            <span
+              v-for="project in app.projects ?? []"
+              :key="project.identifier"
+              class="w-2 h-2 rounded-full shrink-0"
+              :style="{ backgroundColor: project.color || 'var(--muted-foreground)' }"
+            />
+            <span class="truncate">{{ userLabel(app) }}</span>
           </li>
         </ul>
       </div>
@@ -35,10 +38,13 @@ const { usage, used } = useWorkflowUsage(() => props.identifier);
         <ul class="text-xs text-muted-foreground space-y-0.5">
           <li v-for="caller in usage.workflows" :key="caller.identifier" class="flex items-center gap-1.5 min-w-0">
             <Workflow class="w-3 h-3 shrink-0" />
-            <span v-if="caller.project_color" class="w-2 h-2 rounded-full shrink-0" :style="{ backgroundColor: caller.project_color }" />
-            <span class="truncate">
-              {{ caller.name }}<template v-if="caller.project_name"> · {{ caller.project_name }}</template>
-            </span>
+            <span
+              v-for="project in caller.projects ?? []"
+              :key="project.identifier"
+              class="w-2 h-2 rounded-full shrink-0"
+              :style="{ backgroundColor: project.color || 'var(--muted-foreground)' }"
+            />
+            <span class="truncate">{{ userLabel(caller) }}</span>
           </li>
         </ul>
       </div>

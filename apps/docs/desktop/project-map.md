@@ -18,8 +18,12 @@ still needs before anything is built.
 | Global | A [global variable](/desktop/variables) the project's workflows write or read |
 | Schedule | A [schedule](/desktop/schedules) that starts one of the project's workflows |
 
-Nodes from other projects that this project uses (a borrowed sub-workflow, say) show
-faded, and are listed under **From other projects** in the left sidebar.
+Nodes this project uses that aren't in it (a sub-workflow from another project, say) show
+faded, and are listed under **Used, not in this project** in the left sidebar.
+
+On [Tipeline Server](/server/), a workflow on the map that you don't have access to
+(someone else's private one) shows as a locked **Hidden workflow** card: its lines stay, so
+the map still makes sense, but its name and details don't show.
 
 ### Lines
 
@@ -75,21 +79,25 @@ A planned node's details offer a way to make it real:
 | Global | **Create the global**, with its type, in Variables |
 | Schedule | **Create the schedule**, once it's connected to a built workflow: say when, in plain words ("every weekday at 8am") |
 
-**Link to an existing one** links the node to something already built instead. When
-that's from another project (or in none), the map brings in what it uses (the
+**Link to an existing one** links the node to something already built instead. A linked
+workflow or app **joins the project** (and stays in any other projects it's in), so its
+owner, lane and status work like any other node's. The map brings in what it uses (the
 sub-workflows it runs, the globals it writes or reads) but not the other apps and
 schedules that use it. Its lines as they are go on the plan with it, so the
 [Plan check](#plan-check) only lists what changes after that.
-**Unlink from the plan** or **Remove from the plan** takes it back off.
+**Unlink from the plan** turns the node back into an idea; the workflow stays in the
+project. **Remove from project** on a workflow or app takes it out of the project (asked
+first): its card leaves the map, and the workflow itself is kept, in any other projects.
 
 A node from outside the project that isn't on the plan (a sub-workflow a linked
 workflow runs, say) has a small arrow badge in its top-left corner: it's on the map only
 because it's connected to something that is. Link it to a planned node to give it planned
 inputs and outputs.
 
-A workflow or app that's in no project shows with **Add to this project** in its
-details. Adding a workflow or app to a project also brings in the sub-workflows it runs
-that are in no project yet; ones that belong to another project stay there.
+A workflow or app the project uses but that isn't in it shows with **Add to this
+project** in its details. Adding a workflow or app to a project also brings in the
+sub-workflows it runs that are in no project yet; ones already in a project are left as
+they are (add them too if you want).
 
 ## Status
 
@@ -149,9 +157,10 @@ map** in the sidebar finds a node by name.
 
 ## Map of all projects
 
-**Map of all projects** draws every project in its own box. A global or schedule only one
-project uses sits in that project's box; anything more than one project uses, or that's
-in no project, sits in a box of its own, so shared helpers and globals stand out.
+**Map of all projects** draws every project in its own box. A workflow or app in one
+project, and a global or schedule only one project uses, sits in that project's box;
+anything in or used by more than one project, or in none, sits in a box of its own, so
+shared helpers and globals stand out.
 
 Statuses noted on each project's plan still show. To plan, click a project in the list
 beside the map to open its own map.

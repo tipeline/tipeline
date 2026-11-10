@@ -45,6 +45,8 @@ const variableFormRef = ref<VariableFormInstance | null>(null);
 
 const router = useRouter();
 const { t } = useI18n();
+/** "Sales, Ops": the projects an app or workflow is in. */
+const projectNames = (item: { projects?: { name: string }[] }) => (item.projects ?? []).map((p) => p.name).join(', ');
 const pluginStore = usePluginStore();
 const props = defineProps<{ task: any }>();
 
@@ -347,20 +349,21 @@ const updateAvailable = computed(
                 </div>
                 <div class="space-y-1">
                   <div class="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    {{ t('tasks.overview.project') }}
+                    {{ t('tasks.overview.projects', props.task.projects?.length ?? 0) }}
                   </div>
-                  <div v-if="props.task.project_identifier" class="flex items-center gap-2 min-w-0">
-                    <span
-                      v-if="props.task.project_color"
-                      class="w-2.5 h-2.5 rounded-full shrink-0"
-                      :style="{ backgroundColor: props.task.project_color }"
-                    />
-                    <button
-                      class="text-sm hover:underline text-left truncate"
-                      @click="router.push(`/projects/${props.task.project_identifier}`)"
-                    >
-                      {{ props.task.project_name }}
-                    </button>
+                  <div v-if="props.task.projects?.length" class="flex flex-col gap-0.5 min-w-0">
+                    <div v-for="project in props.task.projects" :key="project.identifier" class="flex items-center gap-2 min-w-0">
+                      <span
+                        class="w-2.5 h-2.5 rounded-full shrink-0"
+                        :style="{ backgroundColor: project.color || 'var(--muted-foreground)' }"
+                      />
+                      <button
+                        class="text-sm hover:underline text-left truncate"
+                        @click="router.push(`/projects/${project.identifier}`)"
+                      >
+                        {{ project.name }}
+                      </button>
+                    </div>
                   </div>
                   <div v-else class="text-sm text-muted-foreground">—</div>
                 </div>
@@ -465,15 +468,16 @@ const updateAvailable = computed(
                     :key="`app:${app.identifier}`"
                     type="button"
                     class="inline-flex items-center gap-1.5 max-w-full px-2 py-0.5 rounded border text-xs hover:bg-accent transition-colors"
-                    :title="app.project_name ? t('tasks.overview.usedByInProject', { project: app.project_name }) : undefined"
+                    :title="app.projects?.length ? t('tasks.overview.usedByInProject', { project: projectNames(app) }) : undefined"
                     @click="router.push(`/apps/${app.identifier}`)"
                   >
                     <LayoutGrid class="w-3 h-3 shrink-0 text-muted-foreground" />
                     <span class="truncate">{{ app.name }}</span>
                     <span
-                      v-if="app.project_color"
+                      v-for="project in app.projects ?? []"
+                      :key="project.identifier"
                       class="w-2 h-2 rounded-full shrink-0"
-                      :style="{ backgroundColor: app.project_color }"
+                      :style="{ backgroundColor: project.color || 'var(--muted-foreground)' }"
                     />
                   </button>
                   <button
@@ -481,15 +485,16 @@ const updateAvailable = computed(
                     :key="`workflow:${caller.identifier}`"
                     type="button"
                     class="inline-flex items-center gap-1.5 max-w-full px-2 py-0.5 rounded border text-xs hover:bg-accent transition-colors"
-                    :title="caller.project_name ? t('tasks.overview.calledByInProject', { project: caller.project_name }) : t('tasks.overview.calledBy')"
+                    :title="caller.projects?.length ? t('tasks.overview.calledByInProject', { project: projectNames(caller) }) : t('tasks.overview.calledBy')"
                     @click="router.push(`/tasks/${caller.identifier}`)"
                   >
                     <Workflow class="w-3 h-3 shrink-0 text-muted-foreground" />
                     <span class="truncate">{{ caller.name }}</span>
                     <span
-                      v-if="caller.project_color"
+                      v-for="project in caller.projects ?? []"
+                      :key="project.identifier"
                       class="w-2 h-2 rounded-full shrink-0"
-                      :style="{ backgroundColor: caller.project_color }"
+                      :style="{ backgroundColor: project.color || 'var(--muted-foreground)' }"
                     />
                   </button>
                 </div>

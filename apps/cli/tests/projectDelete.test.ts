@@ -14,7 +14,11 @@ vi.mock('../src/Printer', () => ({
 import CommandService from '../src/CommandService';
 import Printer from '../src/Printer';
 
-const user = (identifier: string, name: string, project_name: string | null) => ({ identifier, name, project_name });
+const user = (identifier: string, name: string, project: string | null) => ({
+  identifier,
+  name,
+  projects: project ? [{ identifier: `p-${project.toLowerCase()}`, name: project }] : [],
+});
 
 // Sales: CRM lookup is used by an Ops app; Quote only by Sales' own app, and has a schedule.
 const PREVIEW = {
@@ -23,8 +27,13 @@ const PREVIEW = {
   workflows: [
     { identifier: 'wf-crm', name: 'CRM lookup', apps: [user('app-desk', 'Desk', 'Ops')], workflows: [], schedules: [] },
     { identifier: 'wf-quote', name: 'Quote', apps: [user('app-deals', 'Deals', 'Sales')], workflows: [], schedules: [{}] },
+    // Also in Ops: only taken out of Sales, whatever the options.
+    { identifier: 'wf-both', name: 'Both', alsoIn: [{ identifier: 'p-ops', name: 'Ops' }], apps: [], workflows: [], schedules: [] },
   ],
-  apps: [{ identifier: 'app-deals', name: 'Deals' }],
+  apps: [
+    { identifier: 'app-deals', name: 'Deals' },
+    { identifier: 'app-board', name: 'Board', alsoIn: [{ identifier: 'p-ops', name: 'Ops' }] },
+  ],
 };
 
 /** Runs `tipeline project delete` with Core answering each channel; returns what was sent. */
@@ -62,7 +71,7 @@ describe('tipeline project delete', () => {
 
   it('keeps the workflows and apps by default, found by name in any case', async () => {
     const sent = await deleteWith('sales', { yes: true });
-    expect(printed()).toContain('Its 2 workflows and 1 app stay, in no project.');
+    expect(printed()).toContain('Its 3 workflows and 2 apps stay, out of the project.');
     expect(sent.at(-1)).toEqual({ event: 'projectDelete', payload: { identifier: 'p-sales' } });
     expect(printed()).toContain('Project deleted.');
     expect(exit).toHaveBeenCalledWith(0);
@@ -73,6 +82,8 @@ describe('tipeline project delete', () => {
     expect(printed()).toContain('workflow  Quote');
     expect(printed()).toContain('1 schedule goes with it');
     expect(printed()).toContain('workflow  CRM lookup — used by Desk (Ops)');
+    expect(printed()).toContain('workflow  Both — also in Ops');
+    expect(printed()).toContain('app       Board — also in Ops');
     expect(sent.at(-1)?.payload).toEqual({ identifier: 'p-sales', workflows: ['wf-quote'], apps: ['app-deals'] });
     expect(printed()).toContain('Project deleted; 2 items moved to the Trash.');
   });

@@ -10,7 +10,8 @@ export type TrashItem = {
   identifier: string;
   name: string;
   image: string | null;
-  projectName: string | null;
+  /** The projects it was in that still exist. */
+  projectNames: string[];
   schedules: number;
   versions: number;
   deletedAt: string;
@@ -38,7 +39,7 @@ export function createColumns(
         const item = info.row.original;
         const image = toAssetUrl(item.image ?? undefined);
         const details = [
-          item.projectName,
+          item.projectNames.join(', '),
           item.versions ? t('trash.versions', item.versions) : null,
           item.schedules ? t('trash.schedules', item.schedules) : null,
         ].filter(Boolean);

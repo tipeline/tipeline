@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { Model } from 'objection';
 import { TagService } from '@database/services/TagService';
+import { ProjectMembership } from '@database/services/ProjectMembership';
 
 export type TrashKind = 'task' | 'app';
 
@@ -13,7 +14,10 @@ export const TRASH_KEEP_DAYS = 30;
  */
 interface TrashData {
   row: Record<string, any>;
-  project: string | null; // project identifier
+  /** Every project it was in, by identifier. */
+  projects?: string[];
+  /** Items trashed before a workflow could be in several projects. */
+  project?: string | null;
   tags?: string[];
   hubLink: Record<string, any> | null;
   revisions?: Record<string, any>[]; // with their old `id`, to map `restored_from`
@@ -26,12 +30,15 @@ export interface TrashListItem {
   identifier: string;
   name: string;
   image: string | null;
-  projectName: string | null;
+  /** The projects it was in that still exist, by name. */
+  projectNames: string[];
   schedules: number;
   versions: number;
   deletedAt: string;
   expiresAt: string;
 }
+
+const projectsOf = (data: TrashData): string[] => data.projects ?? (data.project ? [data.project] : []);
 
 const TABLES: Record<TrashKind, { table: string; hubLink: string; fk: string; label: string }> = {
   task: { table: 'task', hubLink: 'task_hub_link', fk: 'task_id', label: 'Workflow' },
@@ -74,11 +81,10 @@ export class TrashService {
       const row = await trx(table).where({ identifier }).first();
       if (!row) throw new Error(`${label} "${identifier}" not found`);
 
-      const project = row.project_id ? await trx('project').where({ id: row.project_id }).first() : null;
       const link = await trx(hubLink).where({ [fk]: row.id }).first();
       const data: TrashData = {
-        row: withoutKeys(row, 'id', 'project_id'),
-        project: project?.identifier ?? null,
+        row: withoutKeys(row, 'id'),
+        projects: await ProjectMembership.projectsOf(kind, row.id, trx),
         hubLink: link ? withoutKeys(link, 'id', fk) : null,
       };
 
@@ -112,6 +118,7 @@ export class TrashService {
         await trx('schedule').where({ task_id: row.id }).delete();
       }
       await trx(hubLink).where({ [fk]: row.id }).delete();
+      await ProjectMembership.forget(kind, row.id, trx);
       return id;
     });
   }
@@ -130,7 +137,9 @@ export class TrashService {
         identifier: item.identifier,
         name: item.name,
         image: metadata?.image ?? null,
-        projectName: data.project ? (projects.get(data.project) ?? null) : null,
+        projectNames: projectsOf(data)
+          .map((p) => projects.get(p))
+          .filter((name): name is string => !!name),
         schedules: data.schedules?.length ?? 0,
         versions: data.revisions?.length ?? 0,
         deletedAt: item.deleted_at,
@@ -140,7 +149,7 @@ export class TrashService {
   }
 
   /**
-   * Puts a trash item back. Its project, tags, hub link, versions and schedules come
+   * Puts a trash item back. Its projects, tags, hub link, versions and schedules come
    * back too; schedules come back turned off, so nothing runs before you've looked.
    * A project or hub deleted in the meantime is left out.
    */
@@ -156,14 +165,18 @@ export class TrashService {
         throw new Error(`${label} "${item.identifier}" already exists, so this one can't be restored`);
       }
 
-      const project = data.project ? await trx('project').where({ identifier: data.project }).first() : null;
-      const row = { ...data.row };
+      const { project_id: _old, ...row } = { ...data.row };
       // Items trashed before tags were lowercase still carry their casing in the source.
       if (kind === 'task' && typeof row.source === 'string') {
         const source = JSON.parse(row.source);
         if (Array.isArray(source.tags)) row.source = JSON.stringify({ ...source, tags: TagService.normalizeLabels(source.tags) });
       }
-      const [rowId] = await trx(table).insert({ ...row, project_id: project?.id ?? null });
+      const [rowId] = await trx(table).insert(row);
+      // Back in the projects it was in; ones deleted in the meantime are left out.
+      const projectIds: number[] = projectsOf(data).length
+        ? await trx('project').whereIn('identifier', projectsOf(data)).pluck('id')
+        : [];
+      for (const projectId of projectIds) await ProjectMembership.add(kind, projectId, [rowId], trx);
 
       if (data.hubLink && (await trx('hub').where({ id: data.hubLink.hub_id }).first())) {
         await trx(hubLink).insert({ ...data.hubLink, [fk]: rowId });

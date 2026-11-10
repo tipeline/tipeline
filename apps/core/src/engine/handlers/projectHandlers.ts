@@ -81,7 +81,7 @@ export const registerProjectHandlers = (transport: ITransport) => {
   transport.on('projectUnassignTask', async (message: any, client: any) => {
     if (!client) return;
     try {
-      const result = await Core.projectUnassignTask(message.payload.taskIdentifier);
+      const result = await Core.projectUnassignTask(message.payload.projectIdentifier, message.payload.taskIdentifier);
       transport.emit(client, 'onProjectUnassignTask', IPCMessage.success(result, message.correlationId));
     } catch (error: any) {
       transport.emit(client, 'onProjectUnassignTask', IPCMessage.failure(error.message, message.correlationId));
@@ -101,7 +101,7 @@ export const registerProjectHandlers = (transport: ITransport) => {
   transport.on('projectUnassignApp', async (message: any, client: any) => {
     if (!client) return;
     try {
-      const result = await Core.projectUnassignApp(message.payload.appIdentifier);
+      const result = await Core.projectUnassignApp(message.payload.projectIdentifier, message.payload.appIdentifier);
       transport.emit(client, 'onProjectUnassignApp', IPCMessage.success(result, message.correlationId));
     } catch (error: any) {
       transport.emit(client, 'onProjectUnassignApp', IPCMessage.failure(error.message, message.correlationId));

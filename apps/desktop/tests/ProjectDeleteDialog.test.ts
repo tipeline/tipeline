@@ -14,9 +14,7 @@ import { SEND } from '@/ipc-channels';
 const user = (identifier: string, name: string, project: string | null) => ({
   identifier,
   name,
-  project_identifier: project,
-  project_name: project,
-  project_color: null,
+  projects: project ? [{ identifier: project, name: project, color: null }] : [],
 });
 
 // CRM lookup is used by an app in Ops; Quote is used only by this project's app.
@@ -105,6 +103,24 @@ describe('ProjectDeleteDialog', () => {
     buttonByText('Delete project and 2 items').click();
     await flushPromises();
     expect(deleteCall()?.[1]).toEqual({ identifier: 'p-sales', workflows: ['wf-quote', 'wf-crm'], apps: [] });
+  });
+
+  it('never ticks an item that is also in another project, and says it is only taken out', async () => {
+    const also = { alsoIn: [{ identifier: 'p-ops', name: 'Ops' }] };
+    await openDialog({
+      ...PREVIEW,
+      workflows: [...PREVIEW.workflows, { identifier: 'wf-both', name: 'Both', apps: [], workflows: [], schedules: [], ...also }],
+      apps: [...PREVIEW.apps, { identifier: 'app-board', name: 'Board', ...also }],
+    });
+    (body().querySelector('[role="radio"][value="delete"]') as HTMLElement).click();
+    await flushPromises();
+    expect(body().textContent).toContain('Also in Ops: kept, only taken out of this project');
+    const disabled = [...body().querySelectorAll('[role="checkbox"][disabled], [role="checkbox"][data-disabled]')];
+    expect(disabled).toHaveLength(2);
+
+    buttonByText('Delete project and 2 items').click();
+    await flushPromises();
+    expect(deleteCall()?.[1]).toEqual({ identifier: 'p-sales', workflows: ['wf-quote'], apps: ['app-deals'] });
   });
 
   it('offers only the plain delete for an empty project', async () => {

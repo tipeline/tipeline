@@ -5,10 +5,13 @@ import { SEND } from '@/ipc-channels';
 export type WorkflowUser = {
   identifier: string;
   name: string;
-  project_identifier: string | null;
-  project_name: string | null;
-  project_color: string | null;
+  /** Every project the app or workflow is in. */
+  projects: { identifier: string; name: string; color: string | null }[];
 };
+
+/** "Desk · Sales, Ops", or just the name when it's in no project. */
+export const userLabel = (user: Pick<WorkflowUser, 'name' | 'projects'>, separator = ' · ') =>
+  user.projects?.length ? `${user.name}${separator}${user.projects.map((p) => p.name).join(', ')}` : user.name;
 
 export type WorkflowSchedule = {
   identifier: string;

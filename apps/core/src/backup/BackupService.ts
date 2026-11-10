@@ -7,6 +7,7 @@ import type { Knex } from 'knex';
 import { generateIdentifier, parsePlan, readableFileNames } from '@tipeline/utils';
 import { Task as TaskModel } from '@database/models/Task';
 import { TagService } from '@database/services/TagService';
+import { ProjectMembership } from '@database/services/ProjectMembership';
 import { TaskRevisionService } from '@database/services/TaskRevisionService';
 import { appWorkflowIdentifiers, calledWorkflowIdentifiers } from '@database/services/WorkflowUsageService';
 import { Parser } from '@utils/Parser';
@@ -16,9 +17,9 @@ import { TIPELINE_DIR } from '@/asset/AssetService';
  * Full backup / restore of everything a user builds: workflows, apps, projects,
  * schedules, global variables and the workflow/app images.
  *
- * Archive layout (version 3):
+ * Archive layout (version 4):
  *   manifest.json            — format version, counts, and every row's metadata
- *                              (projects, workflow/app columns + tags + project + file, schedules)
+ *                              (projects, workflow/app columns + tags + projects + file, schedules)
  *   tasks/<workflow-name>.yml — workflow sources (the same file "Export" writes)
  *   apps/<app-name>.yml      — app sources, workflows still referenced by `{ identifier }`
  *   globals.yml              — global variables (secrets redacted unless asked for)
@@ -27,8 +28,9 @@ import { TIPELINE_DIR } from '@/asset/AssetService';
  * File names come from the names (clashing ones get the start of the identifier
  * added); the manifest says which file is whose. Everything keeps its identifier,
  * so apps, schedules and subworkflow calls still point at the right workflow after
- * a restore. Version 2 archives (files named `<identifier>.yml`) and version 1
- * archives (tasks/ + globals.yml only) restore too.
+ * a restore. Version 3 archives (one `project` per workflow or app), version 2
+ * archives (files named `<identifier>.yml`) and version 1 archives (tasks/ +
+ * globals.yml only) restore too.
  *
  * Not included: run history, plugins, hubs, remote connections and settings.
  *
@@ -37,7 +39,7 @@ import { TIPELINE_DIR } from '@/asset/AssetService';
  * from elsewhere, and the global variables any of them reference. No schedules.
  */
 
-export const BACKUP_VERSION = 3;
+export const BACKUP_VERSION = 4;
 
 export type RestoreMode = 'skip' | 'replace';
 
@@ -78,6 +80,9 @@ type TaskEntry = {
   platform?: string | null;
   metadata?: Record<string, any> | null;
   tags?: string[];
+  /** Every project it's in, by identifier (version 4). */
+  projects?: string[];
+  /** Version 3 and before: the one project it was in. */
   project?: string | null;
   /** The source's path in the archive (version 3); before that, `<kind>/<identifier>.yml`. */
   file?: string;
@@ -137,16 +142,27 @@ const referencedGlobals = (source: unknown): string[] =>
 
 type Rows = { tasks: any[]; apps: any[]; variables: any[] };
 
+/** Project ids by workflow or app id. */
+type Memberships = { tasks: Map<number, number[]>; apps: Map<number, number[]> };
+
+const entryProjects = (entry: { projects?: unknown; project?: unknown }): string[] =>
+  Array.isArray(entry.projects)
+    ? entry.projects.filter((p): p is string => typeof p === 'string')
+    : typeof entry.project === 'string' && entry.project
+      ? [entry.project]
+      : [];
+
 /**
  * Narrows the rows to one project: its apps, its workflows plus every workflow
  * those apps or workflows call (followed through), and the globals they use.
  */
-const scopeToProject = (projectId: number, rows: Rows): Rows => {
-  const apps = rows.apps.filter((a) => a.project_id === projectId);
+const scopeToProject = (projectId: number, rows: Rows, members: Memberships): Rows => {
+  const inProject = (map: Map<number, number[]>, id: number) => (map.get(id) ?? []).includes(projectId);
+  const apps = rows.apps.filter((a) => inProject(members.apps, a.id));
   const taskByIdentifier = new Map(rows.tasks.map((t) => [t.identifier, t]));
   const included = new Set<string>();
   const queue = [
-    ...rows.tasks.filter((t) => t.project_id === projectId).map((t) => t.identifier),
+    ...rows.tasks.filter((t) => inProject(members.tasks, t.id)).map((t) => t.identifier),
     ...apps.flatMap((a) => appWorkflowIdentifiers(a.source)),
   ];
   while (queue.length) {
@@ -168,8 +184,19 @@ export class BackupService {
     let projectRows = await knex('project')
       .select('id', 'identifier', 'name', 'description', 'color', 'instructions')
       .orderBy('id');
-    // Every project, so a workflow borrowed from another project keeps pointing at it.
+    // Every project, so a workflow that's also in other projects keeps pointing at them.
     const projectIdentifier = new Map<number, string>(projectRows.map((p: any) => [p.id, p.identifier]));
+    const members: Memberships = { tasks: new Map(), apps: new Map() };
+    for (const [table, fk, map] of [
+      ['project_task', 'task_id', members.tasks],
+      ['project_app', 'app_id', members.apps],
+    ] as const) {
+      for (const m of (await knex(table).select('project_id', fk).orderBy('project_id')) as any[]) {
+        map.set(m[fk], [...(map.get(m[fk]) ?? []), m.project_id]);
+      }
+    }
+    const projectsOf = (map: Map<number, number[]>, id: number) =>
+      (map.get(id) ?? []).map((p) => projectIdentifier.get(p)).filter((p): p is string => !!p);
     let rows: Rows = {
       tasks: await knex('task').select('*').orderBy('id'),
       apps: await knex('app').select('*').orderBy('id'),
@@ -181,7 +208,7 @@ export class BackupService {
       const project = projectRows.find((p: any) => p.identifier === scope.project);
       if (!project) throw new Error(`Project not found: ${scope.project}`);
       projectRows = [project];
-      rows = scopeToProject(project.id, rows);
+      rows = scopeToProject(project.id, rows, members);
     }
     const mapRows: any[] = await knex('project_map').whereIn('project_id', projectRows.map((p: any) => p.id)).select('project_id', 'data');
     const mapOf = new Map<number, unknown>(mapRows.map((m) => [m.project_id, parseJson(m.data)]));
@@ -228,7 +255,7 @@ export class BackupService {
         platform: row.platform,
         metadata: withImage(parseJson(row.metadata)),
         tags: tagsOf.get(row.id) ?? [],
-        project: row.project_id ? projectIdentifier.get(row.project_id) ?? null : null,
+        projects: projectsOf(members.tasks, row.id),
         file,
       });
     }
@@ -247,7 +274,7 @@ export class BackupService {
         author: row.author,
         version: row.version,
         metadata: withImage(parseJson(row.metadata)),
-        project: row.project_id ? projectIdentifier.get(row.project_id) ?? null : null,
+        projects: projectsOf(members.apps, row.id),
         file,
       });
     }
@@ -544,11 +571,18 @@ export class BackupService {
           } else result.projects.skipped++;
         }
       }
-      const projectRef = async (identifier: string | null | undefined) => {
-        if (!identifier) return null;
+      const projectRef = async (identifier: string) => {
         if (projectId.has(identifier)) return projectId.get(identifier)!;
         const row = await trx('project').where({ identifier }).first();
         return row?.id ?? null;
+      };
+      // Into every project it was in that exists here. A replaced item keeps the projects
+      // it's in on this machine too: being in one more project takes nothing away.
+      const joinProjects = async (kind: 'task' | 'app', id: number, entry: { projects?: unknown; project?: unknown }) => {
+        for (const identifier of entryProjects(entry)) {
+          const pid = await projectRef(identifier);
+          if (pid) await ProjectMembership.add(kind, pid, [id], trx);
+        }
       };
 
       for (const t of tasks) {
@@ -566,7 +600,6 @@ export class BackupService {
           platform: t.platform ?? null,
           metadata: metadata ? JSON.stringify(metadata) : null,
           source: JSON.stringify(t.source),
-          project_id: await projectRef(t.project),
         };
         let id: number;
         if (existing) {
@@ -579,6 +612,7 @@ export class BackupService {
         }
         await TaskRevisionService.record(existing ?? { id }, data.source, 'backup', { trx });
         await this.setTags(trx, id, t.tags ?? []);
+        await joinProjects('task', id, t);
       }
 
       for (const a of apps) {
@@ -595,15 +629,17 @@ export class BackupService {
           version: a.version ?? null,
           metadata: metadata ? JSON.stringify(metadata) : null,
           source: JSON.stringify(a.source),
-          project_id: await projectRef(a.project),
         };
+        let id: number;
         if (existing) {
-          await trx('app').where({ id: existing.id }).update({ ...data, updated_at: trx.fn.now() });
+          id = existing.id;
+          await trx('app').where({ id }).update({ ...data, updated_at: trx.fn.now() });
           result.apps.replaced++;
         } else {
-          await trx('app').insert({ identifier: a.identifier, ...data });
+          [id] = await trx('app').insert({ identifier: a.identifier, ...data });
           result.apps.added++;
         }
+        await joinProjects('app', id, a);
       }
 
       for (const s of schedules) {

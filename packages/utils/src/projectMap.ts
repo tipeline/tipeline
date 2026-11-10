@@ -47,10 +47,15 @@ export type LiveMapNode = {
   /** The workflow or app identifier, the global's name, the schedule identifier. */
   ref: string;
   description?: string | null;
-  /** The project it lives in; null when it's in none (globals and schedules have none). */
-  project: MapProjectRef | null;
-  /** Shown because something in the project uses it, but it lives elsewhere. */
+  /** Every project it's in; none for globals and schedules, or a workflow in no project. */
+  projects: MapProjectRef[];
+  /** Shown because something in the project uses it, but it isn't in the project. */
   external?: boolean;
+  /**
+   * A workflow the viewer may not see (another user's private one, on a shared server):
+   * drawn as a locked card with its lines, without its name or anything about it.
+   */
+  hidden?: boolean;
   /** A global the workflows use that doesn't exist. */
   missing?: boolean;
   /** A workflow's inputs and outputs, by variable name. */
@@ -90,6 +95,8 @@ export const planNodeSchema = z.object({
   readyBy: z.string().max(200).optional(),
   /** A note pinned to the node. */
   note: z.string().max(4000).optional(),
+  /** A planned schedule: when it should run, in plain words; fills in the schedule once it's made. */
+  when: z.string().max(200).optional(),
 });
 
 export const planEdgeSchema = z.object({
@@ -244,8 +251,12 @@ export function otherGlobalKind(fromKind: MapNodeKind, toKind: MapNodeKind, kind
   return null;
 }
 
-/** Plan nodes of these kinds can be linked to live nodes of these kinds. */
+/**
+ * Plan nodes of these kinds can be linked to live nodes of these kinds. Not a schedule: one
+ * starts one workflow, so a planned one is always made new for the workflow it's drawn to.
+ */
 export function linkableKinds(kind: MapNodeKind): MapNodeKind[] {
+  if (kind === 'schedule') return [];
   return isWorkflowKind(kind) ? ['workflow', 'helper'] : [kind];
 }
 
@@ -277,11 +288,15 @@ export type MapNode = {
   lane?: string;
   /** The note pinned to it. */
   note?: string;
+  /** A planned schedule: when it should run (plain words). */
+  when?: string;
   /** The plan node behind it (planned, or linked to this live node). */
   planId?: string;
   /** The live definition's ref (identifier or global name); absent while planned. */
   ref?: string;
-  project: MapProjectRef | null;
+  projects: MapProjectRef[];
+  /** A workflow the viewer may not see: a locked card. */
+  hidden: boolean;
   inputs: string[];
   outputs: string[];
   plannedInputs: string[];
@@ -340,7 +355,8 @@ export type StatusWhy =
   | 'scheduleOff'
   | 'scheduleUntested'
   | 'scheduleTested'
-  | 'signedOff';
+  | 'signedOff'
+  | 'hidden';
 
 export type MapProgress = Record<PlanStatus, number> & { total: number };
 
@@ -392,7 +408,8 @@ export function mergeMap(live: LiveMap, plan: ProjectMapPlan): MergedMap {
       lane: meta.lane,
       note: meta.note,
       ref: n.ref,
-      project: n.project,
+      projects: n.projects ?? [],
+      hidden: !!n.hidden,
       inputs: n.inputs ?? [],
       outputs: n.outputs ?? [],
       plannedInputs: [],
@@ -454,8 +471,10 @@ export function mergeMap(live: LiveMap, plan: ProjectMapPlan): MergedMap {
       owner: p.owner,
       lane: p.lane,
       note: p.note,
+      when: p.when,
       planId: p.id,
-      project: null,
+      projects: [],
+      hidden: false,
       inputs: [],
       outputs: [],
       plannedInputs: p.inputs,
@@ -550,6 +569,7 @@ function deriveStatuses(nodes: Map<string, MapNode>, liveEdges: LiveMapEdge[]) {
   // Workflows and globals first: apps and schedules depend on them.
   for (const n of nodes.values()) {
     if (n.planned) set(n, 'idea', 'planned');
+    else if (n.hidden) set(n, 'built', 'hidden');
     else if (n.missing) set(n, 'idea', 'missingGlobal');
     else if (isWorkflowKind(n.kind)) {
       if (n.draft) set(n, 'drafting', 'draft');
@@ -1057,6 +1077,7 @@ export function draftBrief(map: MergedMap, nodeKey: string): { text: string; reu
   const writes: string[] = [];
   const runBy: string[] = [];
   const calledBy: string[] = [];
+  const runsWhen: string[] = [];
   for (const e of map.edges) {
     if (e.from === nodeKey) {
       const to = byKey.get(e.to);
@@ -1070,6 +1091,7 @@ export function draftBrief(map: MergedMap, nodeKey: string): { text: string; reu
       if (!from) continue;
       if (e.kind === 'runs') runBy.push(from.name);
       if (e.kind === 'calls') calledBy.push(from.name);
+      if (e.kind === 'triggers' && from.planned && from.when) runsWhen.push(from.when);
     }
   }
   if (reuse.length) lines.push(`Run these existing workflows as steps: ${reuse.map((r) => r.name).join(', ')}.`);
@@ -1077,5 +1099,6 @@ export function draftBrief(map: MergedMap, nodeKey: string): { text: string; reu
   if (writes.length) lines.push(`Save results to these global variables: ${writes.join(', ')}.`);
   if (runBy.length) lines.push(`It will be run from the app${runBy.length > 1 ? 's' : ''} ${runBy.join(', ')}.`);
   if (calledBy.length) lines.push(`Its outputs are used by: ${calledBy.join(', ')}.`);
+  if (runsWhen.length) lines.push(`It will run on a schedule: ${runsWhen.join('; ')}.`);
   return { text: lines.join('\n'), reuse };
 }

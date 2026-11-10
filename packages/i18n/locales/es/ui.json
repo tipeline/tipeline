@@ -397,13 +397,16 @@
       "versionHint": "mayor.menor.parche — sube parche para correcciones, menor para nuevas funciones, mayor para cambios importantes.",
       "versionHubManaged": "Este flujo de trabajo está instalado desde un hub — su versión se gestiona mediante las actualizaciones del hub.",
       "platformPlaceholder": "Selecciona una plataforma",
-      "project": "Proyecto",
-      "projectPlaceholder": "Sin proyecto",
+      "projectPlaceholder": "Sin proyectos",
       "tags": "Etiquetas",
       "tagPlaceholder": "Agregar etiqueta...",
       "fixErrorsBeforeSaving": "Corrige los campos resaltados antes de guardar.",
       "image": "Imagen",
-      "imageHint": "PNG, JPEG o WebP, hasta 2MB. Se muestra en el Hub y en las listas de flujos de trabajo."
+      "imageHint": "PNG, JPEG o WebP, hasta 2MB. Se muestra en el Hub y en las listas de flujos de trabajo.",
+      "projects": "Proyectos",
+      "searchProjects": "Buscar proyectos…",
+      "noProjects": "Todavía no hay proyectos",
+      "removeProject": "Quitar de {name}"
     },
     "builder": {
       "actions": "Acciones",
@@ -475,7 +478,6 @@
       "lastRun": "Última Ejecución",
       "viewRunDetails": "Ver Detalles de Ejecución",
       "identifier": "Identificador",
-      "project": "Proyecto",
       "version": "Versión",
       "author": "Autor",
       "actions": "Acciones",
@@ -495,7 +497,8 @@
       "run": "Ejecutar",
       "about": "Acerca de",
       "lastRunAt": "Última ejecución {when}",
-      "notRunYet": "Aún no se ha ejecutado"
+      "notRunYet": "Aún no se ha ejecutado",
+      "projects": "Proyectos | Proyecto | Proyectos"
     },
     "columns": {
       "task": "Flujo de trabajo",
@@ -1102,10 +1105,10 @@
     "deleteAlert": {
       "title": "¿Eliminar proyecto?",
       "chooseDescription": "Elige qué pasa con sus flujos de trabajo y apps.",
-      "previewFailed": "No se pudieron revisar sus flujos de trabajo y apps. Al eliminarlo se conservan, sin proyecto.",
+      "previewFailed": "No se pudieron revisar sus flujos de trabajo y apps. Al eliminarlo se conservan, solo fuera de este proyecto.",
       "emptyDescription": "El proyecto no tiene flujos de trabajo ni apps.",
       "keep": "Conservar sus flujos de trabajo y apps",
-      "keepHint": "Se quedan, sin proyecto.",
+      "keepHint": "Se quedan, fuera de este proyecto (y en cualquier otro en el que estén).",
       "deleteContents": "Eliminar también sus flujos de trabajo y apps",
       "deleteContentsHint": "Los que marques se mueven a la papelera, donde puedes restaurarlos durante 30 días.",
       "keptBecauseUsed": "Un flujo de trabajo todavía se usa fuera de lo que eliminas, así que está desmarcado. Márcalo para eliminarlo de todos modos. | {n} flujos de trabajo todavía se usan fuera de lo que eliminas, así que están desmarcados. Marca uno para eliminarlo de todos modos.",
@@ -1120,7 +1123,8 @@
       "deleteWithItems": "Eliminar proyecto y 1 elemento | Eliminar proyecto y {n} elementos",
       "deleted": "Proyecto eliminado",
       "deletedWithItems": "Proyecto eliminado; 1 elemento movido a la papelera | Proyecto eliminado; {n} elementos movidos a la papelera",
-      "failed": "No se pudo eliminar el proyecto"
+      "failed": "No se pudo eliminar el proyecto",
+      "alsoIn": "También en {names}: se conserva, solo sale de este proyecto"
     },
     "form": {
       "name": "Nombre",
@@ -1138,7 +1142,7 @@
       "back": "Volver a proyectos"
     },
     "sharedTasks": "Usados desde otros proyectos",
-    "sharedTasksHint": "Flujos de trabajo que usan las apps de este proyecto pero que están en otro proyecto o en ninguno. Se quedan donde están.",
+    "sharedTasksHint": "Flujos de trabajo que usan las apps de este proyecto pero que no están en él. Añade uno para que también sea parte de este proyecto; sigue en los proyectos en los que ya está.",
     "usedByApps": "Usado por {apps}",
     "noProject": "Sin proyecto",
     "import": "Importar",
@@ -1169,7 +1173,8 @@
     "instructions": "Instrucciones para el asistente",
     "instructionsHint": "El asistente las sigue cuando le pides algo desde este proyecto.",
     "openMap": "Mapa del proyecto",
-    "moreActions": "Más acciones"
+    "moreActions": "Más acciones",
+    "addToThisProject": "Añadir a este proyecto"
   },
   "variable": {
     "title": "Variables Globales",
@@ -2556,7 +2561,9 @@
     "stepOver": "Pasar por encima",
     "stepOverHint": "Ejecuta este paso hasta el final (todo un subflujo, bucle o rama) y vuelve a pausar",
     "stepOut": "Salir",
-    "stepOutHint": "Ejecuta el resto de este subflujo y pausa en el flujo de trabajo que lo llamó"
+    "stepOutHint": "Ejecuta el resto de este subflujo y pausa en el flujo de trabajo que lo llamó",
+    "inProjects": "En {count} proyectos",
+    "inProjectsHint": "En {names}. Al guardar cambia en todos ellos."
   },
   "debugFooter": {
     "log": "Registro",
@@ -3056,7 +3063,9 @@
       "differences": "{count} diferencia | {count} diferencias",
       "missingGlobal": "No existe",
       "noProject": "Sin proyecto",
-      "dependency": "No está en el plan: aparece porque está conectado con algo que sí lo está"
+      "dependency": "No está en el plan: aparece porque está conectado con algo que sí lo está",
+      "hidden": "Flujo oculto",
+      "hiddenHint": "No tienes acceso"
     },
     "connectFrom": "Trazar una línea desde {name}",
     "connectHint": "Arrastra desde el punto de un nodo hasta otro para conectarlos",
@@ -3100,10 +3109,10 @@
     },
     "details": {
       "planned": "{kind} planeado",
-      "fromProject": "Del proyecto {name}",
+      "fromProject": "En {name}",
       "noProject": "En ningún proyecto",
       "adopt": "Añadir a este proyecto",
-      "adoptHint": "No está en ningún proyecto. Al añadirlo aquí tendrá un estado en este mapa.",
+      "adoptHint": "No está en este proyecto. Al añadirlo aquí tendrá un estado en este mapa; sigue en los proyectos en los que ya está.",
       "adoptFailed": "No se pudo añadir al proyecto",
       "missingGlobal": "Hay flujos de trabajo que usan esta global, pero no existe. Créala en Variables.",
       "linkMissing": "Estaba vinculado a algo que ya no existe.",
@@ -3143,10 +3152,14 @@
       "scheduleNeedsLine": "Conecta esta programación con el flujo de trabajo que debe iniciar (arrastra desde su punto hasta el flujo de trabajo) y créala aquí.",
       "scheduleTargetPlanned": "{name} todavía está planeado. Constrúyelo primero y luego crea la programación.",
       "scheduleWhen": "¿Cuándo debe iniciar {name}?",
+      "scheduleWhenAny": "¿Cuándo debe ejecutarse?",
       "scheduleWhenPlaceholder": "p. ej. cada día laborable a las 8am",
       "lastChange": "Último cambio",
       "lastSuccess": "Última ejecución exitosa",
-      "never": "nunca"
+      "never": "nunca",
+      "removeFromProject": "Quitar del proyecto",
+      "removeFromProjectFailed": "No se pudo quitar del proyecto",
+      "hidden": "Un flujo de trabajo al que no tienes acceso. Pide a su dueño, o a un administrador, que lo comparta o que te dé una copia propia."
     },
     "connections": {
       "calls": {
@@ -3323,7 +3336,8 @@
       "scheduleOff": "Desactivada: no iniciará nada.",
       "scheduleUntested": "Activada, pero el flujo de trabajo que inicia aún no está probado.",
       "scheduleTested": "Activada, y el flujo de trabajo que inicia está probado.",
-      "signedOff": "Probado y aprobado como listo."
+      "signedOff": "Probado y aprobado como listo.",
+      "hidden": "No tienes acceso a este flujo de trabajo."
     },
     "ready": {
       "mark": "Marcar como listo",
@@ -3357,7 +3371,7 @@
         "apps": "Aplicaciones",
         "globals": "Globales",
         "schedules": "Programaciones",
-        "borrowed": "De otros proyectos"
+        "borrowed": "Usados, fuera de este proyecto"
       },
       "nothing": "No hay coincidencias.",
       "differences": "{count} diferencia | {count} diferencias",
@@ -3390,6 +3404,12 @@
       "tooMany": "Esta programación está conectada a {count} flujos de trabajo, pero una programación inicia solo uno. Primero dale a cada flujo su propia programación.",
       "split": "Una programación por flujo"
     },
-    "copyName": "{name} (copia)"
+    "copyName": "{name} (copia)",
+    "removeFromProject": {
+      "title": "¿Quitar \"{name}\" de este proyecto?",
+      "description": "Sale de este mapa. El flujo de trabajo se conserva y sigue en cualquier otro proyecto en el que esté.",
+      "descriptionCard": "Su tarjeta también sale del mapa. El flujo de trabajo se conserva y sigue en cualquier otro proyecto en el que esté.",
+      "confirm": "Quitar del proyecto"
+    }
   }
 }

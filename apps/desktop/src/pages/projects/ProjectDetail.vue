@@ -43,7 +43,7 @@ import { openNewAppDialog, openNewTaskDialog } from '@/composables/useNewItemDia
 import { useAgentStore } from '@/store/agentStore';
 import type { TaskItem } from '@/config/tables/TasksList';
 import type { AppItem } from '@/config/tables/AppsList';
-import { assignToProject } from '@/utils/projectAssign';
+import { assignToProject, removeFromProject } from '@/utils/projectAssign';
 
 const route = useRoute();
 const router = useRouter();
@@ -115,8 +115,9 @@ async function assignTask(taskIdentifier: string) {
   }
 }
 
+/** Out of this project; it stays in any others. */
 async function unassignTask(taskIdentifier: string) {
-  await invokeCore(SEND.PROJECT_UNASSIGN_TASK, { taskIdentifier });
+  await removeFromProject('task', identifier, taskIdentifier);
   refetch();
 }
 
@@ -132,8 +133,19 @@ async function assignApp(appIdentifier: string) {
 }
 
 async function unassignApp(appIdentifier: string) {
-  await invokeCore(SEND.PROJECT_UNASSIGN_APP, { appIdentifier });
+  await removeFromProject('app', identifier, appIdentifier);
   refetch();
+}
+
+/** A workflow this project's apps use joins the project too (staying in its others). */
+async function addShared(taskIdentifier: string) {
+  assigning.value = taskIdentifier;
+  try {
+    await assignToProject('task', identifier, taskIdentifier);
+    await refetch();
+  } finally {
+    assigning.value = null;
+  }
 }
 
 const { translateError } = useErrorT();
@@ -373,7 +385,7 @@ async function confirmExport() {
           <p v-else class="text-sm text-muted-foreground">{{ t('projects.noTasks') }}</p>
         </section>
 
-        <!-- Workflows this project's apps use that live elsewhere: shown, not assigned -->
+        <!-- Workflows this project's apps use that aren't in it: shown, and can be added -->
         <section v-if="project.shared_tasks?.length">
           <div class="mb-2">
             <h3 class="flex items-center gap-2 text-sm font-semibold">
@@ -396,20 +408,28 @@ async function confirmExport() {
               <p class="text-xs text-muted-foreground line-clamp-2">
                 {{ t('projects.usedByApps', { apps: task.apps.map((a: any) => a.name).join(', ') }) }}
               </p>
-              <button
-                v-if="task.project_identifier"
-                type="button"
-                class="inline-flex items-center gap-1.5 self-start max-w-full px-2 py-0.5 rounded border text-xs hover:bg-background transition-colors"
-                @click.stop="router.push(`/projects/${task.project_identifier}`)"
+              <div class="flex flex-wrap items-center gap-1.5">
+                <button
+                  v-for="other in task.projects ?? []"
+                  :key="other.identifier"
+                  type="button"
+                  class="inline-flex items-center gap-1.5 max-w-full px-2 py-0.5 rounded border text-xs hover:bg-background transition-colors"
+                  @click.stop="router.push(`/projects/${other.identifier}`)"
+                >
+                  <span class="w-2 h-2 rounded-full shrink-0" :style="{ backgroundColor: other.color || 'var(--muted-foreground)' }" />
+                  <span class="truncate">{{ other.name }}</span>
+                </button>
+                <span v-if="!task.projects?.length" class="text-xs text-muted-foreground">{{ t('projects.noProject') }}</span>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                class="self-start h-7 text-xs"
+                :disabled="assigning === task.identifier"
+                @click.stop="addShared(task.identifier)"
               >
-                <span
-                  v-if="task.project_color"
-                  class="w-2 h-2 rounded-full shrink-0"
-                  :style="{ backgroundColor: task.project_color }"
-                />
-                <span class="truncate">{{ task.project_name }}</span>
-              </button>
-              <span v-else class="text-xs text-muted-foreground">{{ t('projects.noProject') }}</span>
+                <Plus class="w-3.5 h-3.5" /> {{ t('projects.addToThisProject') }}
+              </Button>
             </div>
           </div>
         </section>

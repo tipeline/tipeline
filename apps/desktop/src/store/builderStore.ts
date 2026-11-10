@@ -154,7 +154,8 @@ export const useBuilderStore = defineStore('builder', () => {
       }
       identifier.value = result.identifier;
       appName.value = result.name ?? '';
-      projectIdentifier.value = result.project_identifier ?? null;
+      // A new workflow made from the builder starts in the app's (first) project.
+      projectIdentifier.value = result.projects?.[0]?.identifier ?? null;
       if (result.source_error) {
         loadError.value = result.source_error;
         return;

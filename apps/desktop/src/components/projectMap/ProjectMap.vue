@@ -49,7 +49,17 @@ import AssistantButton from '@/components/agent/AssistantButton.vue';
 import MapOverviewPanel from './MapOverviewPanel.vue';
 import MapSidebar from './MapSidebar.vue';
 import type { MapDropKind } from './mapDrag';
-import { assignToProject } from '@/utils/projectAssign';
+import { assignToProject, removeFromProject } from '@/utils/projectAssign';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
 import { mapClipboard, type MapClip } from './mapClipboard';
 
@@ -63,7 +73,8 @@ const router = useRouter();
 const canvasRef = ref<InstanceType<typeof MapCanvas> | null>(null);
 const nudge = ref(0);
 
-type LinkCandidate = { key: string; kind: LinkKind; name: string; project: string | null; starts?: string };
+/** `projects`: the names of the projects it's in. */
+type LinkCandidate = { key: string; kind: LinkKind; name: string; projects: string[] };
 
 const { t } = useI18n();
 const agentStore = useAgentStore();
@@ -257,7 +268,12 @@ function redo() {
 }
 
 /** One map: what exists, with the plan's ideas and lines laid over it. */
-const merged = computed(() => mergeMap(live.value, plan.value));
+const merged = computed(() => {
+  const map = mergeMap(live.value, plan.value);
+  // A workflow the viewer may not see comes without a name: every list calls it the same.
+  for (const n of map.nodes) if (n.hidden) n.name = t('projectMap.node.hidden');
+  return map;
+});
 
 // "Show ideas" off only changes what's drawn: the differences and progress stay the same.
 const visibleNodes = computed(() =>
@@ -339,13 +355,8 @@ const linkTargets = computed(() => {
   if (!node?.planned) return [];
   const taken = new Set(plan.value.nodes.map((n) => n.link).filter(Boolean));
   const kinds = linkableKinds(node.kind);
-  // A schedule starts one workflow: one already drawn to a workflow only links to schedules of that workflow.
-  const starts =
-    node.kind === 'schedule'
-      ? merged.value.edges.find((e) => e.from === node.key && e.kind === 'triggers')?.to
-      : undefined;
   return candidates.value
-    .filter((c) => kinds.includes(c.kind) && (!starts || c.starts === starts))
+    .filter((c) => kinds.includes(c.kind))
     .map((c) => ({ ...c, linked: taken.has(c.key) }))
     .sort((a, b) => Number(a.linked) - Number(b.linked));
 });
@@ -449,7 +460,7 @@ async function pick(key: string) {
 }
 
 type Patch = Partial<
-  Pick<PlanNode, 'name' | 'description' | 'owner' | 'lane' | 'inputs' | 'outputs' | 'readyAt' | 'readyBy' | 'note'>
+  Pick<PlanNode, 'name' | 'description' | 'owner' | 'lane' | 'inputs' | 'outputs' | 'readyAt' | 'readyBy' | 'note' | 'when'>
 >;
 
 function update(node: MapNode, patch: Patch) {
@@ -488,12 +499,14 @@ function link(node: MapNode, key: string) {
   if (plan.value.positions[from] && !plan.value.positions[key]) plan.value.positions[key] = plan.value.positions[from];
   delete plan.value.positions[from];
   selected.value = key;
+  // Linking makes it part of the project (Core adds it when the plan saves), and something
+  // from outside this map shows once Core knows it's linked: save now and load again.
   if (live.value.nodes.some((n) => n.key === key)) {
     adoptLiveEdges(key);
     save();
+    void flush().then(load);
     return;
   }
-  // Something from outside this map shows once Core knows it's linked.
   save();
   void flush()
     .then(load)
@@ -586,7 +599,16 @@ function moveToNewSchedule(planEdgeId: string, quiet = false) {
     ? (merged.value.nodes.find((n) => n.planId === edge.from.slice(5))?.key ?? edge.from)
     : edge.from;
   const id = newId();
-  plan.value.nodes.push({ id, kind: 'schedule', name: t('projectMap.newName.schedule'), inputs: [], outputs: [] });
+  // The new one runs when the one it came from was meant to: same idea, other workflow.
+  const when = edge.from.startsWith('plan:') ? plan.value.nodes.find((n) => n.id === edge.from.slice(5))?.when : undefined;
+  plan.value.nodes.push({
+    id,
+    kind: 'schedule',
+    name: t('projectMap.newName.schedule'),
+    inputs: [],
+    outputs: [],
+    ...(when ? { when } : {}),
+  });
   const at = layout.value.positions[fromKey];
   if (at && layoutMode.value !== 'lanes') plan.value.positions[planKey(id)] = { x: at.x, y: at.y + 112 };
   const lane = byKey.value.get(fromKey)?.lane;
@@ -687,7 +709,7 @@ function removeLane(name: string) {
   save();
 }
 
-/** A workflow or app in no project, shown here because this project uses it, joins it. */
+/** A workflow or app this project uses but that isn't in it joins it (staying in its others). */
 async function adopt(node: MapNode) {
   if (!node.ref) return;
   try {
@@ -696,6 +718,27 @@ async function adopt(node: MapNode) {
     resetHistory();
   } catch (error: any) {
     toast.error(t('projectMap.details.adoptFailed'), { description: error?.message ?? String(error) });
+  }
+}
+
+/** Taking a workflow or app out of this project: asked first, since its card leaves the map. */
+const removing = ref<MapNode | null>(null);
+async function confirmRemoveFromProject() {
+  const node = removing.value;
+  removing.value = null;
+  if (!node?.ref) return;
+  try {
+    // Its card goes with it; the workflow itself is kept (and stays in any other projects).
+    const planNode = planNodeOf(node);
+    if (planNode) {
+      plan.value.nodes = plan.value.nodes.filter((p) => p.id !== planNode.id);
+      await flush();
+    }
+    await removeFromProject(node.kind === 'app' ? 'app' : 'task', props.projectIdentifier, node.ref);
+    selected.value = null;
+    await load();
+  } catch (error: any) {
+    toast.error(t('projectMap.details.removeFromProjectFailed'), { description: error?.message ?? String(error) });
   }
 }
 
@@ -1045,8 +1088,13 @@ const isEmpty = computed(() => !loading.value && !visibleNodes.value.length);
         </button>
       </div>
       <div class="min-h-0 flex-1">
+        <!-- Someone else's private workflow: nothing to show about it. -->
+        <div v-if="selectedNode?.hidden" class="flex flex-col gap-2 p-4 text-sm">
+          <h3 class="text-base font-semibold">{{ t('projectMap.node.hidden') }}</h3>
+          <p class="text-muted-foreground">{{ t('projectMap.details.hidden') }}</p>
+        </div>
         <MapDetailsPanel
-          v-if="selectedNode"
+          v-else-if="selectedNode"
           :key="selectedNode.key"
           :node="selectedNode"
           :map="merged"
@@ -1070,6 +1118,7 @@ const isEmpty = computed(() => !loading.value && !visibleNodes.value.length);
           @split-schedule="splitSchedule(selectedNode)"
           @changed="load"
           @adopt="adopt(selectedNode)"
+          @remove-from-project="removing = selectedNode"
         />
         <MapOverviewPanel
           v-else
@@ -1086,5 +1135,19 @@ const isEmpty = computed(() => !loading.value && !visibleNodes.value.length);
         />
       </div>
     </aside>
+    <AlertDialog :open="!!removing" @update:open="(v) => !v && (removing = null)">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{{ t('projectMap.removeFromProject.title', { name: removing?.name ?? '' }) }}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {{ t(removing?.planId ? 'projectMap.removeFromProject.descriptionCard' : 'projectMap.removeFromProject.description') }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{{ t('common.cancel') }}</AlertDialogCancel>
+          <AlertDialogAction @click="confirmRemoveFromProject">{{ t('projectMap.removeFromProject.confirm') }}</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>

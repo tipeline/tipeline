@@ -63,11 +63,11 @@ To move or share a single project, use a project export instead of a full backup
 
 - the project itself
 - its workflows and apps, with their images
-- workflows from other projects (or from no project) that its apps use or its workflows call, so the apps still work on the other machine
+- workflows that aren't in the project but that its apps use or its workflows call, so the apps still work on the other machine
 - the global variables any of those workflows or apps reference. Secret values are left out unless you tick **Include secret values**.
 
 Schedules and run history aren't included.
 
-**Import:** on the **Projects** page, click **Import** and choose the zip. As with a restore, you choose whether items that already exist are kept (default) or replaced. The dialog lists what the project's workflows can do, as for a restore. Items keep their identifiers, so importing the same export twice doesn't create duplicates. A workflow that belongs to another project keeps that project if it exists here; otherwise it comes in with no project.
+**Import:** on the **Projects** page, click **Import** and choose the zip. As with a restore, you choose whether items that already exist are kept (default) or replaced. The dialog lists what the project's workflows can do, as for a restore. Items keep their identifiers, so importing the same export twice doesn't create duplicates. A workflow or app goes into every project it was in that exists here (the imported project, and any others already on this machine). An item that's replaced keeps the projects it's in here too.
 
 The import only accepts project exports. To restore a full backup, use **Settings → Backup**. A full restore also accepts a project export.

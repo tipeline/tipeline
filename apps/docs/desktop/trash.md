@@ -6,7 +6,7 @@ Deleting a workflow or app moves it to the **Trash** (in the sidebar, under Reso
 
 **Restore** puts the workflow or app back with the same identifier, so apps and sub-workflow steps that use it work again. It also brings back:
 
-- its project, if the project still exists;
+- its projects, the ones that still exist;
 - its tags;
 - its hub link, so hub updates keep coming, if the hub is still configured;
 - its [versions](./builder.md#versions);

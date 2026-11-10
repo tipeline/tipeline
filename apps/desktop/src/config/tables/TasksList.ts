@@ -7,6 +7,7 @@ import TaskListActions from '@/components/task/TaskListActions.vue';
 import { Lock, Workflow } from 'lucide-vue-next';
 import { toAssetUrl } from '@/utils/assetUrl';
 import { descriptionSummary } from '@tipeline/utils';
+import type { ProjectTag } from '@/utils/projectAssign';
 
 export type TaskItem = {
   identifier: string;
@@ -16,8 +17,8 @@ export type TaskItem = {
   version: string | null;
   tags: string[];
   source_type: 'local' | 'hub';
-  project_id: number | null;
-  project_identifier: string | null;
+  /** Every project it's in (none, one or several). */
+  projects: ProjectTag[];
   last_run_status: 'pending' | 'running' | 'failed' | 'completed' | 'canceled' | 'paused' | null;
   last_run_at: string | null;
   last_run_identifier?: string | null;

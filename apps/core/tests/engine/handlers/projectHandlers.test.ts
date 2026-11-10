@@ -330,14 +330,14 @@ describe('projectHandlers', () => {
   });
 
   describe('projectUnassignTask', () => {
-    it('passes taskIdentifier only on success', async () => {
+    it('passes the project and taskIdentifier on success', async () => {
       const sample = { unassigned: true };
       vi.mocked(Core.projectUnassignTask).mockResolvedValue(sample as any);
-      const message = { payload: { taskIdentifier: 't1' }, correlationId: 'corr-7' };
+      const message = { payload: { projectIdentifier: 'p1', taskIdentifier: 't1' }, correlationId: 'corr-7' };
 
       await transport.handlers.get('projectUnassignTask')!(message, client);
 
-      expect(Core.projectUnassignTask).toHaveBeenCalledWith('t1');
+      expect(Core.projectUnassignTask).toHaveBeenCalledWith('p1', 't1');
       expect(transport.emit).toHaveBeenCalledWith(
         client,
         'onProjectUnassignTask',
@@ -416,14 +416,14 @@ describe('projectHandlers', () => {
   });
 
   describe('projectUnassignApp', () => {
-    it('passes appIdentifier only on success', async () => {
+    it('passes the project and appIdentifier on success', async () => {
       const sample = { unassigned: true };
       vi.mocked(Core.projectUnassignApp).mockResolvedValue(sample as any);
-      const message = { payload: { appIdentifier: 'a1' }, correlationId: 'corr-9' };
+      const message = { payload: { projectIdentifier: 'p1', appIdentifier: 'a1' }, correlationId: 'corr-9' };
 
       await transport.handlers.get('projectUnassignApp')!(message, client);
 
-      expect(Core.projectUnassignApp).toHaveBeenCalledWith('a1');
+      expect(Core.projectUnassignApp).toHaveBeenCalledWith('p1', 'a1');
       expect(transport.emit).toHaveBeenCalledWith(
         client,
         'onProjectUnassignApp',

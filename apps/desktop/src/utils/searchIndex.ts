@@ -14,8 +14,8 @@ export interface SearchResult {
 }
 
 export interface SearchSources {
-  tasks: { identifier: string; name: string; description?: string | null; tags?: string[] | string; project_identifier?: string | null; image?: string | null }[];
-  apps: { identifier: string; name: string; description?: string | null; project_identifier?: string | null; image?: string | null }[];
+  tasks: { identifier: string; name: string; description?: string | null; tags?: string[] | string; projects?: { name: string }[]; image?: string | null }[];
+  apps: { identifier: string; name: string; description?: string | null; projects?: { name: string }[]; image?: string | null }[];
   projects: { identifier: string; name: string; description?: string | null; color?: string | null }[];
 }
 
@@ -52,33 +52,33 @@ export function searchAll(rawQuery: string, sources: SearchSources): SearchResul
   if (!query) return [];
   const terms = query.split(/\s+/);
 
-  const projectNames = new Map(sources.projects.map((p) => [p.identifier, p.name]));
-  const projectOf = (id: string | null | undefined) => (id ? projectNames.get(id) : undefined);
+  const projectOf = (item: { projects?: { name: string }[] }) =>
+    item.projects?.length ? item.projects.map((p) => p.name).join(', ') : undefined;
   const subtitle = (project: string | undefined, description: string | null | undefined) =>
     [project, description ? descriptionSummary(description) : ''].filter(Boolean).join(' · ') || undefined;
 
   const tasks = ranked(
     sources.tasks,
-    (t) => score(terms, query, t.name, [t.description ?? '', ...normalizeTags(t.tags), projectOf(t.project_identifier) ?? '']),
+    (t) => score(terms, query, t.name, [t.description ?? '', ...normalizeTags(t.tags), projectOf(t) ?? '']),
     (t) => t.name
   ).map<SearchResult>((t) => ({
     kind: 'task',
     key: `task:${t.identifier}`,
     title: t.name,
-    subtitle: subtitle(projectOf(t.project_identifier), t.description),
+    subtitle: subtitle(projectOf(t), t.description),
     image: t.image,
     path: `/tasks/${t.identifier}`,
   }));
 
   const apps = ranked(
     sources.apps,
-    (a) => score(terms, query, a.name, [a.description ?? '', projectOf(a.project_identifier) ?? '']),
+    (a) => score(terms, query, a.name, [a.description ?? '', projectOf(a) ?? '']),
     (a) => a.name
   ).map<SearchResult>((a) => ({
     kind: 'app',
     key: `app:${a.identifier}`,
     title: a.name,
-    subtitle: subtitle(projectOf(a.project_identifier), a.description),
+    subtitle: subtitle(projectOf(a), a.description),
     image: a.image,
     path: `/apps/${a.identifier}`,
   }));

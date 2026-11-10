@@ -1,6 +1,7 @@
 import { Project as ProjectModel } from '@/database/models/Project';
 import { appWorkflowIdentifiers, calledWorkflowIdentifiers } from '@/database/services/WorkflowUsageService';
 import { isDraft } from '@task/Draft';
+import { ProjectMembership, parseProjects, projectsSubquery } from '@/database/services/ProjectMembership';
 import {
   describeCron,
   describeInterval,
@@ -134,23 +135,14 @@ export function isoTime(value: unknown): string | null {
   return Number.isNaN(ms) ? null : new Date(ms).toISOString();
 }
 
-const projectRef = (row: any): MapProjectRef | null =>
-  row.project_identifier
-    ? { identifier: row.project_identifier, name: row.project_name, color: row.project_color ?? null }
-    : null;
+const projectsOf = (row: any): MapProjectRef[] => parseProjects(row.projects);
 
 export class ProjectMapService {
   /** Everything, connected: each workflow, app, used global and schedule. */
   private static async fullMap(): Promise<LiveMap> {
     const knex = ProjectModel.knex();
-    const projectCols = [
-      'project.identifier as project_identifier',
-      'project.name as project_name',
-      'project.color as project_color',
-    ];
     const [tasks, apps, schedules, globalRows] = await Promise.all([
       knex('task')
-        .leftJoin('project', 'project.id', 'task.project_id')
         .select(
           'task.id',
           'task.identifier',
@@ -159,12 +151,11 @@ export class ProjectMapService {
           'task.source',
           'task.metadata',
           'task.created_at',
-          ...projectCols
+          knex.raw(projectsSubquery('task'))
         )
         .orderBy('task.name'),
       knex('app')
-        .leftJoin('project', 'project.id', 'app.project_id')
-        .select('app.identifier', 'app.name', 'app.description', 'app.source', ...projectCols)
+        .select('app.identifier', 'app.name', 'app.description', 'app.source', knex.raw(projectsSubquery('app')))
         .orderBy('app.name'),
       knex('schedule')
         .join('task', 'task.id', 'schedule.task_id')
@@ -208,7 +199,7 @@ export class ProjectMapService {
         name: t.name,
         ref: t.identifier,
         description: t.description ?? null,
-        project: projectRef(t),
+        projects: projectsOf(t),
         inputs: fields.inputs,
         outputs: fields.outputs,
         dynamicGlobals: globals.dynamic,
@@ -232,7 +223,7 @@ export class ProjectMapService {
 
     for (const a of apps as any[]) {
       const key = `app:${a.identifier}`;
-      nodes.push({ key, kind: 'app', name: a.name, ref: a.identifier, description: a.description ?? null, project: projectRef(a) });
+      nodes.push({ key, kind: 'app', name: a.name, ref: a.identifier, description: a.description ?? null, projects: projectsOf(a) });
       for (const id of appWorkflowIdentifiers(a.source)) {
         if (taskIds.has(id)) edges.push({ from: key, to: `task:${id}`, kind: 'runs' });
       }
@@ -252,7 +243,7 @@ export class ProjectMapService {
         name,
         ref: name,
         description: known.get(name)?.description ?? null,
-        project: null,
+        projects: [],
         missing: !known.has(name),
       });
     }
@@ -260,7 +251,7 @@ export class ProjectMapService {
     for (const s of schedules as any[]) {
       const key = `schedule:${s.identifier}`;
       const timing = scheduleTiming(s);
-      nodes.push({ key, kind: 'schedule', name: timing, ref: s.identifier, project: null, timing, enabled: !!s.enabled });
+      nodes.push({ key, kind: 'schedule', name: timing, ref: s.identifier, projects: [], timing, enabled: !!s.enabled });
       edges.push({ from: key, to: `task:${s.task_identifier}`, kind: 'triggers' });
     }
 
@@ -275,9 +266,10 @@ export class ProjectMapService {
   static async live(projectIdentifier: string | null, linked: string[] = []): Promise<LiveMap> {
     const full = await this.fullMap();
     if (!projectIdentifier) return full;
+    const inProject = (n: LiveMapNode) => n.projects.some((p) => p.identifier === projectIdentifier);
     const own = new Set(
       full.nodes
-        .filter((n) => (n.kind !== 'global' && n.kind !== 'schedule' ? n.project?.identifier === projectIdentifier : false))
+        .filter((n) => n.kind !== 'global' && n.kind !== 'schedule' && inProject(n))
         .map((n) => n.key)
     );
     // What the plan's nodes were linked to belongs on this map, wherever it lives. Only
@@ -295,7 +287,7 @@ export class ProjectMapService {
       const name = key.slice('global:'.length);
       const row = await ProjectModel.knex()('global_variable').where({ name }).first('name', 'description');
       if (row) {
-        full.nodes.push({ key, kind: 'global', name, ref: name, description: row.description ?? null, project: null });
+        full.nodes.push({ key, kind: 'global', name, ref: name, description: row.description ?? null, projects: [] });
         own.add(key);
       }
     }
@@ -310,7 +302,7 @@ export class ProjectMapService {
     const nodes = full.nodes
       .filter((n) => included.has(n.key))
       .map((n) =>
-        (own.has(n.key) && n.project?.identifier === projectIdentifier) || n.kind === 'global' || n.kind === 'schedule'
+        (own.has(n.key) && inProject(n)) || n.kind === 'global' || n.kind === 'schedule'
           ? n
           : { ...n, external: true }
       );
@@ -322,45 +314,29 @@ export class ProjectMapService {
   }
 
   /**
-   * Everything a planned node could be linked to: every workflow, app, global and
-   * schedule in Tipeline, not only what's on this project's map.
+   * Everything a planned node could be linked to: every workflow, app and global in
+   * Tipeline, not only what's on this project's map. No schedules: one starts one workflow,
+   * so a planned schedule is always made new for the workflow it's drawn to.
    */
   static async linkCandidates(): Promise<
-    { key: string; kind: LiveMapNode['kind']; name: string; project: string | null; starts?: string }[]
+    { key: string; kind: LiveMapNode['kind']; name: string; projects: string[] }[]
   > {
     const knex = ProjectModel.knex();
-    const [tasks, apps, globals, schedules] = await Promise.all([
-      knex('task').leftJoin('project', 'project.id', 'task.project_id').select('task.identifier', 'task.name', 'task.source', 'project.name as project'),
-      knex('app').leftJoin('project', 'project.id', 'app.project_id').select('app.identifier', 'app.name', 'project.name as project'),
+    const names = (row: any) => parseProjects(row.projects).map((p) => p.name);
+    const [tasks, apps, globals] = await Promise.all([
+      knex('task').select('task.identifier', 'task.name', 'task.source', knex.raw(projectsSubquery('task'))),
+      knex('app').select('app.identifier', 'app.name', knex.raw(projectsSubquery('app'))),
       knex('global_variable').select('name'),
-      knex('schedule')
-        .join('task', 'task.id', 'schedule.task_id')
-        .select(
-          'schedule.identifier',
-          'schedule.cron',
-          'schedule.run_at',
-          'schedule.every_seconds',
-          'task.name as task_name',
-          'task.identifier as task_identifier'
-        ),
     ]);
     return [
       ...tasks.map((t: any) => ({
         key: `task:${t.identifier}`,
         kind: (workflowFields(t.source).helper ? 'helper' : 'workflow') as LiveMapNode['kind'],
         name: t.name,
-        project: t.project ?? null,
+        projects: names(t),
       })),
-      ...apps.map((a: any) => ({ key: `app:${a.identifier}`, kind: 'app' as const, name: a.name, project: a.project ?? null })),
-      ...globals.map((g: any) => ({ key: `global:${g.name}`, kind: 'global' as const, name: g.name, project: null })),
-      ...schedules.map((s: any) => ({
-        key: `schedule:${s.identifier}`,
-        kind: 'schedule' as const,
-        name: `${scheduleTiming(s)} · ${s.task_name}`,
-        project: null,
-        // The workflow it starts: a planned schedule already drawn to one can only become a schedule of that one.
-        starts: `task:${s.task_identifier}`,
-      })),
+      ...apps.map((a: any) => ({ key: `app:${a.identifier}`, kind: 'app' as const, name: a.name, projects: names(a) })),
+      ...globals.map((g: any) => ({ key: `global:${g.name}`, kind: 'global' as const, name: g.name, projects: [] })),
     ].sort((a, b) => a.name.localeCompare(b.name));
   }
 
@@ -399,11 +375,31 @@ export class ProjectMapService {
     );
     const id = await this.projectId(projectIdentifier);
     const knex = ProjectModel.knex();
+    const existing = await knex('project_map').where({ project_id: id }).first('id', 'data');
+    const before = new Set(parsePlan(existing?.data).nodes.map((n) => n.link).filter(Boolean));
     const json = JSON.stringify(data);
-    const existing = await knex('project_map').where({ project_id: id }).first('id');
     if (existing) await knex('project_map').where({ id: existing.id }).update({ data: json, updated_at: knex.fn.now() });
     else await knex('project_map').insert({ project_id: id, data: json });
+    await this.joinNewLinks(id, data.nodes.map((n) => n.link).filter((k): k is string => !!k && !before.has(k)));
     return data;
+  }
+
+  /**
+   * A planned card linked to a real workflow or app makes it part of the project: it joins
+   * (and stays in any other project it's in). Only links new to this save, so taking
+   * something out of the project by hand isn't undone the next time the map is saved.
+   */
+  private static async joinNewLinks(projectId: number, keys: string[]): Promise<void> {
+    const knex = ProjectModel.knex();
+    for (const [prefix, kind] of [
+      ['task:', 'task'],
+      ['app:', 'app'],
+    ] as const) {
+      const identifiers = keys.filter((k) => k.startsWith(prefix)).map((k) => k.slice(prefix.length));
+      if (!identifiers.length) continue;
+      const ids: number[] = await knex(kind).whereIn('identifier', identifiers).pluck('id');
+      await ProjectMembership.add(kind, projectId, ids);
+    }
   }
 
   /** Links a planned node to the live node it became (a drafted workflow, say). */

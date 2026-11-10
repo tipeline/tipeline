@@ -10,7 +10,7 @@ import { stopCoreServiceNow } from '@tipeline/utils/coreService';
 import Printer from './Printer';
 import IpcMessageService from './IpcMessageService';
 import { WsCommandService, type RemoteConnection } from './WsCommandService';
-import { generateIdentifier, parseSchedule, defaultDeleteSelection, outsideUsers } from '@tipeline/utils';
+import { generateIdentifier, parseSchedule, defaultDeleteSelection, inOtherProjects, outsideUsers } from '@tipeline/utils';
 import type { ActionErrorData } from '@tipeline/types';
 import readline from 'node:readline/promises';
 import { coreVersionWarning } from './coreVersionWarning';
@@ -952,10 +952,10 @@ export default class CommandService {
   // --------------------------------------------------
 
   /**
-   * Deletes a project. Its workflows and apps are kept (in no project) unless
-   * `withContents`; then they go to the Trash too, except workflows something outside
-   * the deletion still uses, which are kept unless `includeUsed`. Shows what happens and
-   * asks first, unless `yes`.
+   * Deletes a project. Its workflows and apps are kept (out of the project) unless
+   * `withContents`; then they go to the Trash too, except ones also in another project
+   * (always kept) and workflows something outside the deletion still uses, which are
+   * kept unless `includeUsed`. Shows what happens and asks first, unless `yes`.
    */
   static async projectDelete(
     nameOrIdentifier: string,
@@ -977,20 +977,23 @@ export default class CommandService {
       const workflows: any[] = preview?.workflows ?? [];
       const apps: any[] = preview?.apps ?? [];
       const selection = defaultDeleteSelection({ workflows, apps });
-      if (options.includeUsed) workflows.forEach((w) => selection.workflows.add(w.identifier));
+      if (options.includeUsed) {
+        workflows.filter((w) => !inOtherProjects(w)).forEach((w) => selection.workflows.add(w.identifier));
+      }
+      const elsewhere = [...workflows, ...apps].filter(inOtherProjects);
       const withContents = !!options.withContents && workflows.length + apps.length > 0;
 
       const named = (users: any[]) =>
-        users.map((u) => (u.project_name ? `${u.name} (${u.project_name})` : u.name)).join(', ');
+        users.map((u) => (u.projects?.length ? `${u.name} (${u.projects.map((p: any) => p.name).join(', ')})` : u.name)).join(', ');
       const lines: string[] = [`Delete project "${project.name}"?`];
       if (!withContents) {
         if (workflows.length + apps.length > 0) {
-          lines.push(`  Its ${plural(workflows.length, 'workflow')} and ${plural(apps.length, 'app')} stay, in no project.`);
+          lines.push(`  Its ${plural(workflows.length, 'workflow')} and ${plural(apps.length, 'app')} stay, out of the project.`);
           lines.push('  (Use --with-contents to delete them too.)');
         }
       } else {
         const trashed = workflows.filter((w) => selection.workflows.has(w.identifier));
-        const kept = workflows.filter((w) => !selection.workflows.has(w.identifier));
+        const kept = workflows.filter((w) => !selection.workflows.has(w.identifier) && !inOtherProjects(w));
         lines.push('  Moves to the Trash (restorable for 30 days):');
         for (const workflow of trashed) {
           lines.push(`    workflow  ${workflow.name}`);
@@ -1001,9 +1004,16 @@ export default class CommandService {
               `              ${plural(workflow.schedules.length, 'schedule')} ${workflow.schedules.length === 1 ? 'goes' : 'go'} with it`
             );
         }
-        for (const app of apps) lines.push(`    app       ${app.name}`);
+        for (const app of apps.filter((a) => selection.apps.has(a.identifier))) lines.push(`    app       ${app.name}`);
+        if (elsewhere.length) {
+          lines.push('  Kept, also in other projects (only taken out of this one):');
+          for (const item of elsewhere) {
+            const kind = workflows.includes(item) ? 'workflow' : 'app     ';
+            lines.push(`    ${kind}  ${item.name} — also in ${item.alsoIn.map((p: any) => p.name).join(', ')}`);
+          }
+        }
         if (kept.length) {
-          lines.push('  Kept in no project, still used elsewhere (use --include-used to delete them too):');
+          lines.push('  Kept, still used elsewhere (use --include-used to delete them too):');
           for (const workflow of kept) {
             const outside = outsideUsers(workflow, selection);
             lines.push(`    workflow  ${workflow.name} — used by ${named([...outside.apps, ...outside.workflows])}`);

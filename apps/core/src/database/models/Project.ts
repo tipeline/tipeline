@@ -22,15 +22,24 @@ export class Project extends Model {
 
   static get relationMappings() {
     return {
+      // A workflow or app can be in any number of projects.
       tasks: {
-        relation: Model.HasManyRelation,
+        relation: Model.ManyToManyRelation,
         modelClass: Task,
-        join: { from: 'project.id', to: 'task.project_id' },
+        join: {
+          from: 'project.id',
+          through: { from: 'project_task.project_id', to: 'project_task.task_id' },
+          to: 'task.id',
+        },
       },
       apps: {
-        relation: Model.HasManyRelation,
+        relation: Model.ManyToManyRelation,
         modelClass: App,
-        join: { from: 'project.id', to: 'app.project_id' },
+        join: {
+          from: 'project.id',
+          through: { from: 'project_app.project_id', to: 'project_app.app_id' },
+          to: 'app.id',
+        },
       },
     };
   }

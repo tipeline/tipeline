@@ -1,13 +1,19 @@
 /** An app or workflow that uses a workflow. */
-export type ProjectItemUser = { identifier: string; name: string; project_name?: string | null };
+export type ProjectItemUser = { identifier: string; name: string; projects?: { identifier: string; name: string }[] };
+
+/** Other projects an item is also in: deleting this project only takes it out of it. */
+export type AlsoIn = { alsoIn?: { identifier: string; name: string }[] };
 
 /** A project workflow with what uses it, as Core's projectDeletePreview returns it. */
-export type ProjectDeleteWorkflow = {
+export type ProjectDeleteWorkflow = AlsoIn & {
   identifier: string;
   name: string;
   apps: ProjectItemUser[];
   workflows: ProjectItemUser[];
 };
+
+/** Also in another project: never deleted with this one, only taken out of it. */
+export const inOtherProjects = (item: AlsoIn) => (item.alsoIn?.length ?? 0) > 0;
 
 /** The workflows and apps chosen for deletion. */
 export type DeleteSelection = { workflows: Set<string>; apps: Set<string> };
@@ -28,17 +34,18 @@ export function outsideUsers<U extends ProjectItemUser>(
 }
 
 /**
- * What's chosen when deleting a project's contents: every app, and every workflow
- * that nothing outside the deletion uses. Keeping a workflow can make another one
- * used again (the kept one runs it), so this goes round until nothing changes.
+ * What's chosen when deleting a project's contents: every app and workflow that's in
+ * no other project, minus the workflows that something outside the deletion uses.
+ * Keeping a workflow can make another one used again (the kept one runs it), so this
+ * goes round until nothing changes.
  */
 export function defaultDeleteSelection(preview: {
   workflows: ProjectDeleteWorkflow[];
-  apps: { identifier: string }[];
+  apps: ({ identifier: string } & AlsoIn)[];
 }): DeleteSelection {
   const selection: DeleteSelection = {
-    workflows: new Set(preview.workflows.map((w) => w.identifier)),
-    apps: new Set(preview.apps.map((a) => a.identifier)),
+    workflows: new Set(preview.workflows.filter((w) => !inOtherProjects(w)).map((w) => w.identifier)),
+    apps: new Set(preview.apps.filter((a) => !inOtherProjects(a)).map((a) => a.identifier)),
   };
   let changed = true;
   while (changed) {

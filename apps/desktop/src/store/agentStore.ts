@@ -11,6 +11,7 @@ import {
 } from '@tipeline/agent/choices';
 import { INSTRUCTIONS_SETTING, type AgentInstructions } from '@tipeline/agent/instructions';
 import { SEND } from '@/ipc-channels';
+import { useRecentItemsStore } from '@/store/recentItems';
 import { invokeCore } from '@/utils/invoke';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useStreamStore } from '@/store/stream';
@@ -169,14 +170,25 @@ export const useAgentStore = defineStore('agent', () => {
   );
   const busyThinking = computed(() => turns.value.some((turn) => turn.phase === 'thinking'));
 
+  /**
+   * Of the projects a workflow or app is in, the one whose instructions apply: the only
+   * one, or of several the project opened most recently (likely the one you came from).
+   */
+  function pickProject(item: { projects?: { identifier: string }[] } | null | undefined): string | null {
+    const ids = (item?.projects ?? []).map((p) => p.identifier);
+    if (ids.length <= 1) return ids[0] ?? null;
+    const recent = useRecentItemsStore().recent('project', 50).find((r) => ids.includes(r.identifier));
+    return recent?.identifier ?? ids[0];
+  }
+
   /** The project a page belongs to: the project's own page, or the project of its workflow or app. */
   async function projectOfRoute(path: string, params: Record<string, any>): Promise<ActiveProject | null> {
     let identifier: string | null = null;
     if (path.startsWith('/projects/')) identifier = params.pid ?? null;
     else if (path.startsWith('/tasks/') && params.tid) {
-      identifier = (await invokeCore<any>(SEND.TASK_DETAIL, { identifier: params.tid }))?.project_identifier ?? null;
+      identifier = pickProject(await invokeCore<any>(SEND.TASK_DETAIL, { identifier: params.tid }));
     } else if (path.startsWith('/apps/') && params.aid) {
-      identifier = (await invokeCore<any>(SEND.APP_DETAIL, { identifier: params.aid }))?.project_identifier ?? null;
+      identifier = pickProject(await invokeCore<any>(SEND.APP_DETAIL, { identifier: params.aid }));
     }
     if (!identifier) return null;
     const project = await invokeCore<any>(SEND.PROJECT_DETAIL, { identifier });

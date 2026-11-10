@@ -907,6 +907,7 @@ function onAddAction(item: any) {
           :has-ordering-errors="hasOrderingErrors"
           :can-undo="canUndo"
           :can-redo="canRedo"
+          :projects="task?.projects ?? []"
           @save="onSave"
           @debug="onDebug"
           @undo="onUndo"

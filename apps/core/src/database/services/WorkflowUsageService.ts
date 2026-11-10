@@ -1,11 +1,9 @@
 import { App as AppModel } from '@/database/models/App';
 import { coreValidations } from '@tipeline/schemas';
+import { parseProjects, projectsSubquery, type ProjectTag } from '@/database/services/ProjectMembership';
 
-type ProjectRef = {
-  project_identifier: string | null;
-  project_name: string | null;
-  project_color: string | null;
-};
+/** Every project the app or workflow is in (none, one or several). */
+type ProjectRef = { projects: ProjectTag[] };
 
 type AppRef = ProjectRef & {
   identifier: string;
@@ -31,6 +29,7 @@ export type WorkflowUsage = {
   schedules: WorkflowSchedule[];
 };
 
+/** A workflow the project's apps use that isn't in the project itself. */
 export type SharedWorkflow = ProjectRef & {
   identifier: string;
   name: string;
@@ -99,24 +98,19 @@ const toSchedule = (row: any): WorkflowSchedule => ({
 
 /**
  * Which apps use which workflows — read from the apps' sources, never stored, so it
- * can't go stale. A workflow keeps one project; this is how a project sees the
- * workflows its apps borrow from elsewhere.
+ * can't go stale. Also how a project sees the workflows its apps use that aren't in it.
  */
 export class WorkflowUsageService {
   private static async appRefs(): Promise<AppRef[]> {
     const knex = AppModel.knex();
     const rows: any[] = await knex('app')
-      .leftJoin('project', 'project.id', 'app.project_id')
-      .select(
-        'app.identifier',
-        'app.name',
-        'app.source',
-        'project.identifier as project_identifier',
-        'project.name as project_name',
-        'project.color as project_color'
-      )
+      .select('app.identifier', 'app.name', 'app.source', knex.raw(projectsSubquery('app')))
       .orderBy('app.name');
-    return rows.map(({ source, ...app }) => ({ ...app, workflows: appWorkflowIdentifiers(source) }));
+    return rows.map(({ source, projects, ...app }) => ({
+      ...app,
+      projects: parseProjects(projects),
+      workflows: appWorkflowIdentifiers(source),
+    }));
   }
 
   /** The apps that use a workflow, with each app's project. */
@@ -130,22 +124,14 @@ export class WorkflowUsageService {
   static async calledBy(taskIdentifier: string): Promise<WorkflowUser[]> {
     const knex = AppModel.knex();
     const rows: any[] = await knex('task')
-      .leftJoin('project', 'project.id', 'task.project_id')
       .whereNot('task.identifier', taskIdentifier)
       // A cheap pre-filter; the walk below decides.
       .where('task.source', 'like', `%${taskIdentifier}%`)
-      .select(
-        'task.identifier',
-        'task.name',
-        'task.source',
-        'project.identifier as project_identifier',
-        'project.name as project_name',
-        'project.color as project_color'
-      )
+      .select('task.identifier', 'task.name', 'task.source', knex.raw(projectsSubquery('task')))
       .orderBy('task.name');
     return rows
       .filter((row) => calledWorkflowIdentifiers(row.source).includes(taskIdentifier))
-      .map(({ source: _source, ...task }) => task);
+      .map(({ source: _source, projects, ...task }) => ({ ...task, projects: parseProjects(projects) }));
   }
 
   /**
@@ -164,17 +150,10 @@ export class WorkflowUsageService {
 
     const knex = AppModel.knex();
     const tasks: any[] = await knex('task')
-      .leftJoin('project', 'project.id', 'task.project_id')
-      .select(
-        'task.identifier',
-        'task.name',
-        'task.source',
-        'project.identifier as project_identifier',
-        'project.name as project_name',
-        'project.color as project_color'
-      )
+      .select('task.identifier', 'task.name', 'task.source', knex.raw(projectsSubquery('task')))
       .orderBy('task.name');
-    for (const { source, ...task } of tasks) {
+    for (const { source, projects, ...row } of tasks) {
+      const task = { ...row, projects: parseProjects(projects) };
       for (const id of calledWorkflowIdentifiers(source)) {
         if (id !== task.identifier) result.get(id)?.workflows.push(task);
       }
@@ -220,13 +199,13 @@ export class WorkflowUsageService {
   }
 
   /**
-   * Workflows the project's apps use that live outside it — in another project or in
-   * none — each with the project it lives in and the apps here that use it.
+   * Workflows the project's apps use that aren't in the project — in other projects or in
+   * none — each with the projects it's in and the apps here that use it.
    */
   static async sharedIntoProject(projectIdentifier: string): Promise<SharedWorkflow[]> {
     const usedHere = new Map<string, { identifier: string; name: string }[]>();
     for (const app of await this.appRefs()) {
-      if (app.project_identifier !== projectIdentifier) continue;
+      if (!app.projects.some((p) => p.identifier === projectIdentifier)) continue;
       for (const id of app.workflows) {
         const apps = usedHere.get(id) ?? [];
         apps.push({ identifier: app.identifier, name: app.name });
@@ -237,18 +216,11 @@ export class WorkflowUsageService {
 
     const knex = AppModel.knex();
     const tasks: any[] = await knex('task')
-      .leftJoin('project', 'project.id', 'task.project_id')
       .whereIn('task.identifier', [...usedHere.keys()])
-      .where((q) => q.whereNull('project.identifier').orWhereNot('project.identifier', projectIdentifier))
-      .select(
-        'task.identifier',
-        'task.name',
-        'task.description',
-        'project.identifier as project_identifier',
-        'project.name as project_name',
-        'project.color as project_color'
-      )
+      .select('task.identifier', 'task.name', 'task.description', knex.raw(projectsSubquery('task')))
       .orderBy('task.name');
-    return tasks.map((task) => ({ ...task, apps: usedHere.get(task.identifier) ?? [] }));
+    return tasks
+      .map(({ projects, ...task }) => ({ ...task, projects: parseProjects(projects), apps: usedHere.get(task.identifier) ?? [] }))
+      .filter((task) => !task.projects.some((p: ProjectTag) => p.identifier === projectIdentifier));
   }
 }

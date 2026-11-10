@@ -17,6 +17,18 @@ const appSource = (...identifiers: string[]) =>
     pages: [],
   });
 
+const join = async (table: 'task' | 'app', identifier: string, projectId: number) => {
+  const { id } = await knex(table).where({ identifier }).first('id');
+  await knex(table === 'task' ? 'project_task' : 'project_app').insert({ project_id: projectId, [`${table}_id`]: id });
+};
+const projectsOf = async (identifier: string) =>
+  await knex('project_task')
+    .join('task', 'task.id', 'project_task.task_id')
+    .join('project', 'project.id', 'project_task.project_id')
+    .where('task.identifier', identifier)
+    .orderBy('project.identifier')
+    .pluck('project.identifier');
+
 beforeAll(async () => {
   knex = knexFactory({
     client: 'better-sqlite3',
@@ -35,19 +47,16 @@ beforeAll(async () => {
     {
       identifier: 'wf-sites',
       name: 'Data: get customer sites',
-      project_id: agenda,
       source: source({ variables: [{ name: 'sites', output: true }], actions: [] }, { helper: true }),
     },
     {
       identifier: 'wf-fetch',
       name: 'Fetch cache config',
-      project_id: cache,
       source: source({ actions: [{ group: 'http', name: 'get', params: { url: 'x' }, destination: '_global.cacheConfig' }] }),
     },
     {
       identifier: 'wf-purge',
       name: 'Purge cache by tag',
-      project_id: cache,
       source: source({
         variables: [
           { name: 'tag', visibility: 'public' },
@@ -57,11 +66,16 @@ beforeAll(async () => {
         actions: [subtask('wf-sites'), { group: 'http', name: 'post', params: { url: '{{ _global.cacheConfig.cdn }}/purge' } }],
       }),
     },
-    { identifier: 'wf-other', name: 'Unrelated', project_id: agenda, source: source({ actions: [] }) },
+    { identifier: 'wf-other', name: 'Unrelated', source: source({ actions: [] }) },
   ]);
   const purge = (await knex('task').where({ identifier: 'wf-purge' }).first()).id;
   await knex('schedule').insert({ identifier: 's-daily', task_id: purge, cron: '0 7 * * *', variables: '{}', enabled: true });
-  await knex('app').insert({ identifier: 'app-console', name: 'Purge console', project_id: cache, source: appSource('wf-purge') });
+  await knex('app').insert({ identifier: 'app-console', name: 'Purge console', source: appSource('wf-purge') });
+  await join('task', 'wf-sites', agenda);
+  await join('task', 'wf-fetch', cache);
+  await join('task', 'wf-purge', cache);
+  await join('task', 'wf-other', agenda);
+  await join('app', 'app-console', cache);
 });
 afterAll(() => knex.destroy());
 
@@ -143,7 +157,7 @@ describe('ProjectMapService.live', () => {
     expect(map.edges).toHaveLength(5);
 
     const sites = map.nodes.find((n) => n.key === 'task:wf-sites')!;
-    expect(sites).toMatchObject({ kind: 'helper', external: true, project: { identifier: 'p-agenda' } });
+    expect(sites).toMatchObject({ kind: 'helper', external: true, projects: [{ identifier: 'p-agenda' }] });
     const purge = map.nodes.find((n) => n.key === 'task:wf-purge')!;
     expect(purge).toMatchObject({ inputs: ['tag'], outputs: ['purged'] });
     expect(purge.external).toBeUndefined();
@@ -154,19 +168,32 @@ describe('ProjectMapService.live', () => {
     await knex('task').insert({
       identifier: 'wf-ttl',
       name: 'Reads a missing global',
-      project_id: (await knex('project').where({ identifier: 'p-cache' }).first()).id,
       source: source({ actions: [{ group: 'x', name: 'y', params: { v: '{{ _global.cacheTtl }}' } }] }),
     });
+    await join('task', 'wf-ttl', (await knex('project').where({ identifier: 'p-cache' }).first()).id);
     const map = await ProjectMapService.live('p-cache');
     expect(map.nodes.find((n) => n.key === 'global:cacheTtl')).toMatchObject({ missing: true });
     expect(map.nodes.find((n) => n.key === 'global:cacheConfig')!.missing).toBe(false);
-    await knex('task').where({ identifier: 'wf-ttl' }).delete();
+    const ttl = await knex('task').where({ identifier: 'wf-ttl' }).first('id');
+    await knex('project_task').where({ task_id: ttl.id }).delete();
+    await knex('task').where({ id: ttl.id }).delete();
   });
 
   it('without a project, draws everything and nothing is borrowed', async () => {
     const map = await ProjectMapService.live(null);
     expect(map.nodes.map((n) => n.key)).toContain('task:wf-other');
     expect(map.nodes.some((n) => n.external)).toBe(false);
+  });
+
+  it('draws a workflow that is in two projects as its own on both maps', async () => {
+    const agenda = (await knex('project').where({ identifier: 'p-agenda' }).first()).id;
+    await join('task', 'wf-fetch', agenda);
+    for (const project of ['p-cache', 'p-agenda']) {
+      const fetch = (await ProjectMapService.live(project)).nodes.find((n) => n.key === 'task:wf-fetch')!;
+      expect(fetch.external).toBeUndefined();
+      expect(fetch.projects.map((p) => p.identifier).sort()).toEqual(['p-agenda', 'p-cache']);
+    }
+    await knex('project_task').where({ project_id: agenda, task_id: (await knex('task').where({ identifier: 'wf-fetch' }).first()).id }).delete();
   });
 });
 
@@ -204,13 +231,13 @@ describe('what statuses are worked out from', () => {
 });
 
 describe('linking outside the project', () => {
-  it('lists every workflow, app, global and schedule as something to link to', async () => {
+  it('lists every workflow, app and global as something to link to, but no schedules', async () => {
     const keys = (await ProjectMapService.linkCandidates()).map((c) => c.key);
-    expect(keys).toEqual(
-      expect.arrayContaining(['task:wf-other', 'task:wf-sites', 'app:app-console', 'global:cacheConfig', 'schedule:s-daily'])
-    );
+    expect(keys).toEqual(expect.arrayContaining(['task:wf-other', 'task:wf-sites', 'app:app-console', 'global:cacheConfig']));
+    // A schedule starts one workflow: a planned one is always made new, never linked.
+    expect(keys.some((k) => k.startsWith('schedule:'))).toBe(false);
     const helper = (await ProjectMapService.linkCandidates()).find((c) => c.key === 'task:wf-sites')!;
-    expect(helper).toMatchObject({ kind: 'helper', project: 'Agenda' });
+    expect(helper).toMatchObject({ kind: 'helper', projects: ['Agenda'] });
   });
 
   it("puts what a plan node was linked to on the map, even from another project or an unused global", async () => {
@@ -257,6 +284,24 @@ describe('ProjectMapService plans', () => {
     const plan = await ProjectMapService.link('p-cache', 'n1', 'task:wf-fetch');
     expect(plan.nodes[0]).toMatchObject({ link: 'task:wf-fetch' });
     await expect(ProjectMapService.link('p-cache', 'missing', 'task:x')).rejects.toThrow(/not found/);
+  });
+
+  it('adds what a planned card is linked to to the project, keeping its other projects', async () => {
+    const plan = await ProjectMapService.getPlan('p-cache');
+    plan.nodes.push({ id: 'n2', kind: 'workflow', name: 'Other', inputs: [], outputs: [] });
+    plan.nodes.push({ id: 'n3', kind: 'app', name: 'Planned app', inputs: [], outputs: [] });
+    await ProjectMapService.savePlan('p-cache', plan);
+    await ProjectMapService.link('p-cache', 'n2', 'task:wf-other');
+    expect(await projectsOf('wf-other')).toEqual(['p-agenda', 'p-cache']);
+    expect((await ProjectMapService.live('p-cache')).nodes.find((n) => n.key === 'task:wf-other')!.external).toBeUndefined();
+  });
+
+  it("doesn't put back a linked workflow someone took out of the project when the map is saved again", async () => {
+    const cache = (await knex('project').where({ identifier: 'p-cache' }).first()).id;
+    const other = (await knex('task').where({ identifier: 'wf-other' }).first()).id;
+    await knex('project_task').where({ project_id: cache, task_id: other }).delete();
+    await ProjectMapService.savePlan('p-cache', await ProjectMapService.getPlan('p-cache'));
+    expect(await projectsOf('wf-other')).toEqual(['p-agenda']);
   });
 
   it('goes with its project', async () => {
