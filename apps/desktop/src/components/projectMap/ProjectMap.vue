@@ -129,9 +129,13 @@ async function load() {
     if (!saveTimer) {
       const stored = parsePlan(result.plan);
       // Changed somewhere else (the Assistant linking a draft, say): undo can't go back past that.
-      if (!committed || JSON.stringify(stored) !== JSON.stringify(parsePlan(snapshot()))) {
+      if (!committed || withoutCoreNotes(stored) !== withoutCoreNotes(parsePlan(snapshot()))) {
         plan.value = stored;
         resetHistory();
+      } else if (JSON.stringify(stored) !== JSON.stringify(parsePlan(snapshot()))) {
+        // Only Core's notes changed (whether a link brought something in): keep undo.
+        plan.value = stored;
+        committed = snapshot();
       }
     }
   } catch (error: any) {
@@ -139,6 +143,11 @@ async function load() {
   } finally {
     loading.value = false;
   }
+}
+
+/** The plan as the person made it, without the notes Core keeps on it. */
+function withoutCoreNotes(p: ProjectMapPlan): string {
+  return JSON.stringify({ ...p, nodes: p.nodes.map(({ alreadyIn: _, ...n }) => n) });
 }
 
 // Coming back to the window (from the builder, say): the definitions may have changed.
@@ -537,13 +546,23 @@ function adoptLiveEdges(key: string): boolean {
 function unlink(nodeKey: string) {
   const node = merged.value.nodes.find((n) => n.key === nodeKey);
   const planNode = planNodeOf(node ?? null);
-  if (!planNode) return;
+  if (!node || !planNode) return;
+  // Core takes out of the project what the link brought in; what was here before stays.
+  const member = !!planNode.link && (planNode.link.startsWith('task:') || planNode.link.startsWith('app:'));
+  const kept = !!planNode.alreadyIn;
   delete planNode.link;
+  delete planNode.alreadyIn;
   selected.value = planKey(planNode.id);
   save();
-  // What came onto the map only through the link (a schedule and the workflow it starts,
-  // say) goes once Core knows it's unlinked, not at the next reload.
-  void flush().then(load);
+  // What came onto the map only through the link (its sub-workflows and schedules, say)
+  // goes once Core knows it's unlinked, not at the next reload.
+  void flush()
+    .then(load)
+    .then(() => {
+      if (!member) return;
+      if (kept) toast.info(t('projectMap.unlinked.kept', { name: node.name }));
+      else toast.success(t('projectMap.unlinked.removed', { name: node.name }), { description: t('projectMap.unlinked.removedDescription') });
+    });
 }
 
 /** Where a node's lines are stored: its plan key while planned, else its live key. */
@@ -723,8 +742,16 @@ async function adopt(node: MapNode) {
 
 /** Taking a workflow or app out of this project: asked first, since its card leaves the map. */
 const removing = ref<MapNode | null>(null);
+// The dialog's action button closes it (clearing `removing`) before our click handler runs,
+// so the handler works from this copy taken when the dialog opened.
+let pendingRemove: MapNode | null = null;
+function askRemoveFromProject(node: MapNode) {
+  pendingRemove = node;
+  removing.value = node;
+}
 async function confirmRemoveFromProject() {
-  const node = removing.value;
+  const node = pendingRemove;
+  pendingRemove = null;
   removing.value = null;
   if (!node?.ref) return;
   try {
@@ -1118,7 +1145,7 @@ const isEmpty = computed(() => !loading.value && !visibleNodes.value.length);
           @split-schedule="splitSchedule(selectedNode)"
           @changed="load"
           @adopt="adopt(selectedNode)"
-          @remove-from-project="removing = selectedNode"
+          @remove-from-project="askRemoveFromProject(selectedNode)"
         />
         <MapOverviewPanel
           v-else

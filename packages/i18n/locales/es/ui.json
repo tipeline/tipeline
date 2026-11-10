@@ -3405,6 +3405,11 @@
       "split": "Una programación por flujo"
     },
     "copyName": "{name} (copia)",
+    "unlinked": {
+      "removed": "\"{name}\" salió de este proyecto",
+      "removedDescription": "Entró con el enlace, así que al desvincularlo salió. Se conserva y sigue en cualquier otro proyecto en el que esté.",
+      "kept": "\"{name}\" sigue en este proyecto: ya estaba aquí antes de enlazarlo."
+    },
     "removeFromProject": {
       "title": "¿Quitar \"{name}\" de este proyecto?",
       "description": "Sale de este mapa. El flujo de trabajo se conserva y sigue en cualquier otro proyecto en el que esté.",

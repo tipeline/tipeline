@@ -82,15 +82,22 @@ async function doRevoke(t: TokenRecord) {
 
 function revokeSession(t: TokenRecord) {
   if (t.id === currentTokenId.value) {
+    pendingRevoke = t;
     confirmRevokeCurrent.value = t;
     return;
   }
   doRevoke(t);
 }
 
+// The dialog's action button closes it (clearing `confirmRevokeCurrent`) before our click
+// handler runs, so the handler works from this copy taken when the dialog opened.
+let pendingRevoke: TokenRecord | null = null;
+
 async function confirmRevokeCurrentSession() {
-  if (!confirmRevokeCurrent.value) return;
-  await doRevoke(confirmRevokeCurrent.value);
+  const token = pendingRevoke;
+  pendingRevoke = null;
+  if (!token) return;
+  await doRevoke(token);
   confirmRevokeCurrent.value = null;
 }
 

@@ -304,6 +304,55 @@ describe('ProjectMapService plans', () => {
     expect(await projectsOf('wf-other')).toEqual(['p-agenda']);
   });
 
+  it('unlinking takes out what the link brought in, keeping its other projects', async () => {
+    const plan = await ProjectMapService.getPlan('p-cache');
+    plan.nodes.push({ id: 'n4', kind: 'workflow', name: 'Sites', inputs: [], outputs: [] });
+    await ProjectMapService.savePlan('p-cache', plan);
+    const linked = await ProjectMapService.link('p-cache', 'n4', 'task:wf-sites');
+    expect(linked.nodes.find((n) => n.id === 'n4')!.alreadyIn).toBeUndefined();
+    expect(await projectsOf('wf-sites')).toEqual(['p-agenda', 'p-cache']);
+
+    // A save that keeps the link changes nothing, whatever the client sent as the note.
+    const again = await ProjectMapService.getPlan('p-cache');
+    again.nodes.find((n) => n.id === 'n4')!.alreadyIn = true;
+    expect((await ProjectMapService.savePlan('p-cache', again)).nodes.find((n) => n.id === 'n4')!.alreadyIn).toBeUndefined();
+
+    const unlinked = await ProjectMapService.getPlan('p-cache');
+    delete unlinked.nodes.find((n) => n.id === 'n4')!.link;
+    await ProjectMapService.savePlan('p-cache', unlinked);
+    expect(await projectsOf('wf-sites')).toEqual(['p-agenda']);
+  });
+
+  it('unlinking keeps what was in the project before the link', async () => {
+    const plan = await ProjectMapService.getPlan('p-cache');
+    plan.nodes.push({ id: 'n5', kind: 'workflow', name: 'Purge', inputs: [], outputs: [] });
+    await ProjectMapService.savePlan('p-cache', plan);
+    const linked = await ProjectMapService.link('p-cache', 'n5', 'task:wf-purge');
+    expect(linked.nodes.find((n) => n.id === 'n5')!.alreadyIn).toBe(true);
+
+    // The note survives a save from a client that dropped it.
+    const resaved = await ProjectMapService.getPlan('p-cache');
+    delete resaved.nodes.find((n) => n.id === 'n5')!.alreadyIn;
+    expect((await ProjectMapService.savePlan('p-cache', resaved)).nodes.find((n) => n.id === 'n5')!.alreadyIn).toBe(true);
+
+    const unlinked = await ProjectMapService.getPlan('p-cache');
+    delete unlinked.nodes.find((n) => n.id === 'n5')!.link;
+    expect((await ProjectMapService.savePlan('p-cache', unlinked)).nodes.find((n) => n.id === 'n5')!.alreadyIn).toBeUndefined();
+    expect(await projectsOf('wf-purge')).toEqual(['p-cache']);
+  });
+
+  it('removing a linked card takes out what its link brought in', async () => {
+    const plan = await ProjectMapService.getPlan('p-cache');
+    plan.nodes.push({ id: 'n6', kind: 'workflow', name: 'Sites', inputs: [], outputs: [] });
+    await ProjectMapService.savePlan('p-cache', plan);
+    await ProjectMapService.link('p-cache', 'n6', 'task:wf-sites');
+    expect(await projectsOf('wf-sites')).toEqual(['p-agenda', 'p-cache']);
+    const removed = await ProjectMapService.getPlan('p-cache');
+    removed.nodes = removed.nodes.filter((n) => n.id !== 'n6');
+    await ProjectMapService.savePlan('p-cache', removed);
+    expect(await projectsOf('wf-sites')).toEqual(['p-agenda']);
+  });
+
   it('goes with its project', async () => {
     const id = (await knex('project').where({ identifier: 'p-cache' }).first()).id;
     await knex('project').where({ id }).delete();

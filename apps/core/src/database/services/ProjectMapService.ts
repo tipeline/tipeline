@@ -137,6 +137,13 @@ export function isoTime(value: unknown): string | null {
 
 const projectsOf = (row: any): MapProjectRef[] => parseProjects(row.projects);
 
+/** Map keys of what can be in a project (globals and schedules aren't). */
+const MEMBER_PREFIXES = [
+  ['task:', 'task'],
+  ['app:', 'app'],
+] as const;
+const isMemberKey = (key: string) => MEMBER_PREFIXES.some(([prefix]) => key.startsWith(prefix));
+
 export class ProjectMapService {
   /** Everything, connected: each workflow, app, used global and schedule. */
   private static async fullMap(): Promise<LiveMap> {
@@ -376,11 +383,30 @@ export class ProjectMapService {
     const id = await this.projectId(projectIdentifier);
     const knex = ProjectModel.knex();
     const existing = await knex('project_map').where({ project_id: id }).first('id', 'data');
-    const before = new Set(parsePlan(existing?.data).nodes.map((n) => n.link).filter(Boolean));
+    const previous = parsePlan(existing?.data).nodes;
+    const before = new Set(previous.map((n) => n.link).filter(Boolean));
+    const now = new Set(data.nodes.map((n) => n.link).filter(Boolean));
+
+    // `alreadyIn` is Core's to set: kept while a card keeps its link, worked out for a new one.
+    const kept = new Set(previous.filter((n) => n.link && n.alreadyIn).map((n) => `${n.id}|${n.link}`));
+    for (const n of data.nodes) {
+      if (n.link && kept.has(`${n.id}|${n.link}`)) n.alreadyIn = true;
+      else delete n.alreadyIn;
+    }
+    const joined = await this.joinNewLinks(id, [...now].filter((k): k is string => !!k && !before.has(k)));
+    for (const n of data.nodes) {
+      if (n.link && !before.has(n.link) && isMemberKey(n.link) && !joined.has(n.link)) n.alreadyIn = true;
+    }
+
+    // A link that's gone (unlinked, or its card removed) takes out what it brought in.
+    const leaving = previous
+      .filter((n) => n.link && !n.alreadyIn && !now.has(n.link))
+      .map((n) => n.link as string);
+    await this.leaveOldLinks(id, [...new Set(leaving)]);
+
     const json = JSON.stringify(data);
     if (existing) await knex('project_map').where({ id: existing.id }).update({ data: json, updated_at: knex.fn.now() });
     else await knex('project_map').insert({ project_id: id, data: json });
-    await this.joinNewLinks(id, data.nodes.map((n) => n.link).filter((k): k is string => !!k && !before.has(k)));
     return data;
   }
 
@@ -388,17 +414,29 @@ export class ProjectMapService {
    * A planned card linked to a real workflow or app makes it part of the project: it joins
    * (and stays in any other project it's in). Only links new to this save, so taking
    * something out of the project by hand isn't undone the next time the map is saved.
+   * Returns the keys that joined (the others were in the project already).
    */
-  private static async joinNewLinks(projectId: number, keys: string[]): Promise<void> {
+  private static async joinNewLinks(projectId: number, keys: string[]): Promise<Set<string>> {
     const knex = ProjectModel.knex();
-    for (const [prefix, kind] of [
-      ['task:', 'task'],
-      ['app:', 'app'],
-    ] as const) {
+    const joined = new Set<string>();
+    for (const [prefix, kind] of MEMBER_PREFIXES) {
+      const identifiers = keys.filter((k) => k.startsWith(prefix)).map((k) => k.slice(prefix.length));
+      if (!identifiers.length) continue;
+      const rows: { id: number; identifier: string }[] = await knex(kind).whereIn('identifier', identifiers).select('id', 'identifier');
+      const added = new Set(await ProjectMembership.add(kind, projectId, rows.map((r) => r.id)));
+      for (const r of rows) if (added.has(r.id)) joined.add(prefix + r.identifier);
+    }
+    return joined;
+  }
+
+  /** Takes out of the project what links brought into it (and stays in its other projects). */
+  private static async leaveOldLinks(projectId: number, keys: string[]): Promise<void> {
+    const knex = ProjectModel.knex();
+    for (const [prefix, kind] of MEMBER_PREFIXES) {
       const identifiers = keys.filter((k) => k.startsWith(prefix)).map((k) => k.slice(prefix.length));
       if (!identifiers.length) continue;
       const ids: number[] = await knex(kind).whereIn('identifier', identifiers).pluck('id');
-      await ProjectMembership.add(kind, projectId, ids);
+      for (const rowId of ids) await ProjectMembership.remove(kind, projectId, rowId);
     }
   }
 
