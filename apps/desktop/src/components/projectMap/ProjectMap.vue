@@ -330,7 +330,10 @@ watch(selected, (key) => {
   if (box && !box.open) toggleCluster(box.key);
 });
 
-/** For the selected planned node: same kind, not already taken by another plan node. */
+/**
+ * For the selected planned node: same kind. Ones another plan node already links to stay in
+ * the list, marked `linked`, so the dropdown says why they can't be picked.
+ */
 const linkTargets = computed(() => {
   const node = selectedNode.value;
   if (!node?.planned) return [];
@@ -341,9 +344,10 @@ const linkTargets = computed(() => {
     node.kind === 'schedule'
       ? merged.value.edges.find((e) => e.from === node.key && e.kind === 'triggers')?.to
       : undefined;
-  return candidates.value.filter(
-    (c) => kinds.includes(c.kind) && !taken.has(c.key) && (!starts || c.starts === starts)
-  );
+  return candidates.value
+    .filter((c) => kinds.includes(c.kind) && (!starts || c.starts === starts))
+    .map((c) => ({ ...c, linked: taken.has(c.key) }))
+    .sort((a, b) => Number(a.linked) - Number(b.linked));
 });
 
 const selectedNode = computed(() => merged.value.nodes.find((n) => n.key === selected.value) ?? null);

@@ -3132,6 +3132,7 @@
       "createSchedule": "Crear la programación",
       "linkExisting": "Vincular con uno existente",
       "linkPick": "Elige uno…",
+      "linkTaken": "ya enlazado en este mapa",
       "removePlanned": "Quitar del plan",
       "open": "Abrir",
       "unlink": "Desvincular del plan",

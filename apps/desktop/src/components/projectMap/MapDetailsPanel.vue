@@ -32,7 +32,7 @@ const props = defineProps<{
   /** Inside a sidebar whose header has its own close button. */
   hideHeaderClose?: boolean;
   /** What it can be linked to (everything in Tipeline); without it, what's on this map. */
-  linkTargets?: { key: string; name: string; project: string | null }[];
+  linkTargets?: { key: string; name: string; project: string | null; linked?: boolean }[];
 }>();
 
 const emit = defineEmits<{
@@ -93,7 +93,7 @@ const linkTargets = computed(
     props.linkTargets ??
     props.map.nodes
       .filter((n) => !n.planned && !n.planId && linkableKinds(props.node.kind).includes(n.kind))
-      .map((n) => ({ key: n.key, name: n.name, project: n.project?.name ?? null }))
+      .map((n) => ({ key: n.key, name: n.name, project: n.project?.name ?? null, linked: false }))
       .sort((a, b) => a.name.localeCompare(b.name))
 );
 
@@ -400,8 +400,9 @@ const scheduleTarget = computed(() => {
             <SelectValue :placeholder="t('projectMap.details.linkPick')" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem v-for="n in linkTargets" :key="n.key" :value="n.key">
+            <SelectItem v-for="n in linkTargets" :key="n.key" :value="n.key" :disabled="n.linked">
               {{ n.name }}<template v-if="n.project"> · {{ n.project }}</template>
+              <span v-if="n.linked" class="ml-1 text-muted-foreground">· {{ t('projectMap.details.linkTaken') }}</span>
             </SelectItem>
           </SelectContent>
         </Select>
