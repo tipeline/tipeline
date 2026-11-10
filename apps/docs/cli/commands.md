@@ -336,12 +336,14 @@ tipeline schedule remove sch001aaa222bbb333ccc
 Delete a [project](/desktop/projects#deleting-a-project), by its name (any case) or identifier.
 It shows what happens and asks first.
 
-- By default its workflows and apps are kept, in no project.
-- `--with-contents` also moves them to the Trash, except workflows that something outside
-  the deletion still uses (an app or workflow in another project, or in none). Those are
-  kept, and the list says what uses each one.
-- `--include-used` (with `--with-contents`) deletes those too, and says what will stop
-  working.
+- By default its workflows and apps are kept, only taken out of the project.
+- `--with-contents` also moves them to the Trash, except:
+  - workflows and apps that are also in another project: they're always kept, only
+    taken out of this one;
+  - workflows that something outside the deletion still uses (an app or workflow in
+    another project, or in none). Those are kept, and the list says what uses each one.
+- `--include-used` (with `--with-contents`) deletes those used workflows too, and says what
+  will stop working.
 - `-y, --yes` deletes without asking. Without a terminal to ask in, it's required.
 
 ```bash
@@ -351,7 +353,9 @@ tipeline project delete Sales --with-contents
 #     workflow  Quote
 #               1 schedule goes with it
 #     app       Deals
-#   Kept in no project, still used elsewhere (use --include-used to delete them too):
+#   Kept, also in other projects (only taken out of this one):
+#     workflow  Prices — also in Ops
+#   Kept, still used elsewhere (use --include-used to delete them too):
 #     workflow  CRM lookup — used by Desk (Ops)
 # Delete? [y/N]
 ```

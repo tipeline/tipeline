@@ -431,11 +431,11 @@ describe('mergeRunEvents', () => {
 describe('searchAll', () => {
   const sources = {
     tasks: [
-      { identifier: 'inv', name: 'Send invoices', description: 'Monthly', tags: ['finance'], project_identifier: 'bill' },
-      { identifier: 'sync', name: 'Invoice sync', tags: '["finance","erp"]', project_identifier: null },
-      { identifier: 'hr', name: 'Onboard employee', tags: [], project_identifier: 'people' },
+      { identifier: 'inv', name: 'Send invoices', description: 'Monthly', tags: ['finance'], projects: [{ name: 'Billing' }] },
+      { identifier: 'sync', name: 'Invoice sync', tags: '["finance","erp"]', projects: [] },
+      { identifier: 'hr', name: 'Onboard employee', tags: [], projects: [{ name: 'People' }, { name: 'Billing' }] },
     ],
-    apps: [{ identifier: 'dash', name: 'Invoice dashboard', project_identifier: 'bill' }],
+    apps: [{ identifier: 'dash', name: 'Invoice dashboard', projects: [{ name: 'Billing' }] }],
     projects: [
       { identifier: 'bill', name: 'Billing' },
       { identifier: 'people', name: 'People' },
@@ -446,6 +446,12 @@ describe('searchAll', () => {
     const results = searchAll('billing send', sources);
     expect(results.map((r) => r.key)).toEqual(['task:inv']);
     expect(results[0].subtitle).toBe('Billing · Monthly');
+  });
+
+  it('finds a workflow by any of its projects, and lists them all', () => {
+    const results = searchAll('billing onboard', sources);
+    expect(results.map((r) => r.key)).toEqual(['task:hr']);
+    expect(results[0].subtitle).toBe('People, Billing');
   });
 
   it('groups by kind and ranks name matches first', () => {

@@ -22,19 +22,21 @@ import {
   MAP_NODE_W,
   type LiveMap,
   type ProjectMapPlan,
+  linkableKinds,
 } from '../src/projectMap';
 
 const project = { identifier: 'p', name: 'Caching', color: null };
+const projects = [project];
 
 const live: LiveMap = {
   nodes: [
-    { key: 'task:sites', kind: 'helper', name: 'Data: sites', ref: 'sites', project },
-    { key: 'task:report', kind: 'workflow', name: 'Cache hit report', ref: 'report', project, inputs: [], outputs: ['hitRatio'] },
-    { key: 'task:purge', kind: 'workflow', name: 'Purge', ref: 'purge', project, inputs: ['tag'], outputs: [] },
-    { key: 'app:console', kind: 'app', name: 'Purge console', ref: 'console', project },
-    { key: 'app:dash', kind: 'app', name: 'Dashboard', ref: 'dash', project },
-    { key: 'global:cacheTtl', kind: 'global', name: 'cacheTtl', ref: 'cacheTtl', project: null },
-    { key: 'task:borrowed', kind: 'workflow', name: 'Borrowed', ref: 'borrowed', project: null, external: true },
+    { key: 'task:sites', kind: 'helper', name: 'Data: sites', ref: 'sites', projects },
+    { key: 'task:report', kind: 'workflow', name: 'Cache hit report', ref: 'report', projects, inputs: [], outputs: ['hitRatio'] },
+    { key: 'task:purge', kind: 'workflow', name: 'Purge', ref: 'purge', projects, inputs: ['tag'], outputs: [] },
+    { key: 'app:console', kind: 'app', name: 'Purge console', ref: 'console', projects },
+    { key: 'app:dash', kind: 'app', name: 'Dashboard', ref: 'dash', projects },
+    { key: 'global:cacheTtl', kind: 'global', name: 'cacheTtl', ref: 'cacheTtl', projects: [] },
+    { key: 'task:borrowed', kind: 'workflow', name: 'Borrowed', ref: 'borrowed', projects: [], external: true },
   ],
   edges: [
     { from: 'app:dash', to: 'task:report', kind: 'runs' },
@@ -64,6 +66,19 @@ describe('edgeKindFor', () => {
     expect(drawnEdge('workflow', 'schedule')).toEqual({ kind: 'triggers', turned: true });
     expect(drawnEdge('workflow', 'workflow')).toEqual({ kind: 'calls', turned: false });
     expect(drawnEdge('schedule', 'app')).toBeNull();
+  });
+});
+
+describe('linkableKinds', () => {
+  it('links a planned workflow to any workflow and others to their own kind', () => {
+    expect(linkableKinds('workflow')).toEqual(['workflow', 'helper']);
+    expect(linkableKinds('helper')).toEqual(['workflow', 'helper']);
+    expect(linkableKinds('app')).toEqual(['app']);
+    expect(linkableKinds('global')).toEqual(['global']);
+  });
+
+  it('never links a planned schedule: one starts one workflow, so it is always made new', () => {
+    expect(linkableKinds('schedule')).toEqual([]);
   });
 });
 
@@ -127,8 +142,8 @@ describe('mergeMap', () => {
   it('a planned write where the workflow only reads the global names the real kind', () => {
     const reader: LiveMap = {
       nodes: [
-        { key: 'task:list', kind: 'workflow', name: 'List orders', ref: 'list', project },
-        { key: 'global:folder', kind: 'global', name: 'folder', ref: 'folder', project: null },
+        { key: 'task:list', kind: 'workflow', name: 'List orders', ref: 'list', projects },
+        { key: 'global:folder', kind: 'global', name: 'folder', ref: 'folder', projects: [] },
       ],
       edges: [{ from: 'task:list', to: 'global:folder', kind: 'reads' }],
     };
@@ -245,7 +260,7 @@ describe('statuses', () => {
     kind: 'workflow',
     name: key,
     ref: key.slice(5),
-    project,
+    projects,
     changedAt: T1,
     ...extra,
   });
@@ -276,11 +291,11 @@ describe('statuses', () => {
         nodes: [
           wf('task:a', { lastSuccessAt: T2 }),
           wf('task:b'),
-          { key: 'app:one', kind: 'app', name: 'One', ref: 'one', project },
-          { key: 'app:two', kind: 'app', name: 'Two', ref: 'two', project },
-          { key: 'app:none', kind: 'app', name: 'None', ref: 'none', project },
-          { key: 'schedule:on', kind: 'schedule', name: 'Daily', ref: 'on', project: null, enabled: true },
-          { key: 'schedule:off', kind: 'schedule', name: 'Daily', ref: 'off', project: null, enabled: false },
+          { key: 'app:one', kind: 'app', name: 'One', ref: 'one', projects },
+          { key: 'app:two', kind: 'app', name: 'Two', ref: 'two', projects },
+          { key: 'app:none', kind: 'app', name: 'None', ref: 'none', projects },
+          { key: 'schedule:on', kind: 'schedule', name: 'Daily', ref: 'on', projects: [], enabled: true },
+          { key: 'schedule:off', kind: 'schedule', name: 'Daily', ref: 'off', projects: [], enabled: false },
         ],
         edges: [
           { from: 'app:one', to: 'task:a', kind: 'runs' },
@@ -322,7 +337,7 @@ describe('statuses', () => {
   it("a linked plan node's sign-off counts, and a global can be signed off once it exists", () => {
     const m = mergeMap(
       {
-        nodes: [wf('task:ok', { lastSuccessAt: T2 }), { key: 'global:g', kind: 'global', name: 'g', ref: 'g', project: null }],
+        nodes: [wf('task:ok', { lastSuccessAt: T2 }), { key: 'global:g', kind: 'global', name: 'g', ref: 'g', projects: [] }],
         edges: [],
       },
       plan({
@@ -446,19 +461,47 @@ describe('draftBrief', () => {
     expect(brief.text).toContain('_global.cacheTtl');
     expect(brief.text).toContain('Purge console');
   });
+
+  it('says when a planned schedule drawn to it should run', () => {
+    const m = mergeMap(
+      live,
+      plan({
+        nodes: [
+          { id: 'n1', kind: 'workflow', name: 'Warm cache', inputs: [], outputs: [] },
+          { id: 's1', kind: 'schedule', name: 'Nightly', inputs: [], outputs: [], when: 'every night at 2am' },
+          { id: 's2', kind: 'schedule', name: 'No time yet', inputs: [], outputs: [] },
+        ],
+        edges: [
+          { id: 'e1', from: 'plan:s1', to: 'plan:n1', kind: 'triggers' },
+          { id: 'e2', from: 'plan:s2', to: 'plan:n1', kind: 'triggers' },
+        ],
+      })
+    );
+    expect(draftBrief(m, 'plan:n1').text).toContain('It will run on a schedule: every night at 2am.');
+  });
+});
+
+describe('planned schedule time', () => {
+  it('keeps a planned schedule\'s when through parsePlan and onto its map node', () => {
+    const stored = parsePlan(
+      JSON.stringify({ ...emptyPlan(), nodes: [{ id: 's1', kind: 'schedule', name: 'Nightly', when: 'every night at 2am' }] })
+    );
+    expect(stored.nodes[0].when).toBe('every night at 2am');
+    expect(mergeMap(live, stored).nodes.find((n) => n.key === 'plan:s1')?.when).toBe('every night at 2am');
+  });
 });
 
 describe('clusterLeaves', () => {
   // The CMS example: one app running 27 workflows; only the deploy one also reads globals.
   const cms = (() => {
-    const nodes: LiveMap['nodes'] = [{ key: 'app:cms', kind: 'app', name: 'CMS', ref: 'cms', project }];
+    const nodes: LiveMap['nodes'] = [{ key: 'app:cms', kind: 'app', name: 'CMS', ref: 'cms', projects }];
     const edges: LiveMap['edges'] = [];
     for (let i = 0; i < 27; i++) {
-      nodes.push({ key: `task:w${i}`, kind: 'workflow', name: `W${i}`, ref: `w${i}`, project });
+      nodes.push({ key: `task:w${i}`, kind: 'workflow', name: `W${i}`, ref: `w${i}`, projects });
       edges.push({ from: 'app:cms', to: `task:w${i}`, kind: 'runs' });
     }
     for (const g of ['CF_ACCOUNT', 'CF_TOKEN']) {
-      nodes.push({ key: `global:${g}`, kind: 'global', name: g, ref: g, project: null });
+      nodes.push({ key: `global:${g}`, kind: 'global', name: g, ref: g, projects: [] });
       edges.push({ from: 'task:w26', to: `global:${g}`, kind: 'reads' });
     }
     return mergeMap({ nodes, edges }, emptyPlan());
@@ -486,7 +529,7 @@ describe('clusterLeaves', () => {
   it('leaves fewer than the minimum, planned nodes and flagged nodes alone', () => {
     expect(clusterLeaves(cms.nodes, cms.edges, { min: 30 }).clusters).toEqual([]);
     const m = mergeMap(
-      { nodes: cms.nodes.map((n) => ({ ...n, ref: n.ref ?? n.key, project: n.project })) as any, edges: cms.edges as any },
+      { nodes: cms.nodes.map((n) => ({ ...n, ref: n.ref ?? n.key, projects: n.projects })) as any, edges: cms.edges as any },
       plan({ nodes: [{ id: 'p1', kind: 'workflow', name: 'Planned', inputs: [], outputs: [] }], edges: [{ id: 'e', from: 'app:cms', to: 'plan:p1', kind: 'runs' }] })
     );
     expect(clusterLeaves(m.nodes, m.edges).clusters[0].members).not.toContain('plan:p1');

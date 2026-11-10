@@ -23,7 +23,7 @@ import { useNewItemDefaults } from '@/composables/useNewItemDefaults';
 
 const props = withDefaults(
   defineProps<{
-    /** The project it starts in (the one it's created from); the user can change it. */
+    /** The project it starts in (the one it's created from); the user can change it or add more. */
     project?: string | null;
   }>(),
   { project: null }
@@ -34,9 +34,9 @@ const router = useRouter();
 const { t } = useI18n();
 const isWaiting = ref(false);
 const submitButtonRef = ref<HTMLButtonElement | null>(null);
-const selectedProject = ref(props.project ?? '__none__');
+const selectedProjects = ref<string[]>(props.project ? [props.project] : []);
 // The dialog may stay mounted between openings; follow where it was opened from.
-watch(() => props.project, (project) => (selectedProject.value = project ?? '__none__'));
+watch(() => props.project, (project) => (selectedProjects.value = project ? [project] : []));
 
 // No version field: core always stamps a new app as 1.0.0 (see Core.appNew).
 const formSchema = toTypedSchema(
@@ -66,11 +66,8 @@ const onSubmit = handleSubmit(async (values) => {
     // An app you create may use files anywhere on this computer (installed ones start
     // limited to ~/Tipeline — see the app's Edit dialog, File access).
     await setAppFileTrust(response.identifier, true);
-    if (selectedProject.value !== '__none__') {
-      await invokeCore(SEND.PROJECT_ASSIGN_APP, {
-        projectIdentifier: selectedProject.value,
-        appIdentifier: response.identifier,
-      });
+    for (const projectIdentifier of selectedProjects.value) {
+      await invokeCore(SEND.PROJECT_ASSIGN_APP, { projectIdentifier, appIdentifier: response.identifier });
     }
     emit('created');
     // Overview first, then the builder, so the builder's back arrow lands on the new
@@ -132,7 +129,7 @@ defineExpose({ submit: triggerSubmit, isWaiting });
       </FormItem>
     </FormField>
 
-    <ProjectSelect v-model="selectedProject" />
+    <ProjectSelect v-model="selectedProjects" />
 
     <button ref="submitButtonRef" type="submit" class="hidden" />
   </form>

@@ -36,7 +36,8 @@ import { useQuery } from '@/composables/useQuery';
 import { toast } from '@/components/ui/sonner';
 import { useErrorT } from '@/composables/useErrorT';
 import { beautifyObjectName } from '@/components/ui/auto-form/utils';
-import { assignToProject } from '@/utils/projectAssign';
+import { projectIdsOf, setProjects, type ProjectTag } from '@/utils/projectAssign';
+import ProjectSelect from '@/components/project/ProjectSelect.vue';
 
 const PLATFORM_OPTIONS = ['windows', 'linux', 'macos'] as const;
 
@@ -49,7 +50,7 @@ const props = defineProps<{
     version?: string | null;
     platform?: string | null;
     tags?: string[];
-    project_identifier?: string | null;
+    projects?: ProjectTag[];
     source_type?: 'local' | 'hub';
     image?: string | null;
   };
@@ -66,13 +67,12 @@ const editOpen = ref(false);
 const isSaving = ref(false);
 const editForm = ref({ name: '', description: '', author: '', version: '', platform: '' });
 const editImage = ref<string | null>(null);
-const selectedProject = ref('');
+const selectedProjects = ref<string[]>([]);
 const editTags = ref<string[]>([]);
 const duplicateOpen = ref(false);
 const isDuplicating = ref(false);
 const duplicateName = ref('');
 
-const { data: projects } = useQuery(SEND.PROJECT_LIST);
 
 function openEdit() {
   editForm.value = {
@@ -83,7 +83,7 @@ function openEdit() {
     platform: props.item.platform ?? '',
   };
   editImage.value = props.item.image ?? null;
-  selectedProject.value = props.item.project_identifier ?? '__none__';
+  selectedProjects.value = projectIdsOf(props.item);
   const raw = props.item.tags;
   editTags.value = typeof raw === 'string' ? JSON.parse(raw as any) : (Array.isArray(raw) ? [...raw] : []);
   editOpen.value = true;
@@ -94,14 +94,7 @@ async function saveEdit() {
   try {
     await invokeCore(SEND.TASK_UPDATE_META, { identifier: props.item.identifier, ...editForm.value, tags: [...editTags.value] });
 
-    const prevProject = props.item.project_identifier ?? '__none__';
-    if (selectedProject.value !== prevProject) {
-      if (selectedProject.value && selectedProject.value !== '__none__') {
-        await assignToProject('task', selectedProject.value, props.item.identifier);
-      } else {
-        await invokeCore(SEND.PROJECT_UNASSIGN_TASK, { taskIdentifier: props.item.identifier });
-      }
-    }
+    await setProjects('task', props.item.identifier, projectIdsOf(props.item), selectedProjects.value);
 
     editOpen.value = false;
     props.onUpdated?.();
@@ -199,24 +192,7 @@ async function confirmDuplicate() {
           </SelectContent>
         </Select>
       </div>
-      <div class="space-y-1.5">
-        <label class="text-sm font-medium">{{ t('tasks.form.project') }} <span class="text-muted-foreground font-normal">{{ t('common.optional') }}</span></label>
-        <Select v-model="selectedProject">
-          <SelectTrigger>
-            <SelectValue :placeholder="t('tasks.form.projectPlaceholder')" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__">{{ t('tasks.form.projectPlaceholder') }}</SelectItem>
-            <SelectItem
-              v-for="project in projects ?? []"
-              :key="project.identifier"
-              :value="project.identifier"
-            >
-              {{ project.name }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <ProjectSelect v-model="selectedProjects" />
       <div class="space-y-1.5">
         <label class="text-sm font-medium">{{ t('tasks.form.tags') }}</label>
         <TagsField v-model="editTags" :placeholder="t('tasks.form.tagPlaceholder')" />

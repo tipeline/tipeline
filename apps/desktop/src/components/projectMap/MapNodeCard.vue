@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Handle, Position } from '@vue-flow/core';
-import { AppWindow, Clock, Database, Globe, CornerDownRight, StickyNote, TriangleAlert, Workflow } from 'lucide-vue-next';
+import { AppWindow, Clock, Database, Globe, CornerDownRight, Lock, StickyNote, TriangleAlert, Workflow } from 'lucide-vue-next';
 import { MAP_NODE_H, MAP_NODE_W, type MapNode } from '@tipeline/utils';
 import { ENTITY_COLORS, type Entity } from '@/config/entityColors';
 
@@ -20,8 +20,8 @@ const props = defineProps<{
 
 const { t } = useI18n();
 
-const icon = computed(
-  () => ({ workflow: Workflow, helper: Database, app: AppWindow, global: Globe, schedule: Clock })[props.node.kind]
+const icon = computed(() =>
+  props.node.hidden ? Lock : { workflow: Workflow, helper: Database, app: AppWindow, global: Globe, schedule: Clock }[props.node.kind]
 );
 
 const flagged = computed(() => props.editable && props.node.differences > 0);
@@ -65,15 +65,23 @@ const statusTone = computed(
     })[props.node.status]
 );
 
-/** The small line under the name: why it's flagged, or where a borrowed node lives. */
+/**
+ * The small line under the name: why it's flagged, which projects a borrowed node is in, or
+ * when a planned schedule should run.
+ */
 const subline = computed(() => {
   const n = props.node;
+  if (n.hidden) return t('projectMap.node.hiddenHint');
   if (flagged.value) return t('projectMap.node.differences', { count: n.differences }, n.differences);
   if (n.missing) return t('projectMap.node.missingGlobal');
-  if (n.external && n.project) return n.project.name;
+  if (n.external && n.projects.length) return n.projects.map((p) => p.name).join(', ');
   if (n.external) return t('projectMap.node.noProject');
+  if (n.planned && n.kind === 'schedule' && n.when) return n.when;
   return '';
 });
+
+/** A workflow the viewer may not see: a locked card, no name. */
+const title = computed(() => (props.node.hidden ? t('projectMap.node.hidden') : props.node.name));
 </script>
 
 <template>
@@ -82,6 +90,7 @@ const subline = computed(() => {
     :class="[
       tone,
       node.kind === 'global' ? 'rounded-full' : '',
+      node.hidden ? 'border-dashed !bg-muted' : '',
       selected ? 'ring-3 ring-primary/40' : '',
       dimmed ? 'opacity-40' : node.external ? 'opacity-80' : '',
     ]"
@@ -99,16 +108,16 @@ const subline = computed(() => {
     <div class="min-w-0 leading-tight">
       <div class="truncate text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
         {{ kindLabel }}
-        <template v-if="editable && !flagged">
+        <template v-if="editable && !flagged && !node.hidden">
           · <span :class="statusTone" :title="t(`projectMap.statusWhy.${node.statusWhy}`)">{{ t(`projectMap.status.${node.status}`) }}</span>
         </template>
       </div>
       <div
         class="line-clamp-2 font-semibold break-words"
-        :class="node.kind === 'global' ? 'font-mono text-[13px] font-medium' : ''"
-        :title="node.name"
+        :class="[node.kind === 'global' ? 'font-mono text-[13px] font-medium' : '', node.hidden ? 'text-muted-foreground' : '']"
+        :title="title"
       >
-        {{ node.name }}
+        {{ title }}
       </div>
       <div v-if="subline" class="truncate text-[11px] text-muted-foreground">{{ subline }}</div>
     </div>

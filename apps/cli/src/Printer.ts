@@ -233,7 +233,7 @@ export default class Printer {
       [chalk.dim('version'), chalk.cyan(task.version ?? '')],
       [chalk.dim('tags'), Array.isArray(task.tags) && task.tags.length ? task.tags.join(', ') : ''],
       [chalk.dim('source'), task.source_type ?? ''],
-      [chalk.dim('project'), task.project_name ?? ''],
+      [chalk.dim('projects'), Array.isArray(task.projects) ? task.projects.map((p: any) => p.name).join(', ') : ''],
       [chalk.dim('actions'), String(actionCount)],
       [chalk.dim('variables'), String(variableCount)],
       ...(task.capabilities

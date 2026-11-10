@@ -32,14 +32,13 @@ beforeAll(async () => {
   const [ops] = await knex('project').insert({ identifier: 'p-ops', name: 'Ops' });
 
   await knex('task').insert([
-    { identifier: 'wf-crm', name: 'CRM lookup', source: '{}', project_id: sales },
-    { identifier: 'wf-mail', name: 'Send mail', source: '{}', project_id: ops },
+    { identifier: 'wf-crm', name: 'CRM lookup', source: '{}' },
+    { identifier: 'wf-mail', name: 'Send mail', source: '{}' },
     { identifier: 'wf-loose', name: 'Loose', source: '{}' },
     // Runs CRM lookup inside an If block, in Ops.
     {
       identifier: 'wf-report',
       name: 'Report',
-      project_id: ops,
       source: workflowSource({ group: 'flow', name: 'if', params: { statements: [{ actions: [step('wf-crm')] }] } }),
     },
     // No project; runs it at the top level and names CRM lookup only in text.
@@ -55,14 +54,30 @@ beforeAll(async () => {
   ]);
   await knex('app').insert([
     // Sales app: its own workflow, one from Ops and one with no project.
-    { identifier: 'app-deals', name: 'Deals', project_id: sales, source: appSource('wf-crm', 'wf-mail', 'wf-loose') },
+    { identifier: 'app-deals', name: 'Deals', source: appSource('wf-crm', 'wf-mail', 'wf-loose') },
     // Ops app reuses Sales' workflow.
-    { identifier: 'app-desk', name: 'Desk', project_id: ops, source: appSource('wf-crm') },
+    { identifier: 'app-desk', name: 'Desk', source: appSource('wf-crm') },
     // No project; the same workflow under two aliases counts once.
     { identifier: 'app-misc', name: 'Misc', source: appSource('wf-mail', 'wf-mail') },
     // Broken source: uses nothing, breaks nothing.
-    { identifier: 'app-broken', name: 'Broken', project_id: sales, source: '{not json' },
+    { identifier: 'app-broken', name: 'Broken', source: '{not json' },
   ]);
+  const member = async (table: 'task' | 'app', identifier: string, projectId: number) => {
+    const { id } = await knex(table).where({ identifier }).first('id');
+    await knex(table === 'task' ? 'project_task' : 'project_app').insert({ project_id: projectId, [`${table}_id`]: id });
+  };
+  await member('task', 'wf-crm', sales);
+  await member('task', 'wf-mail', ops);
+  await member('task', 'wf-report', ops);
+  await member('app', 'app-deals', sales);
+  await member('app', 'app-desk', ops);
+  await member('app', 'app-broken', sales);
+  // In both projects: Ops' apps don't borrow it, Sales' don't either.
+  await knex('task').insert({ identifier: 'wf-both', name: 'Both', source: '{}' });
+  await member('task', 'wf-both', sales);
+  await member('task', 'wf-both', ops);
+  await knex('app').insert({ identifier: 'app-both-user', name: 'Uses both', source: appSource('wf-both') });
+  await member('app', 'app-both-user', ops);
 });
 afterAll(() => knex.destroy());
 
@@ -86,8 +101,8 @@ describe('appWorkflowIdentifiers', () => {
 describe('WorkflowUsageService.usedBy', () => {
   it('lists the apps using a workflow with their projects, by name', async () => {
     expect(await WorkflowUsageService.usedBy('wf-crm')).toEqual([
-      { identifier: 'app-deals', name: 'Deals', project_identifier: 'p-sales', project_name: 'Sales', project_color: '#f00' },
-      { identifier: 'app-desk', name: 'Desk', project_identifier: 'p-ops', project_name: 'Ops', project_color: null },
+      { identifier: 'app-deals', name: 'Deals', projects: [{ identifier: 'p-sales', name: 'Sales', color: '#f00' }] },
+      { identifier: 'app-desk', name: 'Desk', projects: [{ identifier: 'p-ops', name: 'Ops', color: null }] },
     ]);
     expect((await WorkflowUsageService.usedBy('wf-mail')).map((a) => a.identifier)).toEqual(['app-deals', 'app-misc']);
     expect(await WorkflowUsageService.usedBy('wf-unused')).toEqual([]);
@@ -102,27 +117,24 @@ describe('WorkflowUsageService.sharedIntoProject', () => {
         identifier: 'wf-loose',
         name: 'Loose',
         description: null,
-        project_identifier: null,
-        project_name: null,
-        project_color: null,
+        projects: [],
         apps: [{ identifier: 'app-deals', name: 'Deals' }],
       },
       {
         identifier: 'wf-mail',
         name: 'Send mail',
         description: null,
-        project_identifier: 'p-ops',
-        project_name: 'Ops',
-        project_color: null,
+        projects: [{ identifier: 'p-ops', name: 'Ops', color: null }],
         apps: [{ identifier: 'app-deals', name: 'Deals' }],
       },
     ]);
   });
 
   it('works the other way round, and is empty for a project without apps', async () => {
-    expect((await WorkflowUsageService.sharedIntoProject('p-ops')).map((w) => [w.identifier, w.project_identifier])).toEqual([
-      ['wf-crm', 'p-sales'],
-    ]);
+    // wf-both is in Ops too, so an Ops app using it isn't borrowing it.
+    expect(
+      (await WorkflowUsageService.sharedIntoProject('p-ops')).map((w) => [w.identifier, w.projects.map((p) => p.identifier)])
+    ).toEqual([['wf-crm', ['p-sales']]]);
     expect(await WorkflowUsageService.sharedIntoProject('p-none')).toEqual([]);
   });
 });
@@ -143,8 +155,8 @@ describe('calledWorkflowIdentifiers', () => {
 describe('WorkflowUsageService.calledBy', () => {
   it('lists the workflows that run it as a sub-workflow, with their projects', async () => {
     expect(await WorkflowUsageService.calledBy('wf-crm')).toEqual([
-      { identifier: 'wf-digest', name: 'Digest', project_identifier: null, project_name: null, project_color: null },
-      { identifier: 'wf-report', name: 'Report', project_identifier: 'p-ops', project_name: 'Ops', project_color: null },
+      { identifier: 'wf-digest', name: 'Digest', projects: [] },
+      { identifier: 'wf-report', name: 'Report', projects: [{ identifier: 'p-ops', name: 'Ops', color: null }] },
     ]);
     expect(await WorkflowUsageService.calledBy('wf-mail')).toEqual([]);
   });

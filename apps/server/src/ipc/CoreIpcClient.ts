@@ -48,7 +48,7 @@ const CORE_EVENTS = [
   // Projects
   'onProjectList', 'onProjectNew', 'onProjectDetail', 'onProjectUpdate', 'onProjectDelete', 'onProjectDeletePreview',
   'onProjectAssignTask', 'onProjectUnassignTask', 'onProjectAssignApp', 'onProjectUnassignApp',
-  'onProjectExport', 'onProjectImport',
+  'onProjectExport', 'onProjectImport', 'onProjectMap', 'onProjectMapSave', 'onProjectMapLink',
   // Agent run history
   'onAgentRunCreate', 'onAgentRunMarkTaskRunning', 'onAgentRunSetPipeline',
   'onAgentRunComplete', 'onAgentRunFail', 'onAgentRunList',

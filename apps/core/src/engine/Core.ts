@@ -281,16 +281,18 @@ export default class Core {
     return await ProjectService.assignTask(projectIdentifier, taskIdentifier);
   }
 
-  static async projectUnassignTask(taskIdentifier: string) {
-    return await ProjectService.unassignTask(taskIdentifier);
+  /** Takes the workflow out of this project; it stays in any others. */
+  static async projectUnassignTask(projectIdentifier: string, taskIdentifier: string) {
+    return await ProjectService.unassignTask(projectIdentifier, taskIdentifier);
   }
 
   static async projectAssignApp(projectIdentifier: string, appIdentifier: string) {
     return await ProjectService.assignApp(projectIdentifier, appIdentifier);
   }
 
-  static async projectUnassignApp(appIdentifier: string) {
-    return await ProjectService.unassignApp(appIdentifier);
+  /** Takes the app out of this project; it stays in any others. */
+  static async projectUnassignApp(projectIdentifier: string, appIdentifier: string) {
+    return await ProjectService.unassignApp(projectIdentifier, appIdentifier);
   }
 
   /**
@@ -686,8 +688,9 @@ export default class Core {
       source: JSON.stringify(parsedSource),
     });
 
-    if (existing.project_id) {
-      await ProjectService.assignTask(existing.project_identifier, record.identifier);
+    // The copy goes in every project the original is in.
+    if (existing.projects?.length) {
+      for (const project of existing.projects) await ProjectService.assignTask(project.identifier, record.identifier);
       return await TaskService.getByIdentifier(record.identifier);
     }
 

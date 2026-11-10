@@ -10,6 +10,7 @@ import { authorizeCancel } from './cancelAuthorization.js';
 import { authorizeAppCommand, visibleAppWorkflows } from './appAuthorization.js';
 import { authorizeDecision, visibleApprovals, visibleHistory, type PendingApprovalItem } from './approvalAuthorization.js';
 import { AuditLogService } from '../audit/AuditLogService.js';
+import { hideInProjectDetail, hideInProjectMap } from './hideWorkflows.js';
 
 // Events in the middle of a run: the request stays routed to its connection. (A
 // sub-workflow's onTaskEnd arrives mid-run too — only onTaskEndAll / onTaskError end it.)
@@ -23,7 +24,14 @@ const OWNERSHIP_PROTECTED = new Set([
 
 // Additionally checked against *visibility*, not just ownership — reading or running a
 // private task should be denied to non-owners, not just hidden from taskList.
-const PRIVATE_TASK_GATED = new Set(['taskDetail', 'taskUsage', 'taskCapabilities', 'taskRevisionList', 'taskRevisionDetail', 'exec', 'taskValidate', 'taskDuplicate', 'taskUploadImage']);
+// Adding a workflow to a project (or taking it out) is only a label: any workflow the user
+// may see can go in any project, but not another user's private one.
+const PRIVATE_TASK_GATED = new Set([
+  'taskDetail', 'taskUsage', 'taskCapabilities', 'taskRevisionList', 'taskRevisionDetail', 'exec', 'taskValidate', 'taskDuplicate', 'taskUploadImage',
+  'projectAssignTask', 'projectUnassignTask',
+]);
+
+const PROJECT_MEMBERSHIP = new Set(['projectAssignTask', 'projectUnassignTask']);
 
 // Commands the 'viewer' role may send — everything else in ALLOWED_COMMANDS is a
 // mutation or an execution, which "view only" is not meant to permit.
@@ -109,7 +117,7 @@ const ALL_CORE_EVENTS = [
   // Projects
   'onProjectList', 'onProjectNew', 'onProjectDetail', 'onProjectUpdate', 'onProjectDelete', 'onProjectDeletePreview',
   'onProjectAssignTask', 'onProjectUnassignTask', 'onProjectAssignApp', 'onProjectUnassignApp',
-  'onProjectExport', 'onProjectImport',
+  'onProjectExport', 'onProjectImport', 'onProjectMap', 'onProjectMapSave', 'onProjectMapLink',
   // Agent run history
   'onAgentRunCreate', 'onAgentRunMarkTaskRunning', 'onAgentRunSetPipeline',
   'onAgentRunComplete', 'onAgentRunFail', 'onAgentRunList',
@@ -289,7 +297,7 @@ export class WsGateway {
           }
 
           if ((OWNERSHIP_PROTECTED.has(event) || PRIVATE_TASK_GATED.has(event)) && currentUser.role !== 'admin') {
-            const taskId = payload.payload?.identifier;
+            const taskId = PROJECT_MEMBERSHIP.has(event) ? payload.payload?.taskIdentifier : payload.payload?.identifier;
             if (taskId) {
               const owner = await TaskOwnershipService.getOwner(taskId);
               if (owner && owner.user_id !== currentUser.id) {
@@ -473,6 +481,10 @@ export class WsGateway {
       void this.routeTaskListFiltered(event, data);
       return;
     }
+    if (event === 'onProjectMap' || event === 'onProjectDetail') {
+      void this.routeProjectFiltered(event, data);
+      return;
+    }
     if (APPROVAL_LISTS.has(event)) {
       void this.routeApprovalsFiltered(event, data);
       return;
@@ -574,6 +586,26 @@ export class WsGateway {
     } else {
       this.broadcast(msg);
     }
+  }
+
+  /**
+   * A project's detail or map, without other users' private workflows: being in a shared
+   * project doesn't let anyone see one. On the map it stays as a locked card. Goes only to
+   * the asker; without a known asker nothing is sent.
+   */
+  private async routeProjectFiltered(event: string, data: any): Promise<void> {
+    const correlationId = data?.correlationId;
+    const ws = correlationId ? this.correlationMap.get(correlationId) : undefined;
+    if (correlationId) this.correlationMap.delete(correlationId);
+    const user = ws ? this.clientUser.get(ws) : undefined;
+    if (!ws || !user || ws.readyState !== WebSocket.OPEN) return;
+
+    let answer = data?.data;
+    if (answer && user.role !== 'admin') {
+      const hidden = await TaskOwnershipService.privateOwnedByOthers(user.id);
+      answer = event === 'onProjectMap' ? hideInProjectMap(answer, hidden) : hideInProjectDetail(answer, hidden);
+    }
+    ws.send(JSON.stringify({ event, ...data, data: answer }));
   }
 
   /** Approval lists go only to the asker, without runs they may not see, each marked with

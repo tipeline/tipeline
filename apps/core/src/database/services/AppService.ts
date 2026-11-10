@@ -2,6 +2,7 @@ import { hubUpdateState } from '@/hub/HubUpdatePolicy';
 import { App as AppModel } from '@/database/models/App';
 import { AppHubLink } from '@/database/models/AppHubLink';
 import { generateIdentifier } from '@tipeline/utils';
+import { ProjectMembership, parseProjects, projectsSubquery } from '@/database/services/ProjectMembership';
 
 // Every query that lists/details an app computes this instead of reading a
 // stored column — 'hub' iff an app_hub_link row exists, fully redundant
@@ -80,8 +81,7 @@ export class AppService {
 
   static async getAll() {
     const knex = AppModel.knex();
-    return await knex('app')
-      .leftJoin('project', 'project.id', 'app.project_id')
+    const rows = await knex('app')
       .leftJoin('app_hub_link as ahl', 'ahl.app_id', 'app.id')
       .select(
         'app.identifier',
@@ -94,21 +94,20 @@ export class AppService {
         'ahl.hub_id',
         'ahl.hub_app_identifier',
         'ahl.hub_version',
-        'app.project_id',
-        'project.identifier as project_identifier',
+        knex.raw(projectsSubquery('app'))
       )
       .orderBy('app.created_at', 'desc');
+    return rows.map((row: any) => ({ ...row, projects: parseProjects(row.projects) }));
   }
 
   static async getByIdentifier(identifier: string) {
     const knex = AppModel.knex();
     const row = await knex('app')
-      .leftJoin('project', 'project.id', 'app.project_id')
       .leftJoin('app_hub_link as ahl', 'ahl.app_id', 'app.id')
       .leftJoin('hub', 'hub.id', 'ahl.hub_id')
       .select(
         'app.*',
-        'project.identifier as project_identifier',
+        knex.raw(projectsSubquery('app')),
         knex.raw(`${SOURCE_TYPE_CASE} as source_type`),
         'ahl.hub_id',
         'ahl.hub_app_identifier',
@@ -124,6 +123,7 @@ export class AppService {
     return row
       ? {
           ...row,
+          projects: parseProjects(row.projects),
           metadata: row.metadata ? JSON.parse(row.metadata) : row.metadata,
           hub_update_state: hubUpdateState(row.version, row.hub_version),
         }
@@ -163,7 +163,11 @@ export class AppService {
   }
 
   static async uninstall(identifier: string) {
-    return await AppModel.query().delete().where({ identifier });
+    const row = await AppModel.query().findOne({ identifier }).select('id');
+    if (!row) return 0;
+    const count = await AppModel.query().delete().where({ id: row.id });
+    await ProjectMembership.forget('app', row.id);
+    return count;
   }
 
   static async updateSource(identifier: any, source: any) {

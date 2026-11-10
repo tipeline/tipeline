@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
-import { ArrowLeftRight, BadgeCheck, ExternalLink, Link2, Link2Off, Loader2, Sparkles, StickyNote, Trash2, X } from 'lucide-vue-next';
+import { ArrowLeftRight, BadgeCheck, ExternalLink, FolderMinus, Link2, Link2Off, Loader2, Sparkles, StickyNote, Trash2, X } from 'lucide-vue-next';
 import {
   descriptionSummary,
   linkableKinds,
@@ -33,14 +33,14 @@ const props = defineProps<{
   /** Inside a sidebar whose header has its own close button. */
   hideHeaderClose?: boolean;
   /** What it can be linked to (everything in Tipeline); without it, what's on this map. */
-  linkTargets?: { key: string; name: string; project: string | null; linked?: boolean }[];
+  linkTargets?: { key: string; name: string; projects: string[]; linked?: boolean }[];
 }>();
 
 const emit = defineEmits<{
   (e: 'select', key: string): void;
   (e: 'close'): void;
   /** A change to the node's notes: on its plan node when it has one, else on the live node. */
-  (e: 'update', patch: Partial<Pick<PlanNode, 'name' | 'description' | 'owner' | 'lane' | 'inputs' | 'outputs' | 'note'>>): void;
+  (e: 'update', patch: Partial<Pick<PlanNode, 'name' | 'description' | 'owner' | 'lane' | 'inputs' | 'outputs' | 'note' | 'when'>>): void;
   /** Sign it off as ready, or take that back. */
   (e: 'ready', on: boolean): void;
   (e: 'remove'): void;
@@ -52,8 +52,10 @@ const emit = defineEmits<{
   (e: 'build'): void;
   /** Make the planned app, global or schedule for real (`type` for a global, `when` for a schedule). */
   (e: 'create', options: { type?: string; when?: string }): void;
-  /** Move a workflow or app that's in no project into this one. */
+  /** Add a workflow or app that isn't in this project to it (it stays in any others). */
   (e: 'adopt'): void;
+  /** Take a workflow or app out of this project (it stays in any others). */
+  (e: 'remove-from-project'): void;
   /** A planned schedule drawn to several workflows: one schedule each. */
   (e: 'split-schedule'): void;
   /** A real schedule was edited or switched on/off here: the map should reload. */
@@ -99,7 +101,7 @@ const linkTargets = computed(
     props.linkTargets ??
     props.map.nodes
       .filter((n) => !n.planned && !n.planId && linkableKinds(props.node.kind).includes(n.kind))
-      .map((n) => ({ key: n.key, name: n.name, project: n.project?.name ?? null, linked: false }))
+      .map((n) => ({ key: n.key, name: n.name, projects: n.projects.map((p) => p.name), linked: false }))
       .sort((a, b) => a.name.localeCompare(b.name))
 );
 
@@ -147,8 +149,24 @@ const GLOBAL_TYPES = ['string', 'number', 'boolean', 'object', 'array'];
 const globalType = ref('string');
 const globalNameOk = computed(() => /^[a-zA-Z0-9][a-zA-Z0-9_]*$/.test(props.node.name));
 
+/** A planned schedule's time: saved with the plan, and what Create uses once there's a workflow. */
 const when = ref('');
-/** The workflow a planned schedule starts: from its line. */
+watch(
+  () => [props.node.key, props.planNode?.when] as const,
+  ([, saved]) => (when.value = saved ?? ''),
+  { immediate: true }
+);
+function commitWhen() {
+  const value = when.value.trim();
+  if (value !== (props.planNode?.when ?? '')) emit('update', { when: value || undefined });
+}
+function createSchedule() {
+  const value = when.value.trim();
+  if (!value) return;
+  commitWhen();
+  emit('create', { when: value });
+}
+
 /** A schedule starts one workflow, so more than one line from a planned one needs splitting. */
 const scheduleTargets = computed(() =>
   props.map.edges.filter((e) => e.from === props.node.key && e.kind === 'triggers').length
@@ -179,10 +197,14 @@ const scheduleTarget = computed(() => {
           <template v-else>{{ node.kind === 'global' && !node.planned ? `_global.${node.name}` : node.name }}</template>
         </h3>
         <p v-if="node.external" class="text-xs text-muted-foreground">
-          {{ node.project ? t('projectMap.details.fromProject', { name: node.project.name }) : t('projectMap.details.noProject') }}
+          {{
+            node.projects.length
+              ? t('projectMap.details.fromProject', { name: node.projects.map((p) => p.name).join(', ') })
+              : t('projectMap.details.noProject')
+          }}
         </p>
-        <!-- One in no project can join this one; one owned by another project stays there. -->
-        <template v-if="editable && node.external && !node.project && (node.kind === 'workflow' || node.kind === 'helper' || node.kind === 'app')">
+        <!-- Anything this project uses can join it too; it stays in the projects it's in. -->
+        <template v-if="editable && node.external && (isWorkflow || node.kind === 'app')">
           <p class="mt-1 text-xs text-muted-foreground">{{ t('projectMap.details.adoptHint') }}</p>
           <Button size="sm" variant="outline" class="mt-2" @click="emit('adopt')">{{ t('projectMap.details.adopt') }}</Button>
         </template>
@@ -227,7 +249,7 @@ const scheduleTarget = computed(() => {
     </template>
 
     <!-- Status: worked out from facts; only Ready is given by a person -->
-    <div v-if="!node.external" class="flex flex-col gap-2 rounded-lg border p-3">
+    <div v-if="!node.external || node.planId" class="flex flex-col gap-2 rounded-lg border p-3">
       <div class="flex items-center justify-between gap-2">
         <span class="text-xs font-semibold">{{ t('projectMap.details.status') }}</span>
         <span class="rounded-full px-2 py-0.5 text-xs font-semibold" :class="STATUS_BADGE[node.status]">
@@ -273,8 +295,8 @@ const scheduleTarget = computed(() => {
       />
     </label>
 
-    <!-- Notes every node can have on its project's map -->
-    <div v-if="editable && !node.external" class="grid grid-cols-1 gap-3">
+    <!-- Notes every node can have on its project's map: its own, and anything linked from a card -->
+    <div v-if="editable && (!node.external || node.planId)" class="grid grid-cols-1 gap-3">
       <label class="flex flex-col gap-1.5 text-xs font-semibold">
         {{ t('projectMap.details.owner') }}
         <Input
@@ -394,18 +416,25 @@ const scheduleTarget = computed(() => {
           </p>
           <Button size="sm" variant="outline" @click="emit('split-schedule')">{{ t('projectMap.schedule.split') }}</Button>
         </template>
-        <p v-else-if="!scheduleTarget" class="text-xs text-muted-foreground">{{ t('projectMap.details.scheduleNeedsLine') }}</p>
-        <p v-else-if="scheduleTarget.planned" class="text-xs text-muted-foreground">
-          {{ t('projectMap.details.scheduleTargetPlanned', { name: scheduleTarget.name }) }}
-        </p>
-        <form v-else class="flex flex-col gap-2" @submit.prevent="when.trim() && emit('create', { when: when.trim() })">
+        <!-- Its time is part of the idea: written down any time, used when it's made. -->
+        <form class="flex flex-col gap-2" @submit.prevent="scheduleTarget && !scheduleTarget.planned ? createSchedule() : commitWhen()">
           <label class="flex flex-col gap-1.5 text-xs font-semibold">
-            {{ t('projectMap.details.scheduleWhen', { name: scheduleTarget.name }) }}
-            <Input v-model="when" :placeholder="t('projectMap.details.scheduleWhenPlaceholder')" />
+            {{
+              scheduleTarget && scheduleTargets === 1
+                ? t('projectMap.details.scheduleWhen', { name: scheduleTarget.name })
+                : t('projectMap.details.scheduleWhenAny')
+            }}
+            <Input v-model="when" :placeholder="t('projectMap.details.scheduleWhenPlaceholder')" @change="commitWhen" />
           </label>
-          <Button type="submit" :disabled="creating || !when.trim()">
-            <Loader2 v-if="creating" class="size-4 animate-spin" /> {{ t('projectMap.details.createSchedule') }}
-          </Button>
+          <template v-if="scheduleTargets <= 1">
+            <p v-if="!scheduleTarget" class="text-xs text-muted-foreground">{{ t('projectMap.details.scheduleNeedsLine') }}</p>
+            <p v-else-if="scheduleTarget.planned" class="text-xs text-muted-foreground">
+              {{ t('projectMap.details.scheduleTargetPlanned', { name: scheduleTarget.name }) }}
+            </p>
+            <Button v-else type="submit" :disabled="creating || !when.trim()">
+              <Loader2 v-if="creating" class="size-4 animate-spin" /> {{ t('projectMap.details.createSchedule') }}
+            </Button>
+          </template>
         </form>
       </template>
       <!-- Nothing to link to: no section, rather than a dropdown that can't open. -->
@@ -417,7 +446,7 @@ const scheduleTarget = computed(() => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem v-for="n in linkTargets" :key="n.key" :value="n.key" :disabled="n.linked">
-              {{ n.name }}<template v-if="n.project"> · {{ n.project }}</template>
+              {{ n.name }}<template v-if="n.projects.length"> · {{ n.projects.join(', ') }}</template>
               <span v-if="n.linked" class="ml-1 text-muted-foreground">· {{ t('projectMap.details.linkTaken') }}</span>
             </SelectItem>
           </SelectContent>
@@ -434,6 +463,15 @@ const scheduleTarget = computed(() => {
       </Button>
       <Button v-if="editable && node.planId" variant="ghost" size="sm" @click="emit('unlink')">
         <Link2Off class="size-3.5" /> {{ t('projectMap.details.unlink') }}
+      </Button>
+      <Button
+        v-if="editable && !node.external && (isWorkflow || node.kind === 'app')"
+        variant="ghost"
+        size="sm"
+        class="text-destructive hover:text-destructive"
+        @click="emit('remove-from-project')"
+      >
+        <FolderMinus class="size-3.5" /> {{ t('projectMap.details.removeFromProject') }}
       </Button>
     </div>
   </aside>

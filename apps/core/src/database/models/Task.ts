@@ -10,7 +10,6 @@ export class Task extends Model {
   platform?: 'windows' | 'linux' | 'macos';
   metadata?: Record<string, any>;
   source?: string;
-  project_id?: number | null;
   created_at!: Date;
   updated_at!: Date;
 
@@ -36,7 +35,6 @@ export class Task extends Model {
         platform: { type: ['string', 'null'], enum: ['windows', 'linux', 'macos', null] },
         metadata: { type: ['object', 'null'] },
         source: { type: ['string', 'null'] },
-        project_id: { type: ['integer', 'null'] },
         created_at: { type: 'string', format: 'date-time' },
         updated_at: { type: 'string', format: 'date-time' },
       },

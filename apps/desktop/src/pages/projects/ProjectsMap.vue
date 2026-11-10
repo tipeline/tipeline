@@ -55,10 +55,16 @@ const merged = computed(() => {
     Object.assign(meta, plan.meta);
     nodes.push(...plan.nodes.filter((n) => n.link));
   }
-  return mergeMap(live.value, { version: 2, nodes, edges: [], positions: {}, meta, lanes: [], ignored: [], notes: [] });
+  const map = mergeMap(live.value, { version: 2, nodes, edges: [], positions: {}, meta, lanes: [], ignored: [], notes: [] });
+  // A workflow the viewer may not see comes without a name.
+  for (const n of map.nodes) if (n.hidden) n.name = t('projectMap.node.hidden');
+  return map;
 });
 
-/** A node's box: its project, unless it's a global/schedule or used from several projects. */
+/**
+ * A node's box: its project when it's in exactly one. One in several projects, or a
+ * global/schedule used from several, goes in the shared box.
+ */
 const groupOf = computed(() => {
   const byKey = new Map(merged.value.nodes.map((n) => [n.key, n]));
   const projectsTouching = new Map<string, Set<string>>();
@@ -67,14 +73,17 @@ const groupOf = computed(() => {
       [e.from, e.to],
       [e.to, e.from],
     ]) {
-      const other = byKey.get(b)?.project?.identifier;
-      if (!other) continue;
-      projectsTouching.set(a, (projectsTouching.get(a) ?? new Set()).add(other));
+      const others = byKey.get(b)?.projects ?? [];
+      if (!others.length) continue;
+      const set = projectsTouching.get(a) ?? new Set<string>();
+      for (const p of others) set.add(p.identifier);
+      projectsTouching.set(a, set);
     }
   }
   const out = new Map<string, string | null>();
   for (const n of merged.value.nodes) {
-    if (n.project) out.set(n.key, n.project.identifier);
+    if (n.projects.length === 1) out.set(n.key, n.projects[0].identifier);
+    else if (n.projects.length > 1) out.set(n.key, null);
     else {
       // A global or schedule used by one project only goes in that project's box.
       const touching = projectsTouching.get(n.key);
@@ -87,8 +96,8 @@ const groupOf = computed(() => {
 const groups = computed(() => {
   const seen = new Map<string, { id: string; name: string; color: string | null }>();
   for (const n of merged.value.nodes) {
-    if (n.project && !seen.has(n.project.identifier)) {
-      seen.set(n.project.identifier, { id: n.project.identifier, name: n.project.name, color: n.project.color });
+    for (const p of n.projects) {
+      if (!seen.has(p.identifier)) seen.set(p.identifier, { id: p.identifier, name: p.name, color: p.color });
     }
   }
   return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));

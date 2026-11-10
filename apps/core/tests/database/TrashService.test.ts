@@ -23,7 +23,7 @@ beforeAll(async () => {
 afterAll(() => knex.destroy());
 
 beforeEach(async () => {
-  for (const table of ['trash_item', 'task_revision', 'schedule', 'pipeline', 'task_tag', 'tag', 'task_hub_link', 'app_hub_link', 'task', 'app', 'project', 'hub']) {
+  for (const table of ['trash_item', 'task_revision', 'schedule', 'pipeline', 'task_tag', 'tag', 'task_hub_link', 'app_hub_link', 'project_task', 'project_app', 'task', 'app', 'project', 'hub']) {
     await knex(table).del();
   }
 });
@@ -37,13 +37,17 @@ const source = (message: string) =>
 async function workflowWithEverything() {
   await knex('hub').insert({ id: 'hub-1', name: 'Hub', type: 'local_folder', target: '/tmp/hub' });
   const [projectId] = await knex('project').insert({ identifier: 'proj-1', name: 'Ops' });
+  const [salesId] = await knex('project').insert({ identifier: 'proj-2', name: 'Sales' });
   const task = await TaskService.install({
     name: 'Flow',
     source: source('first'),
     tags: ['Reports', 'daily'],
     metadata: { image: 'assets/tasks/flow.png' },
   });
-  await knex('task').where({ id: task.id }).update({ project_id: projectId });
+  await knex('project_task').insert([
+    { project_id: projectId, task_id: task.id },
+    { project_id: salesId, task_id: task.id },
+  ]);
   await TaskService.updateSource(task.identifier, source('second'));
   await knex('task_hub_link').insert({ task_id: task.id, hub_id: 'hub-1', hub_task_identifier: 'hub-flow', hub_version: '1.0.0' });
   await knex('schedule').insert({ identifier: 'sch-1', task_id: task.id, cron: '0 9 * * *', enabled: true, variables: '{}' });
@@ -57,6 +61,7 @@ describe('TrashService', () => {
     await TrashService.trash('task', task.identifier);
 
     expect(await TaskService.getByIdentifier(task.identifier)).toBeUndefined();
+    expect(await knex('project_task').count('* as n').first()).toMatchObject({ n: 0 });
     expect(await knex('schedule').count('* as n').first()).toMatchObject({ n: 0 });
     expect(await knex('pipeline').count('* as n').first()).toMatchObject({ n: 0 });
 
@@ -66,20 +71,21 @@ describe('TrashService', () => {
       identifier: task.identifier,
       name: 'Flow',
       image: 'assets/tasks/flow.png',
-      projectName: 'Ops',
+      projectNames: ['Ops', 'Sales'],
       schedules: 1,
       versions: 2,
     });
     expect(Date.parse(item.expiresAt) - Date.parse(item.deletedAt)).toBe(TRASH_KEEP_DAYS * 86400000);
   });
 
-  it('restores a workflow with its identifier, project, tags, hub link and versions; schedules off; runs gone', async () => {
+  it('restores a workflow with its identifier, projects, tags, hub link and versions; schedules off; runs gone', async () => {
     const task = await workflowWithEverything();
     const id = await TrashService.trash('task', task.identifier);
     expect(await TrashService.restore(id)).toMatchObject({ kind: 'task', identifier: task.identifier });
 
     const restored = await TaskService.getByIdentifier(task.identifier);
-    expect(restored).toMatchObject({ name: 'Flow', project_identifier: 'proj-1', hub_id: 'hub-1', hub_version: '1.0.0' });
+    expect(restored).toMatchObject({ name: 'Flow', hub_id: 'hub-1', hub_version: '1.0.0' });
+    expect(restored.projects.map((p: any) => p.identifier)).toEqual(['proj-1', 'proj-2']);
     expect(restored.tags.sort()).toEqual(['daily', 'reports']);
     expect(restored.metadata).toMatchObject({ image: 'assets/tasks/flow.png' });
     expect(JSON.parse(restored.source).pipeline.actions[0].params.message).toBe('second');
@@ -112,7 +118,7 @@ describe('TrashService', () => {
 
     await TrashService.restore(id);
     const restored = await TaskService.getByIdentifier(task.identifier);
-    expect(restored).toMatchObject({ project_id: null, source_type: 'local' });
+    expect(restored).toMatchObject({ projects: [], source_type: 'local' });
   });
 
   it("refuses to restore over a workflow that now has the same identifier", async () => {

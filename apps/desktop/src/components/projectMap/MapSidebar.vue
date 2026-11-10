@@ -290,7 +290,7 @@ function addLane() {
         >
           <span class="size-2 shrink-0 rounded-full" :class="DOT[n.status]" />
           <span class="min-w-0 truncate">{{ n.name }}</span>
-          <span v-if="n.project" class="ml-auto shrink-0 text-xs">{{ n.project.name }}</span>
+          <span v-if="n.projects.length" class="ml-auto shrink-0 truncate text-xs">{{ n.projects.map((p) => p.name).join(", ") }}</span>
         </button>
       </template>
       <p v-if="!groups.length && !borrowed.length" class="px-2 text-xs text-muted-foreground">

@@ -397,13 +397,16 @@
       "versionHint": "major.minor.patch — bump patch for fixes, minor for new features, major for breaking changes.",
       "versionHubManaged": "This workflow is installed from a hub — its version is managed by hub updates.",
       "platformPlaceholder": "Select a platform",
-      "project": "Project",
-      "projectPlaceholder": "No project",
+      "projectPlaceholder": "No projects",
       "tags": "Tags",
       "tagPlaceholder": "Add tag...",
       "fixErrorsBeforeSaving": "Please fix the highlighted fields before saving.",
       "image": "Image",
-      "imageHint": "PNG, JPEG or WebP, up to 2MB. Shown in the Hub and workflow lists."
+      "imageHint": "PNG, JPEG or WebP, up to 2MB. Shown in the Hub and workflow lists.",
+      "projects": "Projects",
+      "searchProjects": "Search projects…",
+      "noProjects": "No projects yet",
+      "removeProject": "Take it out of {name}"
     },
     "builder": {
       "actions": "Actions",
@@ -475,7 +478,6 @@
       "lastRun": "Last Run",
       "viewRunDetails": "View Run Details",
       "identifier": "Identifier",
-      "project": "Project",
       "version": "Version",
       "author": "Author",
       "actions": "Actions",
@@ -495,7 +497,8 @@
       "run": "Run",
       "about": "About",
       "lastRunAt": "Last run {when}",
-      "notRunYet": "Not run yet"
+      "notRunYet": "Not run yet",
+      "projects": "Projects | Project | Projects"
     },
     "columns": {
       "task": "Workflow",
@@ -1102,10 +1105,10 @@
     "deleteAlert": {
       "title": "Delete project?",
       "chooseDescription": "Choose what happens to its workflows and apps.",
-      "previewFailed": "Couldn't check its workflows and apps. Deleting keeps them, in no project.",
+      "previewFailed": "Couldn't check its workflows and apps. Deleting keeps them, only out of this project.",
       "emptyDescription": "The project has no workflows or apps.",
       "keep": "Keep its workflows and apps",
-      "keepHint": "They stay, in no project.",
+      "keepHint": "They stay, out of this project (and in any others they are in).",
       "deleteContents": "Also delete its workflows and apps",
       "deleteContentsHint": "The ones you tick move to the Trash, where you can restore them for 30 days.",
       "keptBecauseUsed": "One workflow is still used outside what you're deleting, so it's unticked. Tick it to delete it anyway. | {n} workflows are still used outside what you're deleting, so they're unticked. Tick one to delete it anyway.",
@@ -1120,7 +1123,8 @@
       "deleteWithItems": "Delete project and 1 item | Delete project and {n} items",
       "deleted": "Project deleted",
       "deletedWithItems": "Project deleted; 1 item moved to the Trash | Project deleted; {n} items moved to the Trash",
-      "failed": "Couldn't delete the project"
+      "failed": "Couldn't delete the project",
+      "alsoIn": "Also in {names}: kept, only taken out of this project"
     },
     "form": {
       "name": "Name",
@@ -1138,7 +1142,7 @@
       "back": "Back to projects"
     },
     "sharedTasks": "Used from other projects",
-    "sharedTasksHint": "Workflows this project's apps use that live in another project or in none. They stay where they are.",
+    "sharedTasksHint": "Workflows this project's apps use that aren't in it. Add one to make it part of this project too; it stays in the projects it's in.",
     "usedByApps": "Used by {apps}",
     "noProject": "No project",
     "import": "Import",
@@ -1169,7 +1173,8 @@
     "instructions": "Assistant instructions",
     "instructionsHint": "The assistant follows these when you ask it from this project.",
     "openMap": "Project map",
-    "moreActions": "More actions"
+    "moreActions": "More actions",
+    "addToThisProject": "Add to this project"
   },
   "variable": {
     "title": "Global Variables",
@@ -2556,7 +2561,9 @@
     "stepOver": "Step over",
     "stepOverHint": "Run this step to its end (a whole sub-workflow, loop or branch), then pause again",
     "stepOut": "Step out",
-    "stepOutHint": "Run the rest of this sub-workflow, then pause in the workflow that called it"
+    "stepOutHint": "Run the rest of this sub-workflow, then pause in the workflow that called it",
+    "inProjects": "In {count} projects",
+    "inProjectsHint": "In {names}. Saving changes it in every one of them."
   },
   "debugFooter": {
     "log": "Log",
@@ -3056,7 +3063,9 @@
       "differences": "{count} difference | {count} differences",
       "missingGlobal": "Doesn't exist",
       "noProject": "No project",
-      "dependency": "Not on the plan: shown because it's connected to something that is"
+      "dependency": "Not on the plan: shown because it's connected to something that is",
+      "hidden": "Hidden workflow",
+      "hiddenHint": "You don't have access"
     },
     "connectFrom": "Draw a line from {name}",
     "connectHint": "Drag from a node's dot to another node to connect them",
@@ -3100,10 +3109,10 @@
     },
     "details": {
       "planned": "Planned {kind}",
-      "fromProject": "From the project {name}",
+      "fromProject": "In {name}",
       "noProject": "In no project",
       "adopt": "Add to this project",
-      "adoptHint": "It's in no project. Adding it here gives it a status on this map.",
+      "adoptHint": "It isn't in this project. Adding it here gives it a status on this map; it stays in the projects it's in.",
       "adoptFailed": "Couldn't add it to the project",
       "missingGlobal": "Workflows use this global, but it doesn't exist. Create it in Variables.",
       "linkMissing": "This was linked to something that no longer exists.",
@@ -3143,10 +3152,14 @@
       "scheduleNeedsLine": "Connect this schedule to the workflow it should start (drag from its dot to the workflow), then create it here.",
       "scheduleTargetPlanned": "{name} is still planned. Build it first, then create the schedule.",
       "scheduleWhen": "When should it start {name}?",
+      "scheduleWhenAny": "When should it run?",
       "scheduleWhenPlaceholder": "e.g. every weekday at 8am",
       "lastChange": "Last change",
       "lastSuccess": "Last successful run",
-      "never": "never"
+      "never": "never",
+      "removeFromProject": "Remove from project",
+      "removeFromProjectFailed": "Couldn't take it out of the project",
+      "hidden": "A workflow you don't have access to. Ask its owner, or an admin, to share it, or for a copy of your own."
     },
     "connections": {
       "calls": {
@@ -3323,7 +3336,8 @@
       "scheduleOff": "Switched off: it won't start anything.",
       "scheduleUntested": "On, but the workflow it starts isn't tested yet.",
       "scheduleTested": "On, and the workflow it starts is tested.",
-      "signedOff": "Tested and signed off as ready."
+      "signedOff": "Tested and signed off as ready.",
+      "hidden": "You don't have access to this workflow."
     },
     "ready": {
       "mark": "Mark ready",
@@ -3357,7 +3371,7 @@
         "apps": "Apps",
         "globals": "Globals",
         "schedules": "Schedules",
-        "borrowed": "From other projects"
+        "borrowed": "Used, not in this project"
       },
       "nothing": "Nothing matches.",
       "differences": "{count} difference | {count} differences",
@@ -3390,6 +3404,12 @@
       "tooMany": "This schedule is drawn to {count} workflows, but a schedule starts only one. Give each workflow its own schedule first.",
       "split": "One schedule per workflow"
     },
-    "copyName": "{name} (copy)"
+    "copyName": "{name} (copy)",
+    "removeFromProject": {
+      "title": "Take \"{name}\" out of this project?",
+      "description": "It leaves this map. The workflow itself is kept, and stays in any other projects it's in.",
+      "descriptionCard": "Its card leaves the map too. The workflow itself is kept, and stays in any other projects it's in.",
+      "confirm": "Remove from project"
+    }
   }
 }
