@@ -1,10 +1,21 @@
 import { computed } from 'vue';
 import { useQuery } from '@/composables/useQuery';
 import { SEND } from '@/ipc-channels';
+import type { ProjectTag } from '@/utils/projectAssign';
+import type { TaskItem } from '@/config/tables/TasksList';
 
 export type LiveItemType = 'task' | 'app' | 'project';
 
-type LiveItem = { identifier: string; name: string; image?: string | null };
+type LiveItem = {
+  identifier: string;
+  name: string;
+  image?: string | null;
+  projects?: ProjectTag[] | null;
+  last_run_status?: TaskItem['last_run_status'];
+};
+
+/** What Home shows next to a starred or recent entry: its projects and, for a workflow, its last run. */
+export type LiveDetails = { projects: ProjectTag[]; lastRunStatus: TaskItem['last_run_status'] };
 
 /**
  * The dashboard's recent and starred lists live in localStorage and only learn about what
@@ -31,15 +42,28 @@ export function useLiveItems() {
   // Wait for the lists, so a deleted card doesn't flash in and vanish.
   const loaded = computed(() => Object.values(lists).every((q) => !q.isLoading.value));
 
-  /** The entries that still exist, with their current name and image (they may have been renamed). */
+  /**
+   * The entries that still exist, with their current name and image (they may have been renamed),
+   * plus their projects and last run when the lists know them.
+   */
   function keepLive<T extends { type: LiveItemType; identifier: string; name: string; image?: string | null }>(
     entries: T[]
-  ): T[] {
-    return entries.flatMap((item) => {
+  ): (T & LiveDetails)[] {
+    return entries.flatMap((item): (T & LiveDetails)[] => {
       const known = live.value.get(item.type);
-      if (!known) return [item];
+      if (!known) return [{ ...item, projects: [], lastRunStatus: null }];
       const current = known.get(item.identifier);
-      return current ? [{ ...item, name: current.name, image: current.image ?? item.image }] : [];
+      return current
+        ? [
+            {
+              ...item,
+              name: current.name,
+              image: current.image ?? item.image,
+              projects: current.projects ?? [],
+              lastRunStatus: current.last_run_status ?? null,
+            },
+          ]
+        : [];
     });
   }
 

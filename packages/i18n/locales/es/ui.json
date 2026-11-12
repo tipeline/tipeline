@@ -104,34 +104,10 @@
   },
   "dashboard": {
     "title": "Inicio",
-    "simpleView": "Vista simple",
-    "simple": {
-      "title": "¿Qué quieres automatizar?",
-      "description": "Tipeline ejecuta pequeñas automatizaciones en tu computadora: ordenar archivos, enviar correos, llenar formularios web, obtener informes.",
-      "label": "Describe lo que quieres automatizar",
-      "placeholder": "Cada lunes a las 8:00, descarga el informe de ventas y envíalo por correo a mi equipo",
-      "ask": "Preguntar al Asistente",
-      "ideas": {
-        "photos": "Renombrar fotos por la fecha en que se tomaron",
-        "attachments": "Guardar los adjuntos de correo en una carpeta",
-        "uptime": "Avisarme cuando un sitio web se caiga",
-        "pdf": "Extraer el texto de PDFs escaneados"
-      },
-      "startYourself": "o empieza por tu cuenta",
-      "newWorkflow": {
-        "title": "Nuevo flujo de trabajo",
-        "description": "Agrega pasos uno por uno, como “buscar PDFs nuevos” y luego “enviarlos por correo”."
-      },
-      "hub": {
-        "title": "Copiar del Hub",
-        "description": "Flujos de trabajo y aplicaciones listos para ejecutar y luego cambiar."
-      },
-      "newApp": {
-        "title": "Nueva aplicación",
-        "description": "Una pantalla con botones y formularios que ejecuta tus flujos de trabajo."
-      },
-      "knowYourWay": "¿Ya conoces Tipeline?",
-      "showFull": "Mostrar el panel completo"
+    "greeting": {
+      "morning": "Buenos días",
+      "afternoon": "Buenas tardes",
+      "evening": "Buenas noches"
     },
     "quickActions": {
       "newTask": "Nuevo Flujo de Trabajo",
@@ -162,12 +138,23 @@
       "workflows": "Flujos",
       "app": "Aplicación",
       "workflow": "Flujo de trabajo",
-      "showAll": "Ver todos ({count})",
-      "showLess": "Ver menos"
+      "add": "Añadir a destacados",
+      "search": "Buscar flujos y aplicaciones",
+      "nothingToAdd": "No queda nada por destacar."
     },
     "recentItems": {
-      "title": "Abierto Recientemente",
-      "empty": "Los flujos de trabajo, aplicaciones y proyectos que abras aparecen aquí."
+      "title": "Abierto recientemente",
+      "empty": "Los flujos de trabajo, aplicaciones y proyectos que abras aparecen aquí.",
+      "emptyFiltered": "No has abierto nada de este tipo últimamente.",
+      "lastRun": "Última ejecución: {status}",
+      "name": "Nombre",
+      "opened": "Abierto",
+      "groups": {
+        "today": "Hoy",
+        "yesterday": "Ayer",
+        "week": "Antes esta semana",
+        "older": "Más antiguo"
+      }
     },
     "inbox": {
       "title": "Bandeja",
@@ -182,14 +169,20 @@
       "viewAll": "Ver Todo",
       "dismiss": "Descartar hasta que vuelva a fallar"
     },
-    "browse": {
-      "title": "Explorar",
-      "tags": "Etiquetas",
-      "projects": "Proyectos",
-      "viewAll": "Ver Todo",
-      "noTags": "Aún no hay etiquetas. Agrega etiquetas a tus flujos de trabajo para explorarlos aquí.",
+    "projects": {
+      "title": "Proyectos",
+      "viewAll": "Ver todos",
+      "ok": "Todo bien",
+      "failed": "{n} fallida | {n} fallidas",
+      "waiting": "{n} esperando | {n} esperando",
+      "running": "{n} en curso | {n} en curso",
       "workflowCount": "{n} flujo | {n} flujos",
       "appCount": "{n} aplicación | {n} aplicaciones"
+    },
+    "ask": {
+      "label": "Pregunta al Asistente",
+      "placeholder": "Pide al Asistente que cree o ejecute algo…",
+      "send": "Preguntar"
     }
   },
   "runs": {
@@ -1911,15 +1904,13 @@
     "unavailableAtStartup": "Tu espacio de trabajo remoto no estaba disponible al iniciar — se cambió a local."
   },
   "recentActivity": {
-    "title": "Ejecuciones Recientes",
-    "description": "Tus últimas ejecuciones de flujos de trabajo.",
-    "viewAll": "Ver Todo",
+    "title": "Ejecuciones recientes",
+    "viewAll": "Ver todo",
+    "workflow": "Flujo de trabajo",
+    "ran": "Ejecutado",
     "loading": "Cargando ejecuciones...",
-    "filter": {
-      "all": "Todo",
-      "failed": "Fallidas",
-      "running": "En curso"
-    }
+    "now": "En curso",
+    "empty": "Aún no hay ejecuciones."
   },
   "loader": {
     "checkingCore": "Verificando el motor core",

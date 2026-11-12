@@ -104,34 +104,10 @@
   },
   "dashboard": {
     "title": "Home",
-    "simpleView": "Simple view",
-    "simple": {
-      "title": "What do you want to automate?",
-      "description": "Tipeline runs small automations on your computer: sorting files, sending emails, filling web forms, pulling reports.",
-      "label": "Describe what you want to automate",
-      "placeholder": "Every Monday at 8:00, download the sales report and email it to my team",
-      "ask": "Ask the Assistant",
-      "ideas": {
-        "photos": "Rename photos by the date they were taken",
-        "attachments": "Save email attachments to a folder",
-        "uptime": "Tell me when a website goes down",
-        "pdf": "Pull the text out of scanned PDFs"
-      },
-      "startYourself": "or start yourself",
-      "newWorkflow": {
-        "title": "New workflow",
-        "description": "Add steps one by one, like “find new PDFs” then “email them”."
-      },
-      "hub": {
-        "title": "Copy from the Hub",
-        "description": "Ready-made workflows and apps you can run, then change."
-      },
-      "newApp": {
-        "title": "New app",
-        "description": "A screen with buttons and forms that runs your workflows."
-      },
-      "knowYourWay": "Know your way around?",
-      "showFull": "Show the full dashboard"
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening"
     },
     "quickActions": {
       "newTask": "New Workflow",
@@ -162,12 +138,23 @@
       "workflows": "Workflows",
       "app": "App",
       "workflow": "Workflow",
-      "showAll": "Show all ({count})",
-      "showLess": "Show less"
+      "add": "Add to Starred",
+      "search": "Search workflows and apps",
+      "nothingToAdd": "Nothing left to star."
     },
     "recentItems": {
-      "title": "Recently Opened",
-      "empty": "Workflows, apps and projects you open show up here."
+      "title": "Recently opened",
+      "empty": "Workflows, apps and projects you open show up here.",
+      "emptyFiltered": "Nothing of this kind opened lately.",
+      "lastRun": "Last run: {status}",
+      "name": "Name",
+      "opened": "Opened",
+      "groups": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "week": "Earlier this week",
+        "older": "Older"
+      }
     },
     "inbox": {
       "title": "Inbox",
@@ -182,14 +169,20 @@
       "viewAll": "View All",
       "dismiss": "Dismiss until it fails again"
     },
-    "browse": {
-      "title": "Browse",
-      "tags": "Tags",
-      "projects": "Projects",
-      "viewAll": "View All",
-      "noTags": "No tags yet. Add tags to your workflows to browse them here.",
+    "projects": {
+      "title": "Projects",
+      "viewAll": "View all",
+      "ok": "All good",
+      "failed": "{n} failed | {n} failed",
+      "waiting": "{n} waiting | {n} waiting",
+      "running": "{n} running | {n} running",
       "workflowCount": "{n} workflow | {n} workflows",
       "appCount": "{n} app | {n} apps"
+    },
+    "ask": {
+      "label": "Ask the Assistant",
+      "placeholder": "Ask the Assistant to build or run something…",
+      "send": "Ask"
     }
   },
   "runs": {
@@ -1911,15 +1904,13 @@
     "unavailableAtStartup": "Your remote workspace was unreachable at startup — switched to local."
   },
   "recentActivity": {
-    "title": "Recent Runs",
-    "description": "Your latest workflow runs.",
-    "viewAll": "View All",
+    "title": "Recent runs",
+    "viewAll": "View all",
+    "workflow": "Workflow",
+    "ran": "Ran",
     "loading": "Loading runs...",
-    "filter": {
-      "all": "All",
-      "failed": "Failed",
-      "running": "Running"
-    }
+    "now": "Running now",
+    "empty": "No runs yet."
   },
   "loader": {
     "checkingCore": "Checking core engine",

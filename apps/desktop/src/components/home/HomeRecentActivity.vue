@@ -1,117 +1,59 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { generateIdentifier } from '@tipeline/utils';
-import DataTable from '@/components/DataTable.vue';
-import Card from '@/components/Card.vue';
-import { Button } from '@/components/ui/button';
-import type { ColumnDef } from '@tanstack/vue-table';
 import { useRouter } from 'vue-router';
+import { Workflow } from 'lucide-vue-next';
+import { generateIdentifier } from '@tipeline/utils';
 import { useQuery } from '@/composables/useQuery';
 import { useStreamListener } from '@/composables/useStreamListener';
-import { createColumns, type Item } from '@/config/tables/HomeRecentActivity';
+import type { Item } from '@/config/tables/HomeRecentActivity';
 import { mergeRunEvents } from '@/utils/mergeRunEvents';
 import { SEND } from '@/ipc-channels';
-import { useConnectionStore } from '@/store/connectionStore';
-import HomeFilter from '@/components/home/HomeFilter.vue';
-import { useRememberedChoice } from '@/composables/useRememberedChoice';
+import { HOME_HEADING, HOME_HEADING_ROW, HOME_LINK } from '@/config/homeStyles';
+import { ENTITY_COLORS } from '@/config/entityColors';
+import { dayGroupLabel, groupByDay, type DayGroup } from '@/utils/dayGroups';
 
-// `filterable` adds an All / Failed / Running switch (the dashboard's Recent runs card).
-const props = withDefaults(defineProps<{ limit?: number; filterable?: boolean }>(), { limit: 50 });
+// Home's Recent runs: the same table as Recently opened (grouped by day, sticky header): the
+// workflow with how the run went under it, and when it ran. It fills its card and scrolls.
+const props = withDefaults(defineProps<{ limit?: number }>(), { limit: 30 });
 
-const router = useRouter();
 const { t } = useI18n();
-const connectionStore = useConnectionStore();
+const router = useRouter();
 
-interface AuditEntry {
-  pipeline_id: string | null;
-  triggered_by_type: 'user' | 'webhook' | 'schedule';
-  triggered_by_name: string | null;
-}
-const auditMap = ref<Map<string, AuditEntry>>(new Map());
-
-async function loadAudit() {
-  const conn = connectionStore.activeConnection;
-  if (!conn) return;
-  try {
-    const records: AuditEntry[] = await window.ipcRenderer.invoke(SEND.SERVER_PIPELINE_AUDIT_LIST, {
-      host: conn.host,
-      token: conn.token,
-      limit: 100,
-    });
-    auditMap.value = new Map(
-      records.filter((r) => r.pipeline_id).map((r) => [r.pipeline_id!, r])
-    );
-  } catch {
-    // Server unreachable — degrade gracefully
-  }
-}
-
-onMounted(() => {
-  if (connectionStore.isRemote) loadAudit();
-});
-
-watch(
-  () => connectionStore.isRemote,
-  (isRemote) => { if (isRemote) loadAudit(); }
-);
-
-// Half-width on the dashboard: the colored dot already shows the status, so the badge and
-// the trigger columns (server workspaces) stay on the Runs page.
-const compactColumns = ['status', 'status_badge', 'trigger_type', 'trigger_source'];
-
-const FILTERS = ['all', 'failed', 'running'] as const;
-const statusFilter = useRememberedChoice('runsFilter', FILTERS, 'all');
-const filterOptions = computed(() => [
-  { value: 'all' as const, label: t('recentActivity.filter.all') },
-  { value: 'failed' as const, label: t('recentActivity.filter.failed') },
-  { value: 'running' as const, label: t('recentActivity.filter.running') },
-]);
-const activeFilter = computed(() => (props.filterable ? statusFilter.value : 'all'));
-
-function viewAll() {
-  router.push(activeFilter.value === 'all' ? '/activity' : { path: '/activity', query: { status: activeFilter.value } });
-}
-
-// Pin the time column to the right edge, like the other two-column dashboard cards.
-const columns = computed<ColumnDef<Item>[]>(() =>
-  createColumns(t, router, connectionStore.isRemote).map((col) =>
-    'accessorKey' in col && col.accessorKey === 'finished_at'
-      ? { ...col, meta: { class: 'w-px whitespace-nowrap text-right' } }
-      : col
-  )
-);
-
-const {
-  data: pipelineData,
-  isLoading,
-  error,
-} = useQuery<Item[]>(SEND.PIPELINE_LIST, {});
+const { data: pipelineData, isLoading, error } = useQuery<Item[]>(SEND.PIPELINE_LIST, {});
 const { events } = useStreamListener();
 
-// Reload audit when a new pipeline run starts or finishes so triggered_by shows immediately
-watch(
-  () => events.value[events.value.length - 1],
-  (latest) => {
-    if (!latest || !connectionStore.isRemote) return;
-    if (latest.type === 'start' || latest.type === 'end' || latest.type === 'error') {
-      loadAudit();
-    }
-  }
-);
+const runs = computed<Item[]>(() => mergeRunEvents(pipelineData.value ?? [], events.value).slice(0, props.limit));
 
-const sortedPipelines = computed<Item[]>(() => {
-  const sorted = mergeRunEvents(pipelineData.value ?? [], events.value)
-    .filter((p) => activeFilter.value === 'all' || p.status === activeFilter.value)
-    .slice(0, props.limit);
+const statusDot: Record<Item['status'], string> = {
+  running: 'bg-blue-500',
+  completed: 'bg-emerald-500',
+  failed: 'bg-destructive',
+  pending: 'bg-muted-foreground/50',
+  paused: 'bg-amber-500',
+  canceled: 'bg-muted-foreground/50',
+};
 
-  if (!connectionStore.isRemote || auditMap.value.size === 0) return sorted;
-  return sorted.map((p) => {
-    const audit = auditMap.value.get(p.identifier);
-    if (!audit) return p;
-    return { ...p, triggered_by_type: audit.triggered_by_type, triggered_by_name: audit.triggered_by_name };
-  });
-});
+const ranAt = (run: Item) => new Date(run.finished_at ?? run.started_at);
+const groups = computed(() => groupByDay(runs.value, ranAt));
+
+function when(run: Item, group: DayGroup): string {
+  if (run.status === 'running') return t('recentActivity.now');
+  return dayGroupLabel(ranAt(run), group);
+}
+
+const statusInk: Record<Item['status'], string> = {
+  running: 'text-blue-700 dark:text-blue-300',
+  completed: 'text-muted-foreground',
+  failed: 'text-destructive',
+  pending: 'text-muted-foreground',
+  paused: 'text-amber-700 dark:text-amber-400',
+  canceled: 'text-muted-foreground',
+};
+
+function open(run: Item) {
+  if (run.task_identifier) router.push(`/tasks/${run.task_identifier}/pipelines/${run.identifier}`);
+}
 
 // A pipeline only appears above via the initial fetch or a live 'start'/'action'
 // event. A detached run (e.g. a `subtask.exec(async: true)` child) has no
@@ -147,42 +89,60 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <Card classContent="p-0" class="h-full">
-    <template #title>{{ t('recentActivity.title') }}</template>
-    <template #description>{{ t('recentActivity.description') }}</template>
-    <template #actions>
-      <HomeFilter v-if="filterable" v-model="statusFilter" :options="filterOptions" :label="t('recentActivity.title')" />
-      <Button variant="outline" size="sm" @click="viewAll">
-        {{ t('recentActivity.viewAll') }}
-      </Button>
-    </template>
+  <section class="flex flex-col gap-2 min-h-0" aria-labelledby="home-runs-title">
+    <div :class="HOME_HEADING_ROW">
+      <h2 id="home-runs-title" :class="HOME_HEADING">{{ t('recentActivity.title') }}</h2>
+      <button type="button" :class="HOME_LINK" @click="router.push('/activity')">{{ t('recentActivity.viewAll') }}</button>
+    </div>
 
-    <template #content>
-      <div
-        v-if="isLoading"
-        class="flex items-center justify-center py-8 text-muted-foreground text-sm"
-      >
-        {{ t('recentActivity.loading') }}
-      </div>
-
-      <div
-        v-else-if="error"
-        class="flex items-center justify-center py-8 text-destructive text-sm"
-      >
-        {{ error }}
-      </div>
-
-      <DataTable
-        v-else
-        :columns="columns"
-        :data="sortedPipelines"
-        :flat="true"
-        :compact="true"
-        :hide-header="true"
-        :animated="true"
-        :hidden-columns="compactColumns"
-        :filters="[]"
-      />
-    </template>
-  </Card>
+    <div class="flex-1 min-h-0 overflow-y-auto scroll-fade border border-border rounded-md bg-card">
+      <p v-if="isLoading" class="text-sm text-muted-foreground px-4 py-3 m-0">{{ t('recentActivity.loading') }}</p>
+      <p v-else-if="error" class="text-sm text-destructive px-4 py-3 m-0">{{ error }}</p>
+      <p v-else-if="!runs.length" class="text-sm text-muted-foreground px-4 py-3 m-0">{{ t('recentActivity.empty') }}</p>
+      <table v-else class="w-full border-separate border-spacing-0 text-sm">
+        <thead>
+          <tr class="text-xs text-muted-foreground">
+            <th class="sticky top-0 z-10 bg-card text-left font-medium px-4 py-2 border-b border-border">
+              {{ t('recentActivity.workflow') }}
+            </th>
+            <th class="sticky top-0 z-10 bg-card text-right font-medium px-4 py-2 border-b border-border w-px whitespace-nowrap">
+              {{ t('recentActivity.ran') }}
+            </th>
+          </tr>
+        </thead>
+        <tbody v-for="group in groups" :key="group.key">
+          <tr>
+            <th colspan="2" scope="colgroup" class="text-left px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {{ t(`dashboard.recentItems.groups.${group.key}`) }}
+            </th>
+          </tr>
+          <tr
+            v-for="run in group.rows"
+            :key="run.identifier"
+            class="hover:bg-muted/50 transition-colors cursor-pointer"
+            @click="open(run)"
+          >
+            <td class="px-4 py-1.5 max-w-0">
+              <button type="button" class="flex items-center gap-2.5 min-w-0 w-full text-left" @click.stop="open(run)">
+                <span class="relative flex items-center justify-center w-7 h-7 rounded-md shrink-0" :class="ENTITY_COLORS.workflow.tint">
+                  <Workflow class="w-3.5 h-3.5" />
+                  <span class="absolute -bottom-0.5 -right-0.5 flex w-2.5 h-2.5">
+                    <span v-if="run.status === 'running'" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                    <span class="relative inline-flex w-2.5 h-2.5 rounded-full ring-2 ring-card" :class="statusDot[run.status]" />
+                  </span>
+                </span>
+                <span class="min-w-0">
+                  <p class="text-sm font-medium truncate m-0">{{ run.task_name ?? run.task_identifier }}</p>
+                  <span class="block text-xs truncate" :class="statusInk[run.status]">{{ t(`taskHistory.${run.status}`) }}</span>
+                </span>
+              </button>
+            </td>
+            <td class="px-4 py-1.5 text-xs text-muted-foreground text-right whitespace-nowrap">
+              {{ when(run, group.key) }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 </template>

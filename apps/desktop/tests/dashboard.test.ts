@@ -18,14 +18,15 @@ import { mergeRunEvents } from '@/utils/mergeRunEvents';
 import { searchAll } from '@/utils/searchIndex';
 import HomeStarred from '@/components/home/HomeStarred.vue';
 import HomeRecentItems from '@/components/home/HomeRecentItems.vue';
+import HomeRecentActivity from '@/components/home/HomeRecentActivity.vue';
+import HomeAsk from '@/components/home/HomeAsk.vue';
 import HomeInbox from '@/components/home/HomeInbox.vue';
-import HomeBrowse from '@/components/home/HomeBrowse.vue';
-import HomeSimple from '@/components/home/HomeSimple.vue';
+import HomeProjects from '@/components/home/HomeProjects.vue';
 import HomeToday from '@/components/home/HomeToday.vue';
 import Dashboard from '@/pages/Dashboard.vue';
 import { useAgentStore } from '@/store/agentStore';
-import { useConnectionStore } from '@/store/connectionStore';
 import type { TaskItem } from '@/config/tables/TasksList';
+import { readableInk } from '@/utils/readableColor';
 import type { StreamEvent } from '@/store/stream';
 
 const keys = (items: { type: string; identifier: string }[]) => items.map((i) => `${i.type}:${i.identifier}`);
@@ -183,20 +184,16 @@ describe('HomeStarred', () => {
     expect(localStorage.getItem('tipeline:dashboard:starredFilter')).toBe('app');
   });
 
-  it('shows one row until asked for all', async () => {
-    lists[SEND.TASK_LIST] = Array.from({ length: 8 }, (_, i) => ({ identifier: `t${i}`, name: `W${i}` }));
+  it('lists every star, not just one row', async () => {
+    lists[SEND.TASK_LIST] = Array.from({ length: 10 }, (_, i) => ({ identifier: `t${i}`, name: `W${i}` }));
     const store = useStarredItemsStore();
-    for (let i = 0; i < 8; i++) store.star('task', `t${i}`, `W${i}`);
+    for (let i = 0; i < 10; i++) store.star('task', `t${i}`, `W${i}`);
 
     const wrapper = mount(HomeStarred, { global: { plugins: [i18n, makeRouter()] } });
     await flushPromises();
-    // No layout in happy-dom, so the row counts as 6 tiles wide.
-    expect(tileNames(wrapper)).toHaveLength(6);
-
-    await wrapper.findAll('button').find((b) => b.text() === 'Show all (8)')!.trigger('click');
-    expect(tileNames(wrapper)).toHaveLength(8);
-    await wrapper.findAll('button').find((b) => b.text() === 'Show less')!.trigger('click');
-    expect(tileNames(wrapper)).toHaveLength(6);
+    // The ten stars, then the Add to Starred tile.
+    expect(tileNames(wrapper)).toHaveLength(10);
+    expect(wrapper.text()).toContain('Add to Starred');
   });
 
   it('reorders by drag and drop', async () => {
@@ -215,6 +212,31 @@ describe('HomeStarred', () => {
   });
 });
 
+describe('HomeRecentActivity', () => {
+  it('shows runs in the same day-grouped table as Recently opened', async () => {
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - 24 * 3_600_000).toISOString();
+    lists[SEND.PIPELINE_LIST] = [
+      { identifier: 'r1', status: 'running', started_at: now.toISOString(), finished_at: null, task_name: 'Sync', task_identifier: 's' },
+      { identifier: 'r2', status: 'failed', started_at: yesterday, finished_at: yesterday, task_name: 'Billing', task_identifier: 'b' },
+    ];
+    const router = makeRouter();
+    const wrapper = mount(HomeRecentActivity, { global: { plugins: [i18n, router] } });
+    await flushPromises();
+
+    expect(wrapper.findAll('thead th').map((th) => th.text())).toEqual(['Workflow', 'Ran']);
+    const groups = wrapper.findAll('tbody th').map((th) => th.text());
+    expect(groups[0]).toBe('Today');
+    expect(wrapper.text()).toContain('Running now');
+    expect(wrapper.text()).toContain('Failed');
+
+    await wrapper.findAll('tbody tr').find((tr) => tr.text().includes('Billing'))!.trigger('click');
+    await flushPromises();
+    expect(router.currentRoute.value.path).toBe('/tasks/b/pipelines/r2');
+    wrapper.unmount();
+  });
+});
+
 describe('HomeRecentItems', () => {
   it('lists up to 20 items and lets workflows be starred from a row', async () => {
     lists[SEND.TASK_LIST] = Array.from({ length: 25 }, (_, i) => ({ identifier: `t${i}`, name: `W${i}` }));
@@ -228,66 +250,88 @@ describe('HomeRecentItems', () => {
     await wrapper.find('button[aria-label="Star to show it on Home"]').trigger('click');
     expect(keys(useStarredItemsStore().items)).toEqual(['task:t24']);
   });
-});
 
-describe('HomeBrowse', () => {
-  it('switches between tags and projects, and remembers the tab', async () => {
-    lists[SEND.PROJECT_LIST] = [{ identifier: 'p1', name: 'Billing', task_count: 1, app_count: 2 }];
-    const tasks = [{ identifier: 't', name: 'T', tags: ['finance'] }] as unknown as TaskItem[];
+  it('groups by the day they were opened, shows the project and last run, and filters by kind', async () => {
+    const billing = { identifier: 'p1', name: 'Billing', color: '#0f766e' };
+    lists[SEND.TASK_LIST] = [{ identifier: 't1', name: 'Send invoices', projects: [billing], last_run_status: 'failed' }];
+    lists[SEND.APP_LIST] = [{ identifier: 'a1', name: 'Invoice desk', projects: [] }];
+    const recent = useRecentItemsStore();
+    recent.markOpened('app', 'a1', 'Invoice desk');
+    recent.markOpened('task', 't1', 'Send invoices');
+    // Opened two days ago: moved back in time by hand.
+    const twoDaysAgo = new Date(Date.now() - 2 * 86_400_000);
+    recent.items[1].openedAt = twoDaysAgo.toISOString();
 
-    const wrapper = mount(HomeBrowse, { props: { tasks }, global: { plugins: [i18n, makeRouter()] } });
+    const wrapper = mount(HomeRecentItems, { global: { plugins: [i18n, makeRouter()] } });
     await flushPromises();
-    expect(wrapper.text()).toContain('finance');
-    expect(wrapper.text()).not.toContain('Billing');
+    const text = wrapper.text();
+    expect(text).toContain('Today');
+    expect(text).toMatch(/Yesterday|Earlier this week/);
+    expect(text).toContain('Billing');
+    expect(wrapper.find('[title="Last run: Failed"]').exists()).toBe(true);
 
-    await wrapper.findAll('[role="radio"]').find((b) => b.text() === 'Projects')!.trigger('click');
-    expect(wrapper.text()).toContain('Billing');
-    expect(wrapper.text()).toContain('1 workflow · 2 apps');
-
-    const again = mount(HomeBrowse, { props: { tasks }, global: { plugins: [i18n, makeRouter()] } });
-    await flushPromises();
-    expect(again.text()).toContain('Billing');
+    await wrapper.findAll('[role="radio"]').find((b) => b.text() === 'Apps')!.trigger('click');
+    expect(wrapper.findAll('button p.font-medium').map((p) => p.text())).toEqual(['Invoice desk']);
+    expect(localStorage.getItem('tipeline:dashboard:recentFilter')).toBe('app');
   });
 });
 
-describe('HomeSimple', () => {
-  const mountSimple = () => mount(HomeSimple, { global: { plugins: [i18n, makeRouter()] } });
+describe('HomeProjects', () => {
+  const inProject = (id: string, status: TaskItem['last_run_status']) =>
+    ({ identifier: `${id}-wf`, name: id, last_run_status: status, projects: [{ identifier: id, name: id, color: null }] }) as unknown as TaskItem;
 
-  it('fills the box from an idea and hands it to the Assistant on Enter', async () => {
-    const agent = useAgentStore();
-    const ask = vi.spyOn(agent, 'ask').mockResolvedValue(true);
-    const wrapper = mountSimple();
+  it('shows one tile per project, worst news first, recently opened projects first', async () => {
+    lists[SEND.PROJECT_LIST] = [
+      { identifier: 'big', name: 'Big project', color: '#1d4ed8', task_count: 9, app_count: 2 },
+      { identifier: 'quiet', name: 'Quiet one', color: '#fde68a', task_count: 1, app_count: 0 },
+      { identifier: 'fresh', name: 'Fresh', color: null, task_count: 0, app_count: 0 },
+    ];
+    useRecentItemsStore().markOpened('project', 'quiet', 'Quiet one');
+    const tasks = [inProject('big', 'failed'), inProject('big', 'running'), inProject('quiet', 'completed')];
+
+    const wrapper = mount(HomeProjects, { props: { tasks }, global: { plugins: [i18n, makeRouter()] } });
     await flushPromises();
 
-    await wrapper.findAll('button').find((b) => b.text() === 'Save email attachments to a folder')!.trigger('click');
-    const box = wrapper.find('textarea');
-    expect((box.element as HTMLTextAreaElement).value).toBe('Save email attachments to a folder');
-    expect(ask).not.toHaveBeenCalled(); // an idea only fills the box
-
-    await box.trigger('keydown', { key: 'Enter' });
-    await flushPromises();
-    expect(ask).toHaveBeenCalledWith('Save email attachments to a folder');
-    expect((box.element as HTMLTextAreaElement).value).toBe('');
+    const tiles = wrapper.findAll('button[data-project]');
+    expect(tiles.map((b) => b.find('.font-medium.truncate').text())).toEqual(['Quiet one', 'Big project', 'Fresh']);
+    expect(tiles[0].text()).toContain('All good');
+    expect(tiles[1].text()).toContain('1 failed'); // the failure wins over the running run
+    expect(tiles[1].text()).toContain('9 workflows · 2 apps');
+    expect(tiles[2].text()).not.toMatch(/All good|failed|running|waiting/); // nothing has run: no news
+    // The initials sit on the project's own color: dark ink on a light one, white on a dark one.
+    const badge = (i: number) => tiles[i].find('span').attributes('style');
+    expect(badge(0)).toContain('color: #0f172a');
+    expect(badge(1)).toContain('color: #ffffff');
   });
 
-  it('has no box on a remote workspace, where there is no Assistant sidebar', async () => {
-    useConnectionStore().activeId = 'server-1';
-    const wrapper = mountSimple();
+  it('counts approvals waiting in a project', async () => {
+    vi.mocked(invokeCore).mockResolvedValue([
+      { pipelineIdentifier: 'p-1', taskIdentifier: 'hr-wf', workflowName: 'Onboard', title: 'Laptop?', details: null, requestedAt: '' },
+    ]);
+    await useApprovalsStore().refresh();
+    lists[SEND.PROJECT_LIST] = [{ identifier: 'hr', name: 'HR', color: '#be185d', task_count: 1, app_count: 0 }];
+
+    const wrapper = mount(HomeProjects, {
+      props: { tasks: [inProject('hr', 'paused')] },
+      global: { plugins: [i18n, makeRouter()] },
+    });
     await flushPromises();
-    expect(wrapper.find('textarea').exists()).toBe(false);
-    expect(wrapper.text()).toContain('Copy from the Hub');
+    expect(wrapper.text()).toContain('1 waiting');
   });
 
-  it('shows the last few opened items, or says where they will show up', async () => {
-    const empty = mountSimple();
+  it('says so when there are no projects', async () => {
+    const wrapper = mount(HomeProjects, { props: { tasks: [] }, global: { plugins: [i18n, makeRouter()] } });
     await flushPromises();
-    expect(empty.text()).toContain('Workflows, apps and projects you open show up here.');
+    expect(wrapper.text()).toContain('No projects yet.');
+  });
+});
 
-    lists[SEND.TASK_LIST] = Array.from({ length: 6 }, (_, i) => ({ identifier: `t${i}`, name: `W${i}` }));
-    for (let i = 0; i < 6; i++) useRecentItemsStore().markOpened('task', `t${i}`, `W${i}`);
-    const wrapper = mountSimple();
-    await flushPromises();
-    expect(wrapper.findAll('button p.font-medium').map((p) => p.text())).toEqual(['W5', 'W4', 'W3', 'W2']);
+describe('readableInk', () => {
+  it('picks white or dark text for a project color', () => {
+    expect(readableInk('#1d4ed8')).toBe('#ffffff');
+    expect(readableInk('#fde68a')).toBe('#0f172a');
+    expect(readableInk('#fff')).toBe('#0f172a');
+    expect(readableInk('tomato')).toBe('#ffffff'); // unknown formats keep white
   });
 });
 
@@ -355,36 +399,43 @@ describe('HomeToday', () => {
     const wrapper = mount(HomeToday, { props: { tasks: [] }, global: { plugins: [i18n, makeRouter()] } });
     await flushPromises();
 
-    expect(wrapper.text()).toContain('1approval to review');
-    expect(wrapper.text()).toContain('in about 2 hours');
+    expect(wrapper.text()).toContain('Waiting for you1approval to review');
+    expect(wrapper.text()).toContain('Next run2hSoon');
+    expect(wrapper.find('[title="in about 2 hours"]').exists()).toBe(true);
     expect(wrapper.text()).toContain('Soon');
     wrapper.unmount();
   });
 });
 
+describe('HomeAsk', () => {
+  it('hands the request to the Assistant and clears the box', async () => {
+    const agent = useAgentStore();
+    const ask = vi.spyOn(agent, 'ask').mockResolvedValue(true as never);
+    const wrapper = mount(HomeAsk, { global: { plugins: [i18n] } });
+    const submit = wrapper.find('button[type="submit"]');
+    expect(submit.attributes('disabled')).toBeDefined();
+
+    await wrapper.find('input').setValue('  Rename my photos  ');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+    expect(ask).toHaveBeenCalledWith('Rename my photos');
+    expect((wrapper.find('input').element as HTMLInputElement).value).toBe('');
+  });
+});
+
 describe('Dashboard', () => {
-  const stubs = { HomeToday: true, HomeStarred: true, HomeRecentItems: true, HomeRecentActivity: true, HomeBrowse: true };
+  const stubs = { HomeToday: true, HomeStarred: true, HomeRecentItems: true, HomeRecentActivity: true, HomeProjects: true };
 
-  it('starts simple, and remembers a switch to the full dashboard and back', async () => {
-    const wrapper = mount(Dashboard, { global: { plugins: [i18n, makeRouter()], stubs } });
+  it('shows Home even on a new install with nothing in it yet', async () => {
+    const home = mount(Dashboard, { global: { plugins: [i18n, makeRouter()], stubs } });
     await flushPromises();
-    expect(wrapper.text()).toContain('What do you want to automate?');
-
-    await wrapper.findAll('button').find((b) => b.text() === 'Show the full dashboard')!.trigger('click');
-    expect(wrapper.findComponent({ name: 'HomeStarred' }).exists()).toBe(true);
-    expect(localStorage.getItem('tipeline:dashboard:mode')).toBe('full');
-
-    const again = mount(Dashboard, { global: { plugins: [i18n, makeRouter()], stubs } });
-    await flushPromises();
-    expect(again.text()).not.toContain('What do you want to automate?');
-
-    await again.findAll('button').find((b) => b.text() === 'Simple view')!.trigger('click');
-    expect(again.text()).toContain('What do you want to automate?');
-    expect(localStorage.getItem('tipeline:dashboard:mode')).toBe('simple');
+    expect(home.text()).toMatch(/Good (morning|afternoon|evening)/);
+    for (const name of ['HomeStarred', 'HomeRecentItems', 'HomeToday', 'HomeProjects', 'HomeRecentActivity']) {
+      expect(home.findComponent({ name }).exists()).toBe(true);
+    }
   });
 
-  it('opens the inbox from the badge next to the title', async () => {
-    localStorage.setItem('tipeline:dashboard:mode', 'full');
+  it('opens the inbox from the badge next to the greeting', async () => {
     lists[SEND.TASK_LIST] = [failedTask('x', 'run-1')];
     const wrapper = mount(Dashboard, { global: { plugins: [i18n, makeRouter()], stubs }, attachTo: document.body });
     await flushPromises();
