@@ -14,7 +14,7 @@ The sidebar groups every part of the app:
 
 | Group | Section | What you'll find there |
 |-------|---------|----------------------|
-| | **Home** | Where to start: ask the assistant or create something (Simple), or starred items, recent runs and your inbox (Full) |
+| | **Home** | Starred items, what you opened lately, today's runs, your projects and your inbox, on one screen |
 | **Build** | **Workflows** | Every installed workflow — run, edit, see its runs ([builder](/desktop/builder)) |
 | | **Apps** | Dashboards and tools built on your workflows ([Apps](/apps/)) |
 | | **Projects** | Workflows and apps grouped by project ([Projects](/desktop/projects)) |
@@ -34,53 +34,54 @@ The **Bot** icon in the top bar (⌘K) opens the [assistant](/assistant/) on any
 
 ## Home
 
-Home is the first page you see. It has two views. Switch with **Show the full
-dashboard** at the bottom of the simple one and **Simple view** at the top of the full one.
-Tipeline remembers the one you used last.
+Home is the first page you see. It fits in one window: the page itself never scrolls, and
+each list scrolls inside its own card. On a narrow window the columns stack and the page
+scrolls instead.
 
-### Simple
+At the top, a light blue banner:
 
-What a new install opens on:
-
-- **What do you want to automate?** Describe it in your own words and press Enter (or
-  **Ask the Assistant**). The [assistant](/assistant/) opens on the right with your request
-  already sent, and the conversation continues there. The ideas under the box fill it in so
-  you can change them before sending. If no AI provider is set up yet, the assistant asks
-  for an API key first and then sends your request. The box isn't shown while you're
-  connected to a remote Core.
-- Three ways to start yourself: **New workflow**, **Copy from the Hub** and **New app**.
-- **Recently opened**: the last four workflows, apps and projects you opened.
-
-### Full
-
-From top to bottom:
-
-- **Today**, four tiles. Click one to open the page with the details:
+- **A greeting** and today's date, with **New Workflow** and **New App** on the right. When
+  something needs you, an **inbox** badge sits next to the date. It counts approvals you can
+  decide and workflows whose latest run failed. Click it to see the list. Dismiss a failure
+  with the ✕ on its row. It comes back only if the workflow fails again, and leaves on its
+  own when the next run succeeds.
+- **Ask the Assistant**: type what you want built or run and press Enter. The Assistant
+  panel opens with your request. (Not shown when connected to a server workspace. To find
+  something, use **Search** or ⌘J at the top.)
+- **Today**, four numbers. Click one to open the page with the details:
   - **Runs today**, with a bar for each of the last 7 days (hover a bar for its count).
     Opens the Runs page.
   - **Failed today**, with the workflows whose latest run failed today. Opens the Runs page
     filtered to failures.
   - **Waiting for you**: approvals you can decide. Opens the Approvals page.
-  - **Next run**: the next scheduled run and how soon it starts. Opens the Schedules page.
+  - **Next run**: how soon the next scheduled run starts (hover for the exact wording), and
+    which workflow. Opens the Schedules page.
 
-  Days start at midnight in your own time zone. The tiles show — until Core is restarted
+  Days start at midnight in your own time zone. The numbers show — until Core is restarted
   after an update that adds them.
-- **Starred**: workflows and apps you starred, as one row of tiles. **Show all** opens the
-  rest. Star one with the ☆ in the Workflows or Apps list, at the top of its page, or on
-  its row in Recently opened. Drag tiles to reorder them. When you have both kinds starred,
-  filter with **All / Apps / Workflows**.
-- On the left, **Recently opened** and **Browse**. Recently opened lists the workflows, apps
-  and projects you opened last. Browse opens the workflow list by **Tags**, or a project from
-  **Projects**.
-- On the right, **Recent runs**, as tall as the left side. It switches between **All**,
-  **Failed** and **Running**; **View All** opens the Runs page with the same filter.
 
-The **inbox** badge next to the Home title shows what only you can act on: approvals
-you can decide, and workflows whose latest run failed. Click it to see the list. Dismiss a
-failure with the ✕ on its row. It comes back only if the workflow fails again, and it
-leaves on its own when the next run succeeds.
+Below, three columns fill the rest of the window:
 
-Each switch remembers your last choice. Starred items, recent items and dismissed
+- **On the left**, **Starred**: a card for each workflow and app you
+  starred, with the project it's in. Star one with the ☆ in the Workflows or Apps list, at
+  the top of its page, on its row in Recently opened, or with **Add to Starred** at the end
+  of the cards. Drag cards to reorder them. When you have both kinds starred, filter with
+  **All / Apps / Workflows**.
+- **In the middle**, **Recently opened**: a table of the workflows, apps and projects you
+  opened, grouped into **Today**, **Yesterday**, **Earlier this week** and **Older**. Each row
+  shows the project under the name, when you opened it and, for a workflow, a dot with how
+  its last run went. Filter with **All / Workflows / Apps**.
+- **On the right**, **Recent runs** and **Projects**, two cards that share the column's
+  height.
+  - Recent runs is the same kind of table, grouped by day: each run's workflow with how it
+    went (**Running**, **Completed**, **Failed**…) and when it ran. Click one to open it;
+    **View all** opens the Runs page.
+  - Projects lists each project with its initials in its color, its counts and the one thing
+    worth knowing: **failed**, **waiting** (approvals), **running** or **All good** (a project
+    where nothing has run yet shows nothing). Projects you opened lately come first, then the
+    biggest; **New project** at the end creates one.
+
+Each filter remembers your last choice. Starred items, recent items and dismissed
 failures are kept per workspace.
 
 ### Search

@@ -82,7 +82,7 @@ defineExpose({ submit: triggerSubmit, isWaiting, isEditing });
 </script>
 
 <template>
-  <div class="w-full max-w-md space-y-6">
+  <div class="w-full space-y-6">
     <form @submit="onSubmit" class="space-y-4">
       <FormField v-slot="{ componentField }" name="name">
         <FormItem>

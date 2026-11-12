@@ -3,7 +3,6 @@ import { computed, onMounted, onUnmounted, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { addDays, format, formatDistanceToNow, startOfDay } from 'date-fns';
-import { AlertCircle, CalendarClock, CheckCircle2, ShieldCheck } from 'lucide-vue-next';
 import type { TaskItem } from '@/config/tables/TasksList';
 import type { ScheduleItem } from '@/config/tables/SchedulesList';
 import { useInbox } from '@/composables/useInbox';
@@ -12,8 +11,8 @@ import { useStreamListener } from '@/composables/useStreamListener';
 import { invokeCore } from '@/utils/invoke';
 import { SEND } from '@/ipc-channels';
 
-// The full dashboard's top row: one look says whether today went well, what needs the
-// user, and what runs next. Each tile opens the page with the details.
+// Home's Today row: one look says whether today went well, what needs the user, and what
+// runs next. Each card opens the page with the details.
 const props = defineProps<{ tasks: TaskItem[] | null | undefined }>();
 
 type Period = { from: string; to: string; total: number; failed: number };
@@ -109,17 +108,32 @@ onUnmounted(() => {
   if (pending) clearTimeout(pending);
 });
 
-const tile =
-  'flex flex-col gap-1.5 min-w-0 px-4 py-3.5 border border-border rounded-md bg-card hover:bg-muted/50 transition-colors text-left';
+// White chips on Home's banner, one per number: a label, the number, and a line about it.
+const cell =
+  'flex flex-col gap-1 min-w-0 px-3.5 py-2.5 rounded-lg bg-card shadow-xs ring-1 ring-black/5 dark:ring-white/10 text-left hover:ring-black/15 dark:hover:ring-white/25 transition-shadow';
+const label = 'text-xs font-medium text-muted-foreground truncate';
+const value = 'text-2xl font-semibold leading-none tabular-nums';
+const detail = 'text-xs truncate min-w-0';
+const row = 'flex items-baseline gap-2 min-w-0';
+
+// "25m", "3h", "2d": short enough for the square.
+const nextRunShort = computed(() => {
+  void now.value;
+  if (!nextRun.value) return '—';
+  const minutes = Math.max(0, Math.round((Date.parse(nextRun.value.nextRunAt!) - Date.now()) / 60_000));
+  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 60 * 24) return `${Math.round(minutes / 60)}h`;
+  return `${Math.round(minutes / (60 * 24))}d`;
+});
 </script>
 
 <template>
-  <section class="grid gap-3 grid-cols-4" :aria-label="t('dashboard.today.title')">
-    <button type="button" :class="tile" @click="router.push('/activity')">
-      <span class="text-xs font-medium text-muted-foreground">{{ t('dashboard.today.runs') }}</span>
-      <span class="flex items-end justify-between gap-3">
-        <span class="text-2xl font-semibold leading-none tabular-nums shrink-0">{{ today ? today.total : '—' }}</span>
-        <span v-if="bars.length" class="flex items-end gap-0.5 h-8 flex-1 min-w-0 max-w-28" role="img" :aria-label="chartLabel">
+  <section class="grid gap-3 grid-cols-2 md:grid-cols-4" :aria-label="t('dashboard.today.title')">
+    <button type="button" :class="cell" @click="router.push('/activity')">
+      <span :class="label">{{ t('dashboard.today.runs') }}</span>
+      <span class="flex items-end gap-3 min-w-0">
+        <span :class="value">{{ today ? today.total : '—' }}</span>
+        <span v-if="bars.length" class="flex items-end gap-0.5 h-6 w-14 shrink-0" role="img" :aria-label="chartLabel">
           <span
             v-for="bar in bars"
             :key="bar.key"
@@ -129,48 +143,43 @@ const tile =
             :title="bar.title"
           />
         </span>
+        <span :class="[detail, 'text-muted-foreground']">{{ t('dashboard.today.lastDays', { n: DAYS }) }}</span>
       </span>
-      <span class="text-xs text-muted-foreground">{{ t('dashboard.today.lastDays', { n: DAYS }) }}</span>
     </button>
 
     <button
       type="button"
-      :class="tile"
+      :class="cell"
       @click="router.push({ path: '/activity', query: { status: 'failed' } })"
     >
-      <span class="text-xs font-medium text-muted-foreground">{{ t('dashboard.today.failed') }}</span>
-      <span v-if="today && today.failed > 0" class="flex items-center gap-2 text-destructive">
-        <AlertCircle class="w-4 h-4 shrink-0" />
-        <span class="text-2xl font-semibold leading-none tabular-nums">{{ today.failed }}</span>
-      </span>
-      <span v-else class="flex items-center gap-2">
-        <CheckCircle2 v-if="today" class="w-4 h-4 shrink-0 text-emerald-500" />
-        <span class="text-2xl font-semibold leading-none tabular-nums">{{ today ? 0 : '—' }}</span>
-      </span>
-      <span class="text-xs text-muted-foreground truncate">
-        {{ today && today.failed > 0 ? failedNames || t('dashboard.today.failedSome') : t('dashboard.today.failedNone') }}
+      <span :class="label">{{ t('dashboard.today.failed') }}</span>
+      <span :class="row">
+        <span :class="[value, today && today.failed > 0 ? 'text-destructive' : '']">{{ today ? today.failed : '—' }}</span>
+        <span :class="[detail, today && today.failed > 0 ? 'text-destructive' : 'text-emerald-700 dark:text-emerald-400']">
+          {{ today && today.failed > 0 ? failedNames || t('dashboard.today.failedSome') : t('dashboard.today.failedNone') }}
+        </span>
       </span>
     </button>
 
-    <button type="button" :class="tile" @click="router.push('/approvals')">
-      <span class="text-xs font-medium text-muted-foreground">{{ t('dashboard.today.waiting') }}</span>
-      <span class="flex items-center gap-2">
-        <ShieldCheck class="w-4 h-4 shrink-0" :class="approvals.length ? 'text-amber-500' : 'text-muted-foreground'" />
-        <span class="text-2xl font-semibold leading-none tabular-nums">{{ approvals.length }}</span>
-      </span>
-      <span class="text-xs text-muted-foreground truncate">
-        {{ approvals.length ? t('dashboard.today.approvals', approvals.length) : t('dashboard.today.approvalsNone') }}
+    <button
+      type="button"
+      :class="cell"
+      @click="router.push('/approvals')"
+    >
+      <span :class="label">{{ t('dashboard.today.waiting') }}</span>
+      <span :class="row">
+        <span :class="[value, approvals.length ? 'text-amber-600 dark:text-amber-400' : '']">{{ approvals.length }}</span>
+        <span :class="[detail, approvals.length ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground']">
+          {{ approvals.length ? t('dashboard.today.approvals', approvals.length) : t('dashboard.today.approvalsNone') }}
+        </span>
       </span>
     </button>
 
-    <button type="button" :class="tile" @click="router.push('/schedules')">
-      <span class="text-xs font-medium text-muted-foreground">{{ t('dashboard.today.next') }}</span>
-      <span class="flex items-center gap-2 min-w-0">
-        <CalendarClock class="w-4 h-4 shrink-0 text-muted-foreground" />
-        <span class="text-lg font-semibold leading-tight truncate">{{ nextRun ? nextRunIn : '—' }}</span>
-      </span>
-      <span class="text-xs text-muted-foreground truncate">
-        {{ nextRun ? nextRun.taskName : t('dashboard.today.nextNone') }}
+    <button type="button" :class="cell" @click="router.push('/schedules')">
+      <span :class="label">{{ t('dashboard.today.next') }}</span>
+      <span :class="row">
+        <span :class="value" :title="nextRun ? nextRunIn : undefined">{{ nextRunShort }}</span>
+        <span :class="[detail, 'text-muted-foreground']">{{ nextRun ? nextRun.taskName : t('dashboard.today.nextNone') }}</span>
       </span>
     </button>
   </section>
