@@ -35,6 +35,8 @@ import {
 } from '@/components/ui/command';
 
 import { createColumns, type TaskItem } from '@/config/tables/TasksList';
+import type { ScheduleItem } from '@/config/tables/SchedulesList';
+import WorkflowStats from '@/components/task/WorkflowStats.vue';
 import { SEND } from '@/ipc-channels';
 import { invokeCore } from '@/utils/invoke';
 import { toast } from '@/components/ui/sonner';
@@ -60,6 +62,18 @@ const connectionStore = useConnectionStore();
 const { translateError } = useErrorT();
 
 const { data: rawResult, refetch } = useQuery<TaskItem[]>(SEND.TASK_LIST);
+const { data: schedules } = useQuery<ScheduleItem[]>(SEND.SCHEDULE_LIST, {});
+
+// Each workflow's next scheduled run: the earliest of its enabled schedules.
+const nextRuns = computed(() => {
+  const next = new Map<string, string>();
+  for (const s of schedules.value ?? []) {
+    if (!s.enabled || !s.nextRunAt) continue;
+    const current = next.get(s.taskIdentifier);
+    if (!current || Date.parse(s.nextRunAt) < Date.parse(current)) next.set(s.taskIdentifier, s.nextRunAt);
+  }
+  return next;
+});
 
 const result = computed<TaskItem[]>(() => {
   if (!rawResult.value) return [];
@@ -128,11 +142,16 @@ const VIEWS = ['table', 'cards', 'compact'] as const;
 type View = (typeof VIEWS)[number];
 const SORTS = ['name', 'lastRun', 'opened'] as const;
 type Sort = (typeof SORTS)[number];
-type Scope = 'all' | 'starred' | 'recent';
+const SCOPES = ['all', 'failing', 'scheduled', 'starred', 'recent'] as const;
+type Scope = (typeof SCOPES)[number];
 
 const view = useRememberedChoice<View>('view', VIEWS, 'table', 'workflows');
 const sort = useRememberedChoice<Sort>('sort', SORTS, 'name', 'workflows');
-const scope = ref<Scope>('all');
+// Home's "All failing" link opens the list on Failing (?scope=failing).
+const scopeFromQuery = (): Scope =>
+  (SCOPES as readonly string[]).includes(String(route.query.scope)) ? (route.query.scope as Scope) : 'all';
+const scope = ref<Scope>(scopeFromQuery());
+watch(() => route.query.scope, () => (scope.value = scopeFromQuery()));
 const search = ref('');
 const source = ref<'all' | 'local' | 'hub'>('all');
 
@@ -161,8 +180,13 @@ const starredCount = computed(
   () => result.value.filter((task) => starredStore.isStarred('task', task.identifier)).length
 );
 
+const failingCount = computed(() => result.value.filter((task) => task.last_run_status === 'failed').length);
+const scheduledCount = computed(() => result.value.filter((task) => nextRuns.value.has(task.identifier)).length);
+
 const scopeOptions = computed(() => [
   { value: 'all' as const, label: t('listViews.scope.all'), count: result.value.length },
+  { value: 'failing' as const, label: t('listViews.scope.failing'), count: failingCount.value },
+  { value: 'scheduled' as const, label: t('listViews.scope.scheduled'), count: scheduledCount.value },
   { value: 'starred' as const, label: t('listViews.scope.starred'), count: starredCount.value },
   { value: 'recent' as const, label: t('listViews.scope.recent'), count: recentWorkflows.value.length },
 ]);
@@ -182,7 +206,11 @@ const filteredResult = computed<TaskItem[]>(() => {
       ? result.value.filter((task) => starredStore.isStarred('task', task.identifier))
       : scope.value === 'recent'
         ? result.value.filter((task) => openedAt.value.has(task.identifier))
-        : result.value;
+        : scope.value === 'failing'
+          ? result.value.filter((task) => task.last_run_status === 'failed')
+          : scope.value === 'scheduled'
+            ? result.value.filter((task) => nextRuns.value.has(task.identifier))
+            : result.value;
   return inScope.filter(
     (task) =>
       (!query || task.name.toLowerCase().includes(query)) &&
@@ -231,11 +259,15 @@ const emptyText = computed(() => {
   if (filtersActive.value) return t('tasks.empty.noMatch');
   if (scope.value === 'starred') return t('tasks.empty.starred');
   if (scope.value === 'recent') return t('tasks.empty.recent');
+  if (scope.value === 'failing') return t('tasks.empty.failing');
+  if (scope.value === 'scheduled') return t('tasks.empty.scheduled');
   return t('tasks.empty.noMatch');
 });
 
 const columns = computed<ColumnDef<TaskItem>[]>(() =>
-  createColumns(t, router, refetch, refetch, connectionStore.isRemote)
+  createColumns(t, router, refetch, refetch, connectionStore.isRemote, {
+    nextRunAt: (identifier) => nextRuns.value.get(identifier) ?? null,
+  })
 );
 const selectedItems = computed(() =>
   result.value.filter((task) => selection.value.includes(task.identifier))
@@ -305,6 +337,7 @@ async function onExportAll() {
       </Button>
     </template>
     <template #content>
+      <WorkflowStats />
       <RecentItemsRow
         v-if="showRecentRow"
         type="task"

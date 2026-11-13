@@ -1,4 +1,4 @@
-// A run as Core's pipeline list returns it (Home's Recent runs, the Runs page).
+// A run as Core's pipeline list returns it (the Runs page).
 export type Item = {
   identifier: string;
   status: 'running' | 'completed' | 'pending' | 'failed' | 'paused' | 'canceled';

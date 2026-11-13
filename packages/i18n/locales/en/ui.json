@@ -113,27 +113,7 @@
       "newTask": "New Workflow",
       "newApp": "New App"
     },
-    "today": {
-      "title": "Today",
-      "runs": "Runs today",
-      "lastDays": "Last {n} days",
-      "todayLabel": "Today",
-      "dayRuns": "{day}: {n} run | {day}: {n} runs",
-      "chartLabel": "Runs per day, oldest first: {list}",
-      "failed": "Failed today",
-      "failedNone": "Nothing failed",
-      "failedSome": "See the failed runs",
-      "failedMore": "{name} and {count} more",
-      "waiting": "Waiting for you",
-      "approvals": "approval to review | approvals to review",
-      "approvalsNone": "Nothing to approve",
-      "next": "Next run",
-      "nextNone": "Nothing scheduled"
-    },
     "starred": {
-      "title": "Starred",
-      "empty": "Star workflows and apps with ☆ to keep them here.",
-      "all": "All",
       "apps": "Apps",
       "workflows": "Workflows",
       "app": "App",
@@ -142,47 +122,52 @@
       "search": "Search workflows and apps",
       "nothingToAdd": "Nothing left to star."
     },
-    "recentItems": {
-      "title": "Recently opened",
-      "empty": "Workflows, apps and projects you open show up here.",
-      "emptyFiltered": "Nothing of this kind opened lately.",
-      "lastRun": "Last run: {status}",
-      "name": "Name",
-      "opened": "Opened",
-      "groups": {
-        "today": "Today",
-        "yesterday": "Yesterday",
-        "week": "Earlier this week",
-        "older": "Older"
-      }
-    },
-    "inbox": {
-      "title": "Inbox",
-      "description": "Approvals and failed workflows waiting on you.",
-      "badge": "{count} in your inbox",
-      "empty": "Nothing needs you right now.",
-      "approvals": "Waiting for your approval ({count})",
-      "review": "Review",
-      "moreApprovals": "and {count} more on the Approvals page",
-      "failed": "Last run failed ({count})",
-      "failedAgo": "Failed {time}",
-      "viewAll": "View All",
-      "dismiss": "Dismiss until it fails again"
-    },
-    "projects": {
-      "title": "Projects",
-      "viewAll": "View all",
-      "ok": "All good",
-      "failed": "{n} failed | {n} failed",
-      "waiting": "{n} waiting | {n} waiting",
-      "running": "{n} running | {n} running",
-      "workflowCount": "{n} workflow | {n} workflows",
-      "appCount": "{n} app | {n} apps"
-    },
     "ask": {
       "label": "Ask the Assistant",
       "placeholder": "Ask the Assistant to build or run something…",
       "send": "Ask"
+    },
+    "needs": {
+      "title": "Needs you",
+      "kind": {
+        "approval": "Approval",
+        "failed": "Failed",
+        "missed": "Missed"
+      },
+      "approvalDetail": "{workflow} is waiting for your decision",
+      "failedOnce": "The last run failed",
+      "failedTimes": "Failed {n} times in a row",
+      "missedDetail": "Didn't run at {time}: Tipeline wasn't running then",
+      "review": "Review",
+      "openRun": "Open run",
+      "runNow": "Run now",
+      "dismiss": "Dismiss",
+      "allFailing": "All failing workflows",
+      "clearTitle": "All clear: nothing needs you",
+      "clearDetail": "Approvals, failed runs and missed schedules show up here.",
+      "comingUp": "Coming up",
+      "tomorrowAt": "Tomorrow {time}"
+    },
+    "continue": {
+      "title": "Continue",
+      "hint": "Starred first, then recently opened",
+      "ran": "Ran {time}",
+      "opened": "Opened {time}",
+      "neverRan": "Never run",
+      "empty": "Workflows and apps you star or open show up here.",
+      "showAll": "Show all ({n})",
+      "showLess": "Show less"
+    },
+    "day": {
+      "runs": "run today | runs today",
+      "failed": "failed",
+      "noneFailed": "Nothing failed",
+      "next": "Next:",
+      "at": "at {time}",
+      "nothingScheduled": "Nothing scheduled",
+      "allRuns": "All runs",
+      "tomorrowAt": "tomorrow at {time}",
+      "onDayAt": "on {day} at {time}"
     }
   },
   "runs": {
@@ -497,9 +482,9 @@
       "task": "Workflow",
       "source": "Source",
       "owner": "Owner",
-      "author": "Author",
-      "version": "Version",
-      "lastRun": "Last Run"
+      "lastRun": "Last Run",
+      "recentRuns": "Last 10 runs",
+      "nextRun": "Next run"
     },
     "history": {
       "filterByStatus": "Filter by status...",
@@ -582,7 +567,24 @@
       "none": "No workflows yet. Create one or install one from a file.",
       "noMatch": "No workflows match these filters.",
       "starred": "No starred workflows. Star one to keep it here.",
-      "recent": "Workflows you open show up here."
+      "recent": "Workflows you open show up here.",
+      "failing": "No workflow failed its last run.",
+      "scheduled": "No workflow has a schedule turned on."
+    },
+    "runStrip": {
+      "label": "Last {n} runs: {failed} failed",
+      "none": "No runs yet"
+    },
+    "nextRun": {
+      "today": "Today {time}",
+      "tomorrow": "Tomorrow {time}"
+    },
+    "stats": {
+      "title": "Last {n} days",
+      "runs": "Runs · last {n} days",
+      "failed": "Failed · last {n} days",
+      "failureRate": "Failure rate",
+      "averageTime": "Average run time"
     }
   },
   "apps": {
@@ -3018,7 +3020,9 @@
       "label": "Show",
       "all": "All",
       "starred": "Starred",
-      "recent": "Recently opened"
+      "recent": "Recently opened",
+      "failing": "Failing",
+      "scheduled": "Scheduled"
     },
     "sort": {
       "label": "Sort",

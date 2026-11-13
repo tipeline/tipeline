@@ -106,6 +106,8 @@ export interface ScheduleEntry {
   nextRunAt: string | null;
   /** ISO time it last started a run. */
   lastRunAt: string | null;
+  /** ISO time a repeating schedule should have run but didn't (Core was off); absent otherwise. */
+  missedAt?: string;
 }
 
 export interface IJobRunner {

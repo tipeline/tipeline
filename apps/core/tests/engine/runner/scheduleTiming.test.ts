@@ -4,6 +4,7 @@ import { Model } from 'objection';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   assertCanEnable,
+  missedRunAt,
   onceFireDate,
   resolveScheduleTiming,
   toScheduleEntry,
@@ -98,6 +99,33 @@ describe('toScheduleEntry', () => {
     expect(toScheduleEntry(once, NOW)).toMatchObject({ cron: null, runAt: inHours(2), nextRunAt: inHours(2) });
     const done = { ...once, enabled: 0, last_run_at: inHours(2) };
     expect(toScheduleEntry(done, NOW)).toMatchObject({ nextRunAt: null, lastRunAt: inHours(2), enabled: false });
+  });
+});
+
+describe('missedRunAt', () => {
+  // NOW is 10:15; a daily 9:00 schedule last should have run at 9:00 today.
+  const daily = { identifier: 's1', cron: '0 9 * * *', enabled: 1, created_at: inHours(-48) } as any;
+  const nine = new Date(2026, 9, 22, 9, 0, 0).toISOString();
+
+  it('reports the time a cron schedule should have run but did not', () => {
+    expect(missedRunAt({ ...daily, last_run_at: inHours(-25) }, NOW)).toBe(nine);
+    expect(missedRunAt(daily, NOW)).toBe(nine);
+    expect(toScheduleEntry({ ...daily, task: { identifier: 'wf', name: 'W' } }, NOW).missedAt).toBe(nine);
+  });
+
+  it('is quiet when it ran, is paused, was saved after that time, or the time just passed', () => {
+    expect(missedRunAt({ ...daily, last_run_at: new Date(2026, 9, 22, 9, 0, 1).toISOString() }, NOW)).toBeNull();
+    expect(missedRunAt({ ...daily, enabled: 0 }, NOW)).toBeNull();
+    expect(missedRunAt({ ...daily, updated_at: inHours(-1) }, NOW)).toBeNull();
+    // 10:14 is a minute ago: the runner may still be recording it.
+    expect(missedRunAt({ ...daily, cron: '14 10 * * *' }, NOW)).toBeNull();
+    expect(missedRunAt({ ...daily, cron: 'not a cron' }, NOW)).toBeNull();
+    expect('missedAt' in toScheduleEntry({ ...daily, enabled: 0, task: { identifier: 'wf', name: 'W' } }, NOW)).toBe(false);
+  });
+
+  it('never applies to interval or one-time schedules', () => {
+    expect(missedRunAt({ ...daily, cron: null, every_seconds: 60 }, NOW)).toBeNull();
+    expect(missedRunAt({ ...daily, cron: null, run_at: inHours(-3) }, NOW)).toBeNull();
   });
 });
 

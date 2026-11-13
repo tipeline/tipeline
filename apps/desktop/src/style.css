@@ -277,7 +277,8 @@
 /*
  * scroll-fade: put on a scroll container to fade its content out at the top and bottom edges.
  * Each edge only fades while there is hidden content on that side, driven by the scroll position
- * (no JS). A container that doesn't scroll gets no fade. Set --scroll-fade-size to change the depth,
+ * (no JS). A container that doesn't scroll gets no fade (utils/scrollFadeReset.ts clears the fade
+ * Chromium leaves behind when a scrolled box stops being scrollable). Set --scroll-fade-size to change the depth,
  * and --scroll-fade-offset to start the top fade below a sticky header (DataTable sets it).
  */
 @property --scroll-fade-top {

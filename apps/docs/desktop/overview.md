@@ -14,7 +14,7 @@ The sidebar groups every part of the app:
 
 | Group | Section | What you'll find there |
 |-------|---------|----------------------|
-| | **Home** | Starred items, what you opened lately, today's runs, your projects and your inbox, on one screen |
+| | **Home** | What needs you (approvals, failed and missed runs), your starred and recent items, today's runs |
 | **Build** | **Workflows** | Every installed workflow — run, edit, see its runs ([builder](/desktop/builder)) |
 | | **Apps** | Dashboards and tools built on your workflows ([Apps](/apps/)) |
 | | **Projects** | Workflows and apps grouped by project ([Projects](/desktop/projects)) |
@@ -34,55 +34,39 @@ The **Bot** icon in the top bar (⌘K) opens the [assistant](/assistant/) on any
 
 ## Home
 
-Home is the first page you see. It fits in one window: the page itself never scrolls, and
-each list scrolls inside its own card. On a narrow window the columns stack and the page
-scrolls instead.
+Home answers two questions at a glance: does anything need me, and how do I get back to
+what I was doing. How every workflow is doing is on the [Workflows list](#the-workflows-and-apps-lists).
+From top to bottom:
 
-At the top, a light blue banner:
-
-- **A greeting** and today's date, with **New Workflow** and **New App** on the right. When
-  something needs you, an **inbox** badge sits next to the date. It counts approvals you can
-  decide and workflows whose latest run failed. Click it to see the list. Dismiss a failure
-  with the ✕ on its row. It comes back only if the workflow fails again, and leaves on its
-  own when the next run succeeds.
+- **A greeting** and today's date, with **New App** and **New Workflow** on the right.
+  Under the greeting, one line with today's numbers: runs today, how many failed (opens
+  the failed runs), the next scheduled run (opens Schedules) and **All runs**. Days start
+  at midnight in your own time zone; the numbers show — until Core is restarted after an
+  update that adds them.
 - **Ask the Assistant**: type what you want built or run and press Enter. The Assistant
   panel opens with your request. (Not shown when connected to a server workspace. To find
   something, use **Search** or ⌘J at the top.)
-- **Today**, four numbers. Click one to open the page with the details:
-  - **Runs today**, with a bar for each of the last 7 days (hover a bar for its count).
-    Opens the Runs page.
-  - **Failed today**, with the workflows whose latest run failed today. Opens the Runs page
-    filtered to failures.
-  - **Waiting for you**: approvals you can decide. Opens the Approvals page.
-  - **Next run**: how soon the next scheduled run starts (hover for the exact wording), and
-    which workflow. Opens the Schedules page.
+- **Needs you**, with how many things are waiting. Newest first, each row says what
+  happened and has a button for it:
+  - **Approval**: a run waiting for your decision. **Review** opens the Approvals page.
+  - **Failed**: a workflow whose latest run failed, and how many times in a row.
+    **Open run** shows that run; **Dismiss** hides it until the workflow fails again (it also
+    leaves on its own when the next run succeeds). **All failing workflows** opens the
+    Workflows list filtered to them.
+  - **Missed**: a scheduled run that didn't happen because Tipeline wasn't running at that
+    time. **Run now** runs it with the schedule's variables; **Dismiss** hides it until the
+    schedule misses again. Only repeating (cron) schedules can miss.
 
-  Days start at midnight in your own time zone. The numbers show — until Core is restarted
-  after an update that adds them.
+  When nothing needs you, a green **All clear** box says so and lists the next scheduled runs.
+- **Continue**: a tile for each workflow and app you starred, in the order you keep them,
+  then the ones you opened lately. Each tile shows the project it's in, when the workflow
+  last ran (with a dot for how it went) or when you opened it. Star or unstar with the ☆ on
+  a tile, or pick one with **Add to Starred**. Two rows show at first; **Show all** lists
+  the rest.
 
-Below, three columns fill the rest of the window:
+When Needs you is long, the whole page scrolls.
 
-- **On the left**, **Starred**: a card for each workflow and app you
-  starred, with the project it's in. Star one with the ☆ in the Workflows or Apps list, at
-  the top of its page, on its row in Recently opened, or with **Add to Starred** at the end
-  of the cards. Drag cards to reorder them. When you have both kinds starred, filter with
-  **All / Apps / Workflows**.
-- **In the middle**, **Recently opened**: a table of the workflows, apps and projects you
-  opened, grouped into **Today**, **Yesterday**, **Earlier this week** and **Older**. Each row
-  shows the project under the name, when you opened it and, for a workflow, a dot with how
-  its last run went. Filter with **All / Workflows / Apps**.
-- **On the right**, **Recent runs** and **Projects**, two cards that share the column's
-  height.
-  - Recent runs is the same kind of table, grouped by day: each run's workflow with how it
-    went (**Running**, **Completed**, **Failed**…) and when it ran. Click one to open it;
-    **View all** opens the Runs page.
-  - Projects lists each project with its initials in its color, its counts and the one thing
-    worth knowing: **failed**, **waiting** (approvals), **running** or **All good** (a project
-    where nothing has run yet shows nothing). Projects you opened lately come first, then the
-    biggest; **New project** at the end creates one.
-
-Each filter remembers your last choice. Starred items, recent items and dismissed
-failures are kept per workspace.
+Starred items, recent items and dismissed failures and missed runs are kept per workspace.
 
 ### Search
 
@@ -100,7 +84,8 @@ Both lists work the same way:
   **Clear** empties the row (Recently opened on Home keeps the other kinds). The row
   hides while you search or filter.
 - **All / Starred / Recently opened** narrows the list, with a count for each. Recently
-  opened lists the newest first.
+  opened lists the newest first. Workflows also have **Failing** (the latest run failed)
+  and **Scheduled** (a schedule is turned on).
 - **Sort** by name, last run or recently opened for workflows; by name, newest or recently
   opened for apps.
 - Three views: **Table**, **Cards** (picture, description and more on each tile) and
@@ -110,6 +95,15 @@ Both lists work the same way:
   **Can access**.
 
 Each list remembers its view and sort.
+
+The Workflows list also shows how they're doing. Above it, four numbers for the last 7 days:
+**Runs**, **Failed** (click either to open the Runs page), the **Failure rate** and the
+**Average run time**. In the table, each workflow has:
+
+- **Last 10 runs**: a small bar per run, oldest on the left. Green succeeded, red failed
+  (and taller, so a bad streak stands out), amber waiting, grey canceled. Hover for a count.
+- **Last run**: how it went and how long ago.
+- **Next run**: when its next schedule fires, or — when it has none turned on.
 
 ## Running Workflows
 

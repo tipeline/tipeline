@@ -208,16 +208,24 @@ export class PipelineService {
   static async countsByPeriod(boundaries: string[]) {
     if (boundaries.length < 2) return [];
     const rows = await PipelineModel.query()
-      .select('status', 'started_at')
+      .select('status', 'started_at', 'finished_at')
       .where('started_at', '>=', boundaries[0])
       .where('started_at', '<', boundaries[boundaries.length - 1]);
-    const periods = boundaries.slice(0, -1).map((from, i) => ({ from, to: boundaries[i + 1], total: 0, failed: 0 }));
-    for (const row of rows as { status: string; started_at: string }[]) {
+    // `finished` runs and their `durationMs` in total, so callers can average over any span.
+    const periods = boundaries
+      .slice(0, -1)
+      .map((from, i) => ({ from, to: boundaries[i + 1], total: 0, failed: 0, finished: 0, durationMs: 0 }));
+    for (const row of rows as { status: string; started_at: string; finished_at: string | null }[]) {
       // Stored as toISOString(), so plain string order is time order.
       const period = periods.find((p) => row.started_at >= p.from && row.started_at < p.to);
       if (!period) continue;
       period.total++;
       if (row.status === 'failed') period.failed++;
+      const took = row.finished_at ? Date.parse(row.finished_at) - Date.parse(row.started_at) : NaN;
+      if (Number.isFinite(took) && took >= 0) {
+        period.finished++;
+        period.durationMs += took;
+      }
     }
     return periods;
   }

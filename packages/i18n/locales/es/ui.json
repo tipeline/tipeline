@@ -113,27 +113,7 @@
       "newTask": "Nuevo Flujo de Trabajo",
       "newApp": "Nueva Aplicación"
     },
-    "today": {
-      "title": "Hoy",
-      "runs": "Ejecuciones de hoy",
-      "lastDays": "Últimos {n} días",
-      "todayLabel": "Hoy",
-      "dayRuns": "{day}: {n} ejecución | {day}: {n} ejecuciones",
-      "chartLabel": "Ejecuciones por día, de la más antigua a hoy: {list}",
-      "failed": "Fallidas hoy",
-      "failedNone": "Nada falló",
-      "failedSome": "Ver las ejecuciones fallidas",
-      "failedMore": "{name} y {count} más",
-      "waiting": "Esperando por ti",
-      "approvals": "aprobación por revisar | aprobaciones por revisar",
-      "approvalsNone": "Nada por aprobar",
-      "next": "Próxima ejecución",
-      "nextNone": "Nada programado"
-    },
     "starred": {
-      "title": "Destacados",
-      "empty": "Destaca flujos de trabajo y aplicaciones con ☆ para tenerlos aquí.",
-      "all": "Todo",
       "apps": "Aplicaciones",
       "workflows": "Flujos",
       "app": "Aplicación",
@@ -142,47 +122,52 @@
       "search": "Buscar flujos y aplicaciones",
       "nothingToAdd": "No queda nada por destacar."
     },
-    "recentItems": {
-      "title": "Abierto recientemente",
-      "empty": "Los flujos de trabajo, aplicaciones y proyectos que abras aparecen aquí.",
-      "emptyFiltered": "No has abierto nada de este tipo últimamente.",
-      "lastRun": "Última ejecución: {status}",
-      "name": "Nombre",
-      "opened": "Abierto",
-      "groups": {
-        "today": "Hoy",
-        "yesterday": "Ayer",
-        "week": "Antes esta semana",
-        "older": "Más antiguo"
-      }
-    },
-    "inbox": {
-      "title": "Bandeja",
-      "description": "Aprobaciones y flujos fallidos que esperan por ti.",
-      "badge": "{count} en tu bandeja",
-      "empty": "Nada te necesita en este momento.",
-      "approvals": "Esperando tu aprobación ({count})",
-      "review": "Revisar",
-      "moreApprovals": "y {count} más en la página de Aprobaciones",
-      "failed": "Última ejecución fallida ({count})",
-      "failedAgo": "Falló {time}",
-      "viewAll": "Ver Todo",
-      "dismiss": "Descartar hasta que vuelva a fallar"
-    },
-    "projects": {
-      "title": "Proyectos",
-      "viewAll": "Ver todos",
-      "ok": "Todo bien",
-      "failed": "{n} fallida | {n} fallidas",
-      "waiting": "{n} esperando | {n} esperando",
-      "running": "{n} en curso | {n} en curso",
-      "workflowCount": "{n} flujo | {n} flujos",
-      "appCount": "{n} aplicación | {n} aplicaciones"
-    },
     "ask": {
       "label": "Pregunta al Asistente",
       "placeholder": "Pide al Asistente que cree o ejecute algo…",
       "send": "Preguntar"
+    },
+    "needs": {
+      "title": "Te necesita",
+      "kind": {
+        "approval": "Aprobación",
+        "failed": "Falló",
+        "missed": "Perdida"
+      },
+      "approvalDetail": "{workflow} espera tu decisión",
+      "failedOnce": "La última ejecución falló",
+      "failedTimes": "Falló {n} veces seguidas",
+      "missedDetail": "No se ejecutó a las {time}: Tipeline no estaba en marcha",
+      "review": "Revisar",
+      "openRun": "Abrir ejecución",
+      "runNow": "Ejecutar ahora",
+      "dismiss": "Descartar",
+      "allFailing": "Todos los flujos con fallos",
+      "clearTitle": "Todo en orden: nada te necesita",
+      "clearDetail": "Aquí aparecen las aprobaciones, las ejecuciones fallidas y las programaciones perdidas.",
+      "comingUp": "Próximamente",
+      "tomorrowAt": "Mañana {time}"
+    },
+    "continue": {
+      "title": "Continuar",
+      "hint": "Primero los destacados, luego los abiertos recientemente",
+      "ran": "Se ejecutó {time}",
+      "opened": "Abierto {time}",
+      "neverRan": "Nunca ejecutado",
+      "empty": "Aquí aparecen los flujos y aplicaciones que destacas o abres.",
+      "showAll": "Mostrar todo ({n})",
+      "showLess": "Mostrar menos"
+    },
+    "day": {
+      "runs": "ejecución hoy | ejecuciones hoy",
+      "failed": "fallaron",
+      "noneFailed": "Nada falló",
+      "next": "Siguiente:",
+      "at": "a las {time}",
+      "nothingScheduled": "Nada programado",
+      "allRuns": "Todas las ejecuciones",
+      "tomorrowAt": "mañana a las {time}",
+      "onDayAt": "el {day} a las {time}"
     }
   },
   "runs": {
@@ -497,9 +482,9 @@
       "task": "Flujo de trabajo",
       "source": "Origen",
       "owner": "Propietario",
-      "author": "Autor",
-      "version": "Versión",
-      "lastRun": "Última Ejecución"
+      "lastRun": "Última Ejecución",
+      "recentRuns": "Últimas 10 ejecuciones",
+      "nextRun": "Próxima ejecución"
     },
     "history": {
       "filterByStatus": "Filtrar por estado...",
@@ -582,7 +567,24 @@
       "none": "Aún no hay flujos de trabajo. Crea uno o instala uno desde un archivo.",
       "noMatch": "Ningún flujo de trabajo coincide con estos filtros.",
       "starred": "No hay flujos de trabajo destacados. Destaca uno para tenerlo aquí.",
-      "recent": "Los flujos de trabajo que abras aparecen aquí."
+      "recent": "Los flujos de trabajo que abras aparecen aquí.",
+      "failing": "Ningún flujo falló en su última ejecución.",
+      "scheduled": "Ningún flujo tiene una programación activa."
+    },
+    "runStrip": {
+      "label": "Últimas {n} ejecuciones: {failed} fallidas",
+      "none": "Sin ejecuciones"
+    },
+    "nextRun": {
+      "today": "Hoy {time}",
+      "tomorrow": "Mañana {time}"
+    },
+    "stats": {
+      "title": "Últimos {n} días",
+      "runs": "Ejecuciones · últimos {n} días",
+      "failed": "Fallidas · últimos {n} días",
+      "failureRate": "Tasa de fallos",
+      "averageTime": "Duración media"
     }
   },
   "apps": {
@@ -3018,7 +3020,9 @@
       "label": "Mostrar",
       "all": "Todos",
       "starred": "Destacados",
-      "recent": "Abiertos recientemente"
+      "recent": "Abiertos recientemente",
+      "failing": "Con fallos",
+      "scheduled": "Programados"
     },
     "sort": {
       "label": "Ordenar",

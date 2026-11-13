@@ -6,7 +6,7 @@ import { nextTick } from 'vue';
 import { SEND } from '@/ipc-channels';
 import { i18n } from '@/i18n';
 import { useRecentItemsStore } from '@/store/recentItems';
-import HomeRecentItems from '@/components/home/HomeRecentItems.vue';
+import HomeContinue from '@/components/home/HomeContinue.vue';
 
 const flush = async () => {
   for (let i = 0; i < 5; i++) await Promise.resolve();
@@ -49,7 +49,7 @@ describe('recentItems store', () => {
   });
 });
 
-describe('HomeRecentItems', () => {
+describe('HomeContinue (recently opened)', () => {
   let lists: Record<string, unknown>;
 
   beforeEach(() => {
@@ -80,13 +80,14 @@ describe('HomeRecentItems', () => {
     store.markOpened('task', 'alive', 'Old name');
     store.markOpened('task', 'deleted', 'Deleted workflow');
     store.markOpened('app', 'gone', 'Deleted app');
+    store.markOpened('project', 'p', 'A project'); // projects aren't tiles here
 
-    const wrapper = mount(HomeRecentItems, { global: { plugins: [i18n] } });
+    const wrapper = mount(HomeContinue, { global: { plugins: [i18n], stubs: { RouterLink: true } } });
     await flush();
 
     expect(cardNames(wrapper)).toEqual(['Renamed workflow']);
     // Hidden, not forgotten: another workspace may still have them.
-    expect(store.items).toHaveLength(3);
+    expect(store.items).toHaveLength(4);
   });
 
   it('keeps entries of a type whose list failed to load', async () => {
@@ -94,7 +95,7 @@ describe('HomeRecentItems', () => {
     const store = useRecentItemsStore();
     store.markOpened('app', 'unknown', 'Maybe an app');
 
-    const wrapper = mount(HomeRecentItems, { global: { plugins: [i18n] } });
+    const wrapper = mount(HomeContinue, { global: { plugins: [i18n], stubs: { RouterLink: true } } });
     await flush();
 
     expect(cardNames(wrapper)).toEqual(['Maybe an app']);
@@ -104,7 +105,7 @@ describe('HomeRecentItems', () => {
     (window as any).ipcRenderer.invoke = vi.fn(() => new Promise(() => {}));
     useRecentItemsStore().markOpened('task', 'deleted', 'Deleted workflow');
 
-    const wrapper = mount(HomeRecentItems, { global: { plugins: [i18n] } });
+    const wrapper = mount(HomeContinue, { global: { plugins: [i18n], stubs: { RouterLink: true } } });
 
     expect(cardNames(wrapper)).toEqual([]);
   });
