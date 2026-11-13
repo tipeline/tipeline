@@ -21,9 +21,13 @@ import {
   LANE_BY,
   type LaneBy,
   mergeMap,
+  parseDerivedEdgeId,
   parsePlan,
   placeNode,
+  planGivesWayToLink,
   planKey,
+  resolvePlanRef,
+  scaffoldAppSource,
   type LiveMap,
   type MapNodeKind as LinkKind,
   type MapEdgeKind,
@@ -43,6 +47,7 @@ import { invokeCore } from '@/utils/invoke';
 import { SEND } from '@/ipc-channels';
 import { useAgentStore } from '@/store/agentStore';
 import { useNewItemDefaults } from '@/composables/useNewItemDefaults';
+import { setAppFileTrust } from '@/utils/appOpen';
 import MapCanvas from './MapCanvas.vue';
 import MapDetailsPanel from './MapDetailsPanel.vue';
 import AssistantButton from '@/components/agent/AssistantButton.vue';
@@ -356,18 +361,21 @@ watch(selected, (key) => {
 });
 
 /**
- * For the selected planned node: same kind. Ones another plan node already links to stay in
- * the list, marked `linked`, so the dropdown says why they can't be picked.
+ * For the selected planned node: same kind. Ones already on this map come first, marked
+ * `onMap` (the likeliest match: built by hand while it was an idea). Ones another plan node
+ * already links to stay in the list, last, marked `linked`, so the dropdown says why they
+ * can't be picked.
  */
 const linkTargets = computed(() => {
   const node = selectedNode.value;
   if (!node?.planned) return [];
   const taken = new Set(plan.value.nodes.map((n) => n.link).filter(Boolean));
   const kinds = linkableKinds(node.kind);
+  const onMap = new Set(merged.value.nodes.filter((n) => !n.planned).map((n) => n.key));
   return candidates.value
     .filter((c) => kinds.includes(c.kind))
-    .map((c) => ({ ...c, linked: taken.has(c.key) }))
-    .sort((a, b) => Number(a.linked) - Number(b.linked));
+    .map((c) => ({ ...c, linked: taken.has(c.key), onMap: onMap.has(c.key) }))
+    .sort((a, b) => Number(a.linked) - Number(b.linked) || Number(b.onMap) - Number(a.onMap));
 });
 
 const selectedNode = computed(() => merged.value.nodes.find((n) => n.key === selected.value) ?? null);
@@ -469,7 +477,7 @@ async function pick(key: string) {
 }
 
 type Patch = Partial<
-  Pick<PlanNode, 'name' | 'description' | 'owner' | 'lane' | 'inputs' | 'outputs' | 'readyAt' | 'readyBy' | 'note' | 'when'>
+  Pick<PlanNode, 'name' | 'description' | 'owner' | 'lane' | 'inputs' | 'outputs' | 'readyAt' | 'readyBy' | 'note' | 'when' | 'pages'>
 >;
 
 function update(node: MapNode, patch: Patch) {
@@ -495,12 +503,20 @@ function removePlanned(node: MapNode) {
   const key = planKey(node.planId);
   plan.value.nodes = plan.value.nodes.filter((p) => p.id !== node.planId);
   plan.value.edges = plan.value.edges.filter((e) => e.from !== key && e.to !== key);
+  // Planned app components that were to use it use nothing now.
+  for (const component of plan.value.nodes.flatMap((p) => p.pages ?? []).flatMap((p) => p.components)) {
+    if (component.workflow === key) delete component.workflow;
+  }
   delete plan.value.positions[key];
   selected.value = null;
   save();
 }
 
-function link(node: MapNode, key: string) {
+/**
+ * `keepPlan`: it was made from this card (Create), so the plan stays and is checked against
+ * it. Otherwise it existed already, and the plan gives way to it.
+ */
+function link(node: MapNode, key: string, options: { keepPlan?: boolean } = {}) {
   const planNode = planNodeOf(node);
   if (!planNode) return;
   planNode.link = key;
@@ -510,8 +526,14 @@ function link(node: MapNode, key: string) {
   selected.value = key;
   // Linking makes it part of the project (Core adds it when the plan saves), and something
   // from outside this map shows once Core knows it's linked: save now and load again.
+  // The idea gives way to what's built: its planned fields, pages and lines become the real
+  // ones (made from the card with Create or Build, the plan stays instead: see `create`).
+  const replaced = () => {
+    if (!options.keepPlan) planGivesWayToLink(plan.value, planNode.id, live.value);
+    return adoptLiveEdges(key);
+  };
   if (live.value.nodes.some((n) => n.key === key)) {
-    adoptLiveEdges(key);
+    replaced();
     save();
     void flush().then(load);
     return;
@@ -520,7 +542,7 @@ function link(node: MapNode, key: string) {
   void flush()
     .then(load)
     .then(() => {
-      if (adoptLiveEdges(key)) save();
+      if (replaced() || !options.keepPlan) save();
     });
 }
 
@@ -692,7 +714,28 @@ function splitSchedule(node: MapNode) {
 }
 
 function removeEdge(planEdgeId: string) {
-  plan.value.edges = plan.value.edges.filter((e) => e.id !== planEdgeId);
+  // A line a planned app's components imply: those components stop using that workflow.
+  const derived = parseDerivedEdgeId(planEdgeId);
+  if (derived) {
+    const app = plan.value.nodes.find((n) => n.id === derived.planNodeId);
+    for (const component of (app?.pages ?? []).flatMap((p) => p.components)) {
+      if (component.workflow === derived.workflowRef) delete component.workflow;
+    }
+  } else plan.value.edges = plan.value.edges.filter((e) => e.id !== planEdgeId);
+  save();
+}
+
+/** The plan check found planned components the app doesn't have: take them off the plan. */
+function acceptComponents(nodeKey: string, missing: { page: string; component: string }[]) {
+  const planNode = planNodeOf(merged.value.nodes.find((n) => n.key === nodeKey) ?? null);
+  if (!planNode?.pages) return;
+  const loose = (text: string) => text.trim().toLocaleLowerCase();
+  const gone = new Set(missing.map((m) => `${loose(m.page)}|${loose(m.component)}`));
+  for (const page of planNode.pages) {
+    page.components = page.components.filter((c) => !gone.has(`${loose(page.name)}|${loose(c.name)}`));
+  }
+  planNode.pages = planNode.pages.filter((p) => p.components.length);
+  if (!planNode.pages.length) delete planNode.pages;
   save();
 }
 
@@ -837,10 +880,18 @@ async function create(node: MapNode, options: { type?: string; when?: string }) 
   try {
     let key: string | null = null;
     if (node.kind === 'app') {
+      // Same as the New App form: Core reads it from `data`.
       const app = await invokeCore<{ identifier: string }>(SEND.APP_NEW, {
-        name: planNode.name,
-        description: planNode.description || planNode.name,
+        data: {
+          name: planNode.name,
+          description: planNode.description || planNode.name,
+          author: newItemDefaults.author() || undefined,
+          metadata: {},
+          source: appSourceFromPlan(planNode),
+        },
       });
+      // An app you create may use files anywhere on this computer, like one from New App.
+      await setAppFileTrust(app.identifier, true);
       await invokeCore(SEND.PROJECT_ASSIGN_APP, { projectIdentifier: props.projectIdentifier, appIdentifier: app.identifier });
       key = `app:${app.identifier}`;
     } else if (node.kind === 'global') {
@@ -863,7 +914,7 @@ async function create(node: MapNode, options: { type?: string; when?: string }) 
       key = `schedule:${created.scheduleIdentifier}`;
     }
     if (!key) return;
-    link(node, key);
+    link(node, key, { keepPlan: true });
     await flush();
     await load();
     resetHistory();
@@ -873,6 +924,33 @@ async function create(node: MapNode, options: { type?: string; when?: string }) 
   } finally {
     creating.value = false;
   }
+}
+
+/**
+ * A first version of a planned app from its pages: each component connected to its
+ * workflow when that's built (one still planned is added without a workflow).
+ */
+function appSourceFromPlan(planNode: PlanNode) {
+  const isBuilt = (n: MapNode | null | undefined): n is MapNode =>
+    !!n && !n.planned && !!n.ref && (n.kind === 'workflow' || n.kind === 'helper');
+  const scaffoldOf = (n: MapNode) => ({ identifier: n.ref!, name: n.name, inputs: n.inputs, outputs: n.outputs });
+  // Lines drawn by hand from the card to built workflows: the app runs them too.
+  const key = planKey(planNode.id);
+  const drawn = merged.value.edges
+    .filter((e) => e.from === key && e.kind === 'runs' && !e.derived)
+    .map((e) => merged.value.nodes.find((n) => n.key === e.to))
+    .filter(isBuilt)
+    .map(scaffoldOf);
+  return scaffoldAppSource(
+    (planNode.pages ?? []).map((page) => ({
+      name: page.name,
+      components: page.components.map((c) => {
+        const target = c.workflow ? resolvePlanRef(merged.value, c.workflow) : null;
+        return { type: c.type, name: c.name, ...(isBuilt(target) ? { workflow: scaffoldOf(target) } : {}) };
+      }),
+    })),
+    drawn
+  );
 }
 
 async function build(node: MapNode) {
@@ -901,6 +979,7 @@ function clipOf(node: MapNode): MapClip {
   if (node.owner) clip.owner = node.owner;
   if (node.lane) clip.lane = node.lane;
   if (node.note) clip.note = node.note;
+  if (planNode?.pages) clip.pages = JSON.parse(JSON.stringify(planNode.pages));
   return { node: clip, from: node.key };
 }
 
@@ -1204,6 +1283,7 @@ const isEmpty = computed(() => !loading.value && !visibleNodes.value.length);
           @add-edge="addEdge"
           @ignore="ignore"
           @accept-fields="acceptFields"
+          @accept-components="acceptComponents"
           @unlink="unlink"
         />
       </div>

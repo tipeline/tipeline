@@ -3060,7 +3060,10 @@
       "noProject": "No project",
       "dependency": "Not on the plan: shown because it's connected to something that is",
       "hidden": "Hidden workflow",
-      "hiddenHint": "You don't have access"
+      "hiddenHint": "You don't have access",
+      "appContents": "{pages} · {components}",
+      "pages": "{count} page | {count} pages",
+      "components": "{count} component | {count} components"
     },
     "connectFrom": "Draw a line from {name}",
     "connectHint": "Drag from a node's dot to another node to connect them",
@@ -3074,7 +3077,9 @@
       "unplanned": "not on plan",
       "planned": "{label} (planned)",
       "many": "{label} ×{count}",
-      "calls": "runs"
+      "calls": "runs",
+      "components": "{count} components",
+      "componentWays": "{name} · {count} ways"
     },
     "lanes": {
       "unassigned": "No lane",
@@ -3138,6 +3143,7 @@
       "linkExisting": "Link to an existing one",
       "linkPick": "Pick one…",
       "linkTaken": "already linked on this map",
+      "linkOnMap": "on this map",
       "removePlanned": "Remove from the plan",
       "open": "Open",
       "unlink": "Unlink from the plan",
@@ -3154,7 +3160,11 @@
       "never": "never",
       "removeFromProject": "Remove from project",
       "removeFromProjectFailed": "Couldn't take it out of the project",
-      "hidden": "A workflow you don't have access to. Ask its owner, or an admin, to share it, or for a copy of your own."
+      "hidden": "A workflow you don't have access to. Ask its owner, or an admin, to share it, or for a copy of your own.",
+      "openWorkflowBuilder": "Open in the workflow builder",
+      "allBuiltWorkflow": "Everything planned is in the workflow.",
+      "planTitleWorkflow": "Planned for this workflow",
+      "notAllBuiltWorkflow": "{count} planned item isn't in the workflow yet. | {count} planned items aren't in the workflow yet."
     },
     "connections": {
       "calls": {
@@ -3187,7 +3197,7 @@
     "differences": {
       "heading": "Plan check",
       "count": "{count} mismatch | {count} mismatches",
-      "hint": "Compares what you planned (lines, inputs and outputs) with the real workflows, apps and schedules. Ideas aren't checked until they're built.",
+      "hint": "Compares what you planned (lines, inputs and outputs, app components) with the real workflows, apps and schedules. Ideas aren't checked until they're built.",
       "empty": "What's built matches what you planned.",
       "none": "none",
       "show": "Show",
@@ -3211,7 +3221,8 @@
         "not-on-plan": "Not on the plan",
         "inputs": "Inputs changed",
         "outputs": "Outputs changed",
-        "link-missing": "Link broken"
+        "link-missing": "Link broken",
+        "components": "Components missing"
       },
       "missing": {
         "calls": "The plan says {from} runs {to} as a sub-workflow, but it doesn't.",
@@ -3226,7 +3237,8 @@
         "writes": "{from} writes {to}, which isn't on the plan.",
         "reads": "{from} reads {to}, which isn't on the plan.",
         "triggers": "{from} starts {to}, which isn't on the plan."
-      }
+      },
+      "components": "{name} is missing a planned component: {list}. | {name} is missing {count} planned components: {list}."
     },
     "legend": {
       "title": "Lines",
@@ -3417,6 +3429,64 @@
       "description": "It leaves this map. The workflow itself is kept, and stays in any other projects it's in.",
       "descriptionCard": "Its card leaves the map too. The workflow itself is kept, and stays in any other projects it's in.",
       "confirm": "Remove from project"
+    },
+    "uses": {
+      "page": "{name} page",
+      "shows": "shows its results",
+      "pageLoad": "runs when the page opens",
+      "other": "run by something else on the page",
+      "bulk": "{label} (selected rows)",
+      "onEvent": "on {event}",
+      "events": {
+        "submit": "on submit",
+        "click": "on click",
+        "change": "on change",
+        "rowClick": "on row click",
+        "send": "on each message",
+        "search": "on search",
+        "pageChange": "on page change",
+        "save": "on save",
+        "selectionChange": "when the selection changes",
+        "tick": "on each tick",
+        "pointClick": "on chart click",
+        "markerClick": "on marker click",
+        "itemClick": "on item click",
+        "cardClick": "on card click",
+        "cardMove": "when a card moves",
+        "eventClick": "on event click",
+        "dateSelect": "when dates are picked",
+        "rangeChange": "when the visible days change",
+        "decided": "on a decision",
+        "finish": "on finish",
+        "message": "on a message",
+        "preview": "on preview",
+        "play": "on play",
+        "pause": "on pause",
+        "ended": "when it ends"
+      }
+    },
+    "contents": {
+      "title": "Pages and components",
+      "hint": "Plan what the app shows and which workflow each part uses. Create builds the app from this list.",
+      "newPage": "Page {n}",
+      "pageName": "Page name",
+      "removePage": "Remove page",
+      "addPage": "Add page",
+      "addComponent": "Add component",
+      "type": "Component type",
+      "componentName": "Component name",
+      "workflow": "Workflow it uses",
+      "noWorkflow": "No workflow",
+      "planned": "planned",
+      "removeComponent": "Remove component",
+      "notInApp": "Not in the app",
+      "createHint": "Create builds {pages} with {components}, each connected to its workflow.",
+      "createWaiting": " {count} uses a workflow that isn't built yet, so it's added without one. | {count} use workflows that aren't built yet, so they're added without one.",
+      "openBuilder": "Open in the app builder",
+      "allBuilt": "Everything planned is in the app.",
+      "missingLines": "Lines",
+      "planTitle": "Planned for this app",
+      "notAllBuilt": "{count} planned item isn't in the app yet. | {count} planned items aren't in the app yet."
     }
   }
 }

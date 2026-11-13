@@ -18,6 +18,7 @@ import {
   otherGlobalKind,
   parsePlan,
   placeNode,
+  planGivesWayToLink,
   MAP_NODE_H,
   MAP_NODE_W,
   type LiveMap,
@@ -612,5 +613,126 @@ describe('lane grouping', () => {
     expect(laneOrder(nodes, 'owner', [])).toEqual(['Ana', 'zoe']);
     expect(laneOrder(nodes, 'status', [])).toEqual(['idea', 'ready']);
     expect(laneOrder(nodes, 'kind', [])).toEqual(['workflow', 'app', 'schedule']);
+  });
+});
+
+describe('planned app components', () => {
+  const pages = [
+    {
+      id: 'p1',
+      name: 'Catalog',
+      components: [
+        { id: 'c1', type: 'table' as const, name: 'Price list', workflow: 'plan:wf' },
+        { id: 'c2', type: 'select' as const, name: 'Region', workflow: 'plan:wf' },
+        { id: 'c3', type: 'form' as const, name: 'Purge a tag', workflow: 'task:purge' },
+        { id: 'c4', type: 'text' as const, name: 'Intro' },
+      ],
+    },
+  ];
+  const withApp = (patch: Partial<ProjectMapPlan> = {}) =>
+    plan({
+      nodes: [
+        { id: 'app', kind: 'app', name: 'Wholesale', inputs: [], outputs: [], pages },
+        { id: 'wf', kind: 'workflow', name: 'Price list', inputs: [], outputs: [] },
+      ],
+      ...patch,
+    });
+
+  it('keeps pages through parsePlan', () => {
+    expect(parsePlan(JSON.stringify(withApp())).nodes[0].pages).toEqual(pages);
+  });
+
+  it('draws one planned line per workflow, carrying the components that use it', () => {
+    const m = mergeMap(live, withApp());
+    const toWf = m.edges.find((e) => e.from === 'plan:app' && e.to === 'plan:wf')!;
+    expect(toWf).toMatchObject({ kind: 'runs', source: 'plan', derived: true, planEdgeId: 'derived:app:plan:wf' });
+    expect(toWf.uses!.map((u) => [u.component, u.ways[0].kind])).toEqual([
+      ['Price list', 'shows'],
+      ['Region', 'shows'],
+    ]);
+    const toPurge = m.edges.find((e) => e.to === 'task:purge')!;
+    expect(toPurge.uses![0].ways).toEqual([{ kind: 'event', event: 'submit' }]);
+    const node = m.nodes.find((n) => n.key === 'plan:app')!;
+    expect(node.pageCount).toBe(1);
+    expect(node.components).toHaveLength(4);
+  });
+
+  it('lets a line drawn by hand stand for the same one', () => {
+    const m = mergeMap(live, withApp({ edges: [{ id: 'e1', from: 'plan:app', to: 'task:purge', kind: 'runs' }] }));
+    const lines = m.edges.filter((e) => e.to === 'task:purge');
+    expect(lines).toHaveLength(1);
+    expect(lines[0].planEdgeId).toBe('e1');
+  });
+
+  it('checks a linked app for the planned lines and components', () => {
+    const built: LiveMap = {
+      nodes: live.nodes.map((n) =>
+        n.key === 'app:console'
+          ? { ...n, pageCount: 1, components: [{ pageId: 'catalog', page: 'catalog', id: 'priceList', name: 'price list', type: 'table' }] }
+          : n
+      ),
+      edges: live.edges,
+    };
+    const m = mergeMap(
+      built,
+      withApp({ nodes: [{ id: 'app', kind: 'app', name: 'Wholesale', inputs: [], outputs: [], pages, link: 'app:console' }] })
+    );
+    // Purge isn't wired in the app yet; the planned workflow is gone, so its line is too.
+    expect(m.differences.map((d) => d.kind).sort()).toEqual(['components', 'missing-link']);
+    const missing = m.differences.find((d) => d.kind === 'components');
+    expect(missing && missing.kind === 'components' && missing.missing.map((x) => x.component)).toEqual(['Region', 'Purge a tag', 'Intro']);
+  });
+
+  it('tells the draft which components will use the workflow', () => {
+    const text = draftBrief(mergeMap(live, withApp()), 'plan:wf').text;
+    expect(text).toContain('In the app Wholesale, the table "Price list" shows what it returns; the select "Region" shows what it returns.');
+  });
+});
+
+describe('planGivesWayToLink', () => {
+  const builtLive: LiveMap = {
+    nodes: live.nodes.map((n) =>
+      n.key === 'app:console' ? { ...n, components: [{ pageId: 'home', page: 'Home', id: 'log', name: 'Log', type: 'table' }] } : n
+    ),
+    edges: [...live.edges, { from: 'app:console', to: 'task:purge', kind: 'runs' }],
+  };
+
+  it("replaces a linked app's planned pages and the planned lines it doesn't have", () => {
+    const p = plan({
+      nodes: [
+        {
+          id: 'app',
+          kind: 'app',
+          name: 'New app3',
+          inputs: [],
+          outputs: [],
+          owner: 'Ana',
+          link: 'app:console',
+          pages: [{ id: 'p1', name: 'Page 1', components: [{ id: 'c1', type: 'table', name: 'Table1', workflow: 'task:report' }] }],
+        },
+        { id: 'idea', kind: 'workflow', name: 'Not built', inputs: [], outputs: [] },
+      ],
+      edges: [
+        { id: 'e1', from: 'plan:app', to: 'task:report', kind: 'runs' },
+        { id: 'e2', from: 'plan:app', to: 'task:purge', kind: 'runs' },
+        { id: 'e3', from: 'plan:app', to: 'plan:idea', kind: 'runs' },
+        { id: 'e4', from: 'task:purge', to: 'task:sites', kind: 'calls' },
+      ],
+    });
+    planGivesWayToLink(p, 'app', builtLive);
+    expect(p.nodes[0].pages).toBeUndefined();
+    expect(p.nodes[0].owner).toBe('Ana');
+    // e1: not real, dropped. e2: real. e3: to an idea, kept. e4: not about this node.
+    expect(p.edges.map((e) => e.id)).toEqual(['e2', 'e3', 'e4']);
+    const m = mergeMap(builtLive, p);
+    expect(m.differences).toEqual([]);
+  });
+
+  it("takes a linked workflow's real inputs and outputs", () => {
+    const p = plan({
+      nodes: [{ id: 'wf', kind: 'workflow', name: 'Idea', inputs: ['email'], outputs: ['sent'], link: 'task:purge' }],
+    });
+    planGivesWayToLink(p, 'wf', builtLive);
+    expect(p.nodes[0]).toMatchObject({ inputs: ['tag'], outputs: [] });
   });
 });

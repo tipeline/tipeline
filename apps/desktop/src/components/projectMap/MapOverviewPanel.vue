@@ -18,6 +18,8 @@ const emit = defineEmits<{
   (e: 'add-edge', from: string, to: string, kind: MapEdgeKind): void;
   (e: 'ignore', differenceKey: string): void;
   (e: 'accept-fields', nodeKey: string, which: 'inputs' | 'outputs', actual: string[]): void;
+  /** Planned components the app doesn't have: taken off the plan. */
+  (e: 'accept-components', nodeKey: string, missing: { page: string; component: string }[]): void;
   (e: 'unlink', nodeKey: string): void;
 }>();
 
@@ -50,6 +52,12 @@ function sentence(d: MapDifference) {
       });
     case 'link-missing':
       return t('projectMap.differences.linkMissing', { name: nameOf(d.nodeKey) });
+    case 'components':
+      return t(
+        'projectMap.differences.components',
+        { name: nameOf(d.nodeKey), list: d.missing.map((m) => `${m.page} › ${m.component}`).join(', '), count: d.missing.length },
+        d.missing.length
+      );
   }
 }
 
@@ -144,6 +152,11 @@ const unplanned = (d: MapDifference) => d.kind === 'not-on-plan';
           <template v-else-if="d.kind === 'inputs' || d.kind === 'outputs'">
             <Button size="sm" @click="emit('accept-fields', d.nodeKey, d.kind, d.actual)">{{ t('projectMap.differences.updatePlan') }}</Button>
             <Button size="sm" variant="outline" @click="emit('select', d.nodeKey)">{{ t('projectMap.differences.show') }}</Button>
+          </template>
+          <template v-else-if="d.kind === 'components'">
+            <Button size="sm" @click="emit('accept-components', d.nodeKey, d.missing)">{{ t('projectMap.differences.updatePlan') }}</Button>
+            <Button size="sm" variant="outline" @click="emit('select', d.nodeKey)">{{ t('projectMap.differences.show') }}</Button>
+            <Button size="sm" variant="outline" @click="emit('ignore', d.key)">{{ t('projectMap.differences.ignore') }}</Button>
           </template>
           <template v-else>
             <Button size="sm" variant="outline" @click="emit('unlink', d.nodeKey)">{{ t('projectMap.details.unlink') }}</Button>

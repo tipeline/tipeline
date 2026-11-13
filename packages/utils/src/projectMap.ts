@@ -38,6 +38,33 @@ export const PLAN_STATUSES: PlanStatus[] = ['idea', 'drafting', 'built', 'tested
 
 export type MapProjectRef = { identifier: string; name: string; color: string | null };
 
+/**
+ * How a component uses a workflow, read from an app's definition (or its plan):
+ * - `shows`: one of its settings shows what a run of it returns (a table's rows)
+ * - `event`: one of its events runs it (`submit`, `click`, `action:ship`…); `label` is the
+ *   row action, bulk action or button the event belongs to, when it has one
+ * - `pageLoad`: no component uses it, the page runs it when it opens
+ * - `other`: no component uses it, something else runs it (another run, when it's done)
+ */
+export type AppUseWay =
+  | { kind: 'shows' }
+  | { kind: 'event'; event: string; label?: string }
+  | { kind: 'pageLoad' }
+  | { kind: 'other' };
+
+/** One component (or a page, with no component) that uses a workflow, and how. */
+export type AppComponentUse = {
+  pageId: string;
+  page: string;
+  componentId?: string;
+  component?: string;
+  type?: string;
+  ways: AppUseWay[];
+};
+
+/** A component of an app, where it is. */
+export type AppComponentRef = { pageId: string; page: string; id: string; name: string; type: string };
+
 /** A node of the live map, read from a definition. */
 export type LiveMapNode = {
   /** `task:<identifier>`, `app:<identifier>`, `global:<name>` or `schedule:<identifier>`. */
@@ -73,11 +100,51 @@ export type LiveMapNode = {
   lastSuccessAt?: string | null;
   /** A schedule that's switched on. */
   enabled?: boolean;
+  /** An app: how many pages it has, and its components. */
+  pageCount?: number;
+  components?: AppComponentRef[];
 };
 
-export type LiveMapEdge = { from: string; to: string; kind: MapEdgeKind };
+export type LiveMapEdge = {
+  from: string;
+  to: string;
+  kind: MapEdgeKind;
+  /** An app's `runs` line: the components that use the workflow. */
+  uses?: AppComponentUse[];
+};
 
 export type LiveMap = { nodes: LiveMapNode[]; edges: LiveMapEdge[] };
+
+/**
+ * The component types a planned app can list. Each one is something Create knows how to
+ * make and connect to a workflow (see `scaffoldAppSource`).
+ */
+export const PLAN_COMPONENT_TYPES = ['table', 'kpi', 'chart', 'keyValue', 'form', 'button', 'select', 'text'] as const;
+export type PlanComponentType = (typeof PLAN_COMPONENT_TYPES)[number];
+
+export const planComponentSchema = z.object({
+  id: z.string().min(1).max(40),
+  type: z.enum(PLAN_COMPONENT_TYPES),
+  name: z.string().trim().min(1).max(200),
+  /** The workflow it uses: a live node key (`task:<identifier>`) or a planned one (`plan:<id>`). */
+  workflow: z.string().max(300).optional(),
+});
+
+export const planPageSchema = z.object({
+  id: z.string().min(1).max(40),
+  name: z.string().trim().min(1).max(200),
+  components: z.array(planComponentSchema).max(100).default([]),
+});
+
+export type PlanComponent = z.infer<typeof planComponentSchema>;
+export type PlanPage = z.infer<typeof planPageSchema>;
+
+/** How a planned component will use its workflow: forms and buttons run it, the rest show it. */
+export function plannedUseWay(type: PlanComponentType): AppUseWay {
+  if (type === 'form') return { kind: 'event', event: 'submit' };
+  if (type === 'button') return { kind: 'event', event: 'click' };
+  return { kind: 'shows' };
+}
 
 export const planNodeSchema = z.object({
   id: z.string().min(1).max(40),
@@ -102,6 +169,8 @@ export const planNodeSchema = z.object({
   note: z.string().max(4000).optional(),
   /** A planned schedule: when it should run, in plain words; fills in the schedule once it's made. */
   when: z.string().max(200).optional(),
+  /** A planned app: its pages and the components on them. Create builds the app from these. */
+  pages: z.array(planPageSchema).max(30).optional(),
 });
 
 export const planEdgeSchema = z.object({
@@ -295,6 +364,11 @@ export type MapNode = {
   note?: string;
   /** A planned schedule: when it should run (plain words). */
   when?: string;
+  /** An app: how many pages it has and its components (from the definition, or the plan while planned). */
+  pageCount?: number;
+  components?: AppComponentRef[];
+  /** An app's planned pages and components (planned, or linked to this app). */
+  plannedPages?: PlanPage[];
   /** The plan node behind it (planned, or linked to this live node). */
   planId?: string;
   /** The live definition's ref (identifier or global name); absent while planned. */
@@ -328,6 +402,13 @@ export type MapEdge = {
   actualKind?: MapEdgeKind;
   /** A line standing for several (a box of workflows): how many. */
   count?: number;
+  /** An app's `runs` line: the components that use the workflow (built, or planned). */
+  uses?: AppComponentUse[];
+  /**
+   * Comes from a planned app's components, not drawn by hand: its `planEdgeId` is
+   * `derivedEdgeId(...)`, and removing it takes the workflow off those components.
+   */
+  derived?: boolean;
 };
 
 export type MapDifference =
@@ -344,7 +425,9 @@ export type MapDifference =
     }
   | { kind: 'not-on-plan'; key: string; edgeKey: string; from: string; to: string; edgeKind: MapEdgeKind }
   | { kind: 'inputs' | 'outputs'; key: string; nodeKey: string; planned: string[]; actual: string[] }
-  | { kind: 'link-missing'; key: string; nodeKey: string; link: string };
+  | { kind: 'link-missing'; key: string; nodeKey: string; link: string }
+  /** A linked app is missing components its plan lists (matched by page and component name). */
+  | { kind: 'components'; key: string; nodeKey: string; missing: { page: string; component: string }[] };
 
 export type StatusWhy =
   | 'planned'
@@ -421,6 +504,8 @@ export function mergeMap(live: LiveMap, plan: ProjectMapPlan): MergedMap {
       plannedOutputs: [],
       dynamicGlobals: !!n.dynamicGlobals,
       timing: n.timing,
+      pageCount: n.pageCount,
+      components: n.components,
       linkMissing: false,
       differences: 0,
     });
@@ -447,6 +532,11 @@ export function mergeMap(live: LiveMap, plan: ProjectMapPlan): MergedMap {
       linked.lane = p.lane ?? linked.lane;
       linked.plannedInputs = p.inputs;
       linked.plannedOutputs = p.outputs;
+      if (linked.kind === 'app' && p.pages?.length) {
+        linked.plannedPages = p.pages;
+        const missing = missingComponents(p.pages, linked.components ?? []);
+        if (missing.length) addDifference({ kind: 'components', key: `components|${linked.key}`, nodeKey: linked.key, missing });
+      }
       if (isWorkflowKind(linked.kind)) {
         for (const which of ['inputs', 'outputs'] as const) {
           const planned = which === 'inputs' ? p.inputs : p.outputs;
@@ -477,6 +567,9 @@ export function mergeMap(live: LiveMap, plan: ProjectMapPlan): MergedMap {
       lane: p.lane,
       note: p.note,
       when: p.when,
+      ...(p.kind === 'app' && p.pages
+        ? { plannedPages: p.pages, pageCount: p.pages.length, components: plannedComponentRefs(p.pages) }
+        : {}),
       planId: p.id,
       projects: [],
       hidden: false,
@@ -497,23 +590,28 @@ export function mergeMap(live: LiveMap, plan: ProjectMapPlan): MergedMap {
   for (const e of live.edges) {
     if (!nodes.has(e.from) || !nodes.has(e.to)) continue;
     const key = edgeKey(e.from, e.to, e.kind);
-    edges.set(key, { key, from: e.from, to: e.to, kind: e.kind, source: 'live' });
+    edges.set(key, { key, from: e.from, to: e.to, kind: e.kind, source: 'live', ...(e.uses ? { uses: e.uses } : {}) });
   }
   const liveKeys = new Set(edges.keys());
   const plannedKeys = new Set<string>();
-  for (const e of plan.edges) {
+  for (const e of [...plan.edges, ...derivedEdges(plan)]) {
     const from = resolveEnd(e.from);
     const to = resolveEnd(e.to);
     if (!from || !to || !nodes.has(from) || !nodes.has(to)) continue;
     const key = edgeKey(from, to, e.kind);
+    const derived = 'uses' in e;
+    // A line drawn by hand and one the app's components plan are the same line.
+    if (derived && plannedKeys.has(key)) continue;
     plannedKeys.add(key);
     const existing = edges.get(key);
     if (existing) {
       existing.source = 'both';
       existing.planEdgeId = e.id;
+      if (derived) existing.derived = true;
       continue;
     }
     const edge: MapEdge = { key, from, to, kind: e.kind, source: 'plan', planEdgeId: e.id };
+    if (derived) Object.assign(edge, { derived: true, uses: e.uses });
     edges.set(key, edge);
     // Both ends exist, so this line should be in the definitions by now.
     if (!nodes.get(from)!.planned && !nodes.get(to)!.planned && !liveByKey.get(from)?.missing && !liveByKey.get(to)?.missing) {
@@ -555,6 +653,105 @@ export function mergeMap(live: LiveMap, plan: ProjectMapPlan): MergedMap {
   const progress = { idea: 0, drafting: 0, built: 0, tested: 0, ready: 0, total: own.length } as MapProgress;
   for (const n of own) progress[n.status]++;
   return { nodes: [...nodes.values()], edges: [...edges.values()], differences, progress };
+}
+
+/**
+ * Linking a planned node to something already built: the built thing is what it is, so
+ * the idea's own plan gives way to it. A workflow's planned inputs and outputs become its
+ * real ones; a planned app's pages go (its own components are what it has); planned lines
+ * between it and other built things that the definitions don't have are dropped. Lines to
+ * things still planned stay: there's nothing real to compare them with yet. Owner, lane,
+ * note and Ready sign-off are about the project, not the definition, so they stay.
+ *
+ * Changes `plan` in place (the node must already carry its `link`) and returns it.
+ */
+export function planGivesWayToLink(plan: ProjectMapPlan, planNodeId: string, live: LiveMap): ProjectMapPlan {
+  const node = plan.nodes.find((n) => n.id === planNodeId);
+  const linked = node?.link ? live.nodes.find((n) => n.key === node.link) : undefined;
+  if (!node || !linked) return plan;
+  if (node.kind === 'workflow' || node.kind === 'helper') {
+    node.inputs = [...(linked.inputs ?? [])];
+    node.outputs = [...(linked.outputs ?? [])];
+  }
+  delete node.pages;
+
+  const self = planKey(node.id);
+  const linkOf = new Map(plan.nodes.filter((n) => n.link).map((n) => [planKey(n.id), n.link as string]));
+  const liveKeys = new Set(live.nodes.map((n) => n.key));
+  // A line end as a built node's key, or null while it's still only planned.
+  const built = (end: string) => {
+    const key = end.startsWith('plan:') ? linkOf.get(end) : end;
+    return key && liveKeys.has(key) ? key : null;
+  };
+  const real = new Set(live.edges.map((e) => edgeKey(e.from, e.to, e.kind)));
+  plan.edges = plan.edges.filter((e) => {
+    if (![e.from, e.to].some((end) => end === self || end === node.link)) return true;
+    const from = built(e.from);
+    const to = built(e.to);
+    return !from || !to || real.has(edgeKey(from, to, e.kind));
+  });
+  return plan;
+}
+
+/** The planned-edge id of a line a planned app's components imply. */
+export const derivedEdgeId = (planNodeId: string, workflowRef: string) => `derived:${planNodeId}:${workflowRef}`;
+
+/** `derived:<planNodeId>:<workflowRef>` read back, or null for a line drawn by hand. */
+export function parseDerivedEdgeId(id: string): { planNodeId: string; workflowRef: string } | null {
+  const m = id.match(/^derived:([^:]+):(.+)$/);
+  return m ? { planNodeId: m[1], workflowRef: m[2] } : null;
+}
+
+/**
+ * The `runs` lines planned apps' components imply: one per app and workflow, carrying the
+ * components that use it. A hand-drawn line between the same two wins (it comes first).
+ */
+function derivedEdges(plan: ProjectMapPlan): (PlanEdge & { uses: AppComponentUse[] })[] {
+  const out: (PlanEdge & { uses: AppComponentUse[] })[] = [];
+  for (const node of plan.nodes) {
+    if (node.kind !== 'app' || !node.pages?.length) continue;
+    const byRef = new Map<string, AppComponentUse[]>();
+    for (const page of node.pages) {
+      for (const c of page.components) {
+        if (!c.workflow) continue;
+        const uses = byRef.get(c.workflow) ?? [];
+        uses.push({ pageId: page.id, page: page.name, componentId: c.id, component: c.name, type: c.type, ways: [plannedUseWay(c.type)] });
+        byRef.set(c.workflow, uses);
+      }
+    }
+    for (const [ref, uses] of byRef) {
+      out.push({ id: derivedEdgeId(node.id, ref), from: planKey(node.id), to: ref, kind: 'runs', uses });
+    }
+  }
+  return out;
+}
+
+function plannedComponentRefs(pages: PlanPage[]): AppComponentRef[] {
+  return pages.flatMap((p) => p.components.map((c) => ({ pageId: p.id, page: p.name, id: c.id, name: c.name, type: c.type })));
+}
+
+const loose = (text: string) => text.trim().toLocaleLowerCase();
+
+/** Planned components the app doesn't have: a component with that name on a page with that name. */
+function missingComponents(pages: PlanPage[], actual: AppComponentRef[]): { page: string; component: string }[] {
+  const have = new Set(actual.map((c) => `${loose(c.page)}|${loose(c.name)}`));
+  return pages.flatMap((p) =>
+    p.components
+      .filter((c) => !have.has(`${loose(p.name)}|${loose(c.name)}`))
+      .map((c) => ({ page: p.name, component: c.name }))
+  );
+}
+
+/**
+ * What a planned app component's workflow is on the map now: a live node key stays as it
+ * is; a planned one is the live node it was linked to, if any. Null when it's gone.
+ */
+export function resolvePlanRef(map: MergedMap, ref: string): MapNode | null {
+  if (ref.startsWith('plan:')) {
+    const id = ref.slice(5);
+    return map.nodes.find((n) => n.planId === id) ?? null;
+  }
+  return map.nodes.find((n) => n.key === ref) ?? null;
 }
 
 const after = (a: string | null | undefined, b: string | null | undefined) =>
@@ -1081,6 +1278,7 @@ export function draftBrief(map: MergedMap, nodeKey: string): { text: string; reu
   const reads: string[] = [];
   const writes: string[] = [];
   const runBy: string[] = [];
+  const usedIn: string[] = [];
   const calledBy: string[] = [];
   const runsWhen: string[] = [];
   for (const e of map.edges) {
@@ -1094,7 +1292,11 @@ export function draftBrief(map: MergedMap, nodeKey: string): { text: string; reu
     if (e.to === nodeKey) {
       const from = byKey.get(e.from);
       if (!from) continue;
-      if (e.kind === 'runs') runBy.push(from.name);
+      if (e.kind === 'runs') {
+        runBy.push(from.name);
+        const parts = (e.uses ?? []).filter((u) => u.component).map((u) => `the ${u.type ?? 'component'} "${u.component}" ${briefWays(u.ways)}`);
+        if (parts.length) usedIn.push(`In the app ${from.name}, ${parts.join('; ')}.`);
+      }
       if (e.kind === 'calls') calledBy.push(from.name);
       if (e.kind === 'triggers' && from.planned && from.when) runsWhen.push(from.when);
     }
@@ -1103,7 +1305,19 @@ export function draftBrief(map: MergedMap, nodeKey: string): { text: string; reu
   if (reads.length) lines.push(`Read these global variables: ${reads.join(', ')}.`);
   if (writes.length) lines.push(`Save results to these global variables: ${writes.join(', ')}.`);
   if (runBy.length) lines.push(`It will be run from the app${runBy.length > 1 ? 's' : ''} ${runBy.join(', ')}.`);
+  lines.push(...usedIn);
   if (calledBy.length) lines.push(`Its outputs are used by: ${calledBy.join(', ')}.`);
   if (runsWhen.length) lines.push(`It will run on a schedule: ${runsWhen.join('; ')}.`);
   return { text: lines.join('\n'), reuse };
+}
+
+/** How a component uses the workflow, for the brief. */
+function briefWays(ways: AppUseWay[]): string {
+  return ways
+    .map((w) => {
+      if (w.kind === 'shows') return 'shows what it returns';
+      if (w.kind === 'event') return `runs it on ${w.label ?? w.event}`;
+      return 'runs it';
+    })
+    .join(' and ');
 }
