@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
-import { CircleCheck, CircleDashed, PencilRuler } from 'lucide-vue-next';
+import { CircleCheck, CircleDashed, PencilRuler, X } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 
 /**
@@ -16,10 +16,23 @@ const props = defineProps<{
   inputs: string[];
   outputs: string[];
   /** Planned lines from it ("writes _global.total"), and whether the workflow has each. */
-  lines: { text: string; ok: boolean }[];
+  lines: { text: string; ok: boolean; planEdgeId?: string }[];
   /** The workflow builder. */
   builderTo: string;
+  /** Planned items the workflow doesn't have can be taken off the plan (never added). */
+  editable?: boolean;
 }>();
+
+const emit = defineEmits<{
+  (e: 'remove-field', which: 'inputs' | 'outputs', name: string): void;
+  (e: 'remove-line', planEdgeId: string): void;
+}>();
+
+function remove(group: string, item: { text: string; planEdgeId?: string }) {
+  if (group === 'lines') {
+    if (item.planEdgeId) emit('remove-line', item.planEdgeId);
+  } else emit('remove-field', group as 'inputs' | 'outputs', item.text);
+}
 
 const { t } = useI18n();
 const router = useRouter();
@@ -33,6 +46,7 @@ const groups = computed(() =>
         text: name,
         ok: props.inputs.includes(name),
         mono: true,
+        planEdgeId: undefined as string | undefined,
       })),
     },
     {
@@ -42,6 +56,7 @@ const groups = computed(() =>
         text: name,
         ok: props.outputs.includes(name),
         mono: true,
+        planEdgeId: undefined as string | undefined,
       })),
     },
     {
@@ -92,6 +107,16 @@ const missingCount = computed(() =>
         <CircleCheck v-if="item.ok" class="size-3.5 shrink-0 text-green-600" />
         <CircleDashed v-else class="size-3.5 shrink-0 text-amber-600" />
         <span :class="item.mono ? 'font-mono' : ''">{{ item.text }}</span>
+        <button
+          v-if="editable && !item.ok && (g.key !== 'lines' || item.planEdgeId)"
+          type="button"
+          class="ml-auto shrink-0 rounded p-0.5 text-muted-foreground hover:text-destructive"
+          :aria-label="t('projectMap.contents.removeFromPlan')"
+          :title="t('projectMap.contents.removeFromPlan')"
+          @click="remove(g.key, item)"
+        >
+          <X class="size-3.5" />
+        </button>
       </div>
     </div>
     <Button

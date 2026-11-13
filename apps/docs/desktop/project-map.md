@@ -175,6 +175,10 @@ mismatch:
 | Link broken | The node was linked to something that was deleted |
 | Components missing | The plan lists the "Price list" table on Catalog, but the app has no component with that name on that page |
 
+In a built workflow's or app's own details, each planned item it doesn't have (amber) also
+has a **×** to take it off the plan, for a feature you decided against. Only missing items
+can be removed, and nothing can be added: a built workflow or app changes in its builder.
+
 For each one you can update the plan to match (**Add to plan**, **Remove from plan**,
 **Update the plan**) or **Ignore** it. On the map, amber lines are mismatches and orange
 lines exist but aren't on the plan. Ideas aren't checked until they're built.

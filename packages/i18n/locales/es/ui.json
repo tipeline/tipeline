@@ -3486,7 +3486,8 @@
       "allBuilt": "Todo lo planeado está en la app.",
       "missingLines": "Líneas",
       "planTitle": "Planeado para esta app",
-      "notAllBuilt": "{count} elemento planeado aún no está en la app. | {count} elementos planeados aún no están en la app."
+      "notAllBuilt": "{count} elemento planeado aún no está en la app. | {count} elementos planeados aún no están en la app.",
+      "removeFromPlan": "Quitar del plan"
     }
   }
 }

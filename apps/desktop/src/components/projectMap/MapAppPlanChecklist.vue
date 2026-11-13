@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
-import { CircleCheck, CircleDashed, PencilRuler } from 'lucide-vue-next';
+import { CircleCheck, CircleDashed, PencilRuler, X } from 'lucide-vue-next';
 import type { AppComponentRef, PlanPage } from '@tipeline/utils';
 import { Button } from '@/components/ui/button';
 
@@ -16,11 +16,18 @@ const props = defineProps<{
   /** The app's components. */
   built: AppComponentRef[];
   /** Planned lines from it ("runs Data: Alerts"), and whether the app has each. */
-  lines: { text: string; ok: boolean }[];
+  lines: { text: string; ok: boolean; planEdgeId?: string }[];
   /** The workflow a planned component uses, by name (built or planned). */
   workflowName: (ref: string) => string | undefined;
   /** The app builder. */
   builderTo: string;
+  /** Planned items the app doesn't have can be taken off the plan (never added). */
+  editable?: boolean;
+}>();
+
+const emit = defineEmits<{
+  (e: 'remove-component', pageId: string, componentId: string): void;
+  (e: 'remove-line', planEdgeId: string): void;
 }>();
 
 const { t } = useI18n();
@@ -90,6 +97,16 @@ const missingCount = computed(
             {{ workflowName(c.workflow) }}
           </div>
         </div>
+        <button
+          v-if="editable && !inApp(page.name, c.name)"
+          type="button"
+          class="ml-auto shrink-0 rounded p-0.5 text-muted-foreground hover:text-destructive"
+          :aria-label="t('projectMap.contents.removeFromPlan')"
+          :title="t('projectMap.contents.removeFromPlan')"
+          @click="emit('remove-component', page.id, c.id)"
+        >
+          <X class="size-3.5" />
+        </button>
       </div>
     </div>
     <div
@@ -107,6 +124,16 @@ const missingCount = computed(
         <CircleCheck v-if="line.ok" class="size-3.5 shrink-0 text-green-600" />
         <CircleDashed v-else class="size-3.5 shrink-0 text-amber-600" />
         <span>{{ line.text }}</span>
+        <button
+          v-if="editable && !line.ok && line.planEdgeId"
+          type="button"
+          class="ml-auto shrink-0 rounded p-0.5 text-muted-foreground hover:text-destructive"
+          :aria-label="t('projectMap.contents.removeFromPlan')"
+          :title="t('projectMap.contents.removeFromPlan')"
+          @click="emit('remove-line', line.planEdgeId!)"
+        >
+          <X class="size-3.5" />
+        </button>
       </div>
     </div>
     <Button

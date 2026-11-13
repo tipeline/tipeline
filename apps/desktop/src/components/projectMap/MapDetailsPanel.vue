@@ -126,9 +126,22 @@ const plannedLines = computed(() =>
     if (e.from !== props.node.key || e.source === 'live') return [];
     const to = byKey.value.get(e.to);
     const name = to?.kind === 'global' ? `_global.${to.name}` : (to?.name ?? e.to);
-    return [{ text: `${t(`projectMap.edge.${e.kind}`)} ${name}`, ok: e.source === 'both' }];
+    return [{ text: `${t(`projectMap.edge.${e.kind}`)} ${name}`, ok: e.source === 'both', planEdgeId: e.planEdgeId }];
   })
 );
+
+/** A planned component that isn't in the app, taken off the plan (an emptied page goes too). */
+function removePlannedComponent(pageId: string, componentId: string) {
+  const pages = (props.planNode?.pages ?? [])
+    .map((p) => (p.id === pageId ? { ...p, components: p.components.filter((c) => c.id !== componentId) } : p))
+    .filter((p) => p.components.length);
+  emit('update', { pages: pages.length ? JSON.parse(JSON.stringify(pages)) : undefined });
+}
+
+/** A planned input or output the workflow doesn't have, taken off the plan. */
+function removePlannedField(which: 'inputs' | 'outputs', name: string) {
+  emit('update', { [which]: (props.planNode?.[which] ?? []).filter((n) => n !== name) });
+}
 
 const dynamicCount = computed(() => props.map.nodes.filter((n) => n.dynamicGlobals).length);
 
@@ -385,6 +398,9 @@ const scheduleTarget = computed(() => {
       :built="node.components ?? []"
       :workflow-name="(ref: string) => resolvePlanRef(map, ref)?.name"
       :builder-to="`/apps/${node.ref}/edit`"
+      :editable="editable"
+      @remove-component="removePlannedComponent"
+      @remove-line="emit('remove-edge', $event)"
     />
 
     <!-- Built: the plan, read-only, checked against the workflow; it changes in its builder -->
@@ -396,6 +412,9 @@ const scheduleTarget = computed(() => {
       :inputs="node.inputs"
       :outputs="node.outputs"
       :builder-to="`/tasks/${node.ref}/edit`"
+      :editable="editable"
+      @remove-field="removePlannedField"
+      @remove-line="emit('remove-edge', $event)"
     />
 
     <!-- What the definition says -->
