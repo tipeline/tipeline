@@ -251,9 +251,28 @@ function edgeLabel(edge: MapEdge) {
       : t('projectMap.edge.missing');
   }
   if (props.editable && edge.difference === 'unplanned') return t('projectMap.edge.unplanned');
-  const label = t(`projectMap.edge.${edge.kind}`);
+  const label = usesLabel(edge) ?? t(`projectMap.edge.${edge.kind}`);
   if (edge.count) return t('projectMap.edge.many', { label, count: edge.count });
   return edge.source === 'plan' ? t('projectMap.edge.planned', { label }) : label;
+}
+
+/**
+ * An app's line names what in the app uses the workflow: the component when it's one
+ * (and how many ways it runs it), else how many components. The full list is in the
+ * app's details, which a click on the line opens.
+ */
+function usesLabel(edge: MapEdge): string | null {
+  const components = (edge.uses ?? []).filter((u) => u.component);
+  if (!components.length) return null;
+  if (components.length > 1) return t('projectMap.edge.components', { count: components.length });
+  const [only] = components;
+  const ways = only.ways.length;
+  return ways > 1 ? t('projectMap.edge.componentWays', { name: only.component, count: ways }) : (only.component ?? null);
+}
+
+function onEdgeClick({ edge }: { edge: Edge }) {
+  const mapEdge = props.edges.find((e) => e.key === edge.id);
+  if (mapEdge?.uses?.length) emit('select', mapEdge.from);
 }
 
 const flowEdges = computed<Edge[]>(() =>
@@ -267,6 +286,7 @@ const flowEdges = computed<Edge[]>(() =>
       target: edge.to,
       type: 'default',
       label: edgeLabel(edge),
+      class: edge.uses?.length ? 'map-edge--uses' : undefined,
       selectable: false,
       focusable: false,
       // A read points at the global like a write; the open arrowhead tells them apart.
@@ -376,6 +396,7 @@ watch(
       :zoom-on-double-click="false"
       :delete-key-code="null"
       @node-click="onNodeClick"
+      @edge-click="onEdgeClick"
       @pane-click="emit('select', null)"
       @node-drag-stop="onDragStop"
       @connect-start="onConnectStart"
@@ -466,6 +487,10 @@ watch(
 .project-map .map-handle.map-handle--hidden {
   opacity: 0;
   pointer-events: none;
+}
+/* A line that opens its app's component list. */
+.project-map .vue-flow__edge.map-edge--uses {
+  cursor: pointer;
 }
 .project-map .vue-flow__connection-path {
   stroke: var(--primary);

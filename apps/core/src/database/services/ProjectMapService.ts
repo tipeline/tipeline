@@ -1,5 +1,5 @@
 import { Project as ProjectModel } from '@/database/models/Project';
-import { appWorkflowIdentifiers, calledWorkflowIdentifiers } from '@/database/services/WorkflowUsageService';
+import { appWorkflowIdentifiers, appWorkflowUses, calledWorkflowIdentifiers } from '@/database/services/WorkflowUsageService';
 import { isDraft } from '@task/Draft';
 import { ProjectMembership, parseProjects, projectsSubquery } from '@/database/services/ProjectMembership';
 import {
@@ -230,9 +230,21 @@ export class ProjectMapService {
 
     for (const a of apps as any[]) {
       const key = `app:${a.identifier}`;
-      nodes.push({ key, kind: 'app', name: a.name, ref: a.identifier, description: a.description ?? null, projects: projectsOf(a) });
+      const { uses, pageCount, components } = appWorkflowUses(a.source);
+      nodes.push({
+        key,
+        kind: 'app',
+        name: a.name,
+        ref: a.identifier,
+        description: a.description ?? null,
+        projects: projectsOf(a),
+        pageCount,
+        components,
+      });
       for (const id of appWorkflowIdentifiers(a.source)) {
-        if (taskIds.has(id)) edges.push({ from: key, to: `task:${id}`, kind: 'runs' });
+        if (!taskIds.has(id)) continue;
+        const used = uses.get(id);
+        edges.push({ from: key, to: `task:${id}`, kind: 'runs', ...(used?.length ? { uses: used } : {}) });
       }
       const reads = new Set<string>();
       if (typeof a.source === 'string') scanTemplates(a.source, reads);

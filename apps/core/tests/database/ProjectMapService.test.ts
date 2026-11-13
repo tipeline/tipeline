@@ -359,3 +359,29 @@ describe('ProjectMapService plans', () => {
     expect(await knex('project_map').where({ project_id: id })).toEqual([]);
   });
 });
+
+describe('an app made from a map card', () => {
+  const appProjects = async (identifier: string) =>
+    await knex('project_app')
+      .join('app', 'app.id', 'project_app.app_id')
+      .join('project', 'project.id', 'project_app.project_id')
+      .where('app.identifier', identifier)
+      .pluck('project.identifier');
+
+  it('stays in the project when the card is unlinked (Create: made, added, then linked)', async () => {
+    const [projectId] = await knex('project').insert({ identifier: 'p-made', name: 'Made' });
+    await ProjectMapService.savePlan('p-made', { nodes: [{ id: 'made', kind: 'app', name: 'Made here' }] });
+    // What Create does: make the app, add it to the project, link the card.
+    await knex('app').insert({ identifier: 'app-made', name: 'Made here', source: appSource() });
+    await join('app', 'app-made', projectId);
+    const linked = await ProjectMapService.getPlan('p-made');
+    linked.nodes[0].link = 'app:app-made';
+    const saved = await ProjectMapService.savePlan('p-made', linked);
+    expect(saved.nodes[0].alreadyIn).toBe(true);
+
+    const unlinked = await ProjectMapService.getPlan('p-made');
+    delete unlinked.nodes[0].link;
+    await ProjectMapService.savePlan('p-made', unlinked);
+    expect(await appProjects('app-made')).toEqual(['p-made']);
+  });
+});

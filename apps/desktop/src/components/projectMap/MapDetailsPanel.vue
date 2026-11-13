@@ -7,6 +7,7 @@ import {
   descriptionSummary,
   linkableKinds,
   otherGlobalKind,
+  resolvePlanRef,
   type MapEdge,
   type MapEdgeKind,
   type MapNode,
@@ -19,6 +20,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ScheduleDetails from '@/components/schedule/ScheduleDetails.vue';
+import MapComponentUses from './MapComponentUses.vue';
+import MapAppContents from './MapAppContents.vue';
+import MapAppPlanChecklist from './MapAppPlanChecklist.vue';
+import MapWorkflowPlanChecklist from './MapWorkflowPlanChecklist.vue';
 
 const props = defineProps<{
   node: MapNode;
@@ -33,14 +38,14 @@ const props = defineProps<{
   /** Inside a sidebar whose header has its own close button. */
   hideHeaderClose?: boolean;
   /** What it can be linked to (everything in Tipeline); without it, what's on this map. */
-  linkTargets?: { key: string; name: string; projects: string[]; linked?: boolean }[];
+  linkTargets?: { key: string; name: string; projects: string[]; linked?: boolean; onMap?: boolean }[];
 }>();
 
 const emit = defineEmits<{
   (e: 'select', key: string): void;
   (e: 'close'): void;
   /** A change to the node's notes: on its plan node when it has one, else on the live node. */
-  (e: 'update', patch: Partial<Pick<PlanNode, 'name' | 'description' | 'owner' | 'lane' | 'inputs' | 'outputs' | 'note' | 'when'>>): void;
+  (e: 'update', patch: Partial<Pick<PlanNode, 'name' | 'description' | 'owner' | 'lane' | 'inputs' | 'outputs' | 'note' | 'when' | 'pages'>>): void;
   /** Sign it off as ready, or take that back. */
   (e: 'ready', on: boolean): void;
   (e: 'remove'): void;
@@ -93,6 +98,38 @@ const headingLabel = (heading: string) => {
   return t(`projectMap.connections.${kind}.${dir}`);
 };
 
+/** Workflows on this map a planned app's components can use, built or planned. */
+const appWorkflows = computed(() =>
+  props.map.nodes
+    .filter((n) => (n.kind === 'workflow' || n.kind === 'helper') && !n.hidden)
+    .map((n) => ({ key: n.key, name: n.name, planned: n.planned }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+);
+
+/** What Create makes from the planned components: how many, and how many can't be connected yet. */
+const appPlan = computed(() => {
+  const components = (props.planNode?.pages ?? []).flatMap((p) => p.components);
+  const waiting = components.filter((c) => {
+    if (!c.workflow) return false;
+    const target = resolvePlanRef(props.map, c.workflow);
+    return !target || target.planned || !target.ref;
+  }).length;
+  return { pages: props.planNode?.pages?.length ?? 0, components: components.length, waiting };
+});
+
+/**
+ * Planned lines from it ("runs Data: Alerts"), each with whether the real thing has it:
+ * part of how a built workflow or app compares with its plan, next to fields and components.
+ */
+const plannedLines = computed(() =>
+  props.map.edges.flatMap((e) => {
+    if (e.from !== props.node.key || e.source === 'live') return [];
+    const to = byKey.value.get(e.to);
+    const name = to?.kind === 'global' ? `_global.${to.name}` : (to?.name ?? e.to);
+    return [{ text: `${t(`projectMap.edge.${e.kind}`)} ${name}`, ok: e.source === 'both' }];
+  })
+);
+
 const dynamicCount = computed(() => props.map.nodes.filter((n) => n.dynamicGlobals).length);
 
 /** Live nodes a planned one could become: same kind, not taken by another plan node. */
@@ -101,7 +138,7 @@ const linkTargets = computed(
     props.linkTargets ??
     props.map.nodes
       .filter((n) => !n.planned && !n.planId && linkableKinds(props.node.kind).includes(n.kind))
-      .map((n) => ({ key: n.key, name: n.name, projects: n.projects.map((p) => p.name), linked: false }))
+      .map((n) => ({ key: n.key, name: n.name, projects: n.projects.map((p) => p.name), linked: false, onMap: true }))
       .sort((a, b) => a.name.localeCompare(b.name))
 );
 
@@ -320,8 +357,8 @@ const scheduleTarget = computed(() => {
       </label>
     </div>
 
-    <!-- Planned inputs and outputs: what the plan expects; checked once linked -->
-    <div v-if="editable && isWorkflow && planNode" class="flex flex-col gap-3">
+    <!-- Planned inputs and outputs: what the plan expects, editable while it's an idea -->
+    <div v-if="editable && isWorkflow && planNode && node.planned" class="flex flex-col gap-3">
       <label class="flex flex-col gap-1.5 text-xs font-semibold">
         {{ t('projectMap.details.plannedInputs') }}
         <Input :model-value="plannedInputs" :placeholder="t('projectMap.details.listPlaceholder')" @change="commitList('inputs', ($event.target as HTMLInputElement).value)" />
@@ -331,6 +368,35 @@ const scheduleTarget = computed(() => {
         <Input :model-value="plannedOutputs" :placeholder="t('projectMap.details.listPlaceholder')" @change="commitList('outputs', ($event.target as HTMLInputElement).value)" />
       </label>
     </div>
+
+    <!-- A planned app's pages and components: what Create builds -->
+    <MapAppContents
+      v-if="editable && node.kind === 'app' && planNode && node.planned"
+      :pages="planNode.pages"
+      :workflows="appWorkflows"
+      :resolve-key="(ref: string) => resolvePlanRef(map, ref)?.key"
+      @update="emit('update', { pages: $event })"
+    />
+    <!-- Made from the idea: the plan, read-only, checked against the app; the app changes in its builder -->
+    <MapAppPlanChecklist
+      v-else-if="node.kind === 'app' && node.ref && (planNode?.pages?.length || plannedLines.length)"
+      :pages="planNode?.pages ?? []"
+      :lines="plannedLines"
+      :built="node.components ?? []"
+      :workflow-name="(ref: string) => resolvePlanRef(map, ref)?.name"
+      :builder-to="`/apps/${node.ref}/edit`"
+    />
+
+    <!-- Built: the plan, read-only, checked against the workflow; it changes in its builder -->
+    <MapWorkflowPlanChecklist
+      v-else-if="isWorkflow && node.ref && (planNode?.inputs.length || planNode?.outputs.length || plannedLines.length)"
+      :lines="plannedLines"
+      :planned-inputs="planNode?.inputs ?? []"
+      :planned-outputs="planNode?.outputs ?? []"
+      :inputs="node.inputs"
+      :outputs="node.outputs"
+      :builder-to="`/tasks/${node.ref}/edit`"
+    />
 
     <!-- What the definition says -->
     <div v-if="!node.planned && isWorkflow && (node.inputs.length || node.outputs.length)" class="flex flex-col gap-1.5">
@@ -344,7 +410,8 @@ const scheduleTarget = computed(() => {
     <div v-if="groups.length" class="flex flex-col gap-3">
       <div v-for="group in groups" :key="group.heading" class="flex flex-col gap-1">
         <div class="text-xs font-semibold">{{ headingLabel(group.heading) }} ({{ group.items.length }})</div>
-        <div v-for="item in group.items" :key="item.edge.key" class="group flex items-center justify-between gap-2">
+        <template v-for="item in group.items" :key="item.edge.key">
+        <div class="group flex items-center justify-between gap-2">
           <button type="button" class="min-w-0 truncate text-left text-primary hover:underline" @click="emit('select', item.other.key)">
             {{ item.other.kind === 'global' ? `_global.${item.other.name}` : item.other.name }}
             <span v-if="item.edge.source === 'plan'" class="text-xs text-muted-foreground"> · {{ t('projectMap.details.plannedLine') }}</span>
@@ -370,6 +437,8 @@ const scheduleTarget = computed(() => {
             <X class="size-3.5" />
           </button>
         </div>
+        <MapComponentUses v-if="item.edge.uses?.length" :uses="item.edge.uses" class="mb-1" />
+        </template>
       </div>
     </div>
     <p v-else class="text-muted-foreground">
@@ -388,9 +457,20 @@ const scheduleTarget = computed(() => {
       <Button v-if="isWorkflow" @click="emit('build')">
         <Sparkles class="size-4" /> {{ t('projectMap.details.build') }}
       </Button>
-      <Button v-else-if="node.kind === 'app'" :disabled="creating" @click="emit('create', {})">
-        <Loader2 v-if="creating" class="size-4 animate-spin" /> {{ t('projectMap.details.createApp') }}
-      </Button>
+      <template v-else-if="node.kind === 'app'">
+        <p v-if="appPlan.components" class="text-xs text-muted-foreground">
+          {{
+            t('projectMap.contents.createHint', {
+              pages: t('projectMap.node.pages', { count: appPlan.pages }, appPlan.pages),
+              components: t('projectMap.node.components', { count: appPlan.components }, appPlan.components),
+            })
+          }}
+          <template v-if="appPlan.waiting">{{ t('projectMap.contents.createWaiting', { count: appPlan.waiting }, appPlan.waiting) }}</template>
+        </p>
+        <Button :disabled="creating" @click="emit('create', {})">
+          <Loader2 v-if="creating" class="size-4 animate-spin" /> {{ t('projectMap.details.createApp') }}
+        </Button>
+      </template>
 
       <template v-else-if="node.kind === 'global'">
         <p class="text-xs text-muted-foreground">
@@ -447,6 +527,7 @@ const scheduleTarget = computed(() => {
           <SelectContent>
             <SelectItem v-for="n in linkTargets" :key="n.key" :value="n.key" :disabled="n.linked">
               {{ n.name }}<template v-if="n.projects.length"> · {{ n.projects.join(', ') }}</template>
+              <span v-if="n.onMap && !n.linked" class="ml-1 text-muted-foreground">· {{ t('projectMap.details.linkOnMap') }}</span>
               <span v-if="n.linked" class="ml-1 text-muted-foreground">· {{ t('projectMap.details.linkTaken') }}</span>
             </SelectItem>
           </SelectContent>

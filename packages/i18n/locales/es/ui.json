@@ -3060,7 +3060,10 @@
       "noProject": "Sin proyecto",
       "dependency": "No está en el plan: aparece porque está conectado con algo que sí lo está",
       "hidden": "Flujo oculto",
-      "hiddenHint": "No tienes acceso"
+      "hiddenHint": "No tienes acceso",
+      "appContents": "{pages} · {components}",
+      "pages": "{count} página | {count} páginas",
+      "components": "{count} componente | {count} componentes"
     },
     "connectFrom": "Trazar una línea desde {name}",
     "connectHint": "Arrastra desde el punto de un nodo hasta otro para conectarlos",
@@ -3074,7 +3077,9 @@
       "unplanned": "fuera del plan",
       "planned": "{label} (planeado)",
       "many": "{label} ×{count}",
-      "calls": "ejecuta"
+      "calls": "ejecuta",
+      "components": "{count} componentes",
+      "componentWays": "{name} · {count} formas"
     },
     "lanes": {
       "unassigned": "Sin carril",
@@ -3138,6 +3143,7 @@
       "linkExisting": "Vincular con uno existente",
       "linkPick": "Elige uno…",
       "linkTaken": "ya enlazado en este mapa",
+      "linkOnMap": "en este mapa",
       "removePlanned": "Quitar del plan",
       "open": "Abrir",
       "unlink": "Desvincular del plan",
@@ -3154,7 +3160,11 @@
       "never": "nunca",
       "removeFromProject": "Quitar del proyecto",
       "removeFromProjectFailed": "No se pudo quitar del proyecto",
-      "hidden": "Un flujo de trabajo al que no tienes acceso. Pide a su dueño, o a un administrador, que lo comparta o que te dé una copia propia."
+      "hidden": "Un flujo de trabajo al que no tienes acceso. Pide a su dueño, o a un administrador, que lo comparta o que te dé una copia propia.",
+      "openWorkflowBuilder": "Abrir en el editor de flujos",
+      "allBuiltWorkflow": "Todo lo planeado está en el flujo de trabajo.",
+      "planTitleWorkflow": "Planeado para este flujo de trabajo",
+      "notAllBuiltWorkflow": "{count} elemento planeado aún no está en el flujo de trabajo. | {count} elementos planeados aún no están en el flujo de trabajo."
     },
     "connections": {
       "calls": {
@@ -3187,7 +3197,7 @@
     "differences": {
       "heading": "Revisión del plan",
       "count": "{count} discrepancia | {count} discrepancias",
-      "hint": "Compara lo planeado (líneas, entradas y salidas) con los flujos de trabajo, apps y programaciones reales. Las ideas no se revisan hasta que se construyen.",
+      "hint": "Compara lo planeado (líneas, entradas y salidas, componentes de apps) con los flujos de trabajo, apps y programaciones reales. Las ideas no se revisan hasta que se construyen.",
       "empty": "Lo construido coincide con lo planeado.",
       "none": "ninguna",
       "show": "Mostrar",
@@ -3211,7 +3221,8 @@
         "not-on-plan": "Fuera del plan",
         "inputs": "Cambiaron las entradas",
         "outputs": "Cambiaron las salidas",
-        "link-missing": "Vínculo roto"
+        "link-missing": "Vínculo roto",
+        "components": "Faltan componentes"
       },
       "missing": {
         "calls": "El plan dice que {from} ejecuta {to} como subflujo, pero no lo hace.",
@@ -3226,7 +3237,8 @@
         "writes": "{from} escribe {to}, y eso no está en el plan.",
         "reads": "{from} lee {to}, y eso no está en el plan.",
         "triggers": "{from} inicia {to}, y eso no está en el plan."
-      }
+      },
+      "components": "A {name} le falta un componente planeado: {list}. | A {name} le faltan {count} componentes planeados: {list}."
     },
     "legend": {
       "title": "Líneas",
@@ -3417,6 +3429,64 @@
       "description": "Sale de este mapa. El flujo de trabajo se conserva y sigue en cualquier otro proyecto en el que esté.",
       "descriptionCard": "Su tarjeta también sale del mapa. El flujo de trabajo se conserva y sigue en cualquier otro proyecto en el que esté.",
       "confirm": "Quitar del proyecto"
+    },
+    "uses": {
+      "page": "Página {name}",
+      "shows": "muestra sus resultados",
+      "pageLoad": "se ejecuta al abrir la página",
+      "other": "lo ejecuta otra cosa de la página",
+      "bulk": "{label} (filas seleccionadas)",
+      "onEvent": "en {event}",
+      "events": {
+        "submit": "al enviar",
+        "click": "al hacer clic",
+        "change": "al cambiar",
+        "rowClick": "al hacer clic en una fila",
+        "send": "con cada mensaje",
+        "search": "al buscar",
+        "pageChange": "al cambiar de página",
+        "save": "al guardar",
+        "selectionChange": "al cambiar la selección",
+        "tick": "en cada tic",
+        "pointClick": "al hacer clic en el gráfico",
+        "markerClick": "al hacer clic en un marcador",
+        "itemClick": "al hacer clic en un elemento",
+        "cardClick": "al hacer clic en una tarjeta",
+        "cardMove": "al mover una tarjeta",
+        "eventClick": "al hacer clic en un evento",
+        "dateSelect": "al elegir fechas",
+        "rangeChange": "al cambiar los días visibles",
+        "decided": "al decidir",
+        "finish": "al terminar",
+        "message": "al recibir un mensaje",
+        "preview": "al previsualizar",
+        "play": "al reproducir",
+        "pause": "al pausar",
+        "ended": "al terminar de reproducir"
+      }
+    },
+    "contents": {
+      "title": "Páginas y componentes",
+      "hint": "Planea qué muestra la app y qué flujo de trabajo usa cada parte. Crear construye la app a partir de esta lista.",
+      "newPage": "Página {n}",
+      "pageName": "Nombre de la página",
+      "removePage": "Quitar página",
+      "addPage": "Añadir página",
+      "addComponent": "Añadir componente",
+      "type": "Tipo de componente",
+      "componentName": "Nombre del componente",
+      "workflow": "Flujo de trabajo que usa",
+      "noWorkflow": "Sin flujo de trabajo",
+      "planned": "planeado",
+      "removeComponent": "Quitar componente",
+      "notInApp": "No está en la app",
+      "createHint": "Crear construye {pages} con {components}, cada uno conectado a su flujo de trabajo.",
+      "createWaiting": " {count} usa un flujo de trabajo que aún no está construido, así que se añade sin él. | {count} usan flujos de trabajo que aún no están construidos, así que se añaden sin ellos.",
+      "openBuilder": "Abrir en el editor de apps",
+      "allBuilt": "Todo lo planeado está en la app.",
+      "missingLines": "Líneas",
+      "planTitle": "Planeado para esta app",
+      "notAllBuilt": "{count} elemento planeado aún no está en la app. | {count} elementos planeados aún no están en la app."
     }
   }
 }

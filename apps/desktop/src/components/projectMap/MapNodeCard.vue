@@ -77,6 +77,13 @@ const subline = computed(() => {
   if (n.external && n.projects.length) return n.projects.map((p) => p.name).join(', ');
   if (n.external) return t('projectMap.node.noProject');
   if (n.planned && n.kind === 'schedule' && n.when) return n.when;
+  if (n.kind === 'app' && n.components?.length) {
+    const pages = n.pageCount ?? 1;
+    return t('projectMap.node.appContents', {
+      pages: t('projectMap.node.pages', { count: pages }, pages),
+      components: t('projectMap.node.components', { count: n.components.length }, n.components.length),
+    });
+  }
   return '';
 });
 
