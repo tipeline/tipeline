@@ -1,0 +1,93 @@
+version: 1.0.0
+name: 'Roastery: Low Stock Check'
+description: |
+  Looks for coffees under the `roasteryLowStockKg` global and tells the team (through Roastery: Notify Team) which ones to roast next. Runs every hour on a schedule.
+
+  Saves what it found in the `roasteryLastStockCheck` global, so other workflows and the assistant can see it without querying the store.
+
+  **Outputs**
+
+  - `low` — `[{ name, stock_kg }]`
+  - `summary` — one line, e.g. "2 coffees running low: Kirinyaga AA (4 kg), …"
+author: Jose Daniel Estrada
+tags: [roastery, inventory, alerts, scheduled]
+
+pipeline:
+  variables:
+    - { type: array, name: low, value: [], visibility: public, output: true, description: The coffees running low. }
+    - { type: string, name: summary, value: '', visibility: public, output: true, description: One line about what's low. }
+    - { type: dbConnection, name: db }
+    - { type: object, name: check, value: {} }
+
+  actions:
+    - group: database
+      identifier: Rpz1ryP1yPXrp-uk-UMCU
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/roastery/roastery.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      identifier: zPEd9_xtngDbpyToEEpFs
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: SELECT name, stock_kg FROM bean WHERE stock_kg < ? ORDER BY stock_kg
+        bindings: ['{= _global.roasteryLowStockKg =}']
+      destination: low
+
+    - group: database
+      identifier: SZpHZyCOrvDVyS-wVeKQs
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      identifier: x27S-UHiWSnmr2nZp3HQF
+      name: runScript
+      params:
+        context: { low: '{= low =}' }
+        code: |
+          const list = low.map((b) => `${b.name} (${b.stock_kg} kg)`).join(', ');
+          return {
+            at: new Date().toISOString(),
+            count: low.length,
+            beans: low.map((b) => b.name),
+            summary: low.length ? `${low.length} coffee${low.length === 1 ? '' : 's'} running low: ${list}` : 'Stock is fine',
+          };
+      destination: check
+
+    - group: variable
+      identifier: vIsenmDn33mkMRuCGIhZV
+      name: set
+      params:
+        name: _global.roasteryLastStockCheck
+        value: '{= check =}'
+
+    - group: script
+      identifier: EmY2gRXgcJDkpg_4yj2aj
+      name: runScript
+      params: { context: { check: '{= check =}' }, code: return check.summary; }
+      destination: summary
+
+    - group: flow
+      identifier: hFeTIXpFfNdKGwhVXGtuh
+      name: ifConditional
+      params:
+        firstOperand: '{= low =}'
+        compareAs: array
+        operator: notEmpty
+        actions:
+          - group: subtask
+            identifier: R2R-iyC9NIdE6J5gQCCpK
+            name: exec
+            params:
+              identifier: roastNotifyTeam
+              persist: false
+              props:
+                message: '{{ summary }}'
+                level: warning
+                source: 'Roastery: Low Stock Check'

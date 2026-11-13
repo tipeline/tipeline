@@ -29,6 +29,8 @@ import { openInWindow, windowPaths } from '@/utils/detachedWindows';
 import { invokeCore } from '@/utils/invoke';
 import { SEND } from '@/ipc-channels';
 import { useQuery } from '@/composables/useQuery';
+import { projectIdsOf, setProjects, type ProjectTag } from '@/utils/projectAssign';
+import ProjectSelect from '@/components/project/ProjectSelect.vue';
 import { toast } from '@/components/ui/sonner';
 import { useErrorT } from '@/composables/useErrorT';
 import { deleteApp } from '@/utils/deleteApp';
@@ -42,7 +44,7 @@ const props = defineProps<{
     description?: string | null;
     author?: string | null;
     version?: string | null;
-    project_identifier?: string | null;
+    projects?: ProjectTag[];
     image?: string | null;
   };
   onDeleted?: () => void;
@@ -60,9 +62,8 @@ const editOpen = ref(false);
 const isSaving = ref(false);
 const editForm = ref({ name: '', description: '', author: '', version: '' });
 const editImage = ref<string | null>(null);
-const selectedProject = ref('');
+const selectedProjects = ref<string[]>([]);
 
-const { data: projects } = useQuery(SEND.PROJECT_LIST);
 
 function openEdit() {
   editForm.value = {
@@ -72,7 +73,7 @@ function openEdit() {
     version: props.item.version ?? '',
   };
   editImage.value = props.item.image ?? null;
-  selectedProject.value = props.item.project_identifier ?? '__none__';
+  selectedProjects.value = projectIdsOf(props.item);
   editOpen.value = true;
 }
 
@@ -81,17 +82,7 @@ async function saveEdit() {
   try {
     await invokeCore(SEND.APP_UPDATE_META, { identifier: props.item.identifier, ...editForm.value });
 
-    const prevProject = props.item.project_identifier ?? '__none__';
-    if (selectedProject.value !== prevProject) {
-      if (selectedProject.value && selectedProject.value !== '__none__') {
-        await invokeCore(SEND.PROJECT_ASSIGN_APP, {
-          projectIdentifier: selectedProject.value,
-          appIdentifier: props.item.identifier,
-        });
-      } else {
-        await invokeCore(SEND.PROJECT_UNASSIGN_APP, { appIdentifier: props.item.identifier });
-      }
-    }
+    await setProjects('app', props.item.identifier, projectIdsOf(props.item), selectedProjects.value);
     editOpen.value = false;
     props.onUpdated?.();
   } catch (e: any) {
@@ -146,24 +137,7 @@ async function confirmDelete() {
           <Input v-model="editForm.version" :placeholder="t('apps.form.versionPlaceholder')" />
         </div>
       </div>
-      <div class="space-y-1.5">
-        <label class="text-sm font-medium">{{ t('tasks.form.project') }} <span class="text-muted-foreground font-normal">{{ t('common.optional') }}</span></label>
-        <Select v-model="selectedProject">
-          <SelectTrigger>
-            <SelectValue :placeholder="t('tasks.form.projectPlaceholder')" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__">{{ t('tasks.form.projectPlaceholder') }}</SelectItem>
-            <SelectItem
-              v-for="project in projects ?? []"
-              :key="project.identifier"
-              :value="project.identifier"
-            >
-              {{ project.name }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <ProjectSelect v-model="selectedProjects" />
     </div>
 
     <template #footer>

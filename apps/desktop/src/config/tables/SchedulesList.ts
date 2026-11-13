@@ -1,5 +1,6 @@
 import { h } from 'vue';
 import type { ColumnDef } from '@tanstack/vue-table';
+import type { Router } from 'vue-router';
 import { useIcon } from '@/composables/useIcon';
 
 const { getIconComponent } = useIcon();
@@ -20,6 +21,8 @@ export type ScheduleItem = {
   nextRunAt?: string | null;
   /** When it last started a run. */
   lastRunAt?: string | null;
+  /** When a repeating schedule should have run but didn't (Core was off). Missing when it didn't miss. */
+  missedAt?: string | null;
 };
 
 /** Schedule wording from useScheduleText, passed in because column definitions live outside setup. */
@@ -38,6 +41,7 @@ const STATUS_DOT = {
 export function createColumns(
   t: (key: string, values?: Record<string, unknown>) => string,
   text: ScheduleText,
+  router: Router,
   onEdit?: (item: ScheduleItem) => void,
   onDelete?: (item: ScheduleItem) => void,
   onToggle?: (item: ScheduleItem) => void
@@ -49,14 +53,23 @@ export function createColumns(
       cell: (info) => info.getValue(),
     },
     {
-      accessorKey: 'taskIdentifier',
-      header: () => t('schedules.form.task'),
-      cell: (info) => info.getValue(),
-    },
-    {
       accessorKey: 'taskName',
-      header: () => t('schedules.taskName'),
-      cell: (info) => info.getValue(),
+      header: () => t('schedules.form.task'),
+      cell: (info) => {
+        const row = info.row.original;
+        return h(
+          'a',
+          {
+            href: '#',
+            class: 'font-medium hover:underline',
+            onClick: (e: Event) => {
+              e.preventDefault();
+              router.push(`/tasks/${row.taskIdentifier}`);
+            },
+          },
+          row.taskName || row.taskIdentifier
+        );
+      },
     },
     {
       id: 'when',

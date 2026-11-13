@@ -4,9 +4,7 @@ import { defaultDeleteSelection, outsideUsers } from '../src/projectDelete';
 const user = (identifier: string, project: string | null = 'p-sales') => ({
   identifier,
   name: identifier,
-  project_identifier: project,
-  project_name: project,
-  project_color: null,
+  projects: project ? [{ identifier: project, name: project }] : [],
 });
 
 const workflow = (identifier: string, apps: any[] = [], workflows: any[] = []) => ({
@@ -54,5 +52,15 @@ describe('defaultDeleteSelection', () => {
   it('ticks everything when nothing outside uses the project', () => {
     const selection = defaultDeleteSelection({ ...preview, workflows: [workflow('a', [], [user('b')]), workflow('b')] });
     expect([...selection.workflows].sort()).toEqual(['a', 'b']);
+  });
+
+  it('never ticks a workflow or app that is also in another project, and keeps what it runs', () => {
+    const also = { alsoIn: [{ identifier: 'p-ops', name: 'Ops' }] };
+    const selection = defaultDeleteSelection({
+      workflows: [{ ...workflow('shared', [], []), ...also }, workflow('helper', [], [user('shared')]), workflow('alone')],
+      apps: [{ identifier: 'board', ...also }, { identifier: 'desk' }],
+    });
+    expect([...selection.workflows]).toEqual(['alone']);
+    expect([...selection.apps]).toEqual(['desk']);
   });
 });

@@ -8,6 +8,8 @@ const props = defineProps({
   hasOrderingErrors: { type: Boolean, default: false },
   canUndo: { type: Boolean, default: false },
   canRedo: { type: Boolean, default: false },
+  /** The projects the workflow is in: in several, a save changes it in all of them. */
+  projects: { type: Array, default: () => [] },
 });
 const { isDirty } = useSaveTask();
 const { getIconComponent } = useIcon();
@@ -17,6 +19,13 @@ const emit = defineEmits(['save', 'debug', 'undo', 'redo']);
 
 <template>
   <div class="flex items-center gap-1">
+    <span
+      v-if="props.projects.length > 1"
+      class="mr-1 inline-flex items-center rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-800 dark:text-amber-300"
+      :title="t('builder.inProjectsHint', { names: props.projects.map((p) => p.name).join(', ') })"
+    >
+      {{ t('builder.inProjects', { count: props.projects.length }) }}
+    </span>
     <Button
       variant="ghost"
       size="icon"

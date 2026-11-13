@@ -1,4 +1,5 @@
 import { MIN_SCHEDULE_INTERVAL_SECONDS, checkCron, nextIntervalRuns, parseSchedule } from '@tipeline/utils';
+import cronParser from 'cron-parser';
 import { nextRunAt } from '@engine/runner/nextRunAt.js';
 import type { ScheduleEntry } from '@engine/runner/IJobRunner.js';
 import type { Schedule } from '@database/models/Schedule.js';
@@ -110,8 +111,35 @@ function intervalNextRun(s: Schedule, from: Date): string {
   return nextIntervalRuns(s.every_seconds!, 1, start, from)[0].toISOString();
 }
 
+/** How long after its time a cron run may take to be recorded before it counts as missed. */
+const MISSED_GRACE_MS = 2 * 60_000;
+
+/**
+ * The time a repeating (cron) schedule last should have started a run but didn't — Core was
+ * off or asleep then — as an ISO string; null when it ran, is paused, or that time came
+ * before it was saved or turned on. Only the latest time counts: Home offers to run it now.
+ * Interval schedules start counting again when Core starts, so they never miss.
+ */
+export function missedRunAt(s: Schedule, from: Date = new Date()): string | null {
+  if (!s.cron || !s.enabled) return null;
+  let due: Date;
+  try {
+    due = cronParser.parseExpression(s.cron, { currentDate: from }).prev().toDate();
+  } catch {
+    return null;
+  }
+  if (from.getTime() - due.getTime() < MISSED_GRACE_MS) return null;
+  const saved = dbTime(s.updated_at) ?? dbTime(s.created_at);
+  if (saved && due.getTime() <= saved.getTime()) return null;
+  const ran = dbTime(s.last_run_at);
+  // The runner records the run a moment after its time; a second early covers clock rounding.
+  if (ran && ran.getTime() >= due.getTime() - 1000) return null;
+  return due.toISOString();
+}
+
 export function toScheduleEntry(s: Schedule, from: Date = new Date()): ScheduleEntry {
   const runAt = iso(s.run_at);
+  const missedAt = missedRunAt(s, from);
   return {
     scheduleIdentifier: s.identifier,
     taskIdentifier: s.task?.identifier ?? 'unknown',
@@ -131,5 +159,6 @@ export function toScheduleEntry(s: Schedule, from: Date = new Date()): ScheduleE
           ? onceFireDate(runAt, from).toISOString()
           : null,
     lastRunAt: iso(s.last_run_at),
+    ...(missedAt ? { missedAt } : {}),
   };
 }

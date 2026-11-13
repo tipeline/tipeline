@@ -1,0 +1,398 @@
+{
+  "version": 3,
+  "secretsIncluded": true,
+  "counts": {
+    "projects": 1,
+    "tasks": 12,
+    "apps": 2,
+    "schedules": 3,
+    "variables": 4,
+    "images": 0
+  },
+  "projects": [
+    {
+      "identifier": "roasteryOps",
+      "name": "Roastery Ops",
+      "color": "#b45309",
+      "description": "Everything that runs **Bean & Brew Roastery**: orders from the web shop, café and wholesale, roasting and stock, a morning sales report and low-stock alerts.\n\nThe data lives in a SQLite store at `~/Tipeline/output/roastery/roastery.db`; open **Roastery Manager** once to create it with sample data.",
+      "instructions": "This project runs a small coffee roastery. Money is in USD and weights in kg. Orders go New → Roasting → Shipped (or Cancelled). Use the Roastery workflows to read or change data; never edit the SQLite file directly. When someone asks what to roast next, run Roastery: Low Stock Check.",
+      "map": {
+        "version": 2,
+        "lanes": [
+          "Sales",
+          "Inventory",
+          "Ops"
+        ],
+        "meta": {
+          "task:roastAddOrder": {
+            "owner": "Lee",
+            "lane": "Sales"
+          },
+          "task:roastListOrders": {
+            "owner": "Lee",
+            "lane": "Sales"
+          },
+          "task:roastSetOrderStatus": {
+            "owner": "Lee",
+            "lane": "Sales"
+          },
+          "task:roastDailyReport": {
+            "owner": "Jose",
+            "lane": "Sales",
+            "note": "Finance reads this every morning — keep the file name stable."
+          },
+          "task:roastListInventory": {
+            "owner": "Sam",
+            "lane": "Inventory"
+          },
+          "task:roastRecordRoast": {
+            "owner": "Sam",
+            "lane": "Inventory"
+          },
+          "task:roastLowStockCheck": {
+            "owner": "Sam",
+            "lane": "Inventory"
+          },
+          "task:roastSetup": {
+            "owner": "Jose",
+            "lane": "Ops"
+          },
+          "task:roastNotifyTeam": {
+            "owner": "Jose",
+            "lane": "Ops"
+          },
+          "task:roastDashboard": {
+            "owner": "Jose",
+            "lane": "Ops"
+          }
+        },
+        "nodes": [
+          {
+            "id": "invoices",
+            "kind": "workflow",
+            "name": "Roastery: Wholesale Invoices",
+            "description": "A PDF invoice per wholesale customer for last month, emailed on the 1st.",
+            "owner": "Jose",
+            "lane": "Sales",
+            "inputs": [
+              "month"
+            ],
+            "outputs": [
+              "invoices",
+              "total"
+            ]
+          },
+          {
+            "id": "invoiceSchedule",
+            "kind": "schedule",
+            "name": "Monthly invoices (1st at 7:00)",
+            "lane": "Sales"
+          },
+          {
+            "id": "smtp",
+            "kind": "global",
+            "name": "roasterySmtp",
+            "description": "Mail server connection for invoices.",
+            "lane": "Sales"
+          },
+          {
+            "id": "supplier",
+            "kind": "workflow",
+            "name": "Roastery: Green Bean Reorder",
+            "description": "When a coffee stays low two checks in a row, draft a purchase order for the importer.",
+            "owner": "Sam",
+            "lane": "Inventory",
+            "inputs": [
+              "beanId"
+            ],
+            "outputs": [
+              "draft"
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "id": "e1",
+            "from": "plan:invoiceSchedule",
+            "to": "plan:invoices",
+            "kind": "triggers"
+          },
+          {
+            "id": "e2",
+            "from": "plan:invoices",
+            "to": "plan:smtp",
+            "kind": "reads"
+          },
+          {
+            "id": "e3",
+            "from": "plan:invoices",
+            "to": "task:roastNotifyTeam",
+            "kind": "calls"
+          },
+          {
+            "id": "e4",
+            "from": "task:roastLowStockCheck",
+            "to": "plan:supplier",
+            "kind": "calls"
+          }
+        ],
+        "notes": [
+          {
+            "id": "n1",
+            "text": "Planned for December: wholesale invoices + automatic green-bean reorders. Dashed boxes are not built yet.",
+            "x": 40,
+            "y": -160,
+            "w": 280,
+            "color": "yellow"
+          }
+        ]
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "identifier": "roastSetup",
+      "name": "Roastery: Setup",
+      "description": "Sets up the roastery store, a SQLite database at `~/Tipeline/output/roastery/roastery.db`: the beans, roasts, orders and alerts tables, then (only the first time) eight coffees and about six weeks of sample orders.\n\nSafe to run again: it never changes data once the tables have rows. The Roastery Manager app runs it when the Dashboard opens.\n\n**Outputs**\n\n- `seeded` — true when this run added the sample data\n",
+      "author": "Jose Daniel Estrada",
+      "version": "1.0.0",
+      "platform": null,
+      "metadata": null,
+      "tags": [
+        "roastery",
+        "setup",
+        "sqlite"
+      ],
+      "project": "roasteryOps",
+      "file": "tasks/roastery-setup.yml"
+    },
+    {
+      "identifier": "roastDashboard",
+      "name": "Roastery: Dashboard",
+      "description": "Reads the roastery store for the Roastery Manager's Dashboard: the headline numbers, sales by day, sales by channel, the best-selling coffees and the coffees running low.\n\nA coffee is low when its stock is under the `roasteryLowStockKg` global.\n\n**Outputs**\n\n- `summary` — `{ revenue30, revenuePrev30, revenueTrend, ordersToday, openOrders, lowStock, kgSold30 }`\n- `byDay` — the last 21 days: `[{ day, revenue, orders }]`\n- `byChannel` — `[{ channel, revenue }]`, last 30 days\n- `topBeans` — the 6 best sellers by kg, last 30 days: `[{ name, kg, revenue }]`\n- `lowStock` — `[{ id, name, origin, stock_kg }]`\n",
+      "author": "Jose Daniel Estrada",
+      "version": "1.0.0",
+      "platform": null,
+      "metadata": null,
+      "tags": [
+        "roastery",
+        "dashboard",
+        "sales",
+        "sqlite"
+      ],
+      "project": "roasteryOps",
+      "file": "tasks/roastery-dashboard.yml"
+    },
+    {
+      "identifier": "roastListInventory",
+      "name": "Roastery: List Inventory",
+      "description": "Lists the coffees in the roastery store with their stock, the last roast and a stock status, plus the recent roasts.\n\nA coffee is **Low** under the `roasteryLowStockKg` global and **Out** at zero.\n\n**Outputs**\n\n- `beans` — `[{ id, name, origin, process, roast, price_per_kg, stock_kg, status, lastRoast, lat, lng }]`\n- `beanOptions` — `[{ label, value }]` for a select\n- `roasts` — the 15 latest roasts: `[{ id, bean, kg, roaster, notes, roasted_at }]`\n",
+      "author": "Jose Daniel Estrada",
+      "version": "1.0.0",
+      "platform": null,
+      "metadata": null,
+      "tags": [
+        "roastery",
+        "inventory",
+        "sqlite"
+      ],
+      "project": "roasteryOps",
+      "file": "tasks/roastery-list-inventory.yml"
+    },
+    {
+      "identifier": "roastRecordRoast",
+      "name": "Roastery: Record Roast",
+      "description": "Logs a roast batch and adds the roasted coffee to its stock.\n\n**Inputs**\n\n- `beanId` — the coffee roasted\n- `kg` — roasted weight, more than 0 and at most 60\n- `roaster` — who roasted it\n- `notes` — optional tasting or profile notes\n\n**Outputs**\n\n- `bean` — the coffee after the roast: `{ id, name, stock_kg }`\n",
+      "author": "Jose Daniel Estrada",
+      "version": "1.0.0",
+      "platform": null,
+      "metadata": null,
+      "tags": [
+        "roastery",
+        "inventory",
+        "roasting",
+        "sqlite"
+      ],
+      "project": "roasteryOps",
+      "file": "tasks/roastery-record-roast.yml"
+    },
+    {
+      "identifier": "roastListOrders",
+      "name": "Roastery: List Orders",
+      "description": "Lists the orders in the roastery store, newest first.\n\n**Inputs**\n\n- `status` — `all`, `open` (new or roasting), `new`, `roasting`, `shipped` or `cancelled`\n- `days` — only orders from the last this many days; 0 for all\n\n**Outputs**\n\n- `orders` — `[{ id, customer, channel, bean, kg, total, status, created_at }]`\n- `counts` — orders per status: `{ new, roasting, shipped, cancelled }`\n",
+      "author": "Jose Daniel Estrada",
+      "version": "1.0.0",
+      "platform": null,
+      "metadata": null,
+      "tags": [
+        "roastery",
+        "orders",
+        "sqlite"
+      ],
+      "project": "roasteryOps",
+      "file": "tasks/roastery-list-orders.yml"
+    },
+    {
+      "identifier": "roastAddOrder",
+      "name": "Roastery: Add Order",
+      "description": "Takes an order: checks there is enough roasted coffee, saves the order as **New** and takes the coffee out of stock. The price comes from the coffee's price per kg.\n\n**Inputs**\n\n- `customer` — who ordered\n- `channel` — `web`, `cafe` or `wholesale`\n- `beanId` — the coffee\n- `kg` — how much, more than 0\n\n**Outputs**\n\n- `order` — `{ id, customer, bean, kg, total }`\n",
+      "author": "Jose Daniel Estrada",
+      "version": "1.0.0",
+      "platform": null,
+      "metadata": null,
+      "tags": [
+        "roastery",
+        "orders",
+        "sqlite"
+      ],
+      "project": "roasteryOps",
+      "file": "tasks/roastery-add-order.yml"
+    },
+    {
+      "identifier": "roastSetOrderStatus",
+      "name": "Roastery: Set Order Status",
+      "description": "Moves orders to a new status. Cancelling an order that hasn't shipped puts its coffee back in stock.\n\n**Inputs**\n\n- `ids` — order ids, or rows with an id (a table's selectedRows)\n- `status` — `new`, `roasting`, `shipped` or `cancelled`\n\n**Outputs**\n\n- `count` — how many orders changed\n",
+      "author": "Jose Daniel Estrada",
+      "version": "1.0.0",
+      "platform": null,
+      "metadata": null,
+      "tags": [
+        "roastery",
+        "orders",
+        "sqlite"
+      ],
+      "project": "roasteryOps",
+      "file": "tasks/roastery-set-order-status.yml"
+    },
+    {
+      "identifier": "roastNotifyTeam",
+      "name": "Roastery: Notify Team",
+      "description": "Helper used by the other roastery workflows: saves an alert in the store (the Roastery Manager's Alerts page shows them) and, when the `roasteryAlertWebhook` secret global has a URL, posts it there too as `{ \"text\": … }` (Slack and most chat tools take that).\n\n**Inputs**\n\n- `message` — what to tell the team\n- `level` — `info`, `warning` or `error`\n- `source` — the workflow sending it\n",
+      "author": "Jose Daniel Estrada",
+      "version": "1.0.0",
+      "platform": null,
+      "metadata": null,
+      "tags": [
+        "roastery",
+        "alerts",
+        "helper"
+      ],
+      "project": "roasteryOps",
+      "file": "tasks/roastery-notify-team.yml"
+    },
+    {
+      "identifier": "roastLowStockCheck",
+      "name": "Roastery: Low Stock Check",
+      "description": "Looks for coffees under the `roasteryLowStockKg` global and tells the team (through Roastery: Notify Team) which ones to roast next. Runs every hour on a schedule.\n\nSaves what it found in the `roasteryLastStockCheck` global, so other workflows and the assistant can see it without querying the store.\n\n**Outputs**\n\n- `low` — `[{ name, stock_kg }]`\n- `summary` — one line, e.g. \"2 coffees running low: Kirinyaga AA (4 kg), …\"\n",
+      "author": "Jose Daniel Estrada",
+      "version": "1.0.0",
+      "platform": null,
+      "metadata": null,
+      "tags": [
+        "roastery",
+        "inventory",
+        "alerts",
+        "scheduled"
+      ],
+      "project": "roasteryOps",
+      "file": "tasks/roastery-low-stock-check.yml"
+    },
+    {
+      "identifier": "roastDailyReport",
+      "name": "Roastery: Daily Sales Report",
+      "description": "Writes yesterday's sales report as a Markdown file in `~/Tipeline/output/roastery/reports/` (`sales-YYYY-MM-DD.md`) and tells the team it's ready. Runs every morning at 8:00 on a schedule.\n\n**Inputs**\n\n- `daysAgo` — which day to report on: 1 is yesterday (the default), 0 is today so far\n\n**Outputs**\n\n- `report` — `{ day, orders, revenue, kg, topBean, byChannel }`\n- `path` — the report file\n",
+      "author": "Jose Daniel Estrada",
+      "version": "1.0.0",
+      "platform": null,
+      "metadata": null,
+      "tags": [
+        "roastery",
+        "sales",
+        "report",
+        "scheduled"
+      ],
+      "project": "roasteryOps",
+      "file": "tasks/roastery-daily-sales-report.yml"
+    },
+    {
+      "identifier": "roastSimulateOrders",
+      "name": "Roastery: Simulate Orders",
+      "description": "Demo helper: places one made-up order through Roastery: Add Order, for a coffee that has enough stock, so the dashboards keep moving. Its schedule (every 20 minutes) is off — switch it on in Schedules to watch the numbers change.\n\n**Outputs**\n\n- `order` — the order placed\n",
+      "author": "Jose Daniel Estrada",
+      "version": "1.0.0",
+      "platform": null,
+      "metadata": null,
+      "tags": [
+        "roastery",
+        "orders",
+        "demo",
+        "scheduled"
+      ],
+      "project": "roasteryOps",
+      "file": "tasks/roastery-simulate-orders.yml"
+    },
+    {
+      "identifier": "roastDataAlerts",
+      "name": "Data: Roastery Alerts",
+      "description": "The alerts the roastery workflows sent through Roastery: Notify Team, newest first, and the result of the last low-stock check (the `roasteryLastStockCheck` global).\n\n**Inputs**\n\n- `level` — `all`, `info`, `warning` or `error`\n\n**Outputs**\n\n- `alerts` — `[{ id, level, message, source, created_at }]`, at most 100\n- `lastCheck` — `{ at, count, beans, summary }`, empty before the first check\n",
+      "author": "Jose Daniel Estrada",
+      "version": "1.0.0",
+      "platform": null,
+      "metadata": null,
+      "tags": [
+        "roastery",
+        "alerts",
+        "data"
+      ],
+      "project": "roasteryOps",
+      "file": "tasks/data-roastery-alerts.yml"
+    }
+  ],
+  "apps": [
+    {
+      "identifier": "roastManagerApp",
+      "name": "Roastery Manager",
+      "description": "Run the roastery — sales dashboard, orders with bulk status changes, inventory and roasts, and the team's alerts",
+      "author": "Jose Daniel Estrada",
+      "version": "1.0.0",
+      "metadata": null,
+      "project": "roasteryOps",
+      "file": "apps/roastery-manager.yml"
+    },
+    {
+      "identifier": "roastOrderDeskApp",
+      "name": "Order Desk",
+      "description": "The café counter's one-page app — take an order, see today's orders",
+      "author": "Jose Daniel Estrada",
+      "version": "1.0.0",
+      "metadata": null,
+      "project": "roasteryOps",
+      "file": "apps/order-desk.yml"
+    }
+  ],
+  "schedules": [
+    {
+      "identifier": "roastSchedLowStock",
+      "workflow": "roastLowStockCheck",
+      "everySeconds": 3600,
+      "variables": {},
+      "enabled": true
+    },
+    {
+      "identifier": "roastSchedDailyReport",
+      "workflow": "roastDailyReport",
+      "cron": "0 8 * * *",
+      "variables": {
+        "daysAgo": 1
+      },
+      "enabled": true
+    },
+    {
+      "identifier": "roastSchedSimulate",
+      "workflow": "roastSimulateOrders",
+      "everySeconds": 1200,
+      "variables": {},
+      "enabled": false
+    }
+  ]
+}

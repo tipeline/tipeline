@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
 import { flushPromises, mount } from '@vue/test-utils';
-import { ref } from 'vue';
+import { defineComponent, h, ref } from 'vue';
 import { createMemoryHistory, createRouter } from 'vue-router';
 
 vi.mock('@/utils/invoke', () => ({ invokeCore: vi.fn() }));
@@ -16,16 +16,14 @@ import { useApprovalsStore } from '@/store/approvalsStore';
 import { useInbox } from '@/composables/useInbox';
 import { mergeRunEvents } from '@/utils/mergeRunEvents';
 import { searchAll } from '@/utils/searchIndex';
-import HomeStarred from '@/components/home/HomeStarred.vue';
-import HomeRecentItems from '@/components/home/HomeRecentItems.vue';
-import HomeInbox from '@/components/home/HomeInbox.vue';
-import HomeBrowse from '@/components/home/HomeBrowse.vue';
-import HomeSimple from '@/components/home/HomeSimple.vue';
-import HomeToday from '@/components/home/HomeToday.vue';
+import HomeAsk from '@/components/home/HomeAsk.vue';
+import HomeNeedsYou from '@/components/home/HomeNeedsYou.vue';
+import HomeContinue from '@/components/home/HomeContinue.vue';
+import HomeDayLine from '@/components/home/HomeDayLine.vue';
 import Dashboard from '@/pages/Dashboard.vue';
 import { useAgentStore } from '@/store/agentStore';
-import { useConnectionStore } from '@/store/connectionStore';
 import type { TaskItem } from '@/config/tables/TasksList';
+import type { ScheduleItem } from '@/config/tables/SchedulesList';
 import type { StreamEvent } from '@/store/stream';
 
 const keys = (items: { type: string; identifier: string }[]) => items.map((i) => `${i.type}:${i.identifier}`);
@@ -114,8 +112,20 @@ describe('starred items store', () => {
   });
 });
 
+const schedule = (id: string, extra: Partial<ScheduleItem> = {}) =>
+  ({
+    scheduleIdentifier: id,
+    taskIdentifier: `wf-${id}`,
+    taskName: `Scheduled ${id}`,
+    cron: '0 2 * * *',
+    variables: { who: 'me' },
+    enabled: true,
+    nextRunAt: null,
+    ...extra,
+  }) as ScheduleItem;
+
 describe('inbox', () => {
-  it('counts approvals plus failures, and a dismissal only covers that one run', async () => {
+  it('counts approvals, failures and missed runs, and a dismissal only covers that one', async () => {
     vi.mocked(invokeCore).mockResolvedValue([
       { pipelineIdentifier: 'p-1', taskIdentifier: 'wf', workflowName: 'Pay', title: 'Pay?', details: null, requestedAt: '' },
     ]);
@@ -126,274 +136,271 @@ describe('inbox', () => {
       failedTask('y', 'run-2'),
       { identifier: 'ok', name: 'Fine', last_run_status: 'completed' } as TaskItem,
     ]);
-    const inbox = useInbox(tasks);
-    expect(inbox.count.value).toBe(3);
+    const schedules = ref<ScheduleItem[]>([
+      schedule('s1', { missedAt: '2026-11-12T02:00:00.000Z' }),
+      schedule('s2', { missedAt: '2026-11-12T03:00:00.000Z', enabled: false }), // paused: not counted
+      schedule('s3'),
+    ]);
+    const inbox = useInbox(tasks, schedules);
+    expect(inbox.count.value).toBe(4);
 
     inbox.dismiss(tasks.value[0]);
     expect(inbox.failing.value.map((t) => t.identifier)).toEqual(['y']);
+    inbox.dismissMissed(schedules.value[0]);
+    expect(inbox.missed.value).toEqual([]);
+    // A missed run's dismissal doesn't bring back the same workflow's dismissed failure, or the reverse.
     expect(inbox.count.value).toBe(2);
 
-    // The same workflow fails again: back in the inbox.
+    // The same workflow fails again, the schedule misses another night: both are back.
     tasks.value = [failedTask('x', 'run-3'), failedTask('y', 'run-2')];
+    schedules.value = [schedule('s1', { missedAt: '2026-11-13T02:00:00.000Z' })];
     expect(inbox.failing.value.map((t) => t.identifier).sort()).toEqual(['x', 'y']);
+    expect(inbox.missed.value.map((s) => s.scheduleIdentifier)).toEqual(['s1']);
   });
+});
 
-  it('the card dismisses a failure without opening the run', async () => {
+describe('HomeNeedsYou', () => {
+  it('dismisses a failure without opening the run, then says all clear', async () => {
     const router = makeRouter();
     await router.push('/');
-    const card = mount(HomeInbox, {
-      props: { tasks: [failedTask('x', 'run-1')] },
+    const card = mount(HomeNeedsYou, {
+      props: { tasks: [failedTask('x', 'run-1')], schedules: [] },
       global: { plugins: [i18n, router] },
     });
     expect(card.text()).toContain('Workflow x');
 
-    await card.find('button[aria-label="Dismiss until it fails again"]').trigger('click');
+    await card.findAll('button').find((b) => b.text() === 'Dismiss')!.trigger('click');
     await flushPromises();
 
-    expect(card.text()).toContain('Nothing needs you right now.');
+    expect(card.text()).toContain('All clear: nothing needs you');
     expect(router.currentRoute.value.path).toBe('/');
+  });
+
+  it('says how many times in a row a workflow failed, and opens that run', async () => {
+    const router = makeRouter();
+    const card = mount(HomeNeedsYou, {
+      props: {
+        tasks: [failedTask('x', 'run-9', { recent_runs: ['failed', 'failed', 'failed', 'completed', 'failed'] })],
+        schedules: [],
+      },
+      global: { plugins: [i18n, router] },
+    });
+    expect(card.text()).toContain('Failed 3 times in a row');
+
+    await card.findAll('button').find((b) => b.text() === 'Open run')!.trigger('click');
+    await flushPromises();
+    expect(router.currentRoute.value.fullPath).toBe('/tasks/x/pipelines/run-9');
+  });
+
+  it('runs a missed schedule now with its variables, and drops it from the list', async () => {
+    const card = mount(HomeNeedsYou, {
+      props: { tasks: [], schedules: [schedule('s1', { missedAt: new Date().toISOString() })] },
+      global: { plugins: [i18n, makeRouter()] },
+    });
+    expect(card.text()).toContain('Missed');
+    expect(card.text()).toContain('Scheduled s1');
+
+    const send = vi.fn();
+    (window as any).ipcRenderer.send = send;
+    await card.findAll('button').find((b) => b.text() === 'Run now')!.trigger('click');
+    await flushPromises();
+
+    const exec = send.mock.calls.find(([channel]) => channel === SEND.TASK_EXEC);
+    expect(exec?.[1]).toMatchObject({ payload: { identifier: 'wf-s1', variables: { who: 'me' } } });
+    expect(card.text()).toContain('All clear: nothing needs you');
+  });
+
+  it('shows what runs next when all is clear', () => {
+    const soon = new Date();
+    soon.setHours(23, 30, 0, 0);
+    const card = mount(HomeNeedsYou, {
+      props: {
+        tasks: [],
+        schedules: [
+          schedule('later', { nextRunAt: new Date(soon.getTime() + 86_400_000 * 3).toISOString() }),
+          schedule('soon', { nextRunAt: soon.toISOString() }),
+          schedule('off', { nextRunAt: soon.toISOString(), enabled: false }),
+        ],
+      },
+      global: { plugins: [i18n, makeRouter()] },
+    });
+    const text = card.text();
+    expect(text).toContain('Coming up');
+    expect(text).toContain('23:30Scheduled soon');
+    expect(text).not.toContain('Scheduled off');
+    expect(text.indexOf('Scheduled soon')).toBeLessThan(text.indexOf('Scheduled later'));
   });
 });
 
-describe('HomeStarred', () => {
+describe('HomeContinue', () => {
   const tileNames = (wrapper: ReturnType<typeof mount>) =>
     wrapper.findAll('button p.font-medium').map((p) => p.text());
 
-  it('explains how to star when nothing is starred', async () => {
-    const wrapper = mount(HomeStarred, { global: { plugins: [i18n, makeRouter()] } });
+  it('says what shows up here when nothing is starred or opened', async () => {
+    const wrapper = mount(HomeContinue, { global: { plugins: [i18n, makeRouter()] } });
     await flushPromises();
-    expect(wrapper.text()).toContain('Star workflows and apps with ☆ to keep them here.');
+    expect(wrapper.text()).toContain('Workflows and apps you star or open show up here.');
   });
 
-  it('hides deleted items and filters by type once both kinds are starred', async () => {
-    lists[SEND.TASK_LIST] = [{ identifier: 't1', name: 'Nightly sync' }];
+  it('puts every star first, then recently opened ones without repeats, hiding deleted items', async () => {
+    lists[SEND.TASK_LIST] = [
+      { identifier: 't1', name: 'Nightly sync', last_run_status: 'failed', last_run_at: new Date().toISOString() },
+      { identifier: 't2', name: 'Report' },
+    ];
     lists[SEND.APP_LIST] = [{ identifier: 'a1', name: 'Invoices' }];
-    const store = useStarredItemsStore();
-    store.star('task', 't1', 'Old name');
-    store.star('app', 'a1', 'Invoices');
-    store.star('app', 'gone', 'Deleted app');
-
-    const wrapper = mount(HomeStarred, { global: { plugins: [i18n, makeRouter()] } });
-    await flushPromises();
-    expect(tileNames(wrapper)).toEqual(['Nightly sync', 'Invoices']);
-
-    await wrapper.findAll('[role="radio"]').find((b) => b.text() === 'Apps')!.trigger('click');
-    expect(tileNames(wrapper)).toEqual(['Invoices']);
-    // Remembered for next time.
-    expect(localStorage.getItem('tipeline:dashboard:starredFilter')).toBe('app');
-  });
-
-  it('shows one row until asked for all', async () => {
-    lists[SEND.TASK_LIST] = Array.from({ length: 8 }, (_, i) => ({ identifier: `t${i}`, name: `W${i}` }));
-    const store = useStarredItemsStore();
-    for (let i = 0; i < 8; i++) store.star('task', `t${i}`, `W${i}`);
-
-    const wrapper = mount(HomeStarred, { global: { plugins: [i18n, makeRouter()] } });
-    await flushPromises();
-    // No layout in happy-dom, so the row counts as 6 tiles wide.
-    expect(tileNames(wrapper)).toHaveLength(6);
-
-    await wrapper.findAll('button').find((b) => b.text() === 'Show all (8)')!.trigger('click');
-    expect(tileNames(wrapper)).toHaveLength(8);
-    await wrapper.findAll('button').find((b) => b.text() === 'Show less')!.trigger('click');
-    expect(tileNames(wrapper)).toHaveLength(6);
-  });
-
-  it('reorders by drag and drop', async () => {
-    lists[SEND.TASK_LIST] = ['a', 'b', 'c'].map((id) => ({ identifier: id, name: id.toUpperCase() }));
-    const store = useStarredItemsStore();
-    for (const id of ['a', 'b', 'c']) store.star('task', id, id);
-
-    const wrapper = mount(HomeStarred, { global: { plugins: [i18n, makeRouter()] } });
-    await flushPromises();
-    const tiles = wrapper.findAll('[draggable="true"]');
-    await tiles[0].trigger('dragstart');
-    await tiles[2].trigger('dragover');
-    await tiles[2].trigger('drop');
-
-    expect(tileNames(wrapper)).toEqual(['B', 'C', 'A']);
-  });
-});
-
-describe('HomeRecentItems', () => {
-  it('lists up to 20 items and lets workflows be starred from a row', async () => {
-    lists[SEND.TASK_LIST] = Array.from({ length: 25 }, (_, i) => ({ identifier: `t${i}`, name: `W${i}` }));
+    const stars = useStarredItemsStore();
+    stars.star('app', 'a1', 'Invoices');
+    stars.star('task', 't1', 'Old name');
+    stars.star('app', 'gone', 'Deleted app');
     const recent = useRecentItemsStore();
-    for (let i = 0; i < 25; i++) recent.markOpened('task', `t${i}`, `W${i}`);
+    recent.markOpened('task', 't1', 'Nightly sync');
+    recent.markOpened('task', 't2', 'Report');
 
-    const wrapper = mount(HomeRecentItems, { global: { plugins: [i18n, makeRouter()] } });
+    const wrapper = mount(HomeContinue, { global: { plugins: [i18n, makeRouter()] } });
     await flushPromises();
-    expect(wrapper.findAll('button p.font-medium')).toHaveLength(20);
-
-    await wrapper.find('button[aria-label="Star to show it on Home"]').trigger('click');
-    expect(keys(useStarredItemsStore().items)).toEqual(['task:t24']);
+    expect(tileNames(wrapper)).toEqual(['Invoices', 'Nightly sync', 'Report']);
+    expect(wrapper.text()).toMatch(/Ran less than a minute ago/);
+    expect(wrapper.find('.bg-destructive').exists()).toBe(true); // the failed last run
+    expect(wrapper.text()).toContain('Opened less than a minute ago'); // never ran, but opened
   });
 });
 
-describe('HomeBrowse', () => {
-  it('switches between tags and projects, and remembers the tab', async () => {
-    lists[SEND.PROJECT_LIST] = [{ identifier: 'p1', name: 'Billing', task_count: 1, app_count: 2 }];
-    const tasks = [{ identifier: 't', name: 'T', tags: ['finance'] }] as unknown as TaskItem[];
+describe('HomeContinue rows', () => {
+  it('shows two rows of tiles until Show all, then all of them', async () => {
+    lists[SEND.TASK_LIST] = Array.from({ length: 18 }, (_, i) => ({ identifier: `t${i}`, name: `W${i}` }));
+    const stars = useStarredItemsStore();
+    for (let i = 0; i < 18; i++) stars.star('task', `t${i}`, `W${i}`);
 
-    const wrapper = mount(HomeBrowse, { props: { tasks }, global: { plugins: [i18n, makeRouter()] } });
+    const wrapper = mount(HomeContinue, { global: { plugins: [i18n, makeRouter()] } });
     await flushPromises();
-    expect(wrapper.text()).toContain('finance');
-    expect(wrapper.text()).not.toContain('Billing');
+    const names = () => wrapper.findAll('button p.font-medium').map((p) => p.text());
+    // Before the grid is measured it assumes six to a row: two rows are twelve.
+    expect(names()).toHaveLength(12);
 
-    await wrapper.findAll('[role="radio"]').find((b) => b.text() === 'Projects')!.trigger('click');
-    expect(wrapper.text()).toContain('Billing');
-    expect(wrapper.text()).toContain('1 workflow · 2 apps');
+    const toggle = wrapper.findAll('button').find((b) => b.text() === 'Show all (18)')!;
+    await toggle.trigger('click');
+    expect(names()).toHaveLength(18);
+    expect(names().at(-1)).toBe('W17');
 
-    const again = mount(HomeBrowse, { props: { tasks }, global: { plugins: [i18n, makeRouter()] } });
+    await wrapper.findAll('button').find((b) => b.text() === 'Show less')!.trigger('click');
     await flushPromises();
-    expect(again.text()).toContain('Billing');
+    expect(names()).toHaveLength(12);
+  });
+
+  it('Show less scrolls the page back to where it was before Show all', async () => {
+    lists[SEND.TASK_LIST] = Array.from({ length: 18 }, (_, i) => ({ identifier: `t${i}`, name: `W${i}` }));
+    const stars = useStarredItemsStore();
+    for (let i = 0; i < 18; i++) stars.star('task', `t${i}`, `W${i}`);
+    const Host = defineComponent({ render: () => h('div', { class: 'overflow-y-auto' }, [h(HomeContinue)]) });
+    const wrapper = mount(Host, { global: { plugins: [i18n, makeRouter()] }, attachTo: document.body });
+    await flushPromises();
+    const page = wrapper.element as HTMLElement;
+    const button = (text: string) => wrapper.findAll('button').find((b) => b.text() === text)!;
+
+    page.scrollTop = 0;
+    await button('Show all (18)').trigger('click');
+    page.scrollTop = 400; // scrolled down to see the rest
+    await button('Show less').trigger('click');
+    await flushPromises();
+    expect(page.scrollTop).toBe(0);
+    wrapper.unmount();
+  });
+
+  it('shows the hint next to the heading', async () => {
+    const wrapper = mount(HomeContinue, { global: { plugins: [i18n, makeRouter()] } });
+    await flushPromises();
+    expect(wrapper.text()).toContain('Starred first, then recently opened');
+    expect(wrapper.text()).not.toContain('dashboard.');
+  });
+
+  it('has no toggle when everything fits', async () => {
+    lists[SEND.TASK_LIST] = [{ identifier: 't1', name: 'Only one' }];
+    useStarredItemsStore().star('task', 't1', 'Only one');
+    const wrapper = mount(HomeContinue, { global: { plugins: [i18n, makeRouter()] } });
+    await flushPromises();
+    expect(wrapper.text()).not.toContain('Show all');
   });
 });
 
-describe('HomeSimple', () => {
-  const mountSimple = () => mount(HomeSimple, { global: { plugins: [i18n, makeRouter()] } });
-
-  it('fills the box from an idea and hands it to the Assistant on Enter', async () => {
-    const agent = useAgentStore();
-    const ask = vi.spyOn(agent, 'ask').mockResolvedValue(true);
-    const wrapper = mountSimple();
-    await flushPromises();
-
-    await wrapper.findAll('button').find((b) => b.text() === 'Save email attachments to a folder')!.trigger('click');
-    const box = wrapper.find('textarea');
-    expect((box.element as HTMLTextAreaElement).value).toBe('Save email attachments to a folder');
-    expect(ask).not.toHaveBeenCalled(); // an idea only fills the box
-
-    await box.trigger('keydown', { key: 'Enter' });
-    await flushPromises();
-    expect(ask).toHaveBeenCalledWith('Save email attachments to a folder');
-    expect((box.element as HTMLTextAreaElement).value).toBe('');
-  });
-
-  it('has no box on a remote workspace, where there is no Assistant sidebar', async () => {
-    useConnectionStore().activeId = 'server-1';
-    const wrapper = mountSimple();
-    await flushPromises();
-    expect(wrapper.find('textarea').exists()).toBe(false);
-    expect(wrapper.text()).toContain('Copy from the Hub');
-  });
-
-  it('shows the last few opened items, or says where they will show up', async () => {
-    const empty = mountSimple();
-    await flushPromises();
-    expect(empty.text()).toContain('Workflows, apps and projects you open show up here.');
-
-    lists[SEND.TASK_LIST] = Array.from({ length: 6 }, (_, i) => ({ identifier: `t${i}`, name: `W${i}` }));
-    for (let i = 0; i < 6; i++) useRecentItemsStore().markOpened('task', `t${i}`, `W${i}`);
-    const wrapper = mountSimple();
-    await flushPromises();
-    expect(wrapper.findAll('button p.font-medium').map((p) => p.text())).toEqual(['W5', 'W4', 'W3', 'W2']);
-  });
-});
-
-describe('HomeToday', () => {
-  const day = (total: number, failed = 0) => ({ from: '', to: '', total, failed });
-
-  function mockCore(stats: unknown, approvals: unknown[] = []) {
-    vi.mocked(invokeCore).mockImplementation(async (channel: string) => {
-      if (channel === SEND.PIPELINE_STATS) {
-        if (stats instanceof Error) throw stats;
-        return stats;
-      }
-      if (channel === SEND.APPROVAL_LIST) return approvals;
-      return [];
+describe('HomeDayLine', () => {
+  it('shows today\'s runs and failures and the next scheduled run', async () => {
+    vi.mocked(invokeCore).mockImplementation(async (channel: string) =>
+      channel === SEND.PIPELINE_STATS ? [{ from: '', to: '', total: 12, failed: 2 }] : []
+    );
+    const next = new Date();
+    next.setHours(23, 45, 0, 0);
+    const wrapper = mount(HomeDayLine, {
+      props: { schedules: [schedule('r', { taskName: 'Weekly report', nextRunAt: next.toISOString() })] },
+      global: { plugins: [i18n, makeRouter()] },
     });
-  }
-
-  it('asks for seven local days and shows today, its failures and a bar per day', async () => {
-    mockCore([day(18), day(22), day(15), day(20), day(26, 1), day(19), day(24, 2)]);
-    const tasks = [failedTask('x', 'run-1'), failedTask('y', 'run-2'), failedTask('old', 'run-0', { last_run_at: '2020-01-01T00:00:00Z' })];
-    const wrapper = mount(HomeToday, { props: { tasks }, global: { plugins: [i18n, makeRouter()] } });
     await flushPromises();
 
     const call = vi.mocked(invokeCore).mock.calls.find(([channel]) => channel === SEND.PIPELINE_STATS)!;
-    const boundaries: string[] = (call[1] as any).boundaries;
-    expect(boundaries).toHaveLength(8);
-    const midnight = new Date();
-    midnight.setHours(0, 0, 0, 0);
-    expect(new Date(boundaries[6]).getTime()).toBe(midnight.getTime()); // today starts at local midnight
-
-    const text = wrapper.text();
-    expect(text).toContain('Runs today');
-    expect(text).toContain('24');
-    expect(wrapper.findAll('[role="img"] > span')).toHaveLength(7);
-    expect(wrapper.find('[title="Today: 24 runs"]').exists()).toBe(true);
-    // Failed today: the count from Core, the names of today's failed workflows only.
-    expect(text).toContain('Workflow x and 1 more');
-    expect(text).not.toContain('Workflow old');
-  });
-
-  it('shows dashes when Core has no stats command yet, and says when nothing failed', async () => {
-    mockCore(new Error('unknown command'));
-    const older = mount(HomeToday, { props: { tasks: [] }, global: { plugins: [i18n, makeRouter()] } });
-    await flushPromises();
-    expect(older.text()).toContain('—');
-    expect(older.find('[role="img"]').exists()).toBe(false);
-
-    mockCore([day(1), day(1), day(1), day(1), day(1), day(1), day(3)]);
-    const quiet = mount(HomeToday, { props: { tasks: [] }, global: { plugins: [i18n, makeRouter()] } });
-    await flushPromises();
-    expect(quiet.text()).toContain('Nothing failed');
-  });
-
-  it('shows approvals waiting and the next scheduled run', async () => {
-    mockCore([day(0), day(0), day(0), day(0), day(0), day(0), day(0)], [
-      { pipelineIdentifier: 'p-1', taskIdentifier: 'wf', workflowName: 'Pay', title: 'Pay?', details: null, requestedAt: '' },
-    ]);
-    await useApprovalsStore().refresh();
-    const inHours = (h: number) => new Date(Date.now() + h * 3_600_000).toISOString();
-    lists[SEND.SCHEDULE_LIST] = [
-      { scheduleIdentifier: 's1', taskIdentifier: 't1', taskName: 'Later', enabled: true, nextRunAt: inHours(20) },
-      { scheduleIdentifier: 's2', taskIdentifier: 't2', taskName: 'Paused', enabled: false, nextRunAt: inHours(1) },
-      { scheduleIdentifier: 's3', taskIdentifier: 't3', taskName: 'Soon', enabled: true, nextRunAt: inHours(2) },
-    ];
-    const wrapper = mount(HomeToday, { props: { tasks: [] }, global: { plugins: [i18n, makeRouter()] } });
-    await flushPromises();
-
-    expect(wrapper.text()).toContain('1approval to review');
-    expect(wrapper.text()).toContain('in about 2 hours');
-    expect(wrapper.text()).toContain('Soon');
+    expect((call[1] as any).boundaries).toHaveLength(2);
+    const text = wrapper.text().replace(/\s+/g, ' ');
+    expect(text).toContain('12 runs today');
+    expect(text).toContain('2 failed');
+    expect(text).toContain('Next: Weekly report at 23:45');
+    expect(text).toContain('All runs');
+    // The link is the run, not the "Next:" label.
+    const link = wrapper.findAll('button').find((b) => b.text().includes('Weekly report'))!;
+    expect(link.text().replace(/\s+/g, ' ')).toBe('Weekly report at 23:45');
     wrapper.unmount();
+  });
+
+  it('shows dashes when Core has no stats command yet', async () => {
+    vi.mocked(invokeCore).mockRejectedValue(new Error('unknown command'));
+    const wrapper = mount(HomeDayLine, { props: { schedules: [] }, global: { plugins: [i18n, makeRouter()] } });
+    await flushPromises();
+    expect(wrapper.text()).toContain('—');
+    expect(wrapper.text()).toContain('Nothing scheduled');
+    // No failure count to show, so no empty "· ·" between the parts.
+    expect(wrapper.text().replace(/\s+/g, ' ')).not.toMatch(/· ·/);
+    wrapper.unmount();
+  });
+});
+
+describe('HomeAsk', () => {
+  it('hands the request to the Assistant and clears the box', async () => {
+    const agent = useAgentStore();
+    const ask = vi.spyOn(agent, 'ask').mockResolvedValue(true as never);
+    const wrapper = mount(HomeAsk, { global: { plugins: [i18n] } });
+    const submit = wrapper.find('button[type="submit"]');
+    expect(submit.attributes('disabled')).toBeDefined();
+
+    await wrapper.find('input').setValue('  Rename my photos  ');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+    expect(ask).toHaveBeenCalledWith('Rename my photos');
+    expect((wrapper.find('input').element as HTMLInputElement).value).toBe('');
   });
 });
 
 describe('Dashboard', () => {
-  const stubs = { HomeToday: true, HomeStarred: true, HomeRecentItems: true, HomeRecentActivity: true, HomeBrowse: true };
+  const stubs = { HomeContinue: true, HomeDayLine: true };
 
-  it('starts simple, and remembers a switch to the full dashboard and back', async () => {
-    const wrapper = mount(Dashboard, { global: { plugins: [i18n, makeRouter()], stubs } });
+  it('shows Home even on a new install with nothing in it yet', async () => {
+    const home = mount(Dashboard, { global: { plugins: [i18n, makeRouter()], stubs } });
     await flushPromises();
-    expect(wrapper.text()).toContain('What do you want to automate?');
-
-    await wrapper.findAll('button').find((b) => b.text() === 'Show the full dashboard')!.trigger('click');
-    expect(wrapper.findComponent({ name: 'HomeStarred' }).exists()).toBe(true);
-    expect(localStorage.getItem('tipeline:dashboard:mode')).toBe('full');
-
-    const again = mount(Dashboard, { global: { plugins: [i18n, makeRouter()], stubs } });
-    await flushPromises();
-    expect(again.text()).not.toContain('What do you want to automate?');
-
-    await again.findAll('button').find((b) => b.text() === 'Simple view')!.trigger('click');
-    expect(again.text()).toContain('What do you want to automate?');
-    expect(localStorage.getItem('tipeline:dashboard:mode')).toBe('simple');
+    expect(home.text()).toMatch(/Good (morning|afternoon|evening)/);
+    expect(home.text()).toContain('All clear: nothing needs you');
+    for (const name of ['HomeContinue', 'HomeDayLine']) {
+      expect(home.findComponent({ name }).exists()).toBe(true);
+    }
   });
 
-  it('opens the inbox from the badge next to the title', async () => {
-    localStorage.setItem('tipeline:dashboard:mode', 'full');
-    lists[SEND.TASK_LIST] = [failedTask('x', 'run-1')];
-    const wrapper = mount(Dashboard, { global: { plugins: [i18n, makeRouter()], stubs }, attachTo: document.body });
+  it('scrolls as a whole page, so a long Continue row or Needs you list is never cut off', async () => {
+    const home = mount(Dashboard, { global: { plugins: [i18n, makeRouter()], stubs } });
     await flushPromises();
+    expect(home.findComponent({ name: 'Page' }).props('scrollable')).toBe(true);
+  });
 
-    const badge = wrapper.findAll('button').find((b) => b.text() === '1 in your inbox')!;
-    await badge.trigger('click');
+  it('lists a failed workflow under Needs you', async () => {
+    lists[SEND.TASK_LIST] = [failedTask('x', 'run-1')];
+    const wrapper = mount(Dashboard, { global: { plugins: [i18n, makeRouter()], stubs } });
     await flushPromises();
-    expect(document.body.textContent).toContain('Workflow x');
-    wrapper.unmount();
+    expect(wrapper.text()).toMatch(/Needs you\s*1/);
+    expect(wrapper.text()).toContain('Workflow x');
   });
 });
 
@@ -431,11 +438,11 @@ describe('mergeRunEvents', () => {
 describe('searchAll', () => {
   const sources = {
     tasks: [
-      { identifier: 'inv', name: 'Send invoices', description: 'Monthly', tags: ['finance'], project_identifier: 'bill' },
-      { identifier: 'sync', name: 'Invoice sync', tags: '["finance","erp"]', project_identifier: null },
-      { identifier: 'hr', name: 'Onboard employee', tags: [], project_identifier: 'people' },
+      { identifier: 'inv', name: 'Send invoices', description: 'Monthly', tags: ['finance'], projects: [{ name: 'Billing' }] },
+      { identifier: 'sync', name: 'Invoice sync', tags: '["finance","erp"]', projects: [] },
+      { identifier: 'hr', name: 'Onboard employee', tags: [], projects: [{ name: 'People' }, { name: 'Billing' }] },
     ],
-    apps: [{ identifier: 'dash', name: 'Invoice dashboard', project_identifier: 'bill' }],
+    apps: [{ identifier: 'dash', name: 'Invoice dashboard', projects: [{ name: 'Billing' }] }],
     projects: [
       { identifier: 'bill', name: 'Billing' },
       { identifier: 'people', name: 'People' },
@@ -446,6 +453,12 @@ describe('searchAll', () => {
     const results = searchAll('billing send', sources);
     expect(results.map((r) => r.key)).toEqual(['task:inv']);
     expect(results[0].subtitle).toBe('Billing · Monthly');
+  });
+
+  it('finds a workflow by any of its projects, and lists them all', () => {
+    const results = searchAll('billing onboard', sources);
+    expect(results.map((r) => r.key)).toEqual(['task:hr']);
+    expect(results[0].subtitle).toBe('People, Billing');
   });
 
   it('groups by kind and ranks name matches first', () => {

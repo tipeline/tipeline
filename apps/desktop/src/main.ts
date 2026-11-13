@@ -5,6 +5,7 @@ import router from './router';
 import VueCodemirror from 'vue-codemirror';
 import { createPinia } from 'pinia';
 import { i18n } from './i18n';
+import { installScrollFadeReset } from '@/utils/scrollFadeReset';
 
 import './style.css';
 
@@ -20,6 +21,8 @@ createApp(App)
   .$nextTick(() => {
     postMessage({ payload: 'removeLoading' }, '*');
   });
+
+installScrollFadeReset();
 
 // A page in its own window (opened by the main process with ?window=<path>) starts on
 // that page instead of the dashboard. Waits for the router's own initial navigation,

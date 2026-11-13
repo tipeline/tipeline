@@ -5,6 +5,7 @@ import { TagService } from '@/database/services/TagService';
 import { TaskRevisionService } from '@/database/services/TaskRevisionService';
 import type { RevisionOrigin } from '@/database/models/TaskRevision';
 import { generateIdentifier } from '@tipeline/utils';
+import { ProjectMembership, parseProjects, projectsSubquery } from '@/database/services/ProjectMembership';
 
 const TASK_TAGS_SUBQUERY = `(
   SELECT COALESCE(json_group_array(tag.label), '[]')
@@ -108,15 +109,16 @@ export class TaskService {
   }
 
   static async uninstall(identifier: string) {
-    const count = await TaskModel.query().delete().where({ identifier });
-    if (count === 0) throw new Error(`Workflow "${identifier}" not found`);
+    const row = await TaskModel.query().findOne({ identifier }).select('id');
+    if (!row) throw new Error(`Workflow "${identifier}" not found`);
+    const count = await TaskModel.query().delete().where({ id: row.id });
+    await ProjectMembership.forget('task', row.id);
     return count;
   }
 
   static async getAll() {
     const knex = TaskModel.knex();
     const rows = await knex('task')
-      .leftJoin('project', 'project.id', 'task.project_id')
       .leftJoin('task_hub_link as thl', 'thl.task_id', 'task.id')
       .select(
         'task.identifier',
@@ -134,10 +136,9 @@ export class TaskService {
         'thl.hub_id',
         'thl.hub_task_identifier',
         'thl.hub_version',
-        'task.project_id',
-        'project.identifier as project_identifier',
         'task.created_at',
         knex.raw(`${TASK_TAGS_SUBQUERY}`),
+        knex.raw(projectsSubquery('task')),
         knex.raw(`(
           SELECT status FROM pipeline
           WHERE task_id = task.id
@@ -155,11 +156,25 @@ export class TaskService {
           WHERE task_id = task.id
           ORDER BY started_at DESC
           LIMIT 1
-        ) as last_run_identifier`)
+        ) as last_run_identifier`),
+        // The last ten runs' statuses, newest first: the strip on the Workflows list.
+        knex.raw(`(
+          SELECT json_group_array(status) FROM (
+            SELECT status FROM pipeline
+            WHERE task_id = task.id AND started_at IS NOT NULL
+            ORDER BY started_at DESC
+            LIMIT 10
+          )
+        ) as recent_runs`)
       )
       .orderBy('task.created_at', 'desc');
 
-    return rows.map((row) => ({ ...row, tags: JSON.parse(row.tags) }));
+    return rows.map((row) => ({
+      ...row,
+      tags: JSON.parse(row.tags),
+      projects: parseProjects(row.projects),
+      recent_runs: row.recent_runs ? JSON.parse(row.recent_runs) : [],
+    }));
   }
 
   static async getAllWithSource(): Promise<
@@ -171,14 +186,11 @@ export class TaskService {
   static async getByIdentifier(identifier: string) {
     const knex = TaskModel.knex();
     const row = await knex('task')
-      .leftJoin('project', 'project.id', 'task.project_id')
       .leftJoin('task_hub_link as thl', 'thl.task_id', 'task.id')
       .leftJoin('hub', 'hub.id', 'thl.hub_id')
       .select(
         'task.*',
-        'project.identifier as project_identifier',
-        'project.name as project_name',
-        'project.color as project_color',
+        knex.raw(projectsSubquery('task')),
         knex.raw(`${SOURCE_TYPE_CASE} as source_type`),
         'thl.hub_id',
         'thl.hub_task_identifier',
@@ -196,6 +208,7 @@ export class TaskService {
       ? {
           ...row,
           tags: JSON.parse(row.tags),
+          projects: parseProjects(row.projects),
           metadata: row.metadata ? JSON.parse(row.metadata) : row.metadata,
           hub_update_state: hubUpdateState(row.version, row.hub_version),
         }

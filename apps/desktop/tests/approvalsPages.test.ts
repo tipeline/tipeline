@@ -10,7 +10,7 @@ import { invokeCore } from '@/utils/invoke';
 import { SEND } from '@/ipc-channels';
 import { i18n } from '@/i18n';
 import { useApprovalsStore } from '@/store/approvalsStore';
-import HomeInbox from '@/components/home/HomeInbox.vue';
+import HomeNeedsYou from '@/components/home/HomeNeedsYou.vue';
 import Approvals from '@/pages/Approvals.vue';
 
 const pending = (id: string, extra: Record<string, unknown> = {}) => ({
@@ -47,34 +47,36 @@ beforeEach(() => {
   }
 });
 
-describe('HomeInbox', () => {
-  it('lists approvals the user can decide first, then failed workflows', async () => {
+describe('HomeNeedsYou', () => {
+  it('lists approvals the user can decide and failed workflows, newest first', async () => {
     vi.mocked(invokeCore).mockResolvedValue([
-      pending('p-1'),
+      pending('p-1', { requestedAt: new Date().toISOString() }),
       pending('p-2', { canDecide: false }),
     ]);
     await useApprovalsStore().refresh();
     const router = makeRouter();
 
-    const card = mount(HomeInbox, {
+    const card = mount(HomeNeedsYou, {
       props: {
         tasks: [
           {
             identifier: 'wf-x',
             name: 'Nightly sync',
             last_run_status: 'failed',
-            last_run_at: new Date().toISOString(),
+            last_run_at: new Date(Date.now() - 3_600_000).toISOString(),
           } as any,
         ],
+        schedules: [],
       },
       global: { plugins: [i18n, router] },
     });
 
     const text = card.text();
-    expect(text).toContain('Waiting for your approval (1)');
+    expect(text).toMatch(/Needs you\s*2/);
     expect(text).toContain('Pay p-1?');
     expect(text).not.toContain('Pay p-2?'); // someone else's to decide
-    expect(text).toContain('Last run failed (1)');
+    expect(text).toContain('Nightly sync');
+    expect(text).toContain('The last run failed');
     expect(text.indexOf('Pay p-1?')).toBeLessThan(text.indexOf('Nightly sync'));
 
     await card
@@ -85,12 +87,12 @@ describe('HomeInbox', () => {
     expect(router.currentRoute.value.path).toBe('/approvals');
   });
 
-  it('says nothing needs you when there is neither', () => {
-    const card = mount(HomeInbox, {
-      props: { tasks: [] },
+  it('says all clear when nothing needs the user', () => {
+    const card = mount(HomeNeedsYou, {
+      props: { tasks: [], schedules: [] },
       global: { plugins: [i18n, makeRouter()] },
     });
-    expect(card.text()).toContain('Nothing needs you right now.');
+    expect(card.text()).toContain('All clear: nothing needs you');
   });
 });
 

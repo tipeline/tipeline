@@ -20,6 +20,7 @@ import { TrashService } from '@database/services/TrashService';
 import { AppService } from '@database/services/AppService';
 import { ProjectService, type ProjectDeleteContents } from '@database/services/ProjectService';
 import { WorkflowUsageService } from '@database/services/WorkflowUsageService';
+import { ProjectMapService } from '@database/services/ProjectMapService';
 import { AgentRunService } from '@database/services/AgentRunService';
 import { PluginService } from '@database/services/PluginService';
 import { ActionRegistry } from '@action/ActionRegistry';
@@ -280,16 +281,44 @@ export default class Core {
     return await ProjectService.assignTask(projectIdentifier, taskIdentifier);
   }
 
-  static async projectUnassignTask(taskIdentifier: string) {
-    return await ProjectService.unassignTask(taskIdentifier);
+  /** Takes the workflow out of this project; it stays in any others. */
+  static async projectUnassignTask(projectIdentifier: string, taskIdentifier: string) {
+    return await ProjectService.unassignTask(projectIdentifier, taskIdentifier);
   }
 
   static async projectAssignApp(projectIdentifier: string, appIdentifier: string) {
     return await ProjectService.assignApp(projectIdentifier, appIdentifier);
   }
 
-  static async projectUnassignApp(appIdentifier: string) {
-    return await ProjectService.unassignApp(appIdentifier);
+  /** Takes the app out of this project; it stays in any others. */
+  static async projectUnassignApp(projectIdentifier: string, appIdentifier: string) {
+    return await ProjectService.unassignApp(projectIdentifier, appIdentifier);
+  }
+
+  /**
+   * A project's map: the live part read from the definitions, and the stored plan. With
+   * no identifier, every project's live map and plans (the map of all projects).
+   */
+  static async projectMap(identifier?: string | null) {
+    if (!identifier) {
+      return { live: await ProjectMapService.live(null), plans: await ProjectMapService.allPlans() };
+    }
+    const plan = await ProjectMapService.getPlan(identifier);
+    const linked = plan.nodes.map((n) => n.link).filter((k): k is string => !!k);
+    const [live, candidates] = await Promise.all([
+      ProjectMapService.live(identifier, linked),
+      ProjectMapService.linkCandidates(),
+    ]);
+    return { live, plan, candidates };
+  }
+
+  static async projectMapSave(identifier: string, plan: unknown) {
+    return await ProjectMapService.savePlan(identifier, plan);
+  }
+
+  /** Links a planned node to the workflow, app, global or schedule it became. */
+  static async projectMapLink(identifier: string, nodeId: string, key: string) {
+    return await ProjectMapService.link(identifier, nodeId, key);
   }
 
   static async variableList() {
@@ -659,8 +688,9 @@ export default class Core {
       source: JSON.stringify(parsedSource),
     });
 
-    if (existing.project_id) {
-      await ProjectService.assignTask(existing.project_identifier, record.identifier);
+    // The copy goes in every project the original is in.
+    if (existing.projects?.length) {
+      for (const project of existing.projects) await ProjectService.assignTask(project.identifier, record.identifier);
       return await TaskService.getByIdentifier(record.identifier);
     }
 
@@ -992,6 +1022,15 @@ export default class Core {
   }
 
   static async taskInstall(path: string, metadata?: Record<string, unknown>) {
+    return Core.installFile(path, metadata);
+  }
+
+  /** `installed` maps sub-workflow files already installed by this install to their identifiers. */
+  private static async installFile(
+    path: string,
+    metadata?: Record<string, unknown>,
+    installed?: Map<string, string>
+  ) {
     const rawTask = Parser.importFromFile(path);
     const validatedTask = TaskValidator.validateFormat(rawTask);
 
@@ -1003,7 +1042,8 @@ export default class Core {
     if (validatedTask.pipeline?.actions) {
       validatedTask.pipeline.actions = await this.resolveSubtaskPaths(
         validatedTask.pipeline.actions,
-        nodePath.dirname(path)
+        nodePath.dirname(path),
+        installed
       );
       validatedTask.pipeline.actions = this.addActionsIdentifiers(validatedTask.pipeline.actions);
     }
@@ -1023,53 +1063,57 @@ export default class Core {
    * Recursively walks all actions. When a subtask.exec with a `path` param is found,
    * installs the subtask and replaces `path` with the resulting `identifier`.
    */
-  private static async resolveSubtaskPaths(actions: any[], baseDir: string): Promise<any[]> {
+  private static async resolveSubtaskPaths(
+    actions: any[],
+    baseDir: string,
+    installed: Map<string, string> = new Map()
+  ): Promise<any[]> {
     if (!Array.isArray(actions)) return actions;
 
-    return Promise.all(
-      actions.map(async (action) => {
-        if (action.params?.actions && Array.isArray(action.params.actions)) {
-          action = {
-            ...action,
-            params: {
-              ...action.params,
-              actions: await this.resolveSubtaskPaths(action.params.actions, baseDir),
-            },
-          };
+    // One step at a time, and a file named by several steps is installed once: steps
+    // installed side by side made one copy each and raced to create the same new tags.
+    const resolved: any[] = [];
+    for (let action of actions) {
+      if (action.params?.actions && Array.isArray(action.params.actions)) {
+        action = {
+          ...action,
+          params: {
+            ...action.params,
+            actions: await this.resolveSubtaskPaths(action.params.actions, baseDir, installed),
+          },
+        };
+      }
+
+      if (Array.isArray(action.params?.statements)) {
+        const statements = [];
+        for (const stmt of action.params.statements) {
+          statements.push(
+            Array.isArray(stmt.actions)
+              ? { ...stmt, actions: await this.resolveSubtaskPaths(stmt.actions, baseDir, installed) }
+              : stmt
+          );
         }
+        action = { ...action, params: { ...action.params, statements } };
+      }
 
-        if (Array.isArray(action.params?.statements)) {
-          action = {
-            ...action,
-            params: {
-              ...action.params,
-              statements: await Promise.all(
-                action.params.statements.map(async (stmt: any) => {
-                  if (!Array.isArray(stmt.actions)) return stmt;
-                  return {
-                    ...stmt,
-                    actions: await this.resolveSubtaskPaths(stmt.actions, baseDir),
-                  };
-                })
-              ),
-            },
-          };
+      if (action.group === 'subtask' && action.name === 'exec' && action.params?.path) {
+        const subtaskPath =
+          action.params.path.startsWith('./') || action.params.path.startsWith('../')
+            ? nodePath.resolve(baseDir, action.params.path)
+            : action.params.path;
+
+        let identifier = installed.get(subtaskPath);
+        if (!identifier) {
+          identifier = (await Core.installFile(subtaskPath, undefined, installed)).identifier;
+          installed.set(subtaskPath, identifier);
         }
+        const { path: _path, ...restParams } = action.params;
+        action = { ...action, params: { ...restParams, identifier } };
+      }
 
-        if (action.group === 'subtask' && action.name === 'exec' && action.params?.path) {
-          const subtaskPath =
-            action.params.path.startsWith('./') || action.params.path.startsWith('../')
-              ? nodePath.resolve(baseDir, action.params.path)
-              : action.params.path;
-
-          const subtaskRecord = await Core.taskInstall(subtaskPath);
-          const { path: _path, ...restParams } = action.params;
-          action = { ...action, params: { ...restParams, identifier: subtaskRecord.identifier } };
-        }
-
-        return action;
-      })
-    );
+      resolved.push(action);
+    }
+    return resolved;
   }
 
   /**

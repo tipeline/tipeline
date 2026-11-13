@@ -32,7 +32,7 @@ const props = withDefaults(
   defineProps<{
     /** Open the new workflow's builder once created (off when another form picks it). */
     navigate?: boolean;
-    /** The project it starts in (the one it's created from); the user can change it. */
+    /** The project it starts in (the one it's created from); the user can change it or add more. */
     project?: string | null;
   }>(),
   { navigate: true, project: null }
@@ -45,9 +45,9 @@ const router = useRouter();
 const { t } = useI18n();
 const isWaiting = ref(false);
 const submitButtonRef = ref<HTMLButtonElement | null>(null);
-const selectedProject = ref(props.project ?? '__none__');
+const selectedProjects = ref<string[]>(props.project ? [props.project] : []);
 // The dialog may stay mounted between openings; follow where it was opened from.
-watch(() => props.project, (project) => (selectedProject.value = project ?? '__none__'));
+watch(() => props.project, (project) => (selectedProjects.value = project ? [project] : []));
 const tags = ref<string[]>([]);
 const defaults = useNewItemDefaults();
 
@@ -89,11 +89,8 @@ const onSubmit = handleSubmit(async (values) => {
     data.source = JSON.stringify(source);
     data.metadata = {};
     const response = await invokeCore(SEND.TASK_NEW, { data });
-    if (selectedProject.value && selectedProject.value !== '__none__') {
-      await invokeCore(SEND.PROJECT_ASSIGN_TASK, {
-        projectIdentifier: selectedProject.value,
-        taskIdentifier: response.identifier,
-      });
+    for (const projectIdentifier of selectedProjects.value) {
+      await invokeCore(SEND.PROJECT_ASSIGN_TASK, { projectIdentifier, taskIdentifier: response.identifier });
     }
     emit('created', response.identifier);
     if (!props.navigate) return;
@@ -182,7 +179,7 @@ defineExpose({ submit: triggerSubmit, isWaiting });
       </FormField>
     </div>
 
-    <ProjectSelect v-model="selectedProject" />
+    <ProjectSelect v-model="selectedProjects" />
 
     <div class="space-y-1.5">
       <label class="text-sm font-medium">

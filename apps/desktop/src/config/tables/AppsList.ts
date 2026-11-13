@@ -5,6 +5,7 @@ import AppListActions from '@/components/app/AppListActions.vue';
 import { AppWindow } from 'lucide-vue-next';
 import { toAssetUrl } from '@/utils/assetUrl';
 import { descriptionSummary } from '@tipeline/utils';
+import type { ProjectTag } from '@/utils/projectAssign';
 
 export type AppItem = {
   identifier: string;
@@ -13,8 +14,8 @@ export type AppItem = {
   author: string;
   version: string | null;
   source_type?: 'local' | 'hub';
-  project_id: number | null;
-  project_identifier: string | null;
+  /** Every project it's in (none, one or several). */
+  projects: ProjectTag[];
   image?: string | null;
 };
 

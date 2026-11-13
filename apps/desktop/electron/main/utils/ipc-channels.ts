@@ -139,6 +139,9 @@ export const SEND = {
   PROJECT_UNASSIGN_APP: 'projectUnassignApp',
   PROJECT_EXPORT: 'projectExport',
   PROJECT_IMPORT: 'projectImport',
+  PROJECT_MAP: 'projectMap',
+  PROJECT_MAP_SAVE: 'projectMapSave',
+  PROJECT_MAP_LINK: 'projectMapLink',
   // Agent (handled locally in main — talks to Core's MCP server + DeepSeek directly, never forwarded via the Core IPC transport)
   AGENT_PROMPT: 'agentPrompt',
   AGENT_RUN: 'agentRun',
@@ -321,6 +324,9 @@ export const CORE = {
   PROJECT_UNASSIGN_APP: 'projectUnassignApp',
   PROJECT_EXPORT: 'projectExport',
   PROJECT_IMPORT: 'projectImport',
+  PROJECT_MAP: 'projectMap',
+  PROJECT_MAP_SAVE: 'projectMapSave',
+  PROJECT_MAP_LINK: 'projectMapLink',
   // Agent run history
   AGENT_RUN_CREATE: 'agentRunCreate',
   AGENT_RUN_MARK_PROPOSED: 'agentRunMarkProposed',
@@ -481,6 +487,9 @@ export const CORE_RESP = {
   PROJECT_UNASSIGN_APP: 'onProjectUnassignApp',
   PROJECT_EXPORT: 'onProjectExport',
   PROJECT_IMPORT: 'onProjectImport',
+  PROJECT_MAP: 'onProjectMap',
+  PROJECT_MAP_SAVE: 'onProjectMapSave',
+  PROJECT_MAP_LINK: 'onProjectMapLink',
   // Agent run history
   AGENT_RUN_CREATE: 'onAgentRunCreate',
   AGENT_RUN_MARK_PROPOSED: 'onAgentRunMarkProposed',

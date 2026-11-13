@@ -25,7 +25,7 @@ import { Parser } from '@utils/Parser';
 // with every identifier — and so every app/schedule → workflow link — intact.
 let knex: Knex;
 
-const TABLES = ['schedule', 'task_tag', 'tag', 'app', 'task', 'project', 'global_variable'];
+const TABLES = ['project_map', 'project_task', 'project_app', 'schedule', 'task_tag', 'tag', 'app', 'task', 'project', 'global_variable'];
 
 const workflowSource = (name: string) =>
   JSON.stringify({ name, version: '1.0.0', tags: ['ops'], pipeline: { actions: [{ type: 'log.info', message: 'hi' }] } });
@@ -44,6 +44,20 @@ async function seed() {
     color: '#f00',
     instructions: 'Prod is crm-01.',
   });
+  // The project map's plan goes with the project.
+  await knex('project_map').insert({
+    project_id: sales,
+    data: JSON.stringify({
+      version: 2,
+      nodes: [{ id: 'n1', kind: 'workflow', name: 'Warm cache', inputs: ['tag'], outputs: [] }],
+      edges: [{ id: 'e1', from: 'app:app-deals', to: 'plan:n1', kind: 'runs' }],
+      positions: { 'plan:n1': { x: 40, y: 40 } },
+      meta: { 'task:wf-crm': { owner: 'Ana', readyAt: '2026-11-01T10:00:00.000Z', readyBy: 'Ana' } },
+      lanes: ['TAM'],
+      ignored: [],
+      notes: [{ id: 's1', text: 'Ask the AM team', x: 10, y: 20, w: 220, color: 'yellow' }],
+    }),
+  });
   const [crm] = await knex('task').insert({
     identifier: 'wf-crm',
     name: 'CRM lookup',
@@ -53,22 +67,22 @@ async function seed() {
     platform: 'macos',
     metadata: JSON.stringify({ image: 'assets/tasks/wf-crm.png' }),
     source: workflowSource('CRM lookup'),
-    project_id: sales,
   });
+  await knex('project_task').insert({ project_id: sales, task_id: crm });
   await knex('task').insert({ identifier: 'wf-mail', name: 'Send mail', source: workflowSource('Send mail') });
   // Never saved: nothing to back up.
   await knex('task').insert({ identifier: 'wf-empty', name: 'Empty', source: null });
   const [tag] = await knex('tag').insert({ label: 'urgent' });
   await knex('task_tag').insert({ task_id: crm, tag_id: tag });
 
-  await knex('app').insert({
+  const [deals] = await knex('app').insert({
     identifier: 'app-deals',
     name: 'Deals',
     version: '2.0.0',
     metadata: JSON.stringify({ image: 'assets/apps/app-deals.webp' }),
     source: appSource('wf-crm', 'wf-mail'),
-    project_id: sales,
   });
+  await knex('project_app').insert({ project_id: sales, app_id: deals });
 
   await knex('schedule').insert([
     { identifier: 'sch-daily', task_id: crm, cron: '0 9 * * *', variables: JSON.stringify({ region: 'eu' }), enabled: true },
@@ -99,29 +113,43 @@ async function snapshot() {
   const projects = await knex('project')
     .select('identifier', 'name', 'description', 'color', 'instructions')
     .orderBy('identifier');
-  const tasks = await knex('task')
-    .leftJoin('project', 'project.id', 'task.project_id')
-    .whereNotNull('task.source')
-    .select('task.identifier', 'task.name', 'task.description', 'task.author', 'task.version', 'task.platform', 'task.metadata', 'task.source', 'project.identifier as project')
-    .orderBy('task.identifier');
+  const membersOf = async (table: string, fk: string) =>
+    (await knex(table).join('project', 'project.id', `${table}.project_id`).select(`${table}.${fk} as id`, 'project.identifier')).reduce(
+      (out: Record<number, string[]>, m: any) => ({ ...out, [m.id]: [...(out[m.id] ?? []), m.identifier].sort() }),
+      {}
+    );
+  const taskProjects = await membersOf('project_task', 'task_id');
+  const appProjects = await membersOf('project_app', 'app_id');
+  const tasks = (
+    await knex('task')
+      .whereNotNull('task.source')
+      .select('task.id', 'task.identifier', 'task.name', 'task.description', 'task.author', 'task.version', 'task.platform', 'task.metadata', 'task.source')
+      .orderBy('task.identifier')
+  ).map(({ id, ...t }: any) => ({ ...t, projects: taskProjects[id] ?? [] }));
   const tags = await knex('task_tag')
     .join('task', 'task.id', 'task_tag.task_id')
     .join('tag', 'tag.id', 'task_tag.tag_id')
     .select('task.identifier', 'tag.label')
     .orderBy(['task.identifier', 'tag.label']);
-  const apps = await knex('app')
-    .leftJoin('project', 'project.id', 'app.project_id')
-    .select('app.identifier', 'app.name', 'app.version', 'app.metadata', 'app.source', 'project.identifier as project')
-    .orderBy('app.identifier');
+  const apps = (
+    await knex('app').select('app.id', 'app.identifier', 'app.name', 'app.version', 'app.metadata', 'app.source').orderBy('app.identifier')
+  ).map(({ id, ...a }: any) => ({ ...a, projects: appProjects[id] ?? [] }));
   const schedules = await knex('schedule')
     .join('task', 'task.id', 'schedule.task_id')
     .select('schedule.identifier', 'task.identifier as workflow', 'schedule.cron', 'schedule.run_at', 'schedule.variables')
     .orderBy('schedule.identifier');
+  const maps = (
+    await knex('project_map')
+      .join('project', 'project.id', 'project_map.project_id')
+      .select('project.identifier', 'project_map.data')
+      .orderBy('project.identifier')
+  ).map((m: any) => ({ project: m.identifier, data: JSON.parse(m.data) }));
   const variables = (await knex('global_variable').select('name', 'type', 'value', 'secret', 'readonly').orderBy('name')).map(
     (v: any) => ({ ...v, value: unseal(v.value) })
   );
   return {
     projects,
+    maps,
     tasks: tasks.map((t) => ({ ...t, metadata: JSON.parse(t.metadata ?? 'null'), source: JSON.parse(t.source) })),
     tags,
     apps: apps.map((a) => ({ ...a, metadata: JSON.parse(a.metadata ?? 'null'), source: JSON.parse(a.source) })),
@@ -189,7 +217,7 @@ describe('BackupService.create', () => {
 
     const files = await decompress(target);
     const manifest = JSON.parse(files.find((f) => f.path === 'manifest.json')!.data.toString());
-    expect(manifest.version).toBe(3);
+    expect(manifest.version).toBe(4);
     expect(manifest.tasks.map((t: any) => [t.identifier, t.file])).toEqual([
       ['wf-crm', 'tasks/crm-lookup-wfcrm.yml'],
       ['wf-mail', 'tasks/crm-lookup-wfmail.yml'],
@@ -266,7 +294,8 @@ describe('BackupService.restore', () => {
     const target = tmpZip();
     await BackupService.create(target, true);
     const before = await snapshot();
-    await knex('task').where({ identifier: 'wf-crm' }).update({ name: 'Edited', project_id: null });
+    await knex('task').where({ identifier: 'wf-crm' }).update({ name: 'Edited' });
+    await knex('project_task').delete();
     await knex('task_tag').delete();
     await knex('schedule').where({ identifier: 'sch-daily' }).update({ cron: '* * * * *' });
     await knex('global_variable').where({ name: 'apiUrl' }).update({ value: JSON.stringify('changed') });
@@ -291,6 +320,39 @@ describe('BackupService.restore', () => {
     const fresh = await BackupService.restore(target);
     expect(fresh.result.secretsWithoutValue).toEqual(['apiKey']);
     expect(await knex('global_variable').where({ name: 'apiKey' }).first('secret', 'value')).toEqual({ secret: 1, value: 'null' });
+  });
+
+  it('keeps a workflow that is in several projects in all of them', async () => {
+    const [ops] = await knex('project').insert({ identifier: 'p-ops', name: 'Ops' });
+    const crm = await knex('task').where({ identifier: 'wf-crm' }).first('id');
+    await knex('project_task').insert({ project_id: ops, task_id: crm.id });
+    const target = tmpZip();
+    await BackupService.create(target, false);
+    const manifest = JSON.parse((await decompress(target)).find((f) => f.path === 'manifest.json')!.data.toString());
+    expect(manifest.tasks.find((t: any) => t.identifier === 'wf-crm').projects.sort()).toEqual(['p-ops', 'p-sales']);
+
+    const before = await snapshot();
+    await wipe();
+    await BackupService.restore(target);
+    expect((await snapshot()).tasks).toEqual(before.tasks);
+  });
+
+  it('restores the one project of a version 3 backup', async () => {
+    const target = await zip(tmpZip(), {
+      'tasks/old.yml': Parser.exportToString({ name: 'Old', pipeline: { actions: [] } }),
+      'apps/board.yml': Parser.exportToString({ schemaVersion: 4, workflows: {}, pages: [{ id: 'home', title: 'Home', components: [] }] }),
+      'manifest.json': JSON.stringify({
+        version: 3,
+        projects: [{ identifier: 'p-old', name: 'Old project' }],
+        tasks: [{ identifier: 'wf-old', name: 'Old', version: '1.0.0', project: 'p-old', file: 'tasks/old.yml' }],
+        apps: [{ identifier: 'app-board', name: 'Board', version: '1.0.0', project: 'p-old', file: 'apps/board.yml' }],
+      }),
+    });
+    await wipe();
+    await BackupService.restore(target);
+    const snap = await snapshot();
+    expect(snap.tasks.map((t: any) => [t.identifier, t.projects])).toEqual([['wf-old', ['p-old']]]);
+    expect(snap.apps.map((a: any) => [a.identifier, a.projects])).toEqual([['app-board', ['p-old']]]);
   });
 
   it('restores a version 1 backup (workflows and variables only)', async () => {
@@ -435,8 +497,10 @@ describe('project export / import', () => {
       source: JSON.stringify({ name: 'Sub', pipeline: { actions: [{ params: { url: '{{ _global.apiUrl }}', key: '{= _global.apiKey =}' } }] } }),
     });
     const [ops] = await knex('project').insert({ identifier: 'p-ops', name: 'Ops' });
-    await knex('task').insert({ identifier: 'wf-ops', name: 'Ops job', source: workflowSource('Ops job'), project_id: ops });
-    await knex('app').insert({ identifier: 'app-ops', name: 'Ops', source: appSource('wf-ops'), project_id: ops });
+    const [opsJob] = await knex('task').insert({ identifier: 'wf-ops', name: 'Ops job', source: workflowSource('Ops job') });
+    const [opsApp] = await knex('app').insert({ identifier: 'app-ops', name: 'Ops', source: appSource('wf-ops') });
+    await knex('project_task').insert({ project_id: ops, task_id: opsJob });
+    await knex('project_app').insert({ project_id: ops, app_id: opsApp });
   });
 
   it('exports the project, its apps, the workflows they reach and the globals those use', async () => {
@@ -456,7 +520,8 @@ describe('project export / import', () => {
     const manifest = JSON.parse(files.find((f) => f.path === 'manifest.json')!.data.toString());
     expect(manifest.scope).toEqual({ kind: 'project', project: 'p-sales' });
     expect(manifest.projects.map((p: any) => p.identifier)).toEqual(['p-sales']);
-    expect(manifest.tasks.find((t: any) => t.identifier === 'wf-mail').project).toBeNull();
+    expect(manifest.tasks.find((t: any) => t.identifier === 'wf-mail').projects).toEqual([]);
+    expect(manifest.tasks.find((t: any) => t.identifier === 'wf-crm').projects).toEqual(['p-sales']);
     const globals = Parser.importFromString(files.find((f) => f.path === 'globals.yml')!.data.toString()) as any;
     expect(globals.variables.map((v: any) => v.name).sort()).toEqual(['apiKey', 'apiUrl']);
   });
@@ -477,7 +542,11 @@ describe('project export / import', () => {
     expect(result.apps.added).toBe(1);
     expect(result.variables.added).toBe(2);
     expect(startSchedules).toEqual([]);
-    const crm = await knex('task').join('project', 'project.id', 'task.project_id').where('task.identifier', 'wf-crm').first('project.identifier');
+    const crm = await knex('task')
+      .join('project_task', 'project_task.task_id', 'task.id')
+      .join('project', 'project.id', 'project_task.project_id')
+      .where('task.identifier', 'wf-crm')
+      .first('project.identifier');
     expect(crm.identifier).toBe('p-sales');
     expect(await knex('app').pluck('identifier')).toEqual(['app-deals']);
     expect(unseal((await knex('global_variable').where({ name: 'apiKey' }).first('value')).value)).toBe(JSON.stringify('s3cret'));

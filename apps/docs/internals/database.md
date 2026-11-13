@@ -23,11 +23,10 @@ Stores task (workflow) definitions.
 | `platform` | string | `windows` \| `linux` \| `macos`, or null |
 | `metadata` | JSON | Extra info (e.g. `draft` for assistant drafts, cache settings) |
 | `source` | text | The task source as JSON |
-| `project_id` | integer FK → project | Owning project, or null |
 | `created_at` | datetime | |
 | `updated_at` | datetime | |
 
-Hub details live in `task_hub_link`, tags in `task_tag`.
+Hub details live in `task_hub_link`, tags in `task_tag`, projects in `project_task`.
 
 ### `app`
 
@@ -160,7 +159,11 @@ Key-value application settings.
 | `name`, `description`, `color` | string | |
 | `created_at`, `updated_at` | datetime | |
 
-Tasks and apps point at their project with `project_id`.
+A task or app can be in any number of projects: `project_task` (`project_id`, `task_id`)
+and `project_app` (`project_id`, `app_id`) hold one row per membership, with `created_at`.
+Foreign keys cascade, and deletes also clear these rows by hand
+(`ProjectMembership.forget` / `forgetProject`). Being in a project never affects who may
+see or run a workflow: on Tipeline Server that's per workflow (owner and visibility).
 
 ### `tag` and `task_tag`
 

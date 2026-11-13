@@ -19,13 +19,14 @@ import { toast } from '@/components/ui/sonner';
 import { useErrorT } from '@/composables/useErrorT';
 import { invokeCore } from '@/utils/invoke';
 import { SEND } from '@/ipc-channels';
-import type { WorkflowUser } from '@/composables/useWorkflowUsage';
-import { defaultDeleteSelection, outsideUsers, type DeleteSelection } from '@tipeline/utils';
+import { userLabel, type WorkflowUser } from '@/composables/useWorkflowUsage';
+import { defaultDeleteSelection, inOtherProjects, outsideUsers, type DeleteSelection } from '@tipeline/utils';
 import { deleteProject, type ProjectDeletePreview } from '@/utils/projectDelete';
 
 // Deleting a project keeps its workflows and apps unless you choose to delete them too.
 // Then each one is listed with a tick: a workflow something outside the deletion still
 // uses starts unticked (and says what uses it), and ticking it anyway says what breaks.
+// One that is also in another project has no tick: it's only taken out of this one.
 const props = defineProps<{ identifier: string }>();
 const open = defineModel<boolean>('open', { default: false });
 const emit = defineEmits<{ deleted: [] }>();
@@ -63,8 +64,7 @@ watch(open, async (isOpen) => {
 const itemCount = computed(() => (preview.value?.workflows.length ?? 0) + (preview.value?.apps.length ?? 0));
 const tickedCount = computed(() => selection.value.workflows.size + selection.value.apps.size);
 
-const names = (users: WorkflowUser[]) =>
-  users.map((u) => (u.project_name ? `${u.name} · ${u.project_name}` : u.name)).join(', ');
+const names = (users: WorkflowUser[]) => users.map((u) => userLabel(u)).join(', ');
 
 /** Per workflow: what still uses it if the current ticks go ahead. */
 const rows = computed(() =>
@@ -72,6 +72,7 @@ const rows = computed(() =>
     const outside = outsideUsers(workflow, selection.value);
     return {
       ...workflow,
+      elsewhere: inOtherProjects(workflow),
       ticked: selection.value.workflows.has(workflow.identifier),
       outsideApps: outside.apps,
       outsideWorkflows: outside.workflows,
@@ -79,7 +80,8 @@ const rows = computed(() =>
     };
   })
 );
-const keptBecauseUsed = computed(() => rows.value.filter((r) => !r.ticked && r.used).length);
+const keptBecauseUsed = computed(() => rows.value.filter((r) => !r.ticked && !r.elsewhere && r.used).length);
+const alsoInNames = (item: { alsoIn?: { name: string }[] }) => (item.alsoIn ?? []).map((p) => p.name).join(', ');
 const breaking = computed(() => rows.value.filter((r) => r.ticked && r.used).length);
 
 function setTicked(kind: keyof DeleteSelection, identifier: string, ticked: boolean) {
@@ -164,19 +166,23 @@ async function confirmDelete() {
 
           <ul class="max-h-72 overflow-y-auto scroll-fade rounded-md border divide-y text-sm">
             <li v-for="row in rows" :key="`task:${row.identifier}`" class="px-3 py-2 min-w-0">
-              <label class="flex items-center gap-2 min-w-0 cursor-pointer">
+              <label class="flex items-center gap-2 min-w-0" :class="row.elsewhere ? 'cursor-default' : 'cursor-pointer'">
                 <Checkbox
                   :model-value="row.ticked"
+                  :disabled="row.elsewhere"
                   @update:model-value="(v) => setTicked('workflows', row.identifier, v === true)"
                 />
                 <Workflow class="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
-                <span class="truncate font-medium">{{ row.name }}</span>
+                <span class="truncate font-medium" :class="row.elsewhere ? 'text-muted-foreground' : ''">{{ row.name }}</span>
                 <TriangleAlert
                   v-if="row.used && row.ticked"
                   class="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400"
                 />
               </label>
-              <div class="pl-6 text-xs text-muted-foreground space-y-0.5">
+              <p v-if="row.elsewhere" class="pl-6 text-xs text-muted-foreground truncate">
+                {{ t('projects.deleteAlert.alsoIn', { names: alsoInNames(row) }) }}
+              </p>
+              <div v-else class="pl-6 text-xs text-muted-foreground space-y-0.5">
                 <p v-if="row.outsideApps.length" class="truncate" :title="names(row.outsideApps)">
                   {{ t(row.ticked ? 'projects.deleteAlert.appsBreak' : 'projects.deleteAlert.usedByApps', { names: names(row.outsideApps) }) }}
                 </p>
@@ -187,14 +193,18 @@ async function confirmDelete() {
               </div>
             </li>
             <li v-for="app in preview.apps" :key="`app:${app.identifier}`" class="px-3 py-2 min-w-0">
-              <label class="flex items-center gap-2 min-w-0 cursor-pointer">
+              <label class="flex items-center gap-2 min-w-0" :class="inOtherProjects(app) ? 'cursor-default' : 'cursor-pointer'">
                 <Checkbox
                   :model-value="selection.apps.has(app.identifier)"
+                  :disabled="inOtherProjects(app)"
                   @update:model-value="(v) => setTicked('apps', app.identifier, v === true)"
                 />
                 <AppWindow class="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
-                <span class="truncate font-medium">{{ app.name }}</span>
+                <span class="truncate font-medium" :class="inOtherProjects(app) ? 'text-muted-foreground' : ''">{{ app.name }}</span>
               </label>
+              <p v-if="inOtherProjects(app)" class="pl-6 text-xs text-muted-foreground truncate">
+                {{ t('projects.deleteAlert.alsoIn', { names: alsoInNames(app) }) }}
+              </p>
             </li>
           </ul>
           <p class="text-xs text-muted-foreground">{{ t('projects.deleteAlert.untickedStay') }}</p>

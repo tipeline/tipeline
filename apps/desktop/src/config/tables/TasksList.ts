@@ -1,12 +1,13 @@
 import { h } from 'vue';
 import type { ColumnDef } from '@tanstack/vue-table';
 import type { Router } from 'vue-router';
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, isToday, isTomorrow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import TaskListActions from '@/components/task/TaskListActions.vue';
 import { Lock, Workflow } from 'lucide-vue-next';
 import { toAssetUrl } from '@/utils/assetUrl';
 import { descriptionSummary } from '@tipeline/utils';
+import type { ProjectTag } from '@/utils/projectAssign';
 
 export type TaskItem = {
   identifier: string;
@@ -16,11 +17,13 @@ export type TaskItem = {
   version: string | null;
   tags: string[];
   source_type: 'local' | 'hub';
-  project_id: number | null;
-  project_identifier: string | null;
+  /** Every project it's in (none, one or several). */
+  projects: ProjectTag[];
   last_run_status: 'pending' | 'running' | 'failed' | 'completed' | 'canceled' | 'paused' | null;
   last_run_at: string | null;
   last_run_identifier?: string | null;
+  /** The last ten runs' statuses, newest first (missing from older cores). */
+  recent_runs?: NonNullable<TaskItem['last_run_status']>[] | null;
   image?: string | null;
   /** The assistant wrote it and nobody has marked it ready (metadata.draft; SQLite reports 1). */
   draft?: boolean | number | null;
@@ -107,13 +110,63 @@ export function lastRunLabel(row: TaskItem, t: (key: string) => string): string 
   return t(statusKey) !== statusKey ? t(statusKey) : row.last_run_status;
 }
 
+const STRIP_SLOTS = 10;
+const stripColor: Record<string, string> = {
+  completed: 'bg-emerald-500',
+  failed: 'bg-red-500',
+  running: 'bg-blue-500',
+  paused: 'bg-amber-500',
+  pending: 'bg-amber-500',
+  canceled: 'bg-gray-400',
+};
+
+/**
+ * The last ten runs as small bars, oldest on the left; a failed run stands taller so a
+ * bad streak shows at a glance. Empty slots for a workflow that ran fewer times.
+ */
+export function runStrip(row: TaskItem, t: (key: string, named?: Record<string, unknown>) => string) {
+  const runs = [...(row.recent_runs ?? [])].reverse();
+  const slots = [...Array(Math.max(0, STRIP_SLOTS - runs.length)).fill(null), ...runs.slice(-STRIP_SLOTS)];
+  const failed = runs.filter((s) => s === 'failed').length;
+  const label = runs.length
+    ? t('tasks.runStrip.label', { n: runs.length, failed })
+    : t('tasks.runStrip.none');
+  return h(
+    'div',
+    { class: 'flex items-end gap-[3px] h-5', role: 'img', 'aria-label': label, title: label },
+    slots.map((status) =>
+      h('span', {
+        class: `w-2.5 rounded-[2px] ${
+          status ? `${stripColor[status] ?? 'bg-gray-400'} ${status === 'failed' ? 'h-5' : 'h-3.5'}` : 'h-1 bg-muted-foreground/20'
+        }`,
+      })
+    )
+  );
+}
+
+/** "14:00" today, "Tomorrow 02:00", or the weekday and date further out. */
+export function nextRunText(iso: string, t: (key: string, named?: Record<string, unknown>) => string): string {
+  const date = new Date(iso);
+  const time = format(date, 'HH:mm');
+  if (isToday(date)) return t('tasks.nextRun.today', { time });
+  if (isTomorrow(date)) return t('tasks.nextRun.tomorrow', { time });
+  return format(date, 'EEE d MMM HH:mm');
+}
+
+export type WorkflowColumnExtras = {
+  /** When a workflow's next scheduled run is (the earliest of its schedules), or null. */
+  nextRunAt?: (identifier: string) => string | null;
+};
+
 export function createColumns(
   t: (key: string) => string,
   router: Router,
   onDeleted?: () => void,
   onUpdated?: () => void,
-  showOwner = false
+  showOwner = false,
+  extras: WorkflowColumnExtras = {}
 ): ColumnDef<TaskItem>[] {
+  const tt = t as (key: string, named?: Record<string, unknown>) => string;
   return [
     {
       accessorKey: 'name',
@@ -123,7 +176,6 @@ export function createColumns(
         const tags = Array.isArray(row.tags) ? row.tags : [];
         const notMine = row.is_owned_by_me === false;
         return h('div', { class: 'flex items-center gap-3 py-0.5' }, [
-          statusDot(row.last_run_status),
           thumbnail(row.image),
           h('div', { class: 'flex flex-col gap-0.5 min-w-0' }, [
             h('div', { class: 'flex items-center gap-1.5' }, [
@@ -189,25 +241,10 @@ export function createColumns(
         ]
       : []),
     {
-      accessorKey: 'author',
-      header: () => t('tasks.columns.author'),
-      cell: (info) => {
-        const value = info.getValue() as string | null;
-        return value
-          ? h('span', { class: 'text-sm' }, value)
-          : h('span', { class: 'text-muted-foreground' }, '—');
-      },
-    },
-    {
-      accessorKey: 'version',
-      header: () => t('tasks.columns.version'),
+      id: 'recentRuns',
+      header: () => t('tasks.columns.recentRuns'),
       meta: { class: 'whitespace-nowrap' },
-      cell: (info) => {
-        const value = info.getValue() as string | null;
-        return value
-          ? h('span', { class: 'font-mono text-xs' }, value)
-          : h('span', { class: 'text-muted-foreground' }, '—');
-      },
+      cell: (info) => runStrip(info.row.original as TaskItem, tt),
     },
     {
       accessorKey: 'last_run_status',
@@ -217,12 +254,35 @@ export function createColumns(
         if (!row.last_run_status) {
           return h('span', { class: 'text-muted-foreground text-sm' }, t('common.never'));
         }
+        const failed = row.last_run_status === 'failed';
         return h('div', { class: 'flex flex-col gap-0.5' }, [
-          h('span', { class: 'text-sm text-muted-foreground' }, lastRunLabel(row, t)),
+          h('span', { class: 'flex items-center gap-1.5' }, [
+            statusDot(row.last_run_status),
+            h(
+              'span',
+              { class: failed ? 'text-sm font-medium text-red-700 dark:text-red-400' : 'text-sm' },
+              lastRunLabel(row, t)
+            ),
+          ]),
           row.last_run_at
-            ? h('span', { class: 'text-xs text-muted-foreground/60' }, formatDistanceToNow(new Date(row.last_run_at), { addSuffix: true }))
+            ? h(
+                'span',
+                { class: 'text-xs text-muted-foreground pl-3.5' },
+                formatDistanceToNow(new Date(row.last_run_at), { addSuffix: true })
+              )
             : null,
         ]);
+      },
+    },
+    {
+      id: 'nextRun',
+      header: () => t('tasks.columns.nextRun'),
+      meta: { class: 'whitespace-nowrap' },
+      cell: (info) => {
+        const at = extras.nextRunAt?.((info.row.original as TaskItem).identifier) ?? null;
+        return at
+          ? h('span', { class: 'text-sm' }, nextRunText(at, tt))
+          : h('span', { class: 'text-muted-foreground' }, '—');
       },
     },
     {

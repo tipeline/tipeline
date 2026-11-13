@@ -1,0 +1,78 @@
+version: 1.0.0
+name: 'Roastery: List Inventory'
+description: |
+  Lists the coffees in the roastery store with their stock, the last roast and a stock status, plus the recent roasts.
+
+  A coffee is **Low** under the `roasteryLowStockKg` global and **Out** at zero.
+
+  **Outputs**
+
+  - `beans` — `[{ id, name, origin, process, roast, price_per_kg, stock_kg, status, lastRoast, lat, lng }]`
+  - `beanOptions` — `[{ label, value }]` for a select
+  - `roasts` — the 15 latest roasts: `[{ id, bean, kg, roaster, notes, roasted_at }]`
+author: Jose Daniel Estrada
+tags: [roastery, inventory, sqlite]
+
+pipeline:
+  variables:
+    - { type: array, name: beans, value: [], visibility: public, output: true, description: The coffees with stock and status. }
+    - { type: array, name: beanOptions, value: [], visibility: public, description: The coffees as select options. }
+    - { type: array, name: roasts, value: [], visibility: public, output: true, description: The latest roasts. }
+    - { type: dbConnection, name: db }
+    - { type: array, name: rows, value: [] }
+
+  actions:
+    - group: database
+      identifier: qiEpmMIPx2llsvBRYj2To
+      name: connect
+      params:
+        configuration:
+          client: better-sqlite3
+          connection: { filename: '{{ _env.HOME }}/Tipeline/output/roastery/roastery.db' }
+          useNullAsDefault: true
+      destination: db
+
+    - group: database
+      identifier: sX7eCPHHwRMwSt6hTHu8Z
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          SELECT b.*, (SELECT MAX(r.roasted_at) FROM roast r WHERE r.bean_id = b.id) AS lastRoast
+          FROM bean b ORDER BY b.name
+      destination: rows
+
+    - group: database
+      identifier: 2UpinAHFVOUM1HWLBNSS6
+      name: query
+      params:
+        connection: '{= db =}'
+        sql: >-
+          SELECT r.id, b.name AS bean, r.kg, r.roaster, r.notes, r.roasted_at
+          FROM roast r JOIN bean b ON b.id = r.bean_id ORDER BY r.roasted_at DESC LIMIT 15
+      destination: roasts
+
+    - group: database
+      identifier: YajFY0vkDzEmceMNBMIxT
+      name: close
+      params:
+        connection: '{= db =}'
+
+    - group: script
+      identifier: tBmrlLe8xiTQz1_CZ0JBH
+      name: runScript
+      params:
+        context: { rows: '{= rows =}', threshold: '{= _global.roasteryLowStockKg =}' }
+        code: |
+          const limit = Number(threshold) || 8;
+          return rows.map((b) => ({ ...b, status: b.stock_kg <= 0 ? 'Out' : b.stock_kg < limit ? 'Low' : 'In stock' }));
+      destination: beans
+
+    - group: script
+      identifier: Ie2hg-l0K2H42olSa_gO7
+      name: runScript
+      params:
+        context: { beans: '{= beans =}' }
+        code: |
+          return beans.map((b) => ({ label: `${b.name} (${b.stock_kg} kg)`, value: b.id }));
+      destination: beanOptions

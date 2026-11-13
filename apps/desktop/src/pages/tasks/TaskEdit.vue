@@ -75,6 +75,7 @@ import {
 import { useIcon } from '@/composables/useIcon';
 import { useActionT } from '@/composables/useActionT';
 import { hasFlowOrderingErrors, hasFlowFieldErrors } from '@/utils/flowValidation';
+import AssistantButton from '@/components/agent/AssistantButton.vue';
 
 const { getIconComponent } = useIcon();
 const { tGroup, tAction, tActionDescription } = useActionT();
@@ -906,6 +907,7 @@ function onAddAction(item: any) {
           :has-ordering-errors="hasOrderingErrors"
           :can-undo="canUndo"
           :can-redo="canRedo"
+          :projects="task?.projects ?? []"
           @save="onSave"
           @debug="onDebug"
           @undo="onUndo"
@@ -930,6 +932,8 @@ function onAddAction(item: any) {
           @step-out="onStepOut"
           @exit="handleExitDebug"
         />
+        <div class="w-px h-5 bg-border" />
+        <AssistantButton />
       </div>
 
       <DraftBanner :task="task" />

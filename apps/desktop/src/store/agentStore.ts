@@ -11,6 +11,7 @@ import {
 } from '@tipeline/agent/choices';
 import { INSTRUCTIONS_SETTING, type AgentInstructions } from '@tipeline/agent/instructions';
 import { SEND } from '@/ipc-channels';
+import { useRecentItemsStore } from '@/store/recentItems';
 import { invokeCore } from '@/utils/invoke';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useStreamStore } from '@/store/stream';
@@ -90,6 +91,8 @@ export interface AgentTurn {
   error?: string;
   /** The instructions the request was sent with; drafting from it uses the same ones. */
   instructions?: AgentInstructions;
+  /** Drafted from a planned node of a project map: the draft joins the project and becomes that node. */
+  mapLink?: { projectIdentifier: string; nodeId: string };
 }
 
 /** The project the user is in (its page, or one of its workflows or apps). */
@@ -167,14 +170,25 @@ export const useAgentStore = defineStore('agent', () => {
   );
   const busyThinking = computed(() => turns.value.some((turn) => turn.phase === 'thinking'));
 
+  /**
+   * Of the projects a workflow or app is in, the one whose instructions apply: the only
+   * one, or of several the project opened most recently (likely the one you came from).
+   */
+  function pickProject(item: { projects?: { identifier: string }[] } | null | undefined): string | null {
+    const ids = (item?.projects ?? []).map((p) => p.identifier);
+    if (ids.length <= 1) return ids[0] ?? null;
+    const recent = useRecentItemsStore().recent('project', 50).find((r) => ids.includes(r.identifier));
+    return recent?.identifier ?? ids[0];
+  }
+
   /** The project a page belongs to: the project's own page, or the project of its workflow or app. */
   async function projectOfRoute(path: string, params: Record<string, any>): Promise<ActiveProject | null> {
     let identifier: string | null = null;
     if (path.startsWith('/projects/')) identifier = params.pid ?? null;
     else if (path.startsWith('/tasks/') && params.tid) {
-      identifier = (await invokeCore<any>(SEND.TASK_DETAIL, { identifier: params.tid }))?.project_identifier ?? null;
+      identifier = pickProject(await invokeCore<any>(SEND.TASK_DETAIL, { identifier: params.tid }));
     } else if (path.startsWith('/apps/') && params.aid) {
-      identifier = (await invokeCore<any>(SEND.APP_DETAIL, { identifier: params.aid }))?.project_identifier ?? null;
+      identifier = pickProject(await invokeCore<any>(SEND.APP_DETAIL, { identifier: params.aid }));
     }
     if (!identifier) return null;
     const project = await invokeCore<any>(SEND.PROJECT_DETAIL, { identifier });
@@ -258,6 +272,7 @@ export const useAgentStore = defineStore('agent', () => {
         entry.draft = response.draft;
         stopListening(id);
         void loadHistory();
+        if (entry.mapLink) void linkToMap(entry.mapLink, response.draft.identifier);
         // Straight to the builder to test it, as the request asked.
         router.push(`/tasks/${response.draft.identifier}/edit`);
         break;
@@ -423,6 +438,44 @@ export const useAgentStore = defineStore('agent', () => {
       payload: JSON.parse(JSON.stringify({ ...config, prompt: text, rememberedChoices, instructions })),
     });
     return true;
+  }
+
+  /**
+   * From a planned node of a project map: opens the sidebar on a draft offer built from the
+   * map (the brief and the workflows to reuse), for the user to check and send. Nothing is
+   * sent to the model until they do.
+   */
+  async function draftFromMap(
+    brief: string,
+    reuse: ReusedWorkflow[],
+    mapLink: { projectIdentifier: string; nodeId: string }
+  ) {
+    const id = generateIdentifier();
+    turns.value.push({
+      id,
+      prompt: brief,
+      phase: 'nomatch',
+      text: t('projectMap.assistant.offer'),
+      draftRequest: brief,
+      reuse: JSON.parse(JSON.stringify(reuse)),
+      instructions: await currentInstructions(),
+      mapLink: { ...mapLink },
+    });
+    sidebarOpen.value = true;
+  }
+
+  /** The draft joins the map's project and takes the planned node's place. */
+  async function linkToMap(mapLink: { projectIdentifier: string; nodeId: string }, taskIdentifier: string) {
+    try {
+      await invokeCore(SEND.PROJECT_ASSIGN_TASK, { projectIdentifier: mapLink.projectIdentifier, taskIdentifier });
+      await invokeCore(SEND.PROJECT_MAP_LINK, {
+        identifier: mapLink.projectIdentifier,
+        nodeId: mapLink.nodeId,
+        key: `task:${taskIdentifier}`,
+      });
+    } catch (error: any) {
+      toast.error(t('projectMap.assistant.linkFailed'), { description: error?.message ?? String(error) });
+    }
   }
 
   /** Opens the sidebar with a request already sent: the dashboard's box. */
@@ -661,6 +714,7 @@ export const useAgentStore = defineStore('agent', () => {
     switchProposal,
     choose,
     draft,
+    draftFromMap,
     adoptInstalled,
     removeReuse,
     adoptInstalledReuse,

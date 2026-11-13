@@ -4,6 +4,8 @@ interface Task {
   name: string;
   description?: string;
   status?: string;
+  /** Every project it's in. */
+  projects?: { identifier: string; name: string; color: string | null }[];
   [key: string]: any;
 }
 import { ref, computed, watch } from 'vue';
@@ -74,6 +76,8 @@ import {
 import { beautifyObjectName } from '@/components/ui/auto-form/utils';
 import { dump } from 'js-yaml';
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
+import { projectIdsOf, setProjects } from '@/utils/projectAssign';
+import ProjectSelect from '@/components/project/ProjectSelect.vue';
 
 const PLATFORM_OPTIONS = ['windows', 'linux', 'macos'] as const;
 
@@ -124,7 +128,7 @@ watch(task, (newTask) => {
 }, { immediate: true });
 
 const openEditMeta = ref(false);
-const editProject = ref('__none__');
+const editProjects = ref<string[]>([]);
 const editTags = ref<string[]>([]);
 // The workflow cache TTL ('' = off), and what was there when the dialog opened (with
 // any `inputs` written in YAML, which the dialog keeps).
@@ -150,7 +154,6 @@ const isSavingMeta = ref(false);
 
 const taskImageUrl = computed(() => toAssetUrl(task.value?.metadata?.image));
 
-const { data: projects } = useQuery(SEND.PROJECT_LIST);
 
 const { translateError } = useErrorT();
 
@@ -178,7 +181,7 @@ function handleOpenEditMeta() {
     version: task.value.version ?? '',
     platform: task.value.platform ?? undefined,
   });
-  editProject.value = task.value.project_identifier ?? '__none__';
+  editProjects.value = projectIdsOf(task.value);
   editImage.value = task.value.metadata?.image ?? null;
   const raw = task.value.tags;
   editTags.value = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? [...raw] : []);
@@ -218,18 +221,7 @@ const saveEditMeta = handleMetaSubmit(
         helper: editHelper.value,
       });
 
-      const prevProject = task.value.project_identifier ?? '';
-      const nextProject = editProject.value === '__none__' ? '' : editProject.value;
-      if (nextProject !== prevProject) {
-        if (nextProject) {
-          await invokeCore(SEND.PROJECT_ASSIGN_TASK, {
-            projectIdentifier: nextProject,
-            taskIdentifier: task.value.identifier,
-          });
-        } else {
-          await invokeCore(SEND.PROJECT_UNASSIGN_TASK, { taskIdentifier: task.value.identifier });
-        }
-      }
+      await setProjects('task', task.value.identifier, projectIdsOf(task.value), editProjects.value);
 
       await refetch({ identifier: task.value.identifier });
       openEditMeta.value = false;
@@ -411,26 +403,7 @@ useKeyboardShortcuts([
         </FormItem>
       </FormField>
 
-      <div class="space-y-1.5">
-        <label class="text-sm font-medium">
-          {{ t('tasks.form.project') }} <span class="text-muted-foreground font-normal">{{ t('common.optional') }}</span>
-        </label>
-        <Select v-model="editProject">
-          <SelectTrigger>
-            <SelectValue :placeholder="t('tasks.form.projectPlaceholder')" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__">{{ t('tasks.form.projectPlaceholder') }}</SelectItem>
-            <SelectItem
-              v-for="project in projects ?? []"
-              :key="project.identifier"
-              :value="project.identifier"
-            >
-              {{ project.name }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <ProjectSelect v-model="editProjects" />
 
       <div class="space-y-1.5">
         <label class="text-sm font-medium">{{ t('tasks.form.tags') }}</label>
