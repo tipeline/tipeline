@@ -3486,7 +3486,8 @@
       "allBuilt": "Everything planned is in the app.",
       "missingLines": "Lines",
       "planTitle": "Planned for this app",
-      "notAllBuilt": "{count} planned item isn't in the app yet. | {count} planned items aren't in the app yet."
+      "notAllBuilt": "{count} planned item isn't in the app yet. | {count} planned items aren't in the app yet.",
+      "removeFromPlan": "Remove from plan"
     }
   }
 }
