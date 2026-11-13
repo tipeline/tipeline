@@ -21,6 +21,8 @@ export type ScheduleItem = {
   nextRunAt?: string | null;
   /** When it last started a run. */
   lastRunAt?: string | null;
+  /** When a repeating schedule should have run but didn't (Core was off). Missing when it didn't miss. */
+  missedAt?: string | null;
 };
 
 /** Schedule wording from useScheduleText, passed in because column definitions live outside setup. */

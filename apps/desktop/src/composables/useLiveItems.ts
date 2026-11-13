@@ -12,10 +12,15 @@ type LiveItem = {
   image?: string | null;
   projects?: ProjectTag[] | null;
   last_run_status?: TaskItem['last_run_status'];
+  last_run_at?: string | null;
 };
 
 /** What Home shows next to a starred or recent entry: its projects and, for a workflow, its last run. */
-export type LiveDetails = { projects: ProjectTag[]; lastRunStatus: TaskItem['last_run_status'] };
+export type LiveDetails = {
+  projects: ProjectTag[];
+  lastRunStatus: TaskItem['last_run_status'];
+  lastRunAt: string | null;
+};
 
 /**
  * The dashboard's recent and starred lists live in localStorage and only learn about what
@@ -51,7 +56,7 @@ export function useLiveItems() {
   ): (T & LiveDetails)[] {
     return entries.flatMap((item): (T & LiveDetails)[] => {
       const known = live.value.get(item.type);
-      if (!known) return [{ ...item, projects: [], lastRunStatus: null }];
+      if (!known) return [{ ...item, projects: [], lastRunStatus: null, lastRunAt: null }];
       const current = known.get(item.identifier);
       return current
         ? [
@@ -61,6 +66,7 @@ export function useLiveItems() {
               image: current.image ?? item.image,
               projects: current.projects ?? [],
               lastRunStatus: current.last_run_status ?? null,
+              lastRunAt: current.last_run_at ?? null,
             },
           ]
         : [];

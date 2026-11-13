@@ -156,11 +156,25 @@ export class TaskService {
           WHERE task_id = task.id
           ORDER BY started_at DESC
           LIMIT 1
-        ) as last_run_identifier`)
+        ) as last_run_identifier`),
+        // The last ten runs' statuses, newest first: the strip on the Workflows list.
+        knex.raw(`(
+          SELECT json_group_array(status) FROM (
+            SELECT status FROM pipeline
+            WHERE task_id = task.id AND started_at IS NOT NULL
+            ORDER BY started_at DESC
+            LIMIT 10
+          )
+        ) as recent_runs`)
       )
       .orderBy('task.created_at', 'desc');
 
-    return rows.map((row) => ({ ...row, tags: JSON.parse(row.tags), projects: parseProjects(row.projects) }));
+    return rows.map((row) => ({
+      ...row,
+      tags: JSON.parse(row.tags),
+      projects: parseProjects(row.projects),
+      recent_runs: row.recent_runs ? JSON.parse(row.recent_runs) : [],
+    }));
   }
 
   static async getAllWithSource(): Promise<

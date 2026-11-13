@@ -7,8 +7,9 @@ import type { LiveItemType } from '@/composables/useLiveItems';
 import type { ProjectTag } from '@/utils/projectAssign';
 import { ENTITY_COLORS } from '@/config/entityColors';
 
-// One workflow, app or project tile on Home (Starred, the first-run Recently opened):
-// picture or icon on top, then the name and its project (or `subtitle`).
+// One workflow, app or project tile (Home's Continue row, the Recently opened rows above the
+// lists): picture or icon on top, then the name and its project (or `subtitle`), and an
+// optional `meta` line led by a dot for the last run's `status`.
 // Workflows and apps get a star toggle in the corner when `starrable`.
 const props = defineProps<{
   type: LiveItemType;
@@ -18,11 +19,22 @@ const props = defineProps<{
   subtitle?: string;
   projects?: ProjectTag[];
   starrable?: boolean;
+  meta?: string;
+  status?: string | null;
 }>();
 
 const emit = defineEmits<{ open: [] }>();
 
 const typeIcons = { task: Workflow, project: Folders, app: AppWindow } as const;
+
+const statusDot: Record<string, string> = {
+  completed: 'bg-emerald-500',
+  failed: 'bg-destructive',
+  running: 'bg-blue-500',
+  paused: 'bg-amber-500',
+  pending: 'bg-amber-500',
+  canceled: 'bg-muted-foreground/50',
+};
 
 const typeTint = {
   task: ENTITY_COLORS.workflow.tint,
@@ -60,6 +72,14 @@ const moreProjects = computed(() => Math.max(0, (props.projects?.length ?? 0) - 
           <span v-if="moreProjects" class="shrink-0">+{{ moreProjects }}</span>
         </p>
         <p v-else-if="props.subtitle" class="text-xs text-muted-foreground truncate m-0 mt-0.5">{{ props.subtitle }}</p>
+        <p v-if="props.meta" class="flex items-center gap-1.5 text-xs text-muted-foreground truncate m-0 mt-1">
+          <span
+            v-if="props.status !== undefined"
+            class="w-1.5 h-1.5 rounded-full shrink-0"
+            :class="props.status ? statusDot[props.status] ?? 'bg-muted-foreground/50' : 'bg-muted-foreground/30'"
+          />
+          <span class="truncate">{{ props.meta }}</span>
+        </p>
       </div>
     </button>
     <StarButton

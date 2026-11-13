@@ -40,5 +40,5 @@ See [Tipeline Server](/server/) for what each of these means on the server side.
 Removing a connection only removes it from this computer. It doesn't affect the server or its
 data.
 
-Starred items, recent items and dismissed failures are kept per workspace. Windows opened
+Starred items, recent items and dismissed failures and missed runs are kept per workspace. Windows opened
 from one workspace close when you switch to another.

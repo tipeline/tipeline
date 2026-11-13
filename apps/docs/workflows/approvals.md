@@ -39,7 +39,7 @@ Decide from:
   badge shows how many you can decide), **Decided** is the history of who approved or
   rejected what, when and with which comment, including automatic decisions. New requests
   show a notification — a system notification when Tipeline isn't in front — and clicking it
-  opens the page. The inbox badge next to the title of Home's full view lists the ones waiting for you;
+  opens the page. Home's **Needs you** list shows the ones waiting for you;
 - the workflow's **Runs** tab (Approve / Reject on the run); or
 - an `approvals` component in an app, which lists pending approvals of the app's workflows
   with an optional comment. Apps can only see and decide runs of workflows they declare.
