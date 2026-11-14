@@ -3,6 +3,7 @@ import type { FieldProps } from './interface';
 import { FormControl, FormDescription, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { computed, ref } from 'vue';
 import { javascript } from '@codemirror/lang-javascript';
+import { sql } from '@codemirror/lang-sql';
 import { EditorView } from '@codemirror/view';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { useColorMode } from '@vueuse/core';
@@ -21,7 +22,7 @@ const props = defineProps<FieldProps>();
 
 const colorMode = useColorMode();
 const extensions = computed(() => [
-  javascript(),
+  props.config?.language === 'sql' ? sql() : javascript(),
   EditorView.lineWrapping,
   ...(colorMode.value === 'dark' ? [oneDark] : []),
 ]);

@@ -7,6 +7,7 @@ import { FieldContextKey, useField } from 'vee-validate'
 import { computed, provide } from 'vue'
 import AutoFormField from './AutoFormField.vue'
 import AutoFormLabel from './AutoFormLabel.vue'
+import { useOpenWhenFilled } from './useOpenWhenFilled'
 import { beautifyObjectName, getBaseSchema, getBaseType, getDefaultValueInZodStack } from './utils'
 
 const props = defineProps<{
@@ -45,6 +46,7 @@ const shapes = computed(() => {
 })
 
 const fieldContext = useField(props.fieldName)
+const { open, setOpen } = useOpenWhenFilled(fieldContext.value)
 // @ts-expect-error ignore missing `id`
 provide(FieldContextKey, fieldContext)
 </script>
@@ -52,7 +54,15 @@ provide(FieldContextKey, fieldContext)
 <template>
   <section>
     <slot v-bind="props">
-      <Accordion type="single" as-child class="w-full" collapsible :disabled="disabled">
+      <Accordion
+        type="single"
+        as-child
+        class="w-full"
+        collapsible
+        :disabled="disabled"
+        :model-value="open ? fieldName : ''"
+        @update:model-value="(v) => setOpen(v === fieldName)"
+      >
         <FormItem>
           <AccordionItem :value="fieldName" class="border-none bg-muted/50 rounded-md px-2">
             <AccordionTrigger>
