@@ -132,7 +132,8 @@
       "kind": {
         "approval": "Approval",
         "failed": "Failed",
-        "missed": "Missed"
+        "missed": "Missed",
+        "alert": "Alert"
       },
       "approvalDetail": "{workflow} is waiting for your decision",
       "failedOnce": "The last run failed",
@@ -144,9 +145,12 @@
       "dismiss": "Dismiss",
       "allFailing": "All failing workflows",
       "clearTitle": "All clear: nothing needs you",
-      "clearDetail": "Approvals, failed runs and missed schedules show up here.",
+      "clearDetail": "Approvals, alerts, failed runs and missed schedules show up here.",
       "comingUp": "Coming up",
-      "tomorrowAt": "Tomorrow {time}"
+      "tomorrowAt": "Tomorrow {time}",
+      "alertRepeated": "×{n} since {time}",
+      "seeRun": "See run",
+      "openWorkflow": "Open workflow"
     },
     "continue": {
       "title": "Continue",
@@ -2887,7 +2891,8 @@
       "notRun": "not run"
     },
     "resultColumn": "Result",
-    "savedTo": "→ saved to {name}"
+    "savedTo": "→ saved to {name}",
+    "raisedAlert": "This run raised an alert: | This run raised {n} alerts:"
   },
   "agentInstructions": {
     "length": "{count} / {max} characters. They go with every request: shorter is better."
@@ -3488,6 +3493,21 @@
       "planTitle": "Planned for this app",
       "notAllBuilt": "{count} planned item isn't in the app yet. | {count} planned items aren't in the app yet.",
       "removeFromPlan": "Remove from plan"
+    }
+  },
+  "alerts": {
+    "notifyTitle": "Alert",
+    "notifyCritical": "Critical alert",
+    "notifyMany": "{count} new alerts",
+    "notifyManyBody": "Open Needs you on the dashboard to see them.",
+    "open": "Open",
+    "overviewTitle": "Alerts",
+    "acknowledged": "Dismissed: stays quiet until the workflow resolves it",
+    "reopen": "Reopen",
+    "level": {
+      "info": "Info",
+      "warning": "Warning",
+      "critical": "Critical"
     }
   }
 }

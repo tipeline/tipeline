@@ -85,6 +85,7 @@ export default defineConfig({
             { text: 'Variables & Templates', link: '/workflows/variables' },
             { text: 'Conditions', link: '/workflows/conditions' },
             { text: 'Approvals', link: '/workflows/approvals' },
+            { text: 'Alerts', link: '/workflows/alerts' },
             { text: 'Caching Results', link: '/workflows/caching' },
             { text: 'What a Workflow Can Access', link: '/workflows/capabilities' },
           ],
@@ -148,6 +149,7 @@ export default defineConfig({
           items: [
             { text: 'Flow', link: '/actions/flow' },
             { text: 'Approval', link: '/actions/approval' },
+            { text: 'Alert', link: '/actions/alert' },
             { text: 'System', link: '/actions/system' },
             { text: 'API', link: '/actions/api' },
           ],

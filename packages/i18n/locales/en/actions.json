@@ -54,6 +54,43 @@
       }
     }
   },
+  "alert": {
+    "label": "Alert",
+    "actions": {
+      "raise": {
+        "label": "Raise Alert",
+        "description": "Show an alert in Needs you; the run carries on. The same key from the same workflow updates the open alert (×2, ×3…) instead of adding one. Warning and critical alerts also notify.",
+        "fields": {
+          "title": {
+            "label": "Title",
+            "description": "What happened, in a few words."
+          },
+          "message": {
+            "label": "Message",
+            "description": "More detail (optional)."
+          },
+          "level": {
+            "label": "Level",
+            "description": "info: listed only. warning (default): counted and a toast. critical: also a system notification."
+          },
+          "key": {
+            "label": "Key",
+            "description": "Which alert this is, e.g. spike-acme. Empty: the title is the key."
+          }
+        }
+      },
+      "resolve": {
+        "label": "Resolve Alert",
+        "description": "Close this workflow’s alert with this key because the problem went away. Does nothing when there is none.",
+        "fields": {
+          "key": {
+            "label": "Key",
+            "description": "The key the alert was raised with."
+          }
+        }
+      }
+    }
+  },
   "api": {
     "label": "API",
     "actions": {

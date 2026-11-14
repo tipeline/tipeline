@@ -219,6 +219,10 @@ export const registerAppHandlers = (transport: ITransport, broadcast: BroadcastF
   query('appApprovalList', (p) => Core.appApprovalList(p));
   query('appApprovalDecide', (p) => Core.appApprovalDecide(p));
   query('appRunsList', (p) => Core.appRunsList(p));
+  // Alerts raised by workflows (alert.raise).
+  query('alertList', (p) => Core.alertList(p));
+  query('alertDismiss', (p) => Core.alertDismiss(p));
+  query('alertReopen', (p) => Core.alertReopen(p));
   query('appRunsActive', async (p) =>
     ActiveAppRuns.list({ appIdentifier: String(p.appIdentifier ?? ''), pageId: p.pageId })
   );

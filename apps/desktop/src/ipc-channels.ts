@@ -62,6 +62,9 @@ export const SEND = {
   APPROVAL_HISTORY: 'approvalHistory',
   APP_APPROVAL_LIST: 'appApprovalList',
   APP_APPROVAL_DECIDE: 'appApprovalDecide',
+  ALERT_LIST: 'alertList',
+  ALERT_DISMISS: 'alertDismiss',
+  ALERT_REOPEN: 'alertReopen',
   APP_RUNS_ACTIVE: 'appRunsActive',
   APP_RUNS_LIST: 'appRunsList',
   APP_RUN: 'appRun',           // stream — run an app runnable; end_all carries its outputs

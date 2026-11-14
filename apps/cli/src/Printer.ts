@@ -761,6 +761,35 @@ export default class Printer {
     console.log(chalk.dim('\n  Decide with: tipeline pipeline approve <run>, or reject <run>. Add --comment to say why.\n'));
   }
 
+  static printAlertList(alerts: any[], includeClosed = false) {
+    if (alerts.length === 0) {
+      Printer.printMessage(includeClosed ? 'No alerts.' : 'No open alerts.');
+      return;
+    }
+    const levelMark: Record<string, string> = {
+      critical: chalk.red('●'),
+      warning: chalk.hex('#ea580c')('●'),
+      info: chalk.blue('●'),
+    };
+    for (const alert of alerts) {
+      const times = alert.count > 1 ? chalk.dim(` ×${alert.count}`) : '';
+      const status = alert.status !== 'open' ? chalk.dim(` (${alert.status === 'dismissed' ? 'acknowledged' : 'resolved'})`) : '';
+      console.log(
+        `\n  ${levelMark[alert.level] ?? '●'} ${chalk.bold(alert.title)}${times}${status}  ${chalk.dim(alert.workflowName ?? alert.taskIdentifier ?? '')}`
+      );
+      console.log(chalk.dim(`    id        ${alert.id}`));
+      console.log(chalk.dim(`    level     ${alert.level}`));
+      console.log(
+        chalk.dim(
+          `    raised    ${formatDate(alert.lastRaisedAt)}${alert.count > 1 ? ` (first ${formatDate(alert.firstRaisedAt)})` : ''}`
+        )
+      );
+      if (alert.pipelineIdentifier) console.log(chalk.dim(`    run       ${alert.pipelineIdentifier}`));
+      if (alert.message) console.log(`    ${truncate(String(alert.message), MAX_WIDTH - 4)}`);
+    }
+    console.log(chalk.dim('\n  Dismiss with: tipeline alert dismiss <id> (or --all).\n'));
+  }
+
   static printScheduleList(data: any) {
     if (!Array.isArray(data) || data.length === 0) {
       console.log(chalk.dim('No schedules configured.'));

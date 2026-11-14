@@ -64,6 +64,7 @@ import { BackupService, type RestoreMode, type RestoreResult } from '@/backup/Ba
 import { splitAppDocument } from '@utils/appDocument';
 import { runScriptPreview, type ScriptPreviewParams } from '@action/actions/script/preview';
 import { CORE_VERSION } from '@utils/coreVersion';
+import { AlertService, type AlertListQuery } from '@database/services/AlertService';
 
 export default class Core {
   /**
@@ -1459,6 +1460,39 @@ export default class Core {
       cacheMode: toCacheMode(params.cache),
     });
     return { taskIdentifier };
+  }
+
+  /**
+   * Alerts raised by workflows (alert.raise), newest raise first: open ones only, or
+   * with `includeClosed` also acknowledged and resolved ones. `taskIdentifier` narrows
+   * it to one workflow, `ids` to some alerts.
+   */
+  static async alertList(params: AlertListQuery = {}) {
+    return await AlertService.list({
+      includeClosed: params.includeClosed === true,
+      taskIdentifier: typeof params.taskIdentifier === 'string' ? params.taskIdentifier : undefined,
+      ids: Array.isArray(params.ids) ? params.ids.map(String) : undefined,
+    });
+  }
+
+  /**
+   * Acknowledges alerts: `{ id }`, `{ ids }` or `{ all: true }`. They leave Needs you and
+   * stay quiet while their workflow keeps raising the same key, until it resolves it.
+   */
+  static async alertDismiss(params: { id?: string; ids?: string[]; all?: boolean; dismissedBy?: string } = {}) {
+    if (!params.all && !params.id && !params.ids?.length) throw new Error('Say which alert to dismiss: id, ids or all');
+    const dismissed = await AlertService.dismiss(
+      { id: params.id, ids: params.ids, all: params.all === true },
+      params.dismissedBy ?? null
+    );
+    return { dismissed };
+  }
+
+  /** Puts an acknowledged alert back in Needs you. */
+  static async alertReopen(params: { id?: string } = {}) {
+    if (!params.id) throw new Error('Say which alert to reopen');
+    if (!(await AlertService.reopen(params.id))) throw new Error('No dismissed alert with this id');
+    return { reopened: true };
   }
 
   /**

@@ -1,0 +1,71 @@
+version: 1.0.0
+name: Traffic Spike Alert
+description: |
+  Raises an alert in **Needs you** when a site gets more visits than usual, and clears it once traffic is back to normal.
+
+  Try it: run it with `visits` above `threshold` (the alert appears), run it again (the same alert shows ×2), then run it with `visits` below `threshold` (the alert goes away). In a real report, `visits` would come from your analytics API and a schedule would run it every hour.
+author: Tipeline
+tags: [example, alert, monitoring]
+
+pipeline:
+  variables:
+    - type: string
+      name: site
+      label: Site
+      description: Which site the numbers are for. Each site gets its own alert.
+      value: acme-shop
+      visibility: public
+
+    - type: number
+      name: visits
+      label: Visits in the last hour
+      description: Stands in for the number your analytics API would return.
+      value: 1240
+      visibility: public
+
+    - type: number
+      name: threshold
+      label: Alert above
+      description: More visits than this in an hour is a spike.
+      value: 1000
+      visibility: public
+
+    - type: number
+      name: baseline
+      label: Usual visits
+      value: 400
+      visibility: public
+
+    - type: object
+      name: alert
+      label: Alert
+      description: What alert.raise returned (id, key, count, isNew).
+      visibility: public
+
+  actions:
+    - group: flow
+      name: ifConditional
+      params:
+        firstOperand: '{{ visits }}'
+        compareAs: number
+        operator: gt
+        secondOperand: '{{ threshold }}'
+        actions:
+          - group: alert
+            name: raise
+            params:
+              title: 'Traffic spike: {{ site }}'
+              message: '{{ visits }} visits in the last hour (usual {{ baseline }})'
+              level: warning
+              key: 'spike-{{ site }}'
+            destination: alert
+
+    # No spike: close the alert a previous run raised, if there is one.
+    - group: flow
+      name: elseConditional
+      params:
+        actions:
+          - group: alert
+            name: resolve
+            params:
+              key: 'spike-{{ site }}'

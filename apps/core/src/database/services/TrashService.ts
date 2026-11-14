@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { Model } from 'objection';
 import { TagService } from '@database/services/TagService';
 import { ProjectMembership } from '@database/services/ProjectMembership';
+import { AlertService } from '@database/services/AlertService';
 
 export type TrashKind = 'task' | 'app';
 
@@ -116,6 +117,8 @@ export class TrashService {
         await trx('task_tag').where({ task_id: row.id }).delete();
         await trx('task_revision').where({ task_id: row.id }).delete();
         await trx('schedule').where({ task_id: row.id }).delete();
+        // Alerts aren't kept in the snapshot: a restored workflow starts with none.
+        await AlertService.deleteForTask(identifier, trx);
       }
       await trx(hubLink).where({ [fk]: row.id }).delete();
       await ProjectMembership.forget(kind, row.id, trx);
