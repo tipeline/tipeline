@@ -48,7 +48,7 @@ export const validations = {
       returns: 'array',
       fieldConfig: {
         connection: { description: 'The active database connection object.' },
-        sql: { description: 'SQL statement to execute (SELECT, INSERT, UPDATE, DELETE, etc.). Use `?` placeholders for any value that comes from a variable, and pass that value through `bindings` instead of substituting it into this string directly — that keeps it safely parameterized instead of interpolated as raw SQL text.' },
+        sql: { component: 'codemirror', language: 'sql', description: 'SQL statement to execute (SELECT, INSERT, UPDATE, DELETE, etc.). Use `?` placeholders for any value that comes from a variable, and pass that value through `bindings` instead of substituting it into this string directly — that keeps it safely parameterized instead of interpolated as raw SQL text.' },
         bindings: { description: 'Values to bind to the `?` placeholders in `sql`, in order. Prefer this over embedding {{ }}/{= =} template values directly into `sql`.' },
       },
     }
