@@ -9,6 +9,7 @@ import { withoutCredentialSettings, withoutSecretValues, withoutWrittenInSecrets
 import { authorizeCancel } from './cancelAuthorization.js';
 import { authorizeAppCommand, visibleAppWorkflows } from './appAuthorization.js';
 import { authorizeDecision, visibleApprovals, visibleHistory, type PendingApprovalItem } from './approvalAuthorization.js';
+import { authorizeAlertTargets, visibleAlerts, type AlertListItem } from './alertAuthorization.js';
 import { AuditLogService } from '../audit/AuditLogService.js';
 import { hideInProjectDetail, hideInProjectMap } from './hideWorkflows.js';
 
@@ -40,6 +41,8 @@ const VIEWER_ALLOWED = new Set([
   'appList', 'appDetail', 'tableDataFetch', 'appHistoryFetch', 'appRunsActive', 'appRunsList',
   // Deciding is checked per request: a viewer named as an approver may decide.
   'approvalList', 'approvalDecide', 'appApprovalList', 'appApprovalDecide', 'approvalHistory',
+  // Anyone who can see an alert may dismiss it (see alertAuthorization).
+  'alertList', 'alertDismiss', 'alertReopen',
   'variableList', 'variableUsage',
   'tagList', 'scheduleList', 'status',
   // Without credentials: see routeHidingSecrets.
@@ -98,6 +101,8 @@ const ALL_CORE_EVENTS = [
   'onAppUploadImage', 'onAppInstall', 'onAppExport', 'onAppUninstall', 'onTableDataFetch', 'onAppHistoryFetch',
   // Approvals
   'onApprovalList', 'onApprovalDecide', 'onAppApprovalList', 'onAppApprovalDecide', 'onApprovalHistory',
+  // Alerts
+  'onAlertList', 'onAlertDismiss', 'onAlertReopen',
   'onAppRunsActive', 'onAppRunsList',
   // Variables
   'onVariableList', 'onVariableNew', 'onVariableEdit', 'onVariableDuplicate',
@@ -155,6 +160,8 @@ const ALLOWED_COMMANDS = new Set([
   'appRunsActive', 'appRunsList',
   // Approvals
   'approvalList', 'approvalDecide', 'appApprovalList', 'appApprovalDecide', 'approvalHistory',
+  // Alerts
+  'alertList', 'alertDismiss', 'alertReopen',
   // Variables
   'variableList', 'variableNew', 'variableEdit', 'variableDuplicate',
   'variableDelete', 'variableUsage', 'variableExportAll',
@@ -203,6 +210,13 @@ interface PendingDecision {
   appIdentifier: string | null;
 }
 
+interface PendingAlertChange {
+  user: User;
+  ip: string | null;
+  action: 'alert.dismiss' | 'alert.reopen';
+  items: AlertListItem[];
+}
+
 interface PendingTrigger {
   type: TriggerType;
   ref: string | null;
@@ -218,6 +232,7 @@ export class WsGateway {
   private clientUser = new Map<WebSocket, User>();
   private pendingTriggers = new Map<string, PendingTrigger>();
   private pendingDecisions = new Map<string, PendingDecision>();
+  private pendingAlertChanges = new Map<string, PendingAlertChange>();
 
   constructor(private readonly coreClient: CoreIpcClient) {}
 
@@ -408,6 +423,47 @@ export class WsGateway {
             }
           }
 
+          if (event === 'alertDismiss' || event === 'alertReopen') {
+            const params = payload.payload ?? {};
+            const responseEvent = event === 'alertDismiss' ? 'onAlertDismiss' : 'onAlertReopen';
+            const deny = (error: string) => {
+              if (payload.correlationId) this.correlationMap.delete(payload.correlationId);
+              ws.send(JSON.stringify({ event: responseEvent, correlationId: payload.correlationId, error }));
+            };
+            let alerts: AlertListItem[];
+            try {
+              alerts = (await this.coreClient.request('alertList', { includeClosed: true })) ?? [];
+            } catch (error: any) {
+              deny(error?.message ?? 'Could not read alerts');
+              return;
+            }
+            const auth = await authorizeAlertTargets(params, alerts, currentUser, {
+              getOwner: (taskIdentifier) => TaskOwnershipService.getOwner(taskIdentifier),
+            }, event === 'alertDismiss');
+            if (!auth.allowed) {
+              deny(auth.error);
+              return;
+            }
+            if (event === 'alertDismiss' && !auth.items.length) {
+              if (payload.correlationId) this.correlationMap.delete(payload.correlationId);
+              ws.send(JSON.stringify({ event: responseEvent, correlationId: payload.correlationId, data: { dismissed: 0 } }));
+              return;
+            }
+            // "All" becomes the alerts this user can see; recorded as the signed-in user.
+            payload.payload =
+              event === 'alertDismiss'
+                ? { ids: auth.items.map((a) => a.id), dismissedBy: currentUser.email }
+                : { id: auth.items[0].id };
+            if (payload.correlationId) {
+              this.pendingAlertChanges.set(payload.correlationId, {
+                user: currentUser,
+                ip,
+                action: event === 'alertDismiss' ? 'alert.dismiss' : 'alert.reopen',
+                items: auth.items,
+              });
+            }
+          }
+
           if (event === 'pipelineCancel') {
             const auth = await authorizeCancel(payload.payload, currentUser, {
               getRun: (pipelineIdentifier) => this.coreClient.request('pipelineDetail', { pipelineIdentifier }),
@@ -487,6 +543,10 @@ export class WsGateway {
     }
     if (APPROVAL_LISTS.has(event)) {
       void this.routeApprovalsFiltered(event, data);
+      return;
+    }
+    if (event === 'onAlertList') {
+      void this.routeAlertsFiltered(event, data);
       return;
     }
     if (event === 'onAppRunsActive') {
@@ -633,8 +693,44 @@ export class WsGateway {
     ws.send(JSON.stringify({ event, ...outData }));
   }
 
+  /** Alert lists go only to the asker, without alerts from workflows they may not see. */
+  private async routeAlertsFiltered(event: string, data: any): Promise<void> {
+    const correlationId = data?.correlationId;
+    const ws = correlationId ? this.correlationMap.get(correlationId) : undefined;
+    if (correlationId) this.correlationMap.delete(correlationId);
+    const user = ws ? this.clientUser.get(ws) : undefined;
+    if (!ws || !user || ws.readyState !== WebSocket.OPEN) return;
+
+    let outData = data;
+    if (Array.isArray(data?.data)) {
+      const items = await visibleAlerts(data.data, user, {
+        getOwner: (taskIdentifier) => TaskOwnershipService.getOwner(taskIdentifier),
+      });
+      outData = { ...data, data: items };
+    }
+    ws.send(JSON.stringify({ event, ...outData }));
+  }
+
   private async handleCoreEventSideEffects(event: string, data: any): Promise<void> {
     const correlationId = data?.correlationId;
+
+    if ((event === 'onAlertDismiss' || event === 'onAlertReopen') && correlationId) {
+      const change = this.pendingAlertChanges.get(correlationId);
+      this.pendingAlertChanges.delete(correlationId);
+      if (change && !data?.error) {
+        for (const item of change.items) {
+          await AuditLogService.log({
+            actorId: change.user.id,
+            actorEmail: change.user.email,
+            action: change.action,
+            targetType: 'alert',
+            targetId: item.id,
+            metadata: { title: item.title ?? null, workflow: item.taskIdentifier },
+            ip: change.ip,
+          });
+        }
+      }
+    }
 
     if ((event === 'onApprovalDecide' || event === 'onAppApprovalDecide') && correlationId) {
       const decision = this.pendingDecisions.get(correlationId);

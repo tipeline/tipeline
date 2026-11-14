@@ -132,7 +132,8 @@
       "kind": {
         "approval": "Aprobación",
         "failed": "Falló",
-        "missed": "Perdida"
+        "missed": "Perdida",
+        "alert": "Alerta"
       },
       "approvalDetail": "{workflow} espera tu decisión",
       "failedOnce": "La última ejecución falló",
@@ -144,9 +145,12 @@
       "dismiss": "Descartar",
       "allFailing": "Todos los flujos con fallos",
       "clearTitle": "Todo en orden: nada te necesita",
-      "clearDetail": "Aquí aparecen las aprobaciones, las ejecuciones fallidas y las programaciones perdidas.",
+      "clearDetail": "Aquí aparecen las aprobaciones, las alertas, las ejecuciones fallidas y las programaciones perdidas.",
       "comingUp": "Próximamente",
-      "tomorrowAt": "Mañana {time}"
+      "tomorrowAt": "Mañana {time}",
+      "alertRepeated": "×{n} desde las {time}",
+      "seeRun": "Ver ejecución",
+      "openWorkflow": "Abrir flujo"
     },
     "continue": {
       "title": "Continuar",
@@ -2887,7 +2891,8 @@
       "notRun": "no se ejecutó"
     },
     "resultColumn": "Resultado",
-    "savedTo": "→ guardado en {name}"
+    "savedTo": "→ guardado en {name}",
+    "raisedAlert": "Esta ejecución generó una alerta: | Esta ejecución generó {n} alertas:"
   },
   "agentInstructions": {
     "length": "{count} / {max} caracteres. Se envían con cada petición: mejor cortas."
@@ -3488,6 +3493,21 @@
       "planTitle": "Planeado para esta app",
       "notAllBuilt": "{count} elemento planeado aún no está en la app. | {count} elementos planeados aún no están en la app.",
       "removeFromPlan": "Quitar del plan"
+    }
+  },
+  "alerts": {
+    "notifyTitle": "Alerta",
+    "notifyCritical": "Alerta crítica",
+    "notifyMany": "{count} alertas nuevas",
+    "notifyManyBody": "Abre Te necesita en el panel para verlas.",
+    "open": "Abrir",
+    "overviewTitle": "Alertas",
+    "acknowledged": "Descartada: queda en silencio hasta que el flujo la resuelva",
+    "reopen": "Reabrir",
+    "level": {
+      "info": "Información",
+      "warning": "Aviso",
+      "critical": "Crítica"
     }
   }
 }

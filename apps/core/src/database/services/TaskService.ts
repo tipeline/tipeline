@@ -6,6 +6,7 @@ import { TaskRevisionService } from '@/database/services/TaskRevisionService';
 import type { RevisionOrigin } from '@/database/models/TaskRevision';
 import { generateIdentifier } from '@tipeline/utils';
 import { ProjectMembership, parseProjects, projectsSubquery } from '@/database/services/ProjectMembership';
+import { AlertService } from '@/database/services/AlertService';
 
 const TASK_TAGS_SUBQUERY = `(
   SELECT COALESCE(json_group_array(tag.label), '[]')
@@ -113,6 +114,7 @@ export class TaskService {
     if (!row) throw new Error(`Workflow "${identifier}" not found`);
     const count = await TaskModel.query().delete().where({ id: row.id });
     await ProjectMembership.forget('task', row.id);
+    await AlertService.deleteForTask(identifier);
     return count;
   }
 

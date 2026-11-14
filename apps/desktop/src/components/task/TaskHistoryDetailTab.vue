@@ -16,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ArrowLeft, Braces, Download, ExternalLink, FileJson, FileText, ListTree } from 'lucide-vue-next';
+import { ArrowLeft, BellRing, Braces, Download, ExternalLink, FileJson, FileText, ListTree } from 'lucide-vue-next';
 import { useI18n } from 'vue-i18n';
 import { openInWindow, windowPaths } from '@/utils/detachedWindows';
 import { useQuery } from '@/composables/useQuery';
@@ -53,6 +53,16 @@ const parentRun = computed(() => {
   const parent = (result.value as any)?.metadata?.parent;
   return parent?.pipelineIdentifier && parent?.taskIdentifier ? parent : null;
 });
+// Alerts this run raised (alert.raise notes each on the run). Their workflow's Overview
+// lists the open ones.
+const raisedAlerts = computed<{ id: string; title: string; level: string }[]>(() => {
+  const list = (result.value as any)?.metadata?.alerts;
+  return Array.isArray(list) ? list : [];
+});
+function openWorkflowAlerts() {
+  if (inWindow) return;
+  router.push(`/tasks/${route.params.tid as string}`);
+}
 // Opened from a sub-workflow's run: the step that started it is picked.
 const focusStep = typeof route.query.step === 'string' ? route.query.step : null;
 // Live only while the run is actually going — an old, finished run has no end event in
@@ -324,6 +334,24 @@ async function exportLog(format: 'json' | 'text') {
               >
                 {{ t('runDetail.calledByStep') }}
               </button>
+            </div>
+            <div
+              v-if="raisedAlerts.length"
+              class="mb-3 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm text-muted-foreground"
+              data-testid="run-raised-alerts"
+            >
+              <BellRing class="size-4 text-orange-500" aria-hidden="true" />
+              {{ t('runDetail.raisedAlert', raisedAlerts.length) }}
+              <template v-for="(alert, i) in raisedAlerts" :key="alert.id">
+                <span v-if="i > 0" aria-hidden="true">·</span>
+                <button
+                  class="font-medium text-orange-700 hover:underline underline-offset-2 dark:text-orange-400"
+                  :disabled="inWindow"
+                  @click="openWorkflowAlerts"
+                >
+                  {{ alert.title }}
+                </button>
+              </template>
             </div>
             <div v-if="result && (!cachedRun || !isWide)" class="mb-3 inline-flex self-start rounded-md border p-0.5 text-xs" role="tablist">
               <button

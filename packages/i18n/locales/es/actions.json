@@ -8,6 +8,43 @@
       }
     }
   },
+  "alert": {
+    "label": "Alerta",
+    "actions": {
+      "raise": {
+        "label": "Generar alerta",
+        "description": "Muestra una alerta en Te necesita; la ejecución continúa. La misma clave del mismo flujo actualiza la alerta abierta (×2, ×3…) en vez de añadir otra. Las alertas de aviso y críticas también notifican.",
+        "fields": {
+          "title": {
+            "label": "Título",
+            "description": "Qué pasó, en pocas palabras."
+          },
+          "message": {
+            "label": "Mensaje",
+            "description": "Más detalle (opcional)."
+          },
+          "level": {
+            "label": "Nivel",
+            "description": "info: solo en la lista. warning (por defecto): cuenta y muestra un aviso. critical: además, una notificación del sistema."
+          },
+          "key": {
+            "label": "Clave",
+            "description": "Qué alerta es, p. ej. spike-acme. Vacía: el título es la clave."
+          }
+        }
+      },
+      "resolve": {
+        "label": "Resolver alerta",
+        "description": "Cierra la alerta de este flujo con esta clave porque el problema desapareció. No hace nada si no hay ninguna.",
+        "fields": {
+          "key": {
+            "label": "Clave",
+            "description": "La clave con la que se generó la alerta."
+          }
+        }
+      }
+    }
+  },
   "api": {
     "label": "API",
     "actions": {

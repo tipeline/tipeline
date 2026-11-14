@@ -48,6 +48,7 @@ export const CAPABILITY_RULES: Record<
   { other: Capability[]; actions?: Record<string, Capability[]> }
 > = {
   ai: { other: SEND },
+  alert: { other: [] },
   api: { other: [], actions: { auth: SEND, request: SEND, load: SEND, invoke: SEND } },
   approval: { other: [] },
   array: { other: [] },

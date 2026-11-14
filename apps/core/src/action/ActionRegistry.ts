@@ -1,5 +1,6 @@
 import { GroupMath } from '@/action/actions/math/actions';
 import { GroupAI } from '@/action/actions/ai/actions';
+import { GroupAlert } from '@/action/actions/alert/actions';
 import { GroupApi } from '@/action/actions/api/actions';
 import { GroupApproval } from '@/action/actions/approval/actions';
 import { GroupArray } from '@/action/actions/array/actions';
@@ -35,6 +36,7 @@ import type { ActionHandler } from '@action/Action';
 export const ActionRegistry: Record<string, Record<string, ActionHandler>> = {
   math: GroupMath as unknown as Record<string, ActionHandler>,
   ai: GroupAI as unknown as Record<string, ActionHandler>,
+  alert: GroupAlert as unknown as Record<string, ActionHandler>,
   api: GroupApi as unknown as Record<string, ActionHandler>,
   approval: GroupApproval as unknown as Record<string, ActionHandler>,
   array: GroupArray as unknown as Record<string, ActionHandler>,
