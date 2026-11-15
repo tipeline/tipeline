@@ -19,7 +19,9 @@
   "tabs": {
     "workflows": "Workflows",
     "account": "Account",
-    "assistant": "Assistant"
+    "assistant": "Assistant",
+    "runs": "Runs",
+    "approvals": "Approvals"
   },
   "connection": {
     "connecting": "Connecting…",
@@ -102,5 +104,78 @@
     "message": "Message",
     "placeholder": "Ask the Assistant…",
     "send": "Send"
+  },
+  "runs": {
+    "title": "Runs",
+    "filters": {
+      "all": "All",
+      "running": "Running",
+      "paused": "Waiting",
+      "failed": "Failed"
+    },
+    "empty": "No runs yet.",
+    "emptyFiltered": "No runs match this filter.",
+    "loadFailed": "Could not load runs: {message}",
+    "tryAgain": "Try again",
+    "status": {
+      "pending": "Starting",
+      "running": "Running",
+      "paused": "Waiting",
+      "completed": "Finished",
+      "failed": "Failed",
+      "canceled": "Canceled"
+    }
+  },
+  "run": {
+    "notFound": "Run not found.",
+    "started": "Started {when}",
+    "took": "Took {duration}",
+    "runningFor": "Running for {duration}",
+    "waitingApproval": "Waiting for approval",
+    "reviewApproval": "Review in Approvals",
+    "result": "Result",
+    "noOutputs": "This run returned no outputs.",
+    "steps": "Steps",
+    "noSteps": "This workflow has no steps.",
+    "stepSkipped": "Not run",
+    "stepCanceled": "Canceled",
+    "stepRunning": "Running",
+    "cancel": "Cancel run",
+    "cancelTitle": "Cancel this run?",
+    "cancelBody": "The step that is running stops, and the steps after it don't run.",
+    "keepRunning": "Keep running",
+    "canceling": "Canceling…",
+    "cancelFailed": "Could not cancel: {message}",
+    "openWorkflow": "Open workflow",
+    "viewRun": "View run"
+  },
+  "approvals": {
+    "title": "Approvals",
+    "tabs": {
+      "waiting": "Waiting",
+      "decided": "Decided"
+    },
+    "empty": "Nothing is waiting for approval.",
+    "emptyDecided": "No approval has been decided yet.",
+    "loadFailed": "Could not load approvals: {message}",
+    "comment": "Comment (optional)",
+    "approve": "Approve",
+    "reject": "Reject",
+    "rejectTitle": "Reject this request?",
+    "rejectBody": "The workflow gets the rejection, and the run may stop.",
+    "notNow": "Not now",
+    "requested": "Requested {when}",
+    "requestedBy": "Started by {who}",
+    "autoRejects": "Rejected automatically {when}",
+    "autoApproves": "Approved automatically {when}",
+    "onlyApprovers": "Only {who} can decide this approval.",
+    "onlyEditors": "Only editors and admins can decide this approval.",
+    "selfApproval": "You started this run, so someone else has to decide it.",
+    "approvedBy": "Approved by {who}",
+    "rejectedBy": "Rejected by {who}",
+    "approvedAuto": "Approved automatically (timed out)",
+    "rejectedAuto": "Rejected automatically (timed out)",
+    "decideFailed": "Could not send the decision: {message}",
+    "viewRun": "View run"
   }
 }

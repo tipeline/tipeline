@@ -218,6 +218,8 @@ Task-mutating commands (`taskUpdateSource`, `taskUpdateMeta`, `taskUninstall`, `
 
 `taskDetail`, `exec`, `taskValidate`, `taskDuplicate`, and `taskUploadImage` are additionally gated by **visibility**: a non-owner, non-admin calling any of these on a task someone else has marked `private` gets a generic `Task not found` — not a permission error, so probing identifiers can't confirm a private task exists or who owns it. A *shared* task someone else owns can still be viewed/run by anyone (just not edited/reloaded/uninstalled).
 
+Runs follow the same rule. `pipelineList` and `pipelineStats` leave out runs of other people's private workflows (the Server sends Core an `excludeTasks` list, so pages stay full), and `pipelineDetail` of such a run answers `Run not found`, like `pipelineCancel` does. Admins see every run.
+
 ### The Assistant
 
 The Server runs the Assistant for its users, the same one as Desktop's: it finds the workflow for a request in plain words, asks which one when several fit, and proposes a run with the values it read. Nothing runs until the person confirms. It is for **editors and admins**: a viewer gets `Permission denied: the Assistant is for editors and admins.`

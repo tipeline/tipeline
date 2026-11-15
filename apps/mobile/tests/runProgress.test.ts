@@ -97,4 +97,32 @@ describe('withFinalValues', () => {
       ['token', undefined],
     ]);
   });
+
+  it('takes how the run ended from its stored status: the stream ends alike for all', async () => {
+    const { withFinalValues } = await import('../src/lib/runProgress');
+    const ended = { ...startProgress(steps), state: 'finished' as const };
+    expect(withFinalValues(ended, [], 'canceled').state).toBe('canceled');
+    expect(withFinalValues(ended, [], 'paused').state).toBe('paused');
+    expect(withFinalValues(ended, [], 'failed').state).toBe('failed');
+    expect(withFinalValues(ended, [], 'completed').state).toBe('finished');
+    expect(withFinalValues(ended, []).state).toBe('finished');
+  });
+});
+
+describe('withStepStates', () => {
+  it('marks how steps ended from the run detail, keeping live errors', async () => {
+    const { withStepStates } = await import('../src/lib/runProgress');
+    let p = startProgress(steps);
+    p = applyRunEvent(p, ev('action_error', { identifier: 's1' }, 'boom'));
+    const after = withStepStates(p, [
+      { identifier: 's1', state: 'failed' },
+      { identifier: 's2', state: 'skipped' },
+    ]);
+    expect(after.steps.map((s) => [s.state, s.error])).toEqual([
+      ['failed', 'boom'],
+      ['skipped', undefined],
+    ]);
+    const canceled = withStepStates(startProgress(steps), [{ identifier: 's1', state: 'canceled' }, { identifier: 's2', state: 'waiting' }]);
+    expect(canceled.steps.map((s) => s.state)).toEqual(['canceled', 'waiting']);
+  });
 });

@@ -19,7 +19,9 @@
   "tabs": {
     "workflows": "Flujos",
     "account": "Cuenta",
-    "assistant": "Asistente"
+    "assistant": "Asistente",
+    "runs": "Ejecuciones",
+    "approvals": "Aprobaciones"
   },
   "connection": {
     "connecting": "Conectando…",
@@ -102,5 +104,78 @@
     "message": "Mensaje",
     "placeholder": "Pregunta al Asistente…",
     "send": "Enviar"
+  },
+  "runs": {
+    "title": "Ejecuciones",
+    "filters": {
+      "all": "Todas",
+      "running": "En curso",
+      "paused": "En espera",
+      "failed": "Fallidas"
+    },
+    "empty": "Todavía no hay ejecuciones.",
+    "emptyFiltered": "Ninguna ejecución coincide con este filtro.",
+    "loadFailed": "No se pudieron cargar las ejecuciones: {message}",
+    "tryAgain": "Reintentar",
+    "status": {
+      "pending": "Iniciando",
+      "running": "En curso",
+      "paused": "En espera",
+      "completed": "Terminada",
+      "failed": "Fallida",
+      "canceled": "Cancelada"
+    }
+  },
+  "run": {
+    "notFound": "No se encontró la ejecución.",
+    "started": "Iniciada {when}",
+    "took": "Tardó {duration}",
+    "runningFor": "En curso desde hace {duration}",
+    "waitingApproval": "Esperando aprobación",
+    "reviewApproval": "Revisar en Aprobaciones",
+    "result": "Resultado",
+    "noOutputs": "Esta ejecución no devolvió resultados.",
+    "steps": "Pasos",
+    "noSteps": "Este flujo no tiene pasos.",
+    "stepSkipped": "No se ejecutó",
+    "stepCanceled": "Cancelado",
+    "stepRunning": "En curso",
+    "cancel": "Cancelar ejecución",
+    "cancelTitle": "¿Cancelar esta ejecución?",
+    "cancelBody": "El paso en curso se detiene y los pasos siguientes no se ejecutan.",
+    "keepRunning": "Seguir ejecutando",
+    "canceling": "Cancelando…",
+    "cancelFailed": "No se pudo cancelar: {message}",
+    "openWorkflow": "Abrir flujo",
+    "viewRun": "Ver ejecución"
+  },
+  "approvals": {
+    "title": "Aprobaciones",
+    "tabs": {
+      "waiting": "En espera",
+      "decided": "Decididas"
+    },
+    "empty": "No hay nada esperando aprobación.",
+    "emptyDecided": "Todavía no se ha decidido ninguna aprobación.",
+    "loadFailed": "No se pudieron cargar las aprobaciones: {message}",
+    "comment": "Comentario (opcional)",
+    "approve": "Aprobar",
+    "reject": "Rechazar",
+    "rejectTitle": "¿Rechazar esta solicitud?",
+    "rejectBody": "El flujo recibe el rechazo y la ejecución puede detenerse.",
+    "notNow": "Ahora no",
+    "requested": "Solicitada {when}",
+    "requestedBy": "Iniciada por {who}",
+    "autoRejects": "Se rechaza automáticamente {when}",
+    "autoApproves": "Se aprueba automáticamente {when}",
+    "onlyApprovers": "Solo {who} puede decidir esta aprobación.",
+    "onlyEditors": "Solo los editores y administradores pueden decidir esta aprobación.",
+    "selfApproval": "Tú iniciaste esta ejecución, así que otra persona tiene que decidirla.",
+    "approvedBy": "Aprobada por {who}",
+    "rejectedBy": "Rechazada por {who}",
+    "approvedAuto": "Aprobada automáticamente (tiempo agotado)",
+    "rejectedAuto": "Rechazada automáticamente (tiempo agotado)",
+    "decideFailed": "No se pudo enviar la decisión: {message}",
+    "viewRun": "Ver ejecución"
   }
 }

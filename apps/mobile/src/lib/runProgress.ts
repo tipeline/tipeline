@@ -1,8 +1,10 @@
 import type { RunEvent } from '@tipeline/client';
 import type { StepInfo, WorkflowVariable } from './workflows';
 
-export type StepState = 'waiting' | 'done' | 'failed';
-export type RunState = 'idle' | 'starting' | 'running' | 'finished' | 'failed' | 'lost';
+/** `canceled`, `skipped` and `paused` come from the finished run's detail, not live events. */
+export type StepState = 'waiting' | 'done' | 'failed' | 'canceled' | 'skipped' | 'paused';
+/** `canceled` and `paused` (waiting at an approval) come from the run's final status. */
+export type RunState = 'idle' | 'starting' | 'running' | 'finished' | 'failed' | 'canceled' | 'paused' | 'lost';
 
 export interface RunProgress {
   state: RunState;
@@ -80,11 +82,15 @@ export interface FinalVariable {
   hidden?: boolean;
 }
 
+const FINAL_STATES: Record<string, RunState> = { failed: 'failed', canceled: 'canceled', paused: 'paused' };
+
 /**
  * The run's final values, over what the live events said: an output a step never changed
  * keeps its starting value, which no event carries. Only the run's own variables count.
+ * The stream ends the same way for a canceled run or one waiting at an approval: the run's
+ * stored `status` tells them apart.
  */
-export function withFinalValues(progress: RunProgress, variables: FinalVariable[]): RunProgress {
+export function withFinalValues(progress: RunProgress, variables: FinalVariable[], status?: string): RunProgress {
   const values = { ...progress.values };
   const hidden: string[] = [];
   for (const v of variables) {
@@ -92,7 +98,27 @@ export function withFinalValues(progress: RunProgress, variables: FinalVariable[
     if (v.hidden) hidden.push(v.name);
     else values[v.name] = v.value;
   }
-  return { ...progress, values, hidden, final: true };
+  const state = (status && FINAL_STATES[status]) || progress.state;
+  return { ...progress, values, hidden, final: true, state };
+}
+
+/**
+ * How each step ended, from the finished run's detail (runSteps): live events never say
+ * that a step was canceled, or that one never ran because the run stopped before it.
+ */
+export function withStepStates(
+  progress: RunProgress,
+  steps: Array<{ identifier: string; state: string; error?: string }>
+): RunProgress {
+  const ended = new Map(steps.map((s) => [s.identifier, s]));
+  return {
+    ...progress,
+    steps: progress.steps.map((step) => {
+      const found = ended.get(step.identifier);
+      if (!found || !['done', 'failed', 'canceled', 'skipped', 'paused'].includes(found.state)) return step;
+      return { ...step, state: found.state as StepState, ...(found.error ? { error: found.error } : {}) };
+    }),
+  };
 }
 
 /** The outputs to show once a run finished, in source order, only those that got a value. */

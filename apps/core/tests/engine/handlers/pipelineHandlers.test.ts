@@ -67,7 +67,7 @@ describe('pipelineHandlers', () => {
 
       await transport.handlers.get('pipelineStats')!(message, client);
 
-      expect(Core.pipelineStats).toHaveBeenCalledWith(['a', 'b']);
+      expect(Core.pipelineStats).toHaveBeenCalledWith(['a', 'b'], []);
       expect(transport.emit).toHaveBeenCalledWith(client, 'onPipelineStats', IPCMessage.success(counts, 'corr-s'));
     });
 
@@ -90,7 +90,7 @@ describe('pipelineHandlers', () => {
 
       await transport.handlers.get('pipelineList')!(message, client);
 
-      expect(Core.pipelineList).toHaveBeenCalledWith('task-1', undefined, undefined, undefined);
+      expect(Core.pipelineList).toHaveBeenCalledWith('task-1', undefined, undefined, undefined, []);
       expect(transport.emit).toHaveBeenCalledWith(
         client,
         'onPipelineList',
@@ -107,7 +107,19 @@ describe('pipelineHandlers', () => {
 
       await transport.handlers.get('pipelineList')!(message, client);
 
-      expect(Core.pipelineList).toHaveBeenCalledWith(undefined, 30, 0, 'failed');
+      expect(Core.pipelineList).toHaveBeenCalledWith(undefined, 30, 0, 'failed', []);
+    });
+
+    it('passes the workflows to leave out (a Server sends a user\'s hidden ones)', async () => {
+      vi.mocked(Core.pipelineList).mockResolvedValue([]);
+      const message = {
+        payload: { limit: 30, excludeTasks: ['secret', 42, 'other'] },
+        correlationId: 'corr-ex',
+      };
+
+      await transport.handlers.get('pipelineList')!(message, client);
+
+      expect(Core.pipelineList).toHaveBeenCalledWith(undefined, 30, undefined, undefined, ['secret', 'other']);
     });
 
     it('emits a failure message when Core.pipelineList rejects', async () => {

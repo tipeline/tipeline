@@ -1250,20 +1250,28 @@ export default class Core {
     return await TagService.delete(id);
   }
 
-  static async pipelineList(taskIdentifier: string | null, limit = 100, offset = 0, status?: string) {
+  /** `excludeTasks`: workflow identifiers whose runs are left out (a Server's private ones). */
+  static async pipelineList(
+    taskIdentifier: string | null,
+    limit = 100,
+    offset = 0,
+    status?: string,
+    excludeTasks: string[] = []
+  ) {
     if (taskIdentifier) {
+      if (excludeTasks.includes(taskIdentifier)) return [];
       return await PipelineService.getByTaskIdentifier(taskIdentifier, limit, offset, status);
     } else {
-      return await PipelineService.getAllWithTaskName(limit, offset, status);
+      return await PipelineService.getAllWithTaskName(limit, offset, status, excludeTasks);
     }
   }
 
   /** Runs started, and failed, per period: the dashboard's Today row. */
-  static async pipelineStats(boundaries: unknown) {
+  static async pipelineStats(boundaries: unknown, excludeTasks: string[] = []) {
     if (!Array.isArray(boundaries) || !boundaries.every((b) => typeof b === 'string' && !Number.isNaN(Date.parse(b)))) {
       throw new Error('boundaries must be a list of ISO dates');
     }
-    return await PipelineService.countsByPeriod(boundaries as string[]);
+    return await PipelineService.countsByPeriod(boundaries as string[], excludeTasks);
   }
 
   static async pipelineDetail(pipelineIdentifier: string) {

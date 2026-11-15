@@ -517,6 +517,13 @@ export class WsGateway {
             });
           }
 
+          // Run lists and counts leave out other users' private workflows. Core does it in
+          // the query, so pages stay full and a hidden workflow's runs never leave Core.
+          if ((event === 'pipelineList' || event === 'pipelineStats') && currentUser.role !== 'admin') {
+            const hidden = await TaskOwnershipService.privateOwnedByOthers(currentUser.id);
+            payload.payload = { ...(payload.payload ?? {}), excludeTasks: [...hidden] };
+          }
+
           if (event === 'exec') {
             const taskId = payload.payload?.identifier;
             const cid = payload.correlationId;
@@ -624,6 +631,10 @@ export class WsGateway {
       this.routeOwnAppRuns(event, data);
       return;
     }
+    if (event === 'onPipelineDetail') {
+      void this.routeRunDetail(event, data);
+      return;
+    }
     if (SECRET_BEARING_ANSWERS.has(event)) {
       this.routeHidingSecrets(event, data);
       return;
@@ -670,6 +681,28 @@ export class WsGateway {
       }
     }
     ws.send(JSON.stringify({ event, ...data, data: answer }));
+  }
+
+  /**
+   * A run's detail goes only to the asker. A run of another user's private workflow gets the
+   * same answer as a missing one, as for cancel: its steps and variables stay with the owner.
+   */
+  private async routeRunDetail(event: string, data: any): Promise<void> {
+    const correlationId = data?.correlationId;
+    const ws = correlationId ? this.correlationMap.get(correlationId) : undefined;
+    if (correlationId) this.correlationMap.delete(correlationId);
+    const user = ws ? this.clientUser.get(ws) : undefined;
+    if (!ws || !user || ws.readyState !== WebSocket.OPEN) return;
+
+    const taskIdentifier = data?.data?.task?.identifier;
+    if (user.role !== 'admin' && typeof taskIdentifier === 'string') {
+      const owner = await TaskOwnershipService.getOwner(taskIdentifier);
+      if (owner && owner.user_id !== user.id && owner.visibility === 'private') {
+        ws.send(JSON.stringify({ event, correlationId, error: 'Run not found' }));
+        return;
+      }
+    }
+    ws.send(JSON.stringify({ event, ...data }));
   }
 
   /**

@@ -175,6 +175,10 @@ ion-title.title-large {
   color: var(--tl-waiting-ink);
   background: var(--tl-waiting-bg);
 }
+.tl-pill.muted {
+  color: var(--tl-muted);
+  background: var(--tl-border);
+}
 
 .tl-error {
   color: var(--tl-failed-ink);
