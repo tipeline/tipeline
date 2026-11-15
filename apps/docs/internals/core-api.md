@@ -147,6 +147,11 @@ Core.approvalDecide(params: { pipelineIdentifier: string; approved: boolean; com
 Core.approvalHistory(params?: { taskIdentifiers?: string[]; limit?: number }): Promise<ApprovalDecision[]>   // newest first
 Core.appApprovalList(params: { appIdentifier: string; workflows?: string[] }): Promise<PendingApproval[]>   // only the app's workflows
 Core.appApprovalDecide(params: { appIdentifier: string; pipelineIdentifier: string; approved: boolean; comment?: string }): Promise<{ pipelineIdentifier: string; approved: boolean }>
+
+// Alerts — raised by alert.raise, kept in the alert table across runs
+Core.alertList(params?: { includeClosed?: boolean; taskIdentifier?: string; ids?: string[] }): Promise<AlertItem[]>   // open only, unless includeClosed
+Core.alertDismiss(params: { id?: string; ids?: string[]; all?: boolean; dismissedBy?: string }): Promise<{ dismissed: number }>   // acknowledge: quiet until resolved
+Core.alertReopen(params: { id: string }): Promise<{ reopened: true }>
 ```
 
 `approvalDecide` atomically moves the run from `paused` back to `running` (a second

@@ -248,6 +248,29 @@ tipeline pipeline approvals
 tipeline pipeline approve pip003ggg444hhh555iii --comment "Numbers match the invoice"
 ```
 
+## Alert Commands
+
+Alerts raised by workflows with `alert.raise` (see [Alerts](/workflows/alerts)).
+
+### `tipeline alert list`
+Lists open alerts, newest first: title, level, workflow, how many times it was raised, the
+latest run and the message. `--all` also lists dismissed and resolved ones;
+`--workflow <identifier>` shows only that workflow's.
+
+### `tipeline alert dismiss [ids...]`
+Dismisses alerts: they leave Needs you and stay quiet while their workflow keeps raising
+them, until it resolves them. `--all` dismisses every open alert (on a server workspace,
+every one you can see).
+
+### `tipeline alert reopen <id>`
+Puts a dismissed alert back in Needs you.
+
+```bash
+tipeline alert list
+tipeline alert dismiss alr003ggg444hhh555iii
+tipeline alert list --all --workflow abc123def456ghi7890xy
+```
+
 ## Cache Commands
 
 Stored results of cached steps and workflows (see [Caching Results](/workflows/caching)).
