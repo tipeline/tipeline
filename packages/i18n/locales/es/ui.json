@@ -1392,7 +1392,9 @@
       "autoStartHint": "Inicia Core al iniciar sesión y de nuevo si falla, para que las programaciones se ejecuten sin la aplicación abierta.",
       "autoStartHintLogin": "Inicia Core al iniciar sesión, para que las programaciones se ejecuten sin la aplicación abierta.",
       "autoStartNotice": "Tipeline ahora sigue ejecutándose en segundo plano para que tus programaciones puedan ejecutarse.",
-      "autoStartNoticeAction": "Ajustes"
+      "autoStartNoticeAction": "Ajustes",
+      "keepRunning": "Seguir en la barra de menús / bandeja",
+      "keepRunningHint": "Cerrar la ventana la oculta: Tipeline sigue en la barra de menús (macOS) o el área de notificaciones (Windows, Linux) con lo que te necesita y lo que está en ejecución. Desactivado: cerrar la ventana cierra Tipeline. Core sigue en marcha en ambos casos."
     },
     "hubs": {
       "title": "Hubs"
@@ -3509,5 +3511,34 @@
       "warning": "Aviso",
       "critical": "Crítica"
     }
+  },
+  "tray": {
+    "open": "Abrir Tipeline",
+    "quit": "Salir de Tipeline",
+    "ask": "Preguntar",
+    "askHint": "Abre Tipeline con el panel del Asistente",
+    "settings": "Ajustes",
+    "coreRunning": "Core en marcha",
+    "coreStopped": "Core detenido",
+    "seeAll": "Ver todo",
+    "seeAllCount": "Ver todo ({n})",
+    "allClear": "Todo en orden: nada te necesita",
+    "critical": "Crítica",
+    "approve": "Aprobar",
+    "reject": "Rechazar",
+    "missedAt": "No se ejecutó a las {time}",
+    "running": "En ejecución",
+    "moreRunning": "+{n} más en ejecución",
+    "moreRunningMenu": "Más en ejecución…",
+    "stop": "Detener ejecución",
+    "stopRun": "Detener {name}",
+    "stopConfirm": "¿Detener {name}?",
+    "stopYes": "Detener",
+    "keep": "Seguir",
+    "stopping": "Deteniendo…",
+    "next": "Siguiente: {name} a las {when}",
+    "hintTitle": "Tipeline sigue en marcha",
+    "hintBodyMac": "Sigue en la barra de menús. Para cerrarlo, usa Salir de Tipeline allí o desactiva esto en Ajustes → Acerca de.",
+    "hintBody": "Sigue en el área de notificaciones. Para cerrarlo, usa Salir de Tipeline allí o desactiva esto en Ajustes → Acerca de."
   }
 }

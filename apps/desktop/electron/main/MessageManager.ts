@@ -154,6 +154,44 @@ const QUERY_OPS: Array<{ send: string; core: string; coreResp: string; timeoutMs
 
 const QUERY_RESPONSES: string[] = QUERY_OPS.map((op) => op.coreResp);
 
+// Changes that can alter what "Needs you" and "Running" show (Home, the sidebar badges, the
+// tray popover). After one succeeds the other windows are told (`data:changed`) so they
+// re-read their lists: a workflow deleted in the main window must leave the popover, an
+// approval decided in the popover must leave the main window's badge. Runs starting and
+// ending already reach every window as stream events.
+export const NEEDS_YOU_CHANGES = new Set<string>([
+  SEND.TASK_UPDATE_META,
+  SEND.TASK_UPDATE_SOURCE,
+  SEND.TASK_INSTALL,
+  SEND.TASK_UNINSTALL,
+  SEND.TASK_REVISION_RESTORE,
+  SEND.PIPELINE_CLEAR,
+  SEND.PIPELINE_CLEAR_ALL,
+  SEND.PIPELINE_DELETE,
+  SEND.PIPELINE_CANCEL,
+  SEND.APPROVAL_DECIDE,
+  SEND.APP_APPROVAL_DECIDE,
+  SEND.ALERT_DISMISS,
+  SEND.ALERT_REOPEN,
+  SEND.TRASH_RESTORE,
+  SEND.FULL_RESTORE,
+  SEND.SCHEDULE_SET,
+  SEND.SCHEDULE_REMOVE,
+  SEND.SCHEDULE_TOGGLE,
+  SEND.PROJECT_DELETE,
+  SEND.PROJECT_IMPORT,
+  SEND.HUB_INSTALL_TASK,
+  SEND.HUB_UPDATE_TASK,
+]);
+
+/** Tells every window but the one that made the change to re-read what it shows. */
+function announceChange(sender: Electron.WebContents, channel: string) {
+  if (!NEEDS_YOU_CHANGES.has(channel)) return;
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed() && win.webContents !== sender) win.webContents.send('data:changed', { channel });
+  }
+}
+
 // Connection response events — always settle via localRequest (IpcClient), not CoreClientProxy
 const CONNECTION_RESPONSES: string[] = [
   CORE_RESP.CONNECTION_LIST,
@@ -269,21 +307,27 @@ export class MessageManager {
 
   private registerRendererHandlers() {
     for (const { send, core, timeoutMs } of QUERY_OPS) {
-      ipcMain.handle(send, (_, payload) => CoreService.request(core, payload, timeoutMs));
+      ipcMain.handle(send, async (event, payload) => {
+        const result = await CoreService.request(core, payload, timeoutMs);
+        announceChange(event.sender, send);
+        return result;
+      });
     }
 
     ipcMain.removeHandler(SEND.TASK_INSTALL);
-    ipcMain.handle(SEND.TASK_INSTALL, async (_, { correlationId, payload: filePath }) => {
+    ipcMain.handle(SEND.TASK_INSTALL, async (event, { correlationId, payload: filePath }) => {
       let content: string;
       try {
         content = fs.readFileSync(filePath as string, 'utf8');
       } catch {
         throw new Error('Could not read the selected file. It may have been moved or deleted.');
       }
-      return CoreService.request(CORE.TASK_INSTALL, {
+      const result = await CoreService.request(CORE.TASK_INSTALL, {
         correlationId,
         payload: { content, baseDir: path.dirname(path.resolve(filePath as string)) },
       });
+      announceChange(event.sender, SEND.TASK_INSTALL);
+      return result;
     });
 
     for (const { send, core } of STREAM_OPS) {

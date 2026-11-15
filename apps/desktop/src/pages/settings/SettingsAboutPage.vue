@@ -16,6 +16,16 @@ const coreUnavailable = ref(false);
 
 const autoStart = ref<{ available: boolean; restartsOnCrash: boolean; enabled: boolean } | null>(null);
 
+// This computer only (Electron main keeps it): closing the window hides it to the tray.
+const keepRunning = ref<boolean | null>(null);
+
+function setKeepRunning(enabled: boolean) {
+  void autoSave.save('keepRunning', async () => {
+    const result = await window.ipcRenderer.invoke(SEND.TRAY_SETTINGS_SET, { keepRunning: enabled });
+    keepRunning.value = result.keepRunning;
+  });
+}
+
 function setAutoStart(enabled: boolean) {
   void autoSave.save('autoStart', async () => {
     autoStart.value = await window.ipcRenderer.invoke(SEND.AUTO_START_SET, enabled);
@@ -24,6 +34,7 @@ function setAutoStart(enabled: boolean) {
 
 onMounted(async () => {
   autoStart.value = await window.ipcRenderer.invoke(SEND.AUTO_START_GET);
+  keepRunning.value = (await window.ipcRenderer.invoke(SEND.TRAY_SETTINGS_GET)).keepRunning;
   desktopVersion.value = await window.ipcRenderer.invoke(SEND.APP_VERSION);
 
   try {
@@ -67,6 +78,17 @@ onMounted(async () => {
       <div class="flex items-center gap-3 shrink-0">
         <SaveStatus v-bind="autoSave.status('autoStart')" />
         <Switch id="auto-start" :model-value="autoStart.enabled" @update:model-value="setAutoStart" />
+      </div>
+    </div>
+
+    <div v-if="keepRunning !== null" class="rounded-lg border flex items-center justify-between gap-4 px-4 py-3">
+      <div>
+        <label for="keep-running" class="text-sm">{{ t('settings.about.keepRunning') }}</label>
+        <div class="text-xs text-muted-foreground mt-0.5">{{ t('settings.about.keepRunningHint') }}</div>
+      </div>
+      <div class="flex items-center gap-3 shrink-0">
+        <SaveStatus v-bind="autoSave.status('keepRunning')" />
+        <Switch id="keep-running" :model-value="keepRunning" @update:model-value="setKeepRunning" />
       </div>
     </div>
   </section>

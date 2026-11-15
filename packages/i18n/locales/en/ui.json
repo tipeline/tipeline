@@ -1392,7 +1392,9 @@
       "autoStartHint": "Starts Core when you log in and again if it crashes, so schedules run without the app open.",
       "autoStartHintLogin": "Starts Core when you log in, so schedules run without the app open.",
       "autoStartNotice": "Tipeline now keeps running in the background so your schedules can run.",
-      "autoStartNoticeAction": "Settings"
+      "autoStartNoticeAction": "Settings",
+      "keepRunning": "Keep running in the menu bar / tray",
+      "keepRunningHint": "Closing the window hides it: Tipeline stays in the menu bar (macOS) or notification area (Windows, Linux) with what needs you and what's running. Off: closing the window quits Tipeline. Core keeps running either way."
     },
     "hubs": {
       "title": "Hubs"
@@ -3509,5 +3511,34 @@
       "warning": "Warning",
       "critical": "Critical"
     }
+  },
+  "tray": {
+    "open": "Open Tipeline",
+    "quit": "Quit Tipeline",
+    "ask": "Ask",
+    "askHint": "Opens Tipeline with the Assistant panel",
+    "settings": "Settings",
+    "coreRunning": "Core running",
+    "coreStopped": "Core not running",
+    "seeAll": "See all",
+    "seeAllCount": "See all ({n})",
+    "allClear": "All clear: nothing needs you",
+    "critical": "Critical",
+    "approve": "Approve",
+    "reject": "Reject",
+    "missedAt": "Didn't run at {time}",
+    "running": "Running",
+    "moreRunning": "+{n} more running",
+    "moreRunningMenu": "More running…",
+    "stop": "Stop run",
+    "stopRun": "Stop {name}",
+    "stopConfirm": "Stop {name}?",
+    "stopYes": "Stop",
+    "keep": "Keep",
+    "stopping": "Stopping…",
+    "next": "Next: {name} at {when}",
+    "hintTitle": "Tipeline is still running",
+    "hintBodyMac": "It keeps running in the menu bar. To quit it, use Quit Tipeline there or turn this off in Settings → About.",
+    "hintBody": "It keeps running in the notification area. To quit it, use Quit Tipeline there or turn this off in Settings → About."
   }
 }

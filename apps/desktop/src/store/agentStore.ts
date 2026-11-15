@@ -160,6 +160,8 @@ export const useAgentStore = defineStore('agent', () => {
   const pendingPrompt = ref('');
   /** The project of the page the user is on: its instructions go with their requests. */
   const activeProject = ref<ActiveProject | null>(null);
+  /** Bumped to put the cursor in the sidebar's box, also when the sidebar is already open. */
+  const composerFocusRequest = ref(0);
 
   watch(sidebarOpen, (open) => writeStored(SIDEBAR_OPEN_KEY, String(open)));
   watch(sidebarWidth, (width) => writeStored(SIDEBAR_WIDTH_KEY, String(width)));
@@ -699,6 +701,7 @@ export const useAgentStore = defineStore('agent', () => {
     turns,
     sidebarOpen,
     sidebarWidth,
+    composerFocusRequest,
     working,
     busyThinking,
     history,

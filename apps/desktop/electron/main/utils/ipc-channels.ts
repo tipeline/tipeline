@@ -78,6 +78,15 @@ export const SEND = {
   APP_RUNS_LIST: 'appRunsList',
   APP_RUN: 'appRun',
   OPEN_WINDOW: 'openWindow', // main process only — opens a page (app, run, workflow) in its own window
+  WINDOW_SHOW: 'windowShow', // main process only — shows the main window (hidden while Tipeline runs in the tray)
+  // Menu bar / tray popover (main process only, see electron/main/TrayPopover.ts)
+  TRAY_STATE: 'trayState',
+  TRAY_RESIZE: 'trayResize',
+  TRAY_OPEN: 'trayOpen',
+  TRAY_HIDE: 'trayHide',
+  TRAY_ASSISTANT: 'trayAssistant',
+  TRAY_SETTINGS_GET: 'traySettingsGet',
+  TRAY_SETTINGS_SET: 'traySettingsSet',
   // Variables
   VARIABLE_LIST: 'variableList',
   VARIABLE_NEW: 'variableNew',

@@ -30,6 +30,10 @@ const LISTEN_CHANNELS = new Set<string>([
   'stream:broadcast',
   'workspace-changed',
   'workspace-unavailable',
+  'app:navigate', // main window: open this page (from the tray or a notification)
+  'app:assistant', // main window: open the Assistant panel (from the tray)
+  'tray:shown', // tray popover: it was just opened
+  'data:changed', // another window changed something Needs you / Running show
 ])
 
 function isAllowedListenChannel(channel: string): boolean {

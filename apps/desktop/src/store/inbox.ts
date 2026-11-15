@@ -28,6 +28,16 @@ export const useInboxStore = defineStore('inbox', () => {
     dismissed.value = loadForConnection<DismissedFailure>(STORAGE, connectionId.value);
   }
 
+  // The main window and the tray popover share these dismissals: one dismissed in either
+  // disappears from the other too (the storage event only fires in the other window).
+  if (typeof window !== 'undefined') {
+    window.addEventListener('storage', (event) => {
+      if (event.key === null || event.key.includes(`:${STORAGE}:`)) {
+        dismissed.value = loadForConnection<DismissedFailure>(STORAGE, connectionId.value);
+      }
+    });
+  }
+
   function isDismissed(taskIdentifier: string, runKey: string): boolean {
     return dismissed.value.some((d) => d.taskIdentifier === taskIdentifier && d.runKey === runKey);
   }
