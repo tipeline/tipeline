@@ -73,6 +73,9 @@ Every operation has a **send channel** and a matching **receive channel** prefix
 | `approvalList` | `onApprovalList` | Pending approvals, optionally for some workflows (`{ taskIdentifiers? }`) |
 | `approvalDecide` | `onApprovalDecide` | Approve/reject a paused run and resume it (`{ pipelineIdentifier, approved, comment?, decidedBy? }`) |
 | `approvalHistory` | `onApprovalHistory` | Decided approvals, newest first: who, when, comment (`{ taskIdentifiers?, limit? }`) |
+| `alertList` | `onAlertList` | Alerts raised by workflows, newest raise first: open ones, or all with `includeClosed` (`{ includeClosed?, taskIdentifier?, ids? }`) |
+| `alertDismiss` | `onAlertDismiss` | Acknowledge alerts (`{ id }`, `{ ids }` or `{ all: true }`, plus `dismissedBy?`); returns `{ dismissed }` |
+| `alertReopen` | `onAlertReopen` | Put a dismissed alert back in Needs you (`{ id }`) |
 | `scheduleList` | `onScheduleList` | List schedules |
 | `scheduleSet` | `onScheduleSet` | Create a schedule: `{ identifier, when \| cron \| everySeconds \| runAt, variables }` |
 | `scheduleRemove` | `onScheduleRemove` | Delete schedule |

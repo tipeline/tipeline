@@ -37,6 +37,9 @@ The detail view has three sections:
 2. **Variables** — the value each variable ended the run with, in a panel next to the timeline. Close it with the **Variables** button (it stays closed for the next run you open); in a narrow window, switch between **Steps** and **Variables** instead. Secret variables, ones from a secret global and ones from the environment are listed by name only — their value is never shown or exported. Connection-like values (browser, database or SSH connections, images) aren't saved, so they show as *Not saved*. While a run is still going, the values are the ones loaded when you opened it; they refresh when the run ends. **Export** includes the variables too.
 3. **Error Details** — if the pipeline failed, which action threw and the full error message
 
+When the run raised [alerts](/workflows/alerts), a line above the steps says so and names
+them; click one to see the workflow's alerts on its Overview.
+
 ### Sub-workflows
 
 A step that runs a sub-workflow (`subtask.exec`) shows the sub-workflow's name, and a

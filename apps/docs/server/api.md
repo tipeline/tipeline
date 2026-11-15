@@ -147,7 +147,7 @@ Webhooks are the answer to "let an external system (GitHub, Stripe, a cron servi
 | `GET /workflows/ownership` | any | All task ownership/visibility records |
 | `PATCH /workflows/:identifier/visibility` | owner or admin | `{visibility: "shared"\|"private"}` |
 | `GET /pipeline-audit?limit=&offset=` | any | Past task runs: `task_identifier`, `status` (`running`\|`completed`\|`error`), `triggered_by_type`, timestamps. `limit` capped at 500 |
-| `GET /audit-log?limit=&offset=&action=` | admin | Security/admin activity: logins, token/user/webhook/session changes. Same pagination cap |
+| `GET /audit-log?limit=&offset=&action=` | admin | Security/admin activity: logins, token/user/webhook/session changes, approval decisions, canceled runs, dismissed and reopened alerts. Same pagination cap |
 
 ### Misc
 

@@ -14,7 +14,7 @@ The sidebar groups every part of the app:
 
 | Group | Section | What you'll find there |
 |-------|---------|----------------------|
-| | **Home** | What needs you (approvals, failed and missed runs), your starred and recent items, today's runs |
+| | **Home** | What needs you (approvals, alerts, failed and missed runs), your starred and recent items, today's runs |
 | **Build** | **Workflows** | Every installed workflow — run, edit, see its runs ([builder](/desktop/builder)) |
 | | **Apps** | Dashboards and tools built on your workflows ([Apps](/apps/)) |
 | | **Projects** | Workflows and apps grouped by project ([Projects](/desktop/projects)) |
@@ -49,6 +49,12 @@ From top to bottom:
 - **Needs you**, with how many things are waiting. Newest first, each row says what
   happened and has a button for it:
   - **Approval**: a run waiting for your decision. **Review** opens the Approvals page.
+  - **Alert**: something a workflow told you about with [`alert.raise`](/workflows/alerts),
+    with the workflow, how many times it was raised since when (×3 since 09:00) and its
+    message. **See run** opens the latest run that raised it (**Open workflow** when that
+    run wasn't saved); **Dismiss** acknowledges it, so it stays quiet while the workflow
+    keeps raising it, until the workflow resolves it. Warning and critical alerts count in
+    the number next to Needs you; info alerts are only listed.
   - **Failed**: a workflow whose latest run failed, and how many times in a row.
     **Open run** shows that run; **Dismiss** hides it until the workflow fails again (it also
     leaves on its own when the next run succeeds). **All failing workflows** opens the
@@ -143,6 +149,10 @@ From the **Workflows** list, click any workflow to open its detail view. From th
 - **Run (Debug)** — execute in step-through mode, pausing before each action
 - **Edit** — open the workflow in the visual builder
 - **View history** — see all past pipeline runs for this workflow
+
+When the workflow has [alerts](/workflows/alerts) that are open or dismissed, its Overview
+lists them in an **Alerts** card, with **See run**, **Dismiss** and, for dismissed ones,
+**Reopen** to put them back in Needs you.
 
 <div class="screenshot-placeholder" style="height: 320px;">
   <span class="placeholder-icon">▶️</span>
