@@ -13,6 +13,7 @@ The assistant never runs anything on its own. Every run starts with your click.
 ## Opening the assistant
 
 - Click the **Bot** icon in the top bar, or press **⌘K** (Ctrl+K on Windows and Linux).
+- With the window closed or in the background, click **Ask** in the [menu bar / tray popover](/desktop/overview#in-the-menu-bar-and-tray): Tipeline comes forward with the assistant open, ready to type in.
 - The assistant opens as a sidebar on the right of every page. Drag its left edge to make it wider.
 - Type your request in the box at the bottom. **Enter** sends it; **Shift+Enter** starts a new line.
 - **New chat** clears the conversation. **History** opens the Assistant page: past requests, drafts, remembered picks and search tips.

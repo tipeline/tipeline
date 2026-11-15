@@ -95,7 +95,8 @@ Windows and Linux. Click it to open a small window with:
 - **Next**: when the next scheduled run starts.
 - **Open Tipeline**, and **Ask**, which brings the main window forward with the
   [Assistant](/assistant/) panel open on the page you were on (Home, when you were in the
-  builder or an editor). Ask isn't shown when connected to a server workspace.
+  builder or an editor), with the cursor in its box so you can start typing. Ask isn't
+  shown when connected to a server workspace.
 
 Clicking a title opens it in the main window. Dismissing in either place dismisses it in
 both. Press Esc or click elsewhere to close it.
