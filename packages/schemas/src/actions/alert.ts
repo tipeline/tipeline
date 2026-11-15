@@ -38,7 +38,6 @@ export const validations = {
       returns: 'object',
       fieldConfig: {
         title: {
-          component: 'codemirror-template',
           description: 'What happened, in a few words — the alert’s headline.',
         },
         message: {
