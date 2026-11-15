@@ -57,6 +57,8 @@ TIPELINE_DB_SSL=false
 | `TIPELINE_MAX_BODY_BYTES` | `1048576` | Max request body size. |
 | `TIPELINE_RATE_LIMIT_WINDOW_MS` / `TIPELINE_RATE_LIMIT_MAX` | `60000` / `100` | General rate limit. Login is hard-capped at 10/min regardless. |
 | `TIPELINE_IPC_SOCKET_ROOT` | `/tmp/` | Shared volume path for the socket between Server and Core. |
+| `TIPELINE_CORS_ORIGINS` | — | Extra browser origins allowed to call the REST endpoints, comma-separated (`*` = all). The mobile app's origins are always allowed. See [Browser clients](/server/api#browser-clients-cors). |
+| `TIPELINE_SERVER_HOST_PORT` | `4001` | Compose only: the port on your machine. Set another (e.g. `4011`) to run a second stack next to this one. |
 | `TIPELINE_DB_CLIENT` | `pg` | Knex client — `pg`, `mysql2`, etc. |
 | `TIPELINE_DB_HOST` / `_PORT` / `_NAME` / `_USER` / `_PASSWORD` / `_SSL` | see compose file | Postgres connection. Use the compose service name (`postgres`) for `_HOST` inside Docker. |
 
@@ -191,7 +193,7 @@ sudo ufw allow 80 && sudo ufw allow 443 && sudo ufw allow 22 && sudo ufw enable
 
 | Volume | Contents |
 |---|---|
-| `tipeline-data` | Core's database and task files |
+| `tipeline-data` | Core's database and task files. The Server mounts it read-only to read Core's IPC token (`.database/core.token`); without it Core drops the Server's connection |
 | `postgres-data` | Server DB — users, tokens, webhooks, audit log |
 | `ipc-socket` | Ephemeral — don't back this up |
 

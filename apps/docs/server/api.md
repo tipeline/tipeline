@@ -22,7 +22,7 @@ They share one authentication mechanism (a bearer token), but you'll use them fo
 
 ## 1. Authentication
 
-Every request (REST or WebSocket) authenticates the same way: an `Authorization: Bearer <token>` header. There are two kinds of token, and they're created differently:
+Every request (REST or WebSocket) authenticates the same way: an `Authorization: Bearer <token>` header. (A browser can't set headers on a WebSocket, so browser clients send the token as a subprotocol instead: see [§4](#_4-websocket-gateway).) There are two kinds of token, and they're created differently:
 
 | | Session token | API token |
 |---|---|---|
@@ -155,6 +155,12 @@ Webhooks are the answer to "let an external system (GitHub, Stripe, a cron servi
 |---|---|
 | `GET /health` | none (still rate-limited) |
 
+### Browser clients (CORS)
+
+Browsers only let a page call the REST endpoints when the Server allows the page's origin. The mobile app's own origins (`capacitor://localhost` on iOS, `https://localhost` on Android) are always allowed. Add others with `TIPELINE_CORS_ORIGINS`, comma-separated, for example `http://localhost:5173` while developing a web client; `*` allows every origin. Desktop, the CLI, scripts and webhook callers aren't browsers, so this doesn't apply to them.
+
+Tokens travel in the `Authorization` header, never in a cookie, so the Server doesn't use credentialed CORS.
+
 ---
 
 ## 4. WebSocket gateway
@@ -169,6 +175,14 @@ const ws = new WebSocket('wss://your-server:4001', {
   headers: { Authorization: `Bearer ${TOKEN}` },
 });
 ```
+
+**From a browser** (or the mobile app's WebView), which can't set headers on a WebSocket: send the token as a second subprotocol, next to `tipeline`. The Server answers with `tipeline` only, so the token is never sent back. A handshake that doesn't ask for `tipeline` fails.
+
+```js
+const ws = new WebSocket('wss://your-server:4001', ['tipeline', `bearer.${TOKEN}`]);
+```
+
+A missing or unknown token closes the connection with code `4001`. When both are sent, the `Authorization` header wins.
 
 **Send a command** — every message needs an `event` name and a `correlationId` you choose, so you can match the response:
 
