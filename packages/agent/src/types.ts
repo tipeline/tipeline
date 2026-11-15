@@ -4,6 +4,17 @@ export interface ToolDefinition {
   inputSchema: Record<string, any>;
 }
 
+/**
+ * What the request and draft loops call Core's tools through: Core's MCP endpoint (McpClient) on
+ * Desktop and the CLI, or the Server's IPC link to Core, which leaves out what the user may not see.
+ */
+export interface ToolClient {
+  listTools(): Promise<ToolDefinition[]>;
+  callTool(name: string, args: Record<string, any>): Promise<string>;
+  /** Like callTool, but hands back a failed call's text instead of throwing, for tools whose errors carry data. */
+  callToolRaw(name: string, args: Record<string, any>): Promise<{ text: string; isError: boolean }>;
+}
+
 export interface ToolCall {
   id: string;
   name: string;

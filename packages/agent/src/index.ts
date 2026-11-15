@@ -62,6 +62,7 @@ export type {
   RunProposal,
   RunResult,
   ToolCall,
+  ToolClient,
   ToolDefinition,
   WorkflowInput,
   WorkflowOutput,

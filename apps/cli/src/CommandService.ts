@@ -1523,7 +1523,7 @@ export default class CommandService {
         }
         if (project.instructions) instructions.project = { name: project.name, text: project.instructions };
       }
-      const outcome = await runAgent({ mcpClient, provider, providerLabel, rememberedChoices: memory, instructions }, prompt);
+      const outcome = await runAgent({ toolClient: mcpClient, provider, providerLabel, rememberedChoices: memory, instructions }, prompt);
       if (outcome.kind === 'answer') {
         Printer.printAgentAnswer(outcome.text);
         process.exit(0);
@@ -1658,7 +1658,7 @@ export default class CommandService {
     };
     let last = '';
     const loopConfig = {
-      mcpClient: context.mcpClient,
+      toolClient: context.mcpClient,
       provider: context.provider,
       providerLabel: context.providerLabel,
       instructions: context.instructions,

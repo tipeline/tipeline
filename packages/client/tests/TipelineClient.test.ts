@@ -308,3 +308,71 @@ describe('TipelineClient connection', () => {
     expect((c as any).url).toBe('ws://127.0.0.1:1');
   });
 });
+
+describe('TipelineClient Assistant', () => {
+  it('reports each update of a request and settles on the proposal', async () => {
+    const c = makeClient();
+    server.script = (msg, reply) => {
+      const send = (data: any) => reply({ event: 'onAssistantAsk', correlationId: msg.correlationId, data });
+      send({ requestId: 'r-1', phase: 'thinking' });
+      send({ requestId: 'r-1', phase: 'searching', query: 'sales' });
+      send({ requestId: 'r-1', phase: 'proposal', text: 'This one.', proposal: { identifier: 'sales', name: 'Sales' } });
+      send({ requestId: 'r-1', phase: 'thinking' }); // after the end: ignored
+    };
+    const phases: string[] = [];
+    const handle = c.ask('sales for May', (u) => phases.push(u.phase!), { projectIdentifier: 'acme' });
+    await expect(handle.done).resolves.toMatchObject({ phase: 'proposal', proposal: { identifier: 'sales' } });
+    expect(phases).toEqual(['thinking', 'searching', 'proposal']);
+    expect(server.received[0]).toMatchObject({ event: 'assistantAsk', payload: { prompt: 'sales for May', projectIdentifier: 'acme' } });
+  });
+
+  it('rejects with the Server error', async () => {
+    const c = makeClient();
+    server.script = (msg, reply) =>
+      reply({ event: 'onAssistantAsk', correlationId: msg.correlationId, error: 'Permission denied: the Assistant is for editors and admins.' });
+    const updates: any[] = [];
+    const err = await c.ask('x', (u) => updates.push(u)).done.catch((e) => e);
+    expect(err).toBeInstanceOf(CommandError);
+    expect(err.message).toMatch(/editors and admins/);
+    expect(updates).toEqual([{ error: 'Permission denied: the Assistant is for editors and admins.' }]);
+  });
+
+  it('follows a run for the Assistant: its run events, then the answer', async () => {
+    const c = makeClient();
+    server.script = (msg, reply) => {
+      const id = msg.correlationId;
+      reply({ event: 'onAssistantRun', correlationId: id, data: { requestId: 'r-1', phase: 'task_running', identifier: 'sales' } });
+      reply({ event: 'onTaskStart', correlationId: id, data: { pipelineIdentifier: 'p-1' } });
+      reply({ event: 'onTaskEndAll', correlationId: id, data: 'Workflow finished successfully' });
+      reply({ event: 'onAssistantRun', correlationId: id, data: { requestId: 'r-1', phase: 'run_finished', result: { status: 'completed' } } });
+      reply({ event: 'onAssistantRun', correlationId: id, data: { requestId: 'r-1', phase: 'done', answer: '42.' } });
+    };
+    const runEvents: string[] = [];
+    const phases: string[] = [];
+    const handle = c.runForAssistant(
+      { requestId: 'r-1', identifier: 'sales', variables: { month: 'May' } },
+      (u) => phases.push(u.phase!),
+      (e) => runEvents.push(e.type)
+    );
+    await expect(handle.done).resolves.toMatchObject({ phase: 'done', answer: '42.' });
+    expect(phases).toEqual(['task_running', 'run_finished', 'done']);
+    expect(runEvents).toEqual(['start', 'end_all']);
+  });
+
+  it('remembers a choice and lists the history with plain requests', async () => {
+    const c = makeClient();
+    server.script = (msg, reply) =>
+      reply({
+        event: `on${msg.event[0].toUpperCase()}${msg.event.slice(1)}`,
+        correlationId: msg.correlationId,
+        data: msg.event === 'assistantHistory' ? [{ id: 'r-1' }] : { remembered: true },
+      });
+    await c.rememberAssistantChoice('sale', { identifier: 'sales', name: 'Sales' });
+    await expect(c.assistantHistory({ scope: 'everyone' })).resolves.toEqual([{ id: 'r-1' }]);
+    expect(server.received.map((m) => [m.event, m.payload])).toEqual([
+      ['assistantChoose', { requestKey: 'sale', identifier: 'sales', name: 'Sales' }],
+      ['assistantHistory', { scope: 'everyone' }],
+    ]);
+    await expect(c.request('assistantAsk', {})).rejects.toThrow(/use ask\(\)/);
+  });
+});

@@ -109,3 +109,35 @@ describe('list helpers', () => {
     expect(isListed({ helper: null })).toBe(true);
   });
 });
+
+describe('resultVariables', () => {
+  it('is the public outputs when the workflow declares any', async () => {
+    const { resultVariables } = await import('../src/lib/workflows');
+    const source = {
+      pipeline: {
+        variables: [
+          { type: 'string', name: 'input', visibility: 'public' as const },
+          { type: 'string', name: 'total', visibility: 'public' as const, output: true },
+          { type: 'string', name: 'inner', visibility: 'protected' as const, output: true },
+        ],
+      },
+    };
+    expect(resultVariables(source).map((v) => v.name)).toEqual(['total']);
+  });
+
+  it('is the public variables that are not secret when it declares none', async () => {
+    const { resultVariables } = await import('../src/lib/workflows');
+    const source = {
+      pipeline: {
+        variables: [
+          { type: 'string', name: 'client', visibility: 'public' as const },
+          { type: 'string', name: 'apiKey', visibility: 'public' as const, secret: true },
+          { type: 'string', name: 'helper', visibility: 'protected' as const },
+          { type: 'string', name: 'scratch' },
+        ],
+      },
+    };
+    expect(resultVariables(source).map((v) => v.name)).toEqual(['client']);
+    expect(resultVariables(null)).toEqual([]);
+  });
+});

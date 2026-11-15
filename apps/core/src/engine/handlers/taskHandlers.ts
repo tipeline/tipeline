@@ -155,11 +155,12 @@ export const registerTaskHandlers = (transport: ITransport, broadcast: Broadcast
             ? await Core.taskInstallFromContent(payload.content, undefined, undefined, true)
             : await Core.taskInstallFromContent(payload.content, payload.baseDir)
           : await Core.taskInstall(typeof message === 'string' ? message : payload);
-      transport.emit(
-        client,
-        'onTaskInstall',
-        IPCMessage.success(`Workflow installed successfully: ${result.identifier}`, message.correlationId)
-      );
+      // The message is what Desktop and the CLI show; the identifier rides beside it so the
+      // Tipeline Server can record who installed the workflow (its owner).
+      transport.emit(client, 'onTaskInstall', {
+        ...IPCMessage.success(`Workflow installed successfully: ${result.identifier}`, message.correlationId),
+        identifier: result.identifier,
+      });
     } catch (error: any) {
       transport.emit(client, 'onTaskInstall', IPCMessage.failure(error.message, message.correlationId));
     }

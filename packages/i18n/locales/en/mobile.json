@@ -18,7 +18,8 @@
   },
   "tabs": {
     "workflows": "Workflows",
-    "account": "Account"
+    "account": "Account",
+    "assistant": "Assistant"
   },
   "connection": {
     "connecting": "Connecting…",
@@ -69,5 +70,37 @@
       "editor": "Editor",
       "viewer": "Viewer"
     }
+  },
+  "assistant": {
+    "title": "Assistant",
+    "newChat": "New chat",
+    "viewerOnly": "The Assistant is for editors and admins. Ask an admin if you need it.",
+    "emptyTitle": "Ask for what you need",
+    "emptyIntro": "Say it in your own words. The Assistant finds the workflow that does it and fills in what it can. Nothing runs until you press Run.",
+    "thinking": "Thinking…",
+    "searching": "Looking for “{query}”…",
+    "noDraftsHere": "Writing a new workflow isn't available on the phone yet. You can ask for one in Tipeline Desktop.",
+    "proposal": "Suggested run",
+    "remembered": "You picked this one for a request like this before.",
+    "notInstalled": "This workflow isn't installed yet. It's on the {hub} hub: install it from Tipeline Desktop, then ask again.",
+    "scheduleOnDesktop": "You asked for it to run on its own ({schedule}). Schedules are set up in Tipeline Desktop for now, but you can run it once here.",
+    "alternatives": "Others that could fit:",
+    "running": "Running {name}…",
+    "ran": {
+      "completed": "Ran {name}",
+      "failed": "{name} failed",
+      "canceled": "{name} was canceled",
+      "paused": "{name} is waiting for approval"
+    },
+    "stepsNone": "Starting…",
+    "stepsDone": "Steps done: {count}",
+    "open": "Open",
+    "paused": "It carries on once someone approves it.",
+    "outputs": "Outputs",
+    "lost": "The connection dropped during the run. It keeps going on the server.",
+    "tryAgain": "Try again",
+    "message": "Message",
+    "placeholder": "Ask the Assistant…",
+    "send": "Send"
   }
 }

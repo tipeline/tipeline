@@ -54,6 +54,8 @@ const CORE_EVENTS = [
   // Agent run history
   'onAgentRunCreate', 'onAgentRunMarkTaskRunning', 'onAgentRunSetPipeline',
   'onAgentRunComplete', 'onAgentRunFail', 'onAgentRunList',
+  // The assistant's tools, for the Server's own assistant (answered to request() only)
+  'onAgentToolList', 'onAgentToolCall',
   // Connections
   'onConnectionList', 'onConnectionAdd', 'onConnectionRemove', 'onConnectionUpdate',
   'onConnectionSetActive', 'onConnectionGetActive',

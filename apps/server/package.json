@@ -36,6 +36,7 @@
     "prepack": "rm -rf dist && npm run build"
   },
   "dependencies": {
+    "@tipeline/agent": "0.0.0",
     "knex": "^3.1.0",
     "objection": "^3.1.5",
     "otplib": "^12.0.1",

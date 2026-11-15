@@ -1,6 +1,6 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import type { ToolDefinition } from '@/types';
+import type { ToolClient, ToolDefinition } from '@/types';
 import { explainCoreError } from '@/errors';
 
 export interface McpConnectionConfig {
@@ -8,7 +8,7 @@ export interface McpConnectionConfig {
   token: string;
 }
 
-export class McpClient {
+export class McpClient implements ToolClient {
   private client: Client;
   private connected: Promise<void> | null = null;
 

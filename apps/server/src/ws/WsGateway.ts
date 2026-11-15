@@ -13,6 +13,9 @@ import { authorizeAlertTargets, visibleAlerts, type AlertListItem } from './aler
 import { AuditLogService } from '../audit/AuditLogService.js';
 import { hideInProjectDetail, hideInProjectMap } from './hideWorkflows.js';
 import { chooseProtocol, tokenFromRequest } from './wsAuth.js';
+import { ASSISTANT_COMMANDS, AssistantService } from '../assistant/AssistantService.js';
+import { AssistantHistoryService } from '../assistant/AssistantHistoryService.js';
+import { RateLimiter } from '../security/RateLimiter.js';
 
 // Events in the middle of a run: the request stays routed to its connection. (A
 // sub-workflow's onTaskEnd arrives mid-run too — only onTaskEndAll / onTaskError end it.)
@@ -50,7 +53,6 @@ const VIEWER_ALLOWED = new Set([
   'settingsList',
   'pluginList', 'pluginDetail', 'pluginUsage',
   'projectList', 'projectDetail', 'projectMap',
-  'agentRunList',
   'hubList', 'hubCatalog', 'hubUpdateEvents',
 ]);
 
@@ -82,6 +84,9 @@ const ADMIN_ONLY_COMMANDS = new Set([
   'projectExport', 'projectImport',
   // The Trash holds every user's deleted workflows and apps (owners aren't kept in Core).
   'trashList', 'trashRestore', 'trashDelete', 'trashEmpty',
+  // Core's assistant history (Desktop's, on that machine) has no user: everyone's at once.
+  // The Server's own users have assistantHistory.
+  'agentRunList',
 ]);
 
 const SECRET_BEARING_ANSWERS = new Set(['onSettingsList', 'onVariableList', 'onTaskDetail', 'onTaskRevisionDetail']);
@@ -182,8 +187,8 @@ const ALLOWED_COMMANDS = new Set([
   'projectList', 'projectNew', 'projectDetail', 'projectUpdate', 'projectDelete', 'projectDeletePreview',
   'projectAssignTask', 'projectUnassignTask', 'projectAssignApp', 'projectUnassignApp',
   'projectExport', 'projectImport', 'projectMap', 'projectMapSave', 'projectMapLink',
-  // Agent
-  'agentPrompt', 'agentRunList', 'agentRunSetPipeline',
+  // Agent (writing Core's history is Desktop's own; the Server records its users' requests itself)
+  'agentRunList',
   // Connections
   'connectionList', 'connectionAdd', 'connectionRemove', 'connectionUpdate',
   'connectionSetActive', 'connectionGetActive',
@@ -199,6 +204,10 @@ const ALLOWED_COMMANDS = new Set([
   // Trash
   'trashList', 'trashRestore', 'trashDelete', 'trashEmpty',
 ]);
+
+// What one user may ask the assistant: each request is a call to the organization's LLM.
+const ASSISTANT_ASKS_PER_WINDOW = 30;
+const ASSISTANT_WINDOW_MS = 10 * 60 * 1000;
 
 const APPROVAL_LISTS = new Set(['onApprovalList', 'onAppApprovalList', 'onApprovalHistory']);
 
@@ -235,7 +244,17 @@ export class WsGateway {
   private pendingDecisions = new Map<string, PendingDecision>();
   private pendingAlertChanges = new Map<string, PendingAlertChange>();
 
-  constructor(private readonly coreClient: CoreIpcClient) {}
+  private readonly assistant: AssistantService;
+  private readonly assistantLimiter = new RateLimiter(ASSISTANT_WINDOW_MS, ASSISTANT_ASKS_PER_WINDOW);
+
+  constructor(private readonly coreClient: CoreIpcClient) {
+    this.assistant = new AssistantService({
+      core: coreClient,
+      history: AssistantHistoryService,
+      getOwner: (taskIdentifier) => TaskOwnershipService.getOwner(taskIdentifier),
+      privateOwnedByOthers: (userId) => TaskOwnershipService.privateOwnedByOthers(userId),
+    });
+  }
 
   registerWebhookTrigger(
     correlationId: string,
@@ -287,7 +306,7 @@ export class WsGateway {
           const { event, ...payload } = msg;
           const currentUser = this.clientUser.get(ws)!;
 
-          if (!ALLOWED_COMMANDS.has(event)) {
+          if (!ALLOWED_COMMANDS.has(event) && !ASSISTANT_COMMANDS.has(event)) {
             ws.send(JSON.stringify({ event: 'error', data: { message: `Unknown command: ${event}` } }));
             return;
           }
@@ -301,6 +320,11 @@ export class WsGateway {
             const responseEvent = `on${event.charAt(0).toUpperCase()}${event.slice(1)}`;
             ws.send(JSON.stringify({ event: responseEvent, correlationId: payload.correlationId, error: message }));
           };
+
+          if (ASSISTANT_COMMANDS.has(event)) {
+            this.handleAssistant(event, payload, currentUser, ws, deny);
+            return;
+          }
 
           if (currentUser.role === 'viewer' && !VIEWER_ALLOWED.has(event)) {
             deny(`Permission denied: viewers cannot run "${event}"`);
@@ -534,6 +558,48 @@ export class WsGateway {
     }
   }
 
+  /**
+   * The Server's own assistant (AssistantService), for editors and admins only. Its runs are
+   * routed to the asker and recorded as theirs, like a run they start from a workflow page.
+   */
+  private handleAssistant(
+    event: string,
+    message: { correlationId?: string; payload?: any },
+    user: User,
+    ws: WebSocket,
+    deny: (message: string) => void
+  ): void {
+    if (user.role === 'viewer') {
+      deny('Permission denied: the Assistant is for editors and admins.');
+      return;
+    }
+    const correlationId = message.correlationId;
+    if (!correlationId) {
+      deny(`"${event}" needs a correlationId`);
+      return;
+    }
+    if (event === 'assistantAsk' && !this.assistantLimiter.hit(user.id)) {
+      const minutes = Math.max(1, Math.ceil(this.assistantLimiter.retryAfter(user.id) / 60));
+      deny(`Too many requests to the Assistant: try again in ${minutes} minute${minutes === 1 ? '' : 's'}.`);
+      return;
+    }
+    void this.assistant.handle(event, correlationId, message.payload ?? {}, user, {
+      send: (msg) => {
+        if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+      },
+      beforeRun: (runCorrelationId, taskIdentifier) => {
+        this.correlationMap.set(runCorrelationId, ws);
+        this.pendingTriggers.set(runCorrelationId, {
+          type: 'user',
+          ref: user.id,
+          name: `${user.email} · Assistant`,
+          taskIdentifier,
+          requestedBy: { id: user.id, email: user.email },
+        });
+      },
+    });
+  }
+
   private route(event: string, data: any): void {
     // Fire-and-forget async side-effects; routing uses the original data synchronously
     void this.handleCoreEventSideEffects(event, data);
@@ -759,7 +825,8 @@ export class WsGateway {
     }
 
     if (event === 'onTaskNew' || event === 'onTaskInstall') {
-      const taskId = data?.data?.identifier;
+      // taskNew answers with the workflow; taskInstall with a message and the identifier beside it.
+      const taskId = data?.data?.identifier ?? data?.identifier;
       if (taskId && !data.error && correlationId) {
         const ws = this.correlationMap.get(correlationId);
         const user = ws ? this.clientUser.get(ws) : undefined;

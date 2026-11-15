@@ -18,7 +18,8 @@
   },
   "tabs": {
     "workflows": "Flujos",
-    "account": "Cuenta"
+    "account": "Cuenta",
+    "assistant": "Asistente"
   },
   "connection": {
     "connecting": "Conectando…",
@@ -69,5 +70,37 @@
       "editor": "Editor",
       "viewer": "Lector"
     }
+  },
+  "assistant": {
+    "title": "Asistente",
+    "newChat": "Nueva conversación",
+    "viewerOnly": "El Asistente es para editores y administradores. Pídeselo a un administrador si lo necesitas.",
+    "emptyTitle": "Pide lo que necesitas",
+    "emptyIntro": "Dilo con tus palabras. El Asistente encuentra el flujo que lo hace y completa lo que puede. No se ejecuta nada hasta que pulses Ejecutar.",
+    "thinking": "Pensando…",
+    "searching": "Buscando “{query}”…",
+    "noDraftsHere": "Escribir un flujo nuevo aún no está disponible en el teléfono. Puedes pedirlo en Tipeline Desktop.",
+    "proposal": "Ejecución sugerida",
+    "remembered": "Elegiste este para una petición parecida antes.",
+    "notInstalled": "Este flujo aún no está instalado. Está en el hub {hub}: instálalo desde Tipeline Desktop y vuelve a preguntar.",
+    "scheduleOnDesktop": "Pediste que se ejecute solo ({schedule}). Por ahora las programaciones se crean en Tipeline Desktop, pero puedes ejecutarlo una vez aquí.",
+    "alternatives": "Otros que podrían servir:",
+    "running": "Ejecutando {name}…",
+    "ran": {
+      "completed": "Se ejecutó {name}",
+      "failed": "{name} falló",
+      "canceled": "{name} se canceló",
+      "paused": "{name} espera una aprobación"
+    },
+    "stepsNone": "Empezando…",
+    "stepsDone": "Pasos hechos: {count}",
+    "open": "Abrir",
+    "paused": "Continúa cuando alguien lo apruebe.",
+    "outputs": "Resultados",
+    "lost": "La conexión se cortó durante la ejecución. Sigue en el servidor.",
+    "tryAgain": "Reintentar",
+    "message": "Mensaje",
+    "placeholder": "Pregunta al Asistente…",
+    "send": "Enviar"
   }
 }

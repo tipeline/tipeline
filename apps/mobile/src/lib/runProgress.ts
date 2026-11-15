@@ -8,8 +8,12 @@ export interface RunProgress {
   state: RunState;
   pipelineIdentifier: string | null;
   steps: Array<StepInfo & { state: StepState; error?: string }>;
-  /** Latest value of every variable a step changed. */
+  /** Latest value of every variable a step changed; the run's final values once it ended. */
   values: Record<string, unknown>;
+  /** Variables Core keeps the value of to itself (secret or from the environment). */
+  hidden: string[];
+  /** True once the final values were read from the finished run. */
+  final: boolean;
   error: string | null;
 }
 
@@ -19,6 +23,8 @@ export function startProgress(steps: StepInfo[]): RunProgress {
     pipelineIdentifier: null,
     steps: steps.map((s) => ({ ...s, state: 'waiting' })),
     values: {},
+    hidden: [],
+    final: false,
     error: null,
   };
 }
@@ -66,13 +72,36 @@ export function applyRunEvent(progress: RunProgress, event: RunEvent): RunProgre
   return next;
 }
 
+/** A finished run's variables as Core reports them (pipelineDetail). */
+export interface FinalVariable {
+  name: string;
+  value: unknown;
+  scope?: string;
+  hidden?: boolean;
+}
+
+/**
+ * The run's final values, over what the live events said: an output a step never changed
+ * keeps its starting value, which no event carries. Only the run's own variables count.
+ */
+export function withFinalValues(progress: RunProgress, variables: FinalVariable[]): RunProgress {
+  const values = { ...progress.values };
+  const hidden: string[] = [];
+  for (const v of variables) {
+    if (!v || typeof v.name !== 'string' || (v.scope && v.scope !== 'task')) continue;
+    if (v.hidden) hidden.push(v.name);
+    else values[v.name] = v.value;
+  }
+  return { ...progress, values, hidden, final: true };
+}
+
 /** The outputs to show once a run finished, in source order, only those that got a value. */
 export function finalOutputs(
   progress: RunProgress,
   outputs: WorkflowVariable[]
 ): Array<{ variable: WorkflowVariable; value: unknown }> {
   return outputs
-    .filter((v) => Object.prototype.hasOwnProperty.call(progress.values, v.name))
+    .filter((v) => Object.prototype.hasOwnProperty.call(progress.values, v.name) || progress.hidden.includes(v.name))
     .map((variable) => ({ variable, value: progress.values[variable.name] }));
 }
 

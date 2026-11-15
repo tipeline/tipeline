@@ -12,6 +12,7 @@ const routes: RouteRecordRaw[] = [
       { path: '', redirect: '/tabs/workflows' },
       { path: 'workflows', component: () => import('./pages/WorkflowsPage.vue') },
       { path: 'workflows/:identifier', component: () => import('./pages/WorkflowPage.vue'), props: true },
+      { path: 'assistant', component: () => import('./pages/AssistantPage.vue') },
       { path: 'account', component: () => import('./pages/AccountPage.vue') },
     ],
   },

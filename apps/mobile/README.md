@@ -1,6 +1,6 @@
 # Tipeline Mobile
 
-The phone app for a [Tipeline](https://github.com/tipeline/tipeline) Server: sign in, list workflows, run one with its inputs and follow it live. It is a client only: workflows run on the Server's Core, never on the phone.
+The phone app for a [Tipeline](https://github.com/tipeline/tipeline) Server: sign in, list workflows, run one with its inputs and follow it live, or ask the Assistant in your own words. It is a client only: workflows run on the Server's Core, never on the phone.
 
 Built with Vue 3, [Ionic](https://ionicframework.com/docs/vue/overview) (tabs, navigation, iOS and Android styling) and [Capacitor](https://capacitorjs.com/) (the native shell). It talks to the Server through [`@tipeline/client`](../../packages/client).
 
@@ -20,6 +20,8 @@ Sign in with server `http://127.0.0.1:4011` and the stack's admin account (`admi
 
 The dev server always uses port 5180 because the Server only answers browsers from origins it lists.
 
+The **Assistant** tab (editors and admins) needs an LLM key on the Server: connect Desktop to it as an admin and set one in Settings → Assistant.
+
 ## Commands
 
 ```bash
@@ -32,4 +34,5 @@ npm -w apps/mobile run test     # unit tests (Vitest)
 
 - **Native projects.** `ios/` and `android/` aren't generated yet (`npx cap add ios`, `npx cap add android`); they need Xcode and Android Studio.
 - **Secure token storage.** The sign-in is kept in `localStorage` for now; the native build must keep it in the Keychain / Keystore (see `src/storage.ts`).
-- Runs, Inbox, Schedules, apps, push notifications and the Assistant: see the plan.
+- **Assistant:** writing new workflows (drafts) and turning a request into a schedule are Desktop-only for now.
+- Runs, Inbox, Schedules, apps and push notifications: see the plan.
