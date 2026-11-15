@@ -241,7 +241,7 @@ await client.close();
 For Claude Code:
 
 ```bash
-claude mcp add --transport http tipeline http://127.0.0.1:4002/mcp \
+claude mcp add --transport http --scope user tipeline http://127.0.0.1:4002/mcp \
   --header "Authorization: Bearer $(cat ~/.tipeline/.database/core.token)"
 ```
 
