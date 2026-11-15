@@ -9,6 +9,7 @@ import {
   wsUrlFor,
   type RunEventType,
 } from './protocol.js';
+import { ASSISTANT_FINAL_PHASES, type AssistantHandle, type AssistantRequestItem, type AssistantUpdate } from './assistant.js';
 
 export type ConnectionStatus =
   /** Not started yet, or `close()` was called. */
@@ -109,11 +110,12 @@ interface Pending {
   sent: boolean;
 }
 
-interface ActiveRun {
+/** A command answered by several messages on its correlationId: a run, or an Assistant request. */
+interface Stream {
   command: string;
-  onEvent: (event: RunEvent) => void;
-  resolve: (event: RunEvent) => void;
-  reject: (err: Error) => void;
+  /** Handles one message on the stream's correlationId; true when it was the last. */
+  receive(message: ServerMessage): boolean;
+  reject(err: Error): void;
   sent: boolean;
 }
 
@@ -125,6 +127,7 @@ const OPEN = 1;
  * - `request(command, payload)` → the answer's `data` (rejects with the Server's error).
  * - `run(command, payload, onEvent)` → live run events until `end_all` or `error`.
  * - `subscribe(listener)` → every message, for live lists (like Desktop's stream:broadcast).
+ * - `ask(prompt, onUpdate)` / `runForAssistant(...)` → the Server's Assistant (editors and admins).
  *
  * Sends while offline wait in a queue and go out once connected. A lost connection retries
  * with a growing delay; a refused token stops the client.
@@ -143,7 +146,7 @@ export class TipelineClient {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private queue: Array<{ correlationId: string; message: string }> = [];
   private pending = new Map<string, Pending>();
-  private runs = new Map<string, ActiveRun>();
+  private streams = new Map<string, Stream>();
   private statusListeners = new Set<(status: ConnectionStatus) => void>();
   private messageListeners = new Set<(message: ServerMessage) => void>();
 
@@ -247,6 +250,9 @@ export class TipelineClient {
     if (RUN_COMMANDS.has(command)) {
       return Promise.reject(new Error(`"${command}" starts a run: use run() to follow it`));
     }
+    if (command === 'assistantAsk' || command === 'assistantRun') {
+      return Promise.reject(new Error(`"${command}" answers in several steps: use ask() or runForAssistant()`));
+    }
     if (this.status === 'unauthorized') return Promise.reject(this.unauthorizedError(command));
     const correlationId = newCorrelationId();
     return new Promise<T>((resolve, reject) => {
@@ -263,25 +269,129 @@ export class TipelineClient {
 
   /** Starts a run (`exec`, `appRun`, …) and reports each event until it ends. */
   run(command: string, payload: unknown, onEvent: (event: RunEvent) => void = () => {}): RunHandle {
-    const correlationId = newCorrelationId();
-    let entry!: ActiveRun;
-    const done = new Promise<RunEvent>((resolve, reject) => {
-      entry = { command, onEvent, resolve, reject, sent: false };
+    let resolve!: (event: RunEvent) => void;
+    let reject!: (err: Error) => void;
+    const done = new Promise<RunEvent>((res, rej) => {
+      resolve = res;
+      reject = rej;
     });
-    if (this.status === 'unauthorized') {
-      entry.reject(this.unauthorizedError(command));
-      return { correlationId, done, stopListening: () => {} };
-    }
-    this.runs.set(correlationId, entry);
-    entry.sent = this.transmit(correlationId, command, payload);
-    return {
+    const started = this.startStream(command, payload, {
+      command,
+      sent: false,
+      reject,
+      receive: (message) => {
+        const type = RUN_EVENTS[message.event];
+        // A refused run is answered on the command's own event (onExec) with an error.
+        const refused = !type && message.event === answerEventFor(command) && message.error;
+        if (!type && !refused) return false;
+        const event: RunEvent = { ...message, type: type ?? 'error', correlationId: started.correlationId };
+        onEvent(event);
+        if (refused || FINAL_RUN_EVENTS.has(event.type)) {
+          resolve(event);
+          return true;
+        }
+        return false;
+      },
+    });
+    return { ...started, done };
+  }
+
+  /**
+   * Asks the Server's Assistant. Updates arrive as it works (thinking, searching) and it ends
+   * on an answer, a "which one?" choice, a proposed run, or "nothing fits". Nothing runs here:
+   * confirm a proposal with `runForAssistant`.
+   */
+  ask(
+    prompt: string,
+    onUpdate: (update: AssistantUpdate) => void = () => {},
+    options: { projectIdentifier?: string } = {}
+  ): AssistantHandle {
+    return this.assistantStream('assistantAsk', { prompt, ...options }, onUpdate);
+  }
+
+  /**
+   * Runs the workflow the user confirmed for a request, then the Assistant answers the request
+   * from its outputs. `onRunEvent` gets the run's own events, to show it live.
+   */
+  runForAssistant(
+    input: { requestId: string; identifier: string; name?: string; variables?: Record<string, unknown> },
+    onUpdate: (update: AssistantUpdate) => void = () => {},
+    onRunEvent: (event: RunEvent) => void = () => {}
+  ): AssistantHandle {
+    return this.assistantStream('assistantRun', input, onUpdate, onRunEvent);
+  }
+
+  /** Remembers which workflow the user meant for a kind of request (a choice's `requestKey`). */
+  rememberAssistantChoice(requestKey: string, workflow: { identifier: string; name: string }): Promise<void> {
+    return this.request('assistantChoose', { requestKey, ...workflow }).then(() => undefined);
+  }
+
+  /** The user's own requests, newest first; an admin may ask for everyone's. */
+  assistantHistory(options: { scope?: 'mine' | 'everyone'; limit?: number } = {}): Promise<AssistantRequestItem[]> {
+    return this.request('assistantHistory', options);
+  }
+
+  private assistantStream(
+    command: string,
+    payload: unknown,
+    onUpdate: (update: AssistantUpdate) => void,
+    onRunEvent?: (event: RunEvent) => void
+  ): AssistantHandle {
+    let resolve!: (update: AssistantUpdate) => void;
+    let reject!: (err: Error) => void;
+    const done = new Promise<AssistantUpdate>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    const answerEvent = answerEventFor(command);
+    const started = this.startStream(command, payload, {
+      command,
+      sent: false,
+      reject,
+      receive: (message) => {
+        const type = RUN_EVENTS[message.event];
+        if (type) {
+          onRunEvent?.({ ...message, type, correlationId: started.correlationId });
+          return false;
+        }
+        if (message.event !== answerEvent) return false;
+        const update: AssistantUpdate = {
+          ...(message.data && typeof message.data === 'object' ? message.data : {}),
+          ...(message.error ? { error: String(message.error) } : {}),
+        };
+        onUpdate(update);
+        if (update.error) {
+          reject(new CommandError(command, update.error));
+          return true;
+        }
+        if (update.phase && ASSISTANT_FINAL_PHASES.has(update.phase)) {
+          resolve(update);
+          return true;
+        }
+        return false;
+      },
+    });
+    // Nobody may be waiting on `done` when the callbacks are all the caller uses.
+    done.catch(() => {});
+    return { ...started, done };
+  }
+
+  private startStream(command: string, payload: unknown, stream: Stream) {
+    const correlationId = newCorrelationId();
+    const handle = {
       correlationId,
-      done,
       stopListening: () => {
-        this.runs.delete(correlationId);
+        this.streams.delete(correlationId);
         this.unqueue(correlationId);
       },
     };
+    if (this.status === 'unauthorized') {
+      stream.reject(this.unauthorizedError(command));
+      return handle;
+    }
+    this.streams.set(correlationId, stream);
+    stream.sent = this.transmit(correlationId, command, payload);
+    return handle;
   }
 
   // ---------------------------------------------------------------------------
@@ -304,8 +414,8 @@ export class TipelineClient {
       this.ws?.send(message);
       const pending = this.pending.get(correlationId);
       if (pending) pending.sent = true;
-      const run = this.runs.get(correlationId);
-      if (run) run.sent = true;
+      const stream = this.streams.get(correlationId);
+      if (stream) stream.sent = true;
     }
   }
 
@@ -333,18 +443,9 @@ export class TipelineClient {
     const id = message.correlationId;
     if (!id) return;
 
-    const run = this.runs.get(id);
-    if (run) {
-      const type = RUN_EVENTS[message.event];
-      // A refused run is answered on the command's own event (onExec) with an error.
-      const refused = !type && message.event === answerEventFor(run.command) && message.error;
-      if (!type && !refused) return;
-      const event: RunEvent = { ...message, type: type ?? 'error', correlationId: id };
-      run.onEvent(event);
-      if (refused || FINAL_RUN_EVENTS.has(event.type)) {
-        this.runs.delete(id);
-        run.resolve(event);
-      }
+    const stream = this.streams.get(id);
+    if (stream) {
+      if (stream.receive(message)) this.streams.delete(id);
       return;
     }
 
@@ -366,10 +467,10 @@ export class TipelineClient {
       this.pending.delete(id);
       pending.reject(errorFor(pending.command));
     }
-    for (const [id, run] of this.runs) {
-      if (!run.sent) continue;
-      this.runs.delete(id);
-      run.reject(errorFor(run.command));
+    for (const [id, stream] of this.streams) {
+      if (!stream.sent) continue;
+      this.streams.delete(id);
+      stream.reject(errorFor(stream.command));
     }
   }
 
@@ -381,10 +482,10 @@ export class TipelineClient {
         this.pending.delete(correlationId);
         pending.reject(err);
       }
-      const run = this.runs.get(correlationId);
-      if (run) {
-        this.runs.delete(correlationId);
-        run.reject(err);
+      const stream = this.streams.get(correlationId);
+      if (stream) {
+        this.streams.delete(correlationId);
+        stream.reject(err);
       }
     }
     this.queue = [];

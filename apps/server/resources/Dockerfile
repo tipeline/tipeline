@@ -8,6 +8,8 @@ COPY apps/server/ ./apps/server/
 
 RUN npm install --ignore-scripts
 RUN npm rebuild better-sqlite3
+# The Server runs the assistant itself (@tipeline/agent).
+RUN npm -w packages/agent run build
 RUN npm -w apps/server run build
 
 ENV TIPELINE_IPC_SOCKET_ROOT=/tmp/tipeline/

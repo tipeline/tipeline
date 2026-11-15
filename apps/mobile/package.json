@@ -4,7 +4,7 @@
   "private": true,
   "description": "Tipeline Mobile: run and follow workflows on a Tipeline Server from a phone",
   "license": "Apache-2.0",
-  "author": "José Daniel Estrada Guzmán",
+  "author": "Jos\u00e9 Daniel Estrada Guzm\u00e1n",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -18,7 +18,9 @@
     "@ionic/vue-router": "9.0.10",
     "@tipeline/client": "0.0.0",
     "@tipeline/i18n": "0.0.0",
+    "dompurify": "^3.4.16",
     "ionicons": "8.1.0",
+    "marked": "^18.1.0",
     "pinia": "^3.0.3",
     "vue": "^3.4.21",
     "vue-i18n": "^11.4.5",

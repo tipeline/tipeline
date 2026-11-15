@@ -93,7 +93,7 @@ area; each calls the `Core` method of the same name.
 
 | Area | Channels |
 |------|----------|
-| Assistant | `agentRunComplete`, `agentRunCreate`, `agentRunFail`, `agentRunList`, `agentRunMarkProposed`, `agentRunMarkTaskRunning`, `agentRunSetPipeline`, `assistantFindability`, `taskMarkReady` |
+| Assistant | `agentRunComplete`, `agentRunCreate`, `agentRunFail`, `agentRunList`, `agentRunMarkProposed`, `agentRunMarkTaskRunning`, `agentRunSetPipeline`, `agentToolCall`, `agentToolList`, `assistantFindability`, `taskMarkReady` |
 | Hubs | `hubAdd`, `hubCatalog`, `hubCheckAll`, `hubCheckOne`, `hubInstallApp`, `hubInstallPlugin`, `hubInstallTask`, `hubList`, `hubPreviewTask`, `hubPreviewUpdate`, `hubUpdateEvents`, `hubUpdateEventsRead`, `hubRemove`, `hubSetAppAutoUpdate`, `hubSetEnabled`, `hubSetPluginAutoUpdate`, `hubSetTaskAutoUpdate`, `hubUpdate`, `hubUpdateApp`, `hubUpdatePlugin`, `hubUpdateTask` |
 | Plugins | `pluginDetail`, `pluginList`, `pluginRemove`, `pluginScan`, `pluginSetEnabled`, `pluginUsage` |
 | Projects | `projectAssignApp`, `projectAssignTask`, `projectDelete`, `projectDeletePreview`, `projectDetail`, `projectExport`, `projectImport`, `projectList`, `projectNew`, `projectUnassignApp`, `projectUnassignTask`, `projectUpdate` |

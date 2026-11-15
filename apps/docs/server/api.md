@@ -208,15 +208,51 @@ The full allowlist lives in `apps/server/src/ws/WsGateway.ts` (`ALLOWED_COMMANDS
 - **Pipelines**: `pipelineList`, `pipelineDetail`, `pipelineStats`, `pipelineResume`, `pipelineClear`, `pipelineClearAll`
 - **Apps, Variables, Tags, Schedules, Plugins, Projects, Hubs, Connections**: full CRUD per area (see source for exact names)
 - **System**: `status`, `stop`
-- **Agent**: `agentPrompt`, `agentRunList`, `agentRunSetPipeline`
+- **Assistant**: `assistantAsk`, `assistantRun`, `assistantChoose`, `assistantHistory`, answered by the Server itself (see [The Assistant](#the-assistant)). `agentRunList` reads Core's own Assistant history, which has no user on it, so it is admin only.
 
 ### Viewer-scoped tokens
 
-A `viewer`-scoped connection can only call the read-only subset: `taskList`, `taskDetail`, `pipelineList`, `pipelineDetail`, `pipelineStats`, `appList`, `appDetail`, `tableDataFetch`, `variableList`, `variableUsage`, `tagList`, `scheduleList`, `status`, `settingsList`, `settingsGetApiToken`, `pluginList`, `pluginDetail`, `pluginUsage`, `projectList`, `projectDetail`, `agentRunList`, `connectionList`, `connectionGetActive`, `hubList`, `hubCatalog`. Everything else — including `exec` — gets `{"event":"error","data":{"message":"Permission denied: viewers cannot run \"...\""}}`.
+A `viewer`-scoped connection can only call the read-only subset: `taskList`, `taskDetail`, `pipelineList`, `pipelineDetail`, `pipelineStats`, `appList`, `appDetail`, `tableDataFetch`, `variableList`, `variableUsage`, `tagList`, `scheduleList`, `status`, `settingsList`, `settingsGetApiToken`, `pluginList`, `pluginDetail`, `pluginUsage`, `projectList`, `projectDetail`, `connectionList`, `connectionGetActive`, `hubList`, `hubCatalog`. Everything else — including `exec` — gets `{"event":"error","data":{"message":"Permission denied: viewers cannot run \"...\""}}`.
 
 Task-mutating commands (`taskUpdateSource`, `taskUpdateMeta`, `taskUninstall`, `taskReload`) are additionally gated by **task ownership**: a non-admin gets rejected if someone else owns that specific task, whether it's shared or private.
 
 `taskDetail`, `exec`, `taskValidate`, `taskDuplicate`, and `taskUploadImage` are additionally gated by **visibility**: a non-owner, non-admin calling any of these on a task someone else has marked `private` gets a generic `Task not found` — not a permission error, so probing identifiers can't confirm a private task exists or who owns it. A *shared* task someone else owns can still be viewed/run by anyone (just not edited/reloaded/uninstalled).
+
+### The Assistant
+
+The Server runs the Assistant for its users, the same one as Desktop's: it finds the workflow for a request in plain words, asks which one when several fit, and proposes a run with the values it read. Nothing runs until the person confirms. It is for **editors and admins**: a viewer gets `Permission denied: the Assistant is for editors and admins.`
+
+**Setting it up.** The Assistant uses the organization's key, never the person's. An admin connects Desktop to the Server and sets a provider and key in **Settings → Assistant**: those settings are stored in the Server's Core, only admins can change them, and nobody else can read the key. Until a key is set, asking answers `The Assistant isn't set up on this Server yet…`. The global instructions from the same page apply to every request, and a project's own instructions apply when the request names the project.
+
+**What each person sees.** The Assistant searches only the workflows the person could open themselves: other people's private workflows are left out before the model sees anything, and a run goes through the same checks as a run from the workflow page. A run started this way is recorded as the person's, named `<email> · Assistant` in the run history.
+
+**Asking** streams updates on `onAssistantAsk`, all with the same `requestId`:
+
+```json
+{ "event": "assistantAsk", "correlationId": "a-1", "payload": { "prompt": "greet Northwind formally", "projectIdentifier": "acme" } }
+```
+
+```jsonc
+{ "event": "onAssistantAsk", "correlationId": "a-1", "data": { "requestId": "…", "phase": "thinking" } }
+{ "event": "onAssistantAsk", "correlationId": "a-1", "data": { "requestId": "…", "phase": "searching", "query": "greet client" } }
+{ "event": "onAssistantAsk", "correlationId": "a-1", "data": { "requestId": "…", "phase": "proposal", "text": "…", "proposal": { "identifier": "…", "name": "Greet a client", "variables": { "client": "Northwind" }, "inputs": […], "alternatives": […] }, "requestKey": "…" } }
+```
+
+It ends on one of `answer` (`text`), `nomatch` (`text`; writing a new workflow isn't offered on the Server yet), `choice` (`text`, `options`, `variables`: pick one, then run it) or `proposal`, or on an `error`.
+
+**Running** the confirmed workflow streams the run's own events (`onTaskStart`, `onAction`…) and then the answer written from its outputs, on `onAssistantRun`:
+
+```json
+{ "event": "assistantRun", "correlationId": "r-1", "payload": { "requestId": "…", "identifier": "…", "name": "Greet a client", "variables": { "client": "Northwind" } } }
+```
+
+Phases: `task_running` → `run_finished` (`result`: `status`, `pipelineIdentifier`, `durationMs`, `outputs`) → `done` (`answer`, `result`). Only the person who asked can run for a request.
+
+**Other commands:** `assistantChoose` `{requestKey, identifier, name}` remembers which workflow the person meant for that kind of request, for their next one (each person has their own). `assistantHistory` `{limit?, scope?}` lists the person's own requests, newest first; an admin may pass `scope: "everyone"` to see every user's.
+
+**Limit:** 30 requests per person per 10 minutes, since each is a call to the organization's model.
+
+The `@tipeline/client` package (`packages/client`) wraps all of this: `ask()`, `runForAssistant()`, `rememberAssistantChoice()`, `assistantHistory()`.
 
 ---
 
@@ -227,6 +263,7 @@ Task-mutating commands (`taskUpdateSource`, `taskUpdateMeta`, `taskUninstall`, `
 | General requests | 100/min per IP | `TIPELINE_RATE_LIMIT_MAX`, `TIPELINE_RATE_LIMIT_WINDOW_MS` |
 | `/auth/login`, `/auth/login/mfa` | 10/min per IP | fixed |
 | Request body size | 1 MB | `TIPELINE_MAX_BODY_BYTES` |
+| Assistant requests (`assistantAsk`) | 30 per 10 min per user | fixed |
 | `/pipeline-audit`, `/audit-log` page size | 500 max | fixed (`limit` query param, defaults to 100) |
 
 Exceeding a rate limit returns `429` with a `Retry-After` header.

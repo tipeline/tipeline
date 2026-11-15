@@ -1,4 +1,4 @@
-import type { McpClient } from '@/McpClient';
+import type { ToolClient } from '@/types';
 import { explainModelError } from '@/errors';
 import { proposalFromChoice, requestKey, type ChoiceMemory } from '@/choices';
 import { instructionsSection, type AgentInstructions } from '@/instructions';
@@ -126,7 +126,7 @@ export const NO_MATCH_TOOL: ToolDefinition = {
 };
 
 export interface AgentLoopConfig {
-  mcpClient: McpClient;
+  toolClient: ToolClient;
   provider: LLMProvider;
   systemPrompt?: string;
   /** Called immediately before each tool call is handled. */
@@ -188,8 +188,8 @@ export function defaultSystemPrompt(now: Date): string {
  * loop and goes back to the caller, which shows it to the user.
  */
 export async function runAgent(config: AgentLoopConfig, prompt: string): Promise<AgentOutcome> {
-  const { mcpClient, provider } = config;
-  const mcpTools = (await mcpClient.listTools()).filter((tool) => AGENT_MCP_TOOLS.includes(tool.name));
+  const { toolClient, provider } = config;
+  const mcpTools = (await toolClient.listTools()).filter((tool) => AGENT_MCP_TOOLS.includes(tool.name));
   // A Core built before search_workflows existed would leave the model unable to find anything.
   if (!mcpTools.some((tool) => tool.name === 'search_workflows')) {
     throw new Error('Tipeline Core is out of date for the assistant. Restart Core (tipeline stop, then tipeline start) and try again.');
@@ -275,7 +275,7 @@ export async function runAgent(config: AgentLoopConfig, prompt: string): Promise
 
       let output: string;
       try {
-        output = await mcpClient.callTool(call.name, call.arguments);
+        output = await toolClient.callTool(call.name, call.arguments);
         if (call.name === 'search_workflows') rememberWorkflows(output, seen);
       } catch (error: any) {
         output = `Error: ${error.message ?? String(error)}`;

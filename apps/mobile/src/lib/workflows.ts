@@ -152,6 +152,17 @@ export function outputVariables(source: WorkflowSource | null): WorkflowVariable
   return (source?.pipeline?.variables ?? []).filter((v) => v.output && (v.visibility ?? 'private') === 'public');
 }
 
+/**
+ * What a finished run shows: the workflow's outputs, or, when it declares none, its public
+ * variables that aren't secret. The same rule Core uses for the Assistant's answers
+ * (reportedOutputNames), kept to public ones like Desktop's Overview.
+ */
+export function resultVariables(source: WorkflowSource | null): WorkflowVariable[] {
+  const outputs = outputVariables(source);
+  if (outputs.length > 0) return outputs;
+  return (source?.pipeline?.variables ?? []).filter((v) => (v.visibility ?? 'private') === 'public' && !v.secret);
+}
+
 /** First plain line of a Markdown description, for lists. */
 export function descriptionLine(description: unknown): string {
   if (typeof description !== 'string') return '';

@@ -9,22 +9,21 @@ import {
   IonButtons,
   IonBackButton,
   IonContent,
-  IonToggle,
   IonButton,
   IonSpinner,
   IonIcon,
   IonSkeletonText,
   IonFooter,
 } from '@ionic/vue';
-import { checkmarkCircle, closeCircle, ellipseOutline, desktopOutline } from 'ionicons/icons';
+import { checkmarkCircle, closeCircle, ellipseOutline } from 'ionicons/icons';
 import ConnectionBanner from '@/components/ConnectionBanner.vue';
-import TextField from '@/components/TextField.vue';
+import RunInputsForm from '@/components/RunInputsForm.vue';
 import { useSession } from '@/session';
 import { useWorkflowRun } from '@/composables/useWorkflowRun';
 import {
   descriptionLine,
   initialValues,
-  outputVariables,
+  resultVariables,
   parseSource,
   runInputs,
   stepsFromSource,
@@ -51,7 +50,7 @@ const problems = ref<FormProblem[]>([]);
 
 const { progress, start, reset } = useWorkflowRun(() => session.api());
 const running = computed(() => progress.value?.state === 'starting' || progress.value?.state === 'running');
-const outputs = computed(() => (progress.value ? finalOutputs(progress.value, outputVariables(source.value)) : []));
+const outputs = computed(() => (progress.value ? finalOutputs(progress.value, resultVariables(source.value)) : []));
 
 async function load() {
   loadError.value = '';
@@ -69,12 +68,6 @@ async function load() {
   }
 }
 onMounted(load);
-
-function problemFor(inputName: string): string {
-  const p = problems.value.find((x) => x.name === inputName);
-  if (!p) return '';
-  return p.problem === 'invalidJson' ? t('workflow.invalidJson') : t('workflow.required');
-}
 
 function run() {
   const { variables, problems: found } = toRunVariables(inputs.value, values.value);
@@ -120,47 +113,7 @@ function runAgain() {
           <h2 class="tl-section-title">{{ t('workflow.inputs') }}</h2>
           <p v-if="inputs.length === 0" class="tl-muted">{{ t('workflow.noInputs') }}</p>
 
-          <form v-else class="inputs" @submit.prevent="run">
-            <div v-for="input in inputs" :key="input.variable.name" class="field">
-              <div v-if="input.kind === 'desktopOnly'" class="tl-card desktop-only">
-                <ion-icon :icon="desktopOutline" aria-hidden="true" />
-                <div>
-                  <strong>{{ input.label }}</strong>
-                  <span class="tl-muted">{{ t('workflow.desktopOnlyInput') }}</span>
-                  <small class="tl-muted">{{ t('workflow.desktopOnlyInputHint') }}</small>
-                </div>
-              </div>
-
-              <div v-else-if="input.kind === 'boolean'" class="tl-card toggle-card">
-                <ion-toggle
-                  v-model="values[input.variable.name] as boolean"
-                  :name="input.variable.name"
-                  :disabled="input.variable.readonly"
-                  justify="space-between"
-                >
-                  {{ input.label }}
-                </ion-toggle>
-                <p v-if="input.variable.description" class="tl-muted toggle-hint">{{ input.variable.description }}</p>
-              </div>
-
-              <text-field
-                v-else
-                v-model="values[input.variable.name] as string"
-                :name="input.variable.name"
-                :label="input.label"
-                :required="input.variable.required"
-                :readonly="input.variable.readonly"
-                :multiline="input.kind === 'json'"
-                :mono="input.kind === 'json'"
-                :type="input.kind === 'number' ? 'number' : input.kind === 'date' ? 'date' : input.variable.secret ? 'password' : 'text'"
-                :inputmode="input.kind === 'number' ? 'decimal' : undefined"
-                :autocapitalize="input.kind === 'text' ? 'sentences' : 'off'"
-                :hint="input.variable.description"
-                :error="problemFor(input.variable.name)"
-              />
-            </div>
-            <p v-if="problems.length" class="tl-error" role="alert">{{ t('workflow.missingRequired') }}</p>
-          </form>
+          <run-inputs-form v-else v-model="values" :inputs="inputs" :problems="problems" @submit="run" />
         </template>
 
         <!-- During and after a run: the steps and the result -->
@@ -181,7 +134,7 @@ function runAgain() {
             <p v-if="outputs.length === 0" class="tl-muted">{{ t('workflow.noOutputs') }}</p>
             <div v-for="o in outputs" :key="o.variable.name" class="tl-card output">
               <strong>{{ o.variable.label || o.variable.name }}</strong>
-              <pre class="tl-value">{{ o.variable.secret ? '••••••' : formatValue(o.value) }}</pre>
+              <pre class="tl-value">{{ o.variable.secret || progress.hidden.includes(o.variable.name) ? '••••••' : formatValue(o.value) }}</pre>
             </div>
           </template>
 
@@ -229,40 +182,6 @@ function runAgain() {
   margin: 0;
   font-size: 15px;
   line-height: 1.5;
-}
-.inputs {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.toggle-card {
-  padding: 14px 16px;
-}
-.toggle-card ion-toggle {
-  display: flex;
-  width: 100%;
-  font-size: 15px;
-}
-.toggle-hint {
-  margin: 6px 0 0;
-  font-size: 13px;
-  line-height: 1.4;
-}
-.desktop-only {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-}
-.desktop-only ion-icon {
-  font-size: 22px;
-  color: var(--tl-muted);
-  flex: none;
-  margin-top: 2px;
-}
-.desktop-only div {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
 .status {
   margin: 16px 0 8px;

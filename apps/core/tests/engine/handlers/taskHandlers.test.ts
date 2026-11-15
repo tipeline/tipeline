@@ -330,7 +330,7 @@ describe('taskHandlers', () => {
       expect(transport.emit).toHaveBeenCalledWith(
         client,
         'onTaskInstall',
-        IPCMessage.success('Workflow installed successfully: t1', 'corr-6')
+        { ...IPCMessage.success('Workflow installed successfully: t1', 'corr-6'), identifier: 't1' }
       );
     });
 
@@ -346,7 +346,7 @@ describe('taskHandlers', () => {
       expect(transport.emit).toHaveBeenCalledWith(
         client,
         'onTaskInstall',
-        IPCMessage.success('Workflow installed successfully: t3', 'corr-7')
+        { ...IPCMessage.success('Workflow installed successfully: t3', 'corr-7'), identifier: 't3' }
       );
     });
 
@@ -372,7 +372,7 @@ describe('taskHandlers', () => {
       expect(transport.emit).toHaveBeenCalledWith(
         client,
         'onTaskInstall',
-        IPCMessage.success('Workflow installed successfully: t2', undefined)
+        { ...IPCMessage.success('Workflow installed successfully: t2', undefined), identifier: 't2' }
       );
     });
 

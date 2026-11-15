@@ -71,3 +71,30 @@ describe('finalOutputs', () => {
     expect(formatValue(null)).toBe('');
   });
 });
+
+describe('withFinalValues', () => {
+  it("adds the run's final values over the live ones, leaving out other scopes and hidden values", async () => {
+    const { withFinalValues } = await import('../src/lib/runProgress');
+    let p = startProgress(steps);
+    for (const e of realRun) p = applyRunEvent(p, e);
+    const done = withFinalValues(p, [
+      { name: 'out', value: 'hello from Linux', scope: 'task' },
+      { name: 'untouched', value: 'starting value', scope: 'task' },
+      { name: 'token', value: null, scope: 'task', hidden: true },
+      { name: 'HOME', value: null, scope: 'env', hidden: true },
+      { name: 'now', value: 'x', scope: 'core' },
+    ]);
+    expect(done.final).toBe(true);
+    expect(done.values).toEqual({ out: 'hello from Linux', untouched: 'starting value' });
+    expect(done.hidden).toEqual(['token']);
+    const shown = finalOutputs(done, [
+      { name: 'untouched', type: 'string' },
+      { name: 'token', type: 'string' },
+      { name: 'never', type: 'string' },
+    ]);
+    expect(shown.map((o) => [o.variable.name, o.value])).toEqual([
+      ['untouched', 'starting value'],
+      ['token', undefined],
+    ]);
+  });
+});

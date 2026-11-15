@@ -47,7 +47,7 @@ describe('draftWorkflow', () => {
     const { client } = fakeMcp([{ created: true, identifier: 'new-1', name: 'Annual salary', warnings: [] }]);
     const { provider, calls } = scripted([submit('s1')]);
 
-    await draftWorkflow({ mcpClient: client, provider }, 'annual salary');
+    await draftWorkflow({ toolClient: client, provider }, 'annual salary');
 
     expect(calls[0].tools.map((t) => t.name)).toEqual([
       'search_workflows',
@@ -65,7 +65,7 @@ describe('draftWorkflow', () => {
     const { client } = fakeMcp([{ created: true, identifier: 'new-1', name: 'Disk report', warnings: [] }]);
     const { provider, calls } = scripted([submit('s1')]);
 
-    await draftWorkflow({ mcpClient: client, provider, instructions: { global: 'Reports go to team@acme.com.' } }, 'disk report');
+    await draftWorkflow({ toolClient: client, provider, instructions: { global: 'Reports go to team@acme.com.' } }, 'disk report');
 
     const system = calls[0].messages[0].content as string;
     expect(system.indexOf('Reports go to team@acme.com.')).toBeGreaterThan(system.indexOf('# GUIDE'));
@@ -79,7 +79,7 @@ describe('draftWorkflow', () => {
     ]);
     const onProgress = vi.fn();
 
-    const outcome = await draftWorkflow({ mcpClient: client, provider, onProgress }, 'annual salary');
+    const outcome = await draftWorkflow({ toolClient: client, provider, onProgress }, 'annual salary');
 
     expect(callTool).toHaveBeenCalledWith('create_draft_workflow', { yaml: 'name: Annual salary\n' });
     expect(outcome).toEqual({
@@ -108,7 +108,7 @@ describe('draftWorkflow', () => {
       },
     ]);
 
-    const outcome = await draftWorkflow({ mcpClient: client, provider }, 'sales report every day');
+    const outcome = await draftWorkflow({ toolClient: client, provider }, 'sales report every day');
 
     expect(callTool).toHaveBeenCalledWith('create_draft_workflow', { yaml: 'name: Sales report\n', schedule: 'every day at 9am' });
     expect(outcome).toMatchObject({ kind: 'drafted', schedule });
@@ -131,7 +131,7 @@ describe('draftWorkflow', () => {
       },
     ]);
 
-    await draftWorkflow({ mcpClient: client, provider }, 'Generates random numbers.', { schedule: 'every 30 seconds' });
+    await draftWorkflow({ toolClient: client, provider }, 'Generates random numbers.', { schedule: 'every 30 seconds' });
 
     expect(calls[0].messages[1].content).toBe(
       'Generates random numbers.\n\nIt will run on a schedule (every 30 seconds) that Tipeline starts it on. ' +
@@ -147,7 +147,7 @@ describe('draftWorkflow', () => {
     ]);
     const { provider, calls } = scripted([submit('s1'), submit('s2')]);
 
-    const outcome = await draftWorkflow({ mcpClient: client, provider }, 'x');
+    const outcome = await draftWorkflow({ toolClient: client, provider }, 'x');
 
     expect(calls[1].messages.at(-1)?.content).toContain('multiplier: required');
     expect(outcome).toMatchObject({ kind: 'drafted', identifier: 'new-2' });
@@ -158,7 +158,7 @@ describe('draftWorkflow', () => {
     const { client } = fakeMcp([bad, bad, bad]);
     const { provider } = scripted([submit('a'), submit('b'), submit('c')]);
 
-    const outcome = await draftWorkflow({ mcpClient: client, provider }, 'x');
+    const outcome = await draftWorkflow({ toolClient: client, provider }, 'x');
 
     expect(outcome).toEqual({
       kind: 'failed',
@@ -174,7 +174,7 @@ describe('draftWorkflow', () => {
       submit('s1'),
     ]);
 
-    await draftWorkflow({ mcpClient: client, provider }, 'x');
+    await draftWorkflow({ toolClient: client, provider }, 'x');
 
     expect(callTool).not.toHaveBeenCalledWith('exec_task', expect.anything());
     expect(calls[1].messages.at(-1)?.content).toMatch(/not available/);
@@ -187,7 +187,7 @@ describe('draftWorkflow', () => {
     } as unknown as McpClient;
     const { provider } = scripted([]);
 
-    await expect(draftWorkflow({ mcpClient: client, provider }, 'x')).rejects.toThrow(/Restart Core/);
+    await expect(draftWorkflow({ toolClient: client, provider }, 'x')).rejects.toThrow(/Restart Core/);
   });
 });
 
@@ -273,7 +273,7 @@ describe('drafting with workflows to reuse', () => {
     const { client } = fakeMcp([{ created: true, identifier: 'new-1', name: 'Versions', warnings: [] }]);
     const { provider, calls } = scripted([submit('s1')]);
 
-    await draftWorkflow({ mcpClient: client, provider }, 'email the versions', {
+    await draftWorkflow({ toolClient: client, provider }, 'email the versions', {
       reuse: [{ identifier: 'php-version', name: 'Get PHP Version' }],
     });
 
@@ -304,7 +304,7 @@ describe('when part of the request cannot be done', () => {
     const { client, callTool } = fakeMcp([]);
     const { provider } = scripted([cannotDo([' Reading the battery level: no action reads it. ', ''])]);
 
-    const outcome = await draftWorkflow({ mcpClient: client, provider }, 'save my battery level to a file');
+    const outcome = await draftWorkflow({ toolClient: client, provider }, 'save my battery level to a file');
 
     expect(outcome).toEqual({
       kind: 'gap',
@@ -318,7 +318,7 @@ describe('when part of the request cannot be done', () => {
     const { client } = fakeMcp([{ created: true, identifier: 'new-1', name: 'Battery', warnings: [] }]);
     const { provider, calls } = scripted([cannotDo([]), submit('s1')]);
 
-    const outcome = await draftWorkflow({ mcpClient: client, provider }, 'save my battery level');
+    const outcome = await draftWorkflow({ toolClient: client, provider }, 'save my battery level');
 
     expect(outcome.kind).toBe('drafted');
     expect(calls[1].messages.at(-1)?.content).toMatch(/list each part/);
@@ -329,7 +329,7 @@ describe('when part of the request cannot be done', () => {
     const { provider, calls } = scripted([submit('s1')]);
     const missing = ['Reading the battery level: no action reads it.'];
 
-    const outcome = await draftWorkflow({ mcpClient: client, provider }, 'save my battery level', {
+    const outcome = await draftWorkflow({ toolClient: client, provider }, 'save my battery level', {
       acceptMissing: missing,
     });
 

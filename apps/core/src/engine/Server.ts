@@ -66,7 +66,12 @@ function writeTokenFile(token: string): void {
   }
 }
 
-function registerHandlers(transport: ITransport, broadcast: (e: string, d: any) => void, shutdown: ShutdownFn) {
+function registerHandlers(
+  transport: ITransport,
+  broadcast: (e: string, d: any) => void,
+  shutdown: ShutdownFn,
+  tools: TipelineMcpServer
+) {
   registerTaskHandlers(transport, broadcast);
   registerPipelineHandlers(transport, broadcast);
   registerVariableHandlers(transport);
@@ -78,7 +83,7 @@ function registerHandlers(transport: ITransport, broadcast: (e: string, d: any) 
   registerSettingsHandlers(transport);
   registerPluginHandlers(transport);
   registerProjectHandlers(transport);
-  registerAgentHandlers(transport);
+  registerAgentHandlers(transport, tools);
   registerBackupHandlers(transport);
   registerHubHandlers(transport);
   registerCacheHandlers(transport);
@@ -174,14 +179,14 @@ process.on('uncaughtException', (err: Error, origin: string) => {
     }
 
     // WebSocket handlers registered immediately (WS server is already listening)
-    registerHandlers(wsTransport, globalBroadcast, shutdown);
+    registerHandlers(wsTransport, globalBroadcast, shutdown, mcpServer);
 
     // IPC handlers must be registered inside ipc.serve() callback — node-ipc only creates
     // ipc.server once serve() runs, so attach() (which touches ipc.server) can't happen
     // any earlier either.
     ipc.serve(() => {
       ipcTransport.attach();
-      registerHandlers(ipcTransport, globalBroadcast, shutdown);
+      registerHandlers(ipcTransport, globalBroadcast, shutdown, mcpServer);
     });
 
     ipc.server.start();

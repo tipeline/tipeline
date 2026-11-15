@@ -1,6 +1,6 @@
 import { onBeforeUnmount, ref, shallowRef } from 'vue';
 import { ConnectionLostError, type RunHandle, type TipelineClient } from '@tipeline/client';
-import { applyRunEvent, startProgress, type RunProgress } from '@/lib/runProgress';
+import { applyRunEvent, startProgress, withFinalValues, type FinalVariable, type RunProgress } from '@/lib/runProgress';
 import type { StepInfo } from '@/lib/workflows';
 
 /**
@@ -19,6 +19,18 @@ export function useWorkflowRun(client: () => TipelineClient) {
       progress.value = applyRunEvent(progress.value, event);
     });
     handle.value = run;
+    run.done
+      .then(async (last) => {
+        const pipelineIdentifier = progress.value?.pipelineIdentifier;
+        if (last.type !== 'end_all' || !pipelineIdentifier) return;
+        // The final values, including outputs no step changed. Without them the live values stay.
+        const detail = await client()
+          .request<{ variables?: FinalVariable[] } | null>('pipelineDetail', { pipelineIdentifier })
+          .catch(() => null);
+        if (handle.value !== run || !progress.value || !Array.isArray(detail?.variables)) return;
+        progress.value = withFinalValues(progress.value, detail.variables);
+      })
+      .catch(() => {});
     run.done.catch((err) => {
       if (handle.value !== run || !progress.value) return;
       progress.value = {

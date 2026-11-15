@@ -21,3 +21,15 @@ export {
   wsUrlFor,
   type RunEventType,
 } from './protocol.js';
+export {
+  ASSISTANT_FINAL_PHASES,
+  type AssistantChoiceOption,
+  type AssistantHandle,
+  type AssistantHubSource,
+  type AssistantInput,
+  type AssistantPhase,
+  type AssistantProposal,
+  type AssistantRequestItem,
+  type AssistantRunResult,
+  type AssistantUpdate,
+} from './assistant.js';
