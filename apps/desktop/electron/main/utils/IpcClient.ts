@@ -70,7 +70,10 @@ export class IpcClient {
           this.isConnected = false;
           // attachedEvents stays: node-ipc reconnects with the same object, which keeps
           // its listeners, so attaching them again would fire every handler twice.
-          onDisconnect?.();
+          // node-ipc also fires this for every failed attempt before the first connect
+          // (Desktop started before Core). Reporting those would leave the tray saying
+          // "Core not running", since the first connect isn't a reconnect.
+          if (this.hasConnected) onDisconnect?.();
         });
 
         conn.on('error', (err: Error) => {
