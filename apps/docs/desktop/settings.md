@@ -11,7 +11,7 @@ Open **Settings** at the bottom of the sidebar.
 | **Hubs** | The [hubs](/hub/) Tipeline installs from and checks for updates |
 | **Run history** | [How long finished runs are kept](/desktop/pipelines#how-long-runs-are-kept) |
 | **Cache** | Stored results of [cached](/workflows/caching) steps and workflows: how much space they use, the size limit, and **Clear all** |
-| **About** | The versions of the Tipeline parts running on this computer |
+| **About** | The versions of the Tipeline parts running on this computer, starting Core at login, and whether Tipeline [keeps running in the menu bar / tray](/desktop/overview#in-the-menu-bar-and-tray) when you close the window |
 
 ## Workspaces
 

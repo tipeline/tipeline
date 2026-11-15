@@ -35,6 +35,7 @@ import SidebarNavItem from '@/components/SidebarNavItem.vue';
 import { usePluginStore } from '@/store/pluginStore';
 import { useApprovalsStore } from '@/store/approvalsStore';
 import { useAlertsStore, type AlertItem } from '@/store/alertsStore';
+import { bringToFront } from '@/utils/mainWindow';
 import { useHubUpdatesStore, type HubUpdateEvent } from '@/store/hubUpdatesStore';
 import { toast } from '@/components/ui/sonner';
 import type { PendingApproval } from '@/components/approvals/ApprovalCard.vue';
@@ -115,7 +116,7 @@ const bottomItems = computed<NavItem[]>(() => [
 // windows opened on their own don't notify a second time.
 function announce(added: PendingApproval[]) {
   const openPage = () => {
-    window.focus();
+    bringToFront();
     router.push('/approvals');
   };
   const title = added.length === 1 ? added[0].title : t('approvals.notifyMany', { count: added.length });
@@ -133,7 +134,7 @@ function announce(added: PendingApproval[]) {
 // notification. Both open Needs you on the dashboard.
 function announceAlerts(added: AlertItem[]) {
   const openPage = () => {
-    window.focus();
+    bringToFront();
     router.push('/');
   };
   const first = added[0];
@@ -155,7 +156,7 @@ function announceAlerts(added: AlertItem[]) {
 // Updates installed, held back or failed in the background, announced the same way.
 function announceHubUpdates(added: HubUpdateEvent[]) {
   const openPage = () => {
-    window.focus();
+    bringToFront();
     router.push({ name: 'HubUpdates' });
   };
   const first = added[0];
@@ -171,15 +172,23 @@ function announceHubUpdates(added: HubUpdateEvent[]) {
   notification.onclick = openPage;
 }
 
+// Decided or dismissed in another window (the tray popover): the badges follow right away.
+function onDataChanged() {
+  void approvals.refresh();
+  void alerts.refresh();
+}
+
 onMounted(() => {
   pluginStore.refreshAttentionCount();
   approvals.start(announce);
   alerts.start(announceAlerts);
   hubUpdates.start(announceHubUpdates);
+  window.ipcRenderer.on('data:changed', onDataChanged);
 });
 onUnmounted(() => {
   approvals.stop();
   alerts.stop();
+  window.ipcRenderer.off('data:changed', onDataChanged);
 });
 </script>
 

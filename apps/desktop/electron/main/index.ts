@@ -13,6 +13,8 @@ import { initDetachedWindows, openDetachedWindow } from './DetachedWindows';
 import { checkOpenFile, checkOpenUrl, readableAppFile, resolveAppPath, type OpenFileMode } from './utils/appOpen';
 import { isAppTrusted, recordPickedFile, setAppTrusted, wasPicked } from './appFileTrust';
 import { mediaResponse, playableMediaFile } from './utils/appMedia';
+import { initTray, isAppPath, keepRunning, noteWindowHidden } from './TrayPopover';
+import { isQuitting, markQuitting } from './quitState';
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -168,8 +170,20 @@ async function createWindow() {
     win.loadFile(indexHtml);
   }
 
-  // Test actively push message to the Electron-Renderer
-  win.webContents.on('did-finish-load', () => {});
+  // Closing the window hides it while Tipeline keeps running in the menu bar / tray (the
+  // default): Core, notifications and the tray badge carry on, and opening it again is
+  // instant. With that turned off, closing it quits Tipeline (Core keeps running either way).
+  win.on('close', (event) => {
+    if (isQuitting() || !keepRunning()) return;
+    event.preventDefault();
+    win?.hide();
+    if (process.platform === 'darwin') app.dock?.hide();
+    noteWindowHidden();
+  });
+  win.on('closed', () => {
+    win = null;
+    if (!isQuitting()) app.quit();
+  });
 
   // Make all links open with the browser (or mail client), not with the application.
   // Only web and mail links — the same ones app Markdown renders as links.
@@ -190,36 +204,62 @@ function fencePermissions() {
   session.defaultSession.setPermissionCheckHandler((_contents, _permission, _origin, details) => details.isMainFrame);
 }
 
+/**
+ * Brings the main window back (it may be hidden while Tipeline runs in the tray), on
+ * `navigateTo` when given: a path inside the app, which the renderer opens itself.
+ */
+function showMainWindow(navigateTo?: string) {
+  if (!win || win.isDestroyed()) {
+    createWindow();
+    if (navigateTo) win!.webContents.once('did-finish-load', () => win?.webContents.send('app:navigate', navigateTo));
+  } else if (win.webContents.isCrashed()) {
+    // A page that crashed while hidden would come back blank: load it again.
+    win.webContents.reload();
+    if (navigateTo) win.webContents.once('did-finish-load', () => win?.webContents.send('app:navigate', navigateTo));
+  } else if (navigateTo) {
+    win.webContents.send('app:navigate', navigateTo);
+  }
+  if (process.platform === 'darwin') void app.dock?.show();
+  if (win!.isMinimized()) win!.restore();
+  win!.show();
+  win!.focus();
+}
+
+/** Shows the main window with its Assistant panel open (the tray's Ask button). */
+function openAssistantInMainWindow() {
+  const fresh = !win || win.isDestroyed();
+  showMainWindow();
+  if (fresh) win!.webContents.once('did-finish-load', () => win?.webContents.send('app:assistant'));
+  else win!.webContents.send('app:assistant');
+}
+
+// The renderer asks for this when a notification is clicked: the window may be hidden.
+ipcMain.handle(SEND.WINDOW_SHOW, (_event, navigateTo?: unknown) =>
+  showMainWindow(isAppPath(navigateTo) ? navigateTo : undefined)
+);
+
+// Menu Quit, ⌘Q, the tray's Quit: really quit, so closing the window doesn't just hide it.
+app.on('before-quit', markQuitting);
+
 app.whenReady().then(() => {
   fencePermissions();
   registerAssetProtocol();
   registerDataProtocol();
   registerMediaProtocol();
   createWindow();
+  initTray({ preload, indexHtml, devServerUrl: VITE_DEV_SERVER_URL, showMain: showMainWindow, openAssistant: openAssistantInMainWindow });
   startAppUpdater(() => win).catch((err) => console.warn('[AppUpdater]', err?.message ?? err));
 });
 
+// The tray's popover is always open (hidden), so this only fires while quitting.
 app.on('window-all-closed', () => {
   win = null;
-  if (process.platform !== 'darwin') app.quit();
+  app.quit();
 });
 
-app.on('second-instance', () => {
-  if (win) {
-    // Focus on the main window if the user tried to open another
-    if (win.isMinimized()) win.restore();
-    win.focus();
-  }
-});
-
-app.on('activate', () => {
-  const allWindows = BrowserWindow.getAllWindows();
-  if (allWindows.length) {
-    allWindows[0].focus();
-  } else {
-    createWindow();
-  }
-});
+// Opening Tipeline again (dock, Start menu, a second launch) shows the window it hid.
+app.on('second-instance', () => showMainWindow());
+app.on('activate', () => showMainWindow());
 
 ipcMain.handle('dialog:open-file', async (event, { filters } = {}) => {
   const focusedWindow =

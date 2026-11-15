@@ -68,6 +68,36 @@ When Needs you is long, the whole page scrolls.
 
 Starred items, recent items and dismissed failures and missed runs are kept per workspace.
 
+## In the menu bar and tray
+
+Closing the Tipeline window doesn't quit it: it keeps running in the **menu bar** (macOS)
+or the **notification area** (Windows, Linux), so notifications keep coming and scheduled
+runs keep being watched. The first time, a notification says so. To really quit, use
+**Quit Tipeline** from the icon's menu (right-click on macOS and Windows) or ⌘Q while the
+window is open. To make closing the window quit Tipeline instead, turn off **Keep running
+in the menu bar / tray** in **Settings → About**. Core keeps running either way.
+
+The icon shows how many things need you: a number next to it on macOS, a red dot on
+Windows and Linux. Click it to open a small window with:
+
+- **Needs you**: the 4 most urgent items: critical alerts first, then approvals, failed
+  runs, other alerts and missed schedules, each with its button (**Approve** / **Reject**,
+  **See run**, **Open run**, **Run now**, **Dismiss**). With more, **See all (N)** opens
+  Needs you on Home.
+- **Running**: up to 3 runs in progress and how long they've been running. **■** stops one
+  after you confirm; **+N more running** opens the Runs page filtered to running ones.
+- **Next**: when the next scheduled run starts.
+- **Open Tipeline**, and **Ask**, which brings the main window forward with the
+  [Assistant](/assistant/) panel open on the page you were on (Home, when you were in the
+  builder or an editor). Ask isn't shown when connected to a server workspace.
+
+Clicking a title opens it in the main window. Dismissing in either place dismisses it in
+both. Press Esc or click elsewhere to close it.
+
+On Linux many desktops don't report clicks on tray icons, so the icon opens a menu with
+the same items instead. GNOME needs the AppIndicator extension (Ubuntu has it already) to
+show tray icons at all.
+
 ### Search
 
 Press **⌘J** (or click **Search…**) to search workflows, apps, projects and tags. Every

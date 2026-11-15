@@ -1,6 +1,7 @@
 import { app, type BrowserWindow } from 'electron';
 import type { AppUpdater } from 'electron-updater';
 import { stopCoreForUpdate } from './CoreLauncher';
+import { markQuitting } from '../quitState';
 
 // Off until releases are signed and notarized: macOS refuses to apply an update to an unsigned
 // app. Turning this on is the only change needed, see RELEASING.md.
@@ -48,6 +49,8 @@ export async function installAppUpdate(interrupt = false): Promise<{ installing:
   if (!updater || !readyVersion) return { installing: false };
   const { ready, activeRuns } = await stopCoreForUpdate(interrupt);
   if (!ready) return { installing: false, activeRuns };
+  // quitAndInstall closes the windows first: closing must quit, not hide to the tray.
+  markQuitting();
   updater.quitAndInstall();
   return { installing: true };
 }
