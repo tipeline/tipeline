@@ -46,6 +46,7 @@ npm -w packages/utils run build
 npm -w packages/i18n run build
 npm -w packages/schemas run build
 npm -w packages/agent run build
+npm -w packages/client run build   # browser client for a Server (the mobile app)
 
 # Applications
 npm -w apps/core run build

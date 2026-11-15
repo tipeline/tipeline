@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Tipeline is a task/automation orchestration platform with five applications and five shared packages in an npm workspace monorepo.
+Tipeline is a task/automation orchestration platform with five applications and six shared packages in an npm workspace monorepo.
 
 - **apps/core** — Node.js engine that executes automation tasks (browser, file, email, SSH, OCR, PDF, database, etc.)
 - **apps/cli** — Commander.js CLI that controls the core engine via IPC
@@ -16,6 +16,7 @@ Tipeline is a task/automation orchestration platform with five applications and 
 - **packages/utils** — Shared utilities (e.g., `generateIdentifier()`)
 - **packages/i18n** — i18next-based translations with file-system backend
 - **packages/agent** — the assistant: LLM providers, MCP client, request and draft loops
+- **packages/client** — browser client for a Tipeline Server (sign-in, requests, live runs over WebSocket); no Electron or Node APIs, used by the mobile app
 
 ## Commands
 
