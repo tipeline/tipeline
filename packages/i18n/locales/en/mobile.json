@@ -1,0 +1,73 @@
+{
+  "connect": {
+    "title": "Connect to Tipeline",
+    "intro": "Your workflows run on your Tipeline Server. This app lets you run them and follow them from your phone.",
+    "server": "Server address",
+    "serverHint": "The address you use in Desktop.",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signingIn": "Signing in…",
+    "mfaTitle": "Two-step verification",
+    "mfaIntro": "Enter the 6-digit code from your authenticator app, or a backup code.",
+    "code": "Code",
+    "verify": "Verify",
+    "back": "Back",
+    "missing": "Fill in the server address, email and password.",
+    "unreachable": "Could not reach the server. Check the address and that this app's origin is allowed (TIPELINE_CORS_ORIGINS)."
+  },
+  "tabs": {
+    "workflows": "Workflows",
+    "account": "Account"
+  },
+  "connection": {
+    "connecting": "Connecting…",
+    "reconnecting": "Offline. Trying again…",
+    "retry": "Retry now",
+    "unauthorized": "Your sign-in has expired.",
+    "signInAgain": "Sign in again"
+  },
+  "workflows": {
+    "title": "Workflows",
+    "search": "Search workflows",
+    "empty": "No workflows yet. Create them in Tipeline Desktop.",
+    "noMatch": "No workflows match \"{query}\".",
+    "loadFailed": "Could not load workflows: {message}",
+    "tryAgain": "Try again"
+  },
+  "workflow": {
+    "inputs": "Inputs",
+    "noInputs": "This workflow needs no inputs.",
+    "required": "Required",
+    "run": "Run",
+    "running": "Running…",
+    "runAgain": "Run again",
+    "steps": "Steps",
+    "result": "Result",
+    "noOutputs": "Finished. This workflow returns no outputs.",
+    "finished": "Finished",
+    "failed": "Failed",
+    "desktopOnlyInput": "Set on Desktop",
+    "desktopOnlyInputHint": "This input can't be filled in on a phone yet. The workflow uses its saved value.",
+    "invalidJson": "Enter valid JSON.",
+    "missingRequired": "Fill in the required inputs.",
+    "lostConnection": "The connection dropped during the run. It keeps going on the server.",
+    "notFound": "Workflow not found.",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "account": {
+    "title": "Account",
+    "signedInAs": "Signed in as",
+    "role": "Role",
+    "server": "Server",
+    "status": "Connection",
+    "statusOpen": "Connected",
+    "signOut": "Sign out",
+    "roles": {
+      "admin": "Admin",
+      "editor": "Editor",
+      "viewer": "Viewer"
+    }
+  }
+}

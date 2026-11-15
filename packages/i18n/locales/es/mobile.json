@@ -1,0 +1,73 @@
+{
+  "connect": {
+    "title": "Conectar a Tipeline",
+    "intro": "Tus flujos se ejecutan en tu Tipeline Server. Esta app te permite ejecutarlos y seguirlos desde el teléfono.",
+    "server": "Dirección del servidor",
+    "serverHint": "La dirección que usas en Desktop.",
+    "email": "Correo",
+    "password": "Contraseña",
+    "signIn": "Iniciar sesión",
+    "signingIn": "Iniciando sesión…",
+    "mfaTitle": "Verificación en dos pasos",
+    "mfaIntro": "Escribe el código de 6 dígitos de tu app de autenticación, o un código de respaldo.",
+    "code": "Código",
+    "verify": "Verificar",
+    "back": "Atrás",
+    "missing": "Completa la dirección del servidor, el correo y la contraseña.",
+    "unreachable": "No se pudo conectar con el servidor. Revisa la dirección y que el origen de esta app esté permitido (TIPELINE_CORS_ORIGINS)."
+  },
+  "tabs": {
+    "workflows": "Flujos",
+    "account": "Cuenta"
+  },
+  "connection": {
+    "connecting": "Conectando…",
+    "reconnecting": "Sin conexión. Reintentando…",
+    "retry": "Reintentar ahora",
+    "unauthorized": "Tu sesión ha caducado.",
+    "signInAgain": "Iniciar sesión de nuevo"
+  },
+  "workflows": {
+    "title": "Flujos",
+    "search": "Buscar flujos",
+    "empty": "Aún no hay flujos. Créalos en Tipeline Desktop.",
+    "noMatch": "Ningún flujo coincide con \"{query}\".",
+    "loadFailed": "No se pudieron cargar los flujos: {message}",
+    "tryAgain": "Reintentar"
+  },
+  "workflow": {
+    "inputs": "Entradas",
+    "noInputs": "Este flujo no necesita entradas.",
+    "required": "Obligatorio",
+    "run": "Ejecutar",
+    "running": "Ejecutando…",
+    "runAgain": "Ejecutar de nuevo",
+    "steps": "Pasos",
+    "result": "Resultado",
+    "noOutputs": "Terminado. Este flujo no devuelve resultados.",
+    "finished": "Terminado",
+    "failed": "Falló",
+    "desktopOnlyInput": "Se define en Desktop",
+    "desktopOnlyInputHint": "Esta entrada aún no se puede completar en el teléfono. El flujo usa su valor guardado.",
+    "invalidJson": "Escribe un JSON válido.",
+    "missingRequired": "Completa las entradas obligatorias.",
+    "lostConnection": "La conexión se cortó durante la ejecución. Sigue en el servidor.",
+    "notFound": "No se encontró el flujo.",
+    "yes": "Sí",
+    "no": "No"
+  },
+  "account": {
+    "title": "Cuenta",
+    "signedInAs": "Sesión iniciada como",
+    "role": "Rol",
+    "server": "Servidor",
+    "status": "Conexión",
+    "statusOpen": "Conectado",
+    "signOut": "Cerrar sesión",
+    "roles": {
+      "admin": "Administrador",
+      "editor": "Editor",
+      "viewer": "Lector"
+    }
+  }
+}
