@@ -10,6 +10,7 @@ import { TaskOwnershipService } from './ownership/TaskOwnershipService.js';
 import { PipelineAuditService } from './audit/PipelineAuditService.js';
 import { AuditLogService } from './audit/AuditLogService.js';
 import { RateLimiter } from './security/RateLimiter.js';
+import { applyCors, corsOrigins } from './security/cors.js';
 import { readBody, MAX_BODY_BYTES } from './utils/httpBody.js';
 
 const PORT = parseInt(process.env.TIPELINE_SERVER_PORT ?? '4001', 10);
@@ -27,6 +28,7 @@ export class ServerApp {
   private tokenRoutes = new TokenRoutes();
   private generalLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX);
   private loginLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, LOGIN_RATE_LIMIT_MAX);
+  private corsOrigins = corsOrigins();
 
   async start(): Promise<void> {
     await runMigrations();
@@ -116,6 +118,9 @@ export class ServerApp {
   }
 
   private async handleHttp(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+    // Preflights are answered here, before the rate limits: the browser sends one ahead of
+    // each new kind of request, and the real request that follows is counted.
+    if (applyCors(req, res, this.corsOrigins)) return;
     res.setHeader('Content-Type', 'application/json');
 
     const ip = this.clientIp(req);

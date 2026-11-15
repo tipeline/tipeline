@@ -4,18 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Tipeline is a task/automation orchestration platform with five applications and five shared packages in an npm workspace monorepo.
+Tipeline is a task/automation orchestration platform with six applications and six shared packages in an npm workspace monorepo.
 
 - **apps/core** — Node.js engine that executes automation tasks (browser, file, email, SSH, OCR, PDF, database, etc.)
 - **apps/cli** — Commander.js CLI that controls the core engine via IPC
 - **apps/desktop** — Electron + Vue 3 desktop UI for building and managing tasks
 - **apps/server** — Tipeline Server: multi-user gateway (Postgres) in front of a Core
 - **apps/docs** — VitePress documentation site (user guides and internals)
+- **apps/mobile** — Capacitor + Vue 3 + Ionic phone app, a client of the Server (sign in, workflows, live runs)
 - **packages/schemas** — Zod schemas for all 30+ action types
 - **packages/types** — Shared TypeScript type definitions
 - **packages/utils** — Shared utilities (e.g., `generateIdentifier()`)
 - **packages/i18n** — i18next-based translations with file-system backend
 - **packages/agent** — the assistant: LLM providers, MCP client, request and draft loops
+- **packages/client** — browser client for a Tipeline Server (sign-in, requests, live runs over WebSocket); no Electron or Node APIs, used by the mobile app
 
 ## Commands
 
@@ -46,6 +48,12 @@ npm -w apps/desktop run preview  # Preview the built Electron app
 ```bash
 npm -w apps/docs run dev        # http://localhost:5173
 npm -w apps/docs run generate   # regenerate actions/*.md from action JSDoc + schemas
+```
+
+### Mobile app
+```bash
+npm -w apps/mobile run dev      # http://localhost:5180 (fixed: the Server's TIPELINE_CORS_ORIGINS must list it)
+npm -w apps/mobile run build    # vue-tsc + Vite build
 ```
 
 ### CLI

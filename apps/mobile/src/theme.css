@@ -1,0 +1,193 @@
+/* Colors from the design canvas (Tipeline Mobile), as Ionic variables. */
+
+:root {
+  --tl-bg: #f4f6f9;
+  --tl-card: #ffffff;
+  --tl-border: #e1e5eb;
+  --tl-ink: #1a1f26;
+  --tl-muted: #5b6472;
+  --tl-accent: #2457d6;
+  --tl-success-ink: #166534;
+  --tl-success-bg: #e5f3ea;
+  --tl-failed-ink: #8f2f09;
+  --tl-failed-bg: #fceee6;
+  --tl-waiting-ink: #6e4700;
+  --tl-waiting-bg: #fdf3dc;
+
+  --ion-font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --ion-background-color: var(--tl-bg);
+  --ion-background-color-rgb: 244, 246, 249;
+  --ion-text-color: var(--tl-ink);
+  --ion-text-color-rgb: 26, 31, 38;
+  --ion-item-background: var(--tl-card);
+  --ion-card-background: var(--tl-card);
+  --ion-toolbar-background: var(--tl-bg);
+  --ion-tab-bar-background: var(--tl-card);
+  --ion-border-color: var(--tl-border);
+
+  /* Main buttons are ink-filled, as in the designs. */
+  --ion-color-primary: #1a1f26;
+  --ion-color-primary-rgb: 26, 31, 38;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #171b21;
+  --ion-color-primary-tint: #31353c;
+
+  --ion-color-secondary: #2457d6;
+  --ion-color-secondary-rgb: 36, 87, 214;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #204dbc;
+  --ion-color-secondary-tint: #3a68da;
+
+  --ion-color-danger: #8f2f09;
+  --ion-color-danger-rgb: 143, 47, 9;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #7e2908;
+  --ion-color-danger-tint: #9a4422;
+
+  --ion-color-success: #166534;
+  --ion-color-success-rgb: 22, 101, 52;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #13592e;
+  --ion-color-success-tint: #2d7448;
+
+  --ion-color-medium: #5b6472;
+  --ion-color-medium-rgb: 91, 100, 114;
+  --ion-color-medium-contrast: #ffffff;
+  --ion-color-medium-contrast-rgb: 255, 255, 255;
+  --ion-color-medium-shade: #505864;
+  --ion-color-medium-tint: #6b7480;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --tl-bg: #12161b;
+    --tl-card: #1c2128;
+    --tl-border: #2c333d;
+    --tl-ink: #eef1f5;
+    --tl-muted: #a3acb9;
+    --tl-accent: #7ea2ff;
+    --tl-success-ink: #8fd6a8;
+    --tl-success-bg: #173322;
+    --tl-failed-ink: #ffab8a;
+    --tl-failed-bg: #3a1d12;
+    --tl-waiting-ink: #f3c96b;
+    --tl-waiting-bg: #3a2d10;
+
+    --ion-background-color: var(--tl-bg);
+    --ion-background-color-rgb: 18, 22, 27;
+    --ion-text-color: var(--tl-ink);
+    --ion-text-color-rgb: 238, 241, 245;
+    --ion-item-background: var(--tl-card);
+    --ion-card-background: var(--tl-card);
+    --ion-toolbar-background: var(--tl-bg);
+    --ion-tab-bar-background: var(--tl-card);
+    --ion-border-color: var(--tl-border);
+
+    --ion-color-primary: #eef1f5;
+    --ion-color-primary-rgb: 238, 241, 245;
+    --ion-color-primary-contrast: #12161b;
+    --ion-color-primary-contrast-rgb: 18, 22, 27;
+    --ion-color-primary-shade: #d1d4d8;
+    --ion-color-primary-tint: #f0f2f6;
+
+    --ion-color-secondary: #7ea2ff;
+    --ion-color-secondary-rgb: 126, 162, 255;
+    --ion-color-secondary-contrast: #12161b;
+    --ion-color-secondary-contrast-rgb: 18, 22, 27;
+    --ion-color-secondary-shade: #6f8fe0;
+    --ion-color-secondary-tint: #8babff;
+
+    --ion-color-danger: #ffab8a;
+    --ion-color-danger-rgb: 255, 171, 138;
+    --ion-color-danger-contrast: #12161b;
+    --ion-color-danger-contrast-rgb: 18, 22, 27;
+    --ion-color-danger-shade: #e09679;
+    --ion-color-danger-tint: #ffb396;
+
+    --ion-color-success: #8fd6a8;
+    --ion-color-success-rgb: 143, 214, 168;
+    --ion-color-success-contrast: #12161b;
+    --ion-color-success-contrast-rgb: 18, 22, 27;
+    --ion-color-success-shade: #7ebc94;
+    --ion-color-success-tint: #9adab1;
+
+    --ion-color-medium: #a3acb9;
+    --ion-color-medium-rgb: 163, 172, 185;
+    --ion-color-medium-contrast: #12161b;
+    --ion-color-medium-contrast-rgb: 18, 22, 27;
+    --ion-color-medium-shade: #8f97a3;
+    --ion-color-medium-tint: #acb4c0;
+  }
+}
+
+ion-toolbar {
+  --border-width: 0;
+}
+
+ion-title.title-large {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* A white card on the grey page, the designs' basic surface. */
+.tl-card {
+  background: var(--tl-card);
+  border: 1px solid var(--tl-border);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.tl-muted {
+  color: var(--tl-muted);
+}
+
+.tl-section-title {
+  margin: 24px 4px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--tl-muted);
+}
+
+.tl-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.tl-pill.success {
+  color: var(--tl-success-ink);
+  background: var(--tl-success-bg);
+}
+.tl-pill.failed {
+  color: var(--tl-failed-ink);
+  background: var(--tl-failed-bg);
+}
+.tl-pill.waiting {
+  color: var(--tl-waiting-ink);
+  background: var(--tl-waiting-bg);
+}
+
+.tl-error {
+  color: var(--tl-failed-ink);
+  background: var(--tl-failed-bg);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+pre.tl-value {
+  margin: 4px 0 0;
+  font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

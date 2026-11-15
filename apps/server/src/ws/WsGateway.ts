@@ -12,6 +12,7 @@ import { authorizeDecision, visibleApprovals, visibleHistory, type PendingApprov
 import { authorizeAlertTargets, visibleAlerts, type AlertListItem } from './alertAuthorization.js';
 import { AuditLogService } from '../audit/AuditLogService.js';
 import { hideInProjectDetail, hideInProjectMap } from './hideWorkflows.js';
+import { chooseProtocol, tokenFromRequest } from './wsAuth.js';
 
 // Events in the middle of a run: the request stays routed to its connection. (A
 // sub-workflow's onTaskEnd arrives mid-run too — only onTaskEndAll / onTaskError end it.)
@@ -251,14 +252,18 @@ export class WsGateway {
   }
 
   attach(httpServer: Server): void {
-    const wss = new WebSocketServer({ server: httpServer });
+    const wss = new WebSocketServer({
+      server: httpServer,
+      // Browser clients send their token as a subprotocol (see wsAuth.ts).
+      handleProtocols: (protocols) => chooseProtocol(protocols),
+    });
 
     wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
       const ip = req.socket.remoteAddress ?? null;
 
       // A client may send as soon as the connection opens, before the token check below is
       // done. The listener is attached first so that message waits instead of being lost.
-      const token = this.extractToken(req);
+      const token = tokenFromRequest(req);
       const authenticated = (token ? AuthService.validateToken(token) : Promise.resolve(null))
         .catch((err) => {
           console.error('[WsGateway] Token check failed:', err?.message ?? err);
@@ -800,11 +805,5 @@ export class WsGateway {
     for (const client of this.clients) {
       if (client.readyState === WebSocket.OPEN) client.send(msg);
     }
-  }
-
-  private extractToken(req: IncomingMessage): string | null {
-    const auth = req.headers['authorization'];
-    if (auth?.startsWith('Bearer ')) return auth.slice(7);
-    return null;
   }
 }
