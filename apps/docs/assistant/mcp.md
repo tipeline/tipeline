@@ -18,9 +18,16 @@ Core must be running: the Desktop app starts it, or run `tipeline start`.
 ### Claude Code
 
 ```bash
-claude mcp add --transport http tipeline http://127.0.0.1:4002/mcp \
+claude mcp add --transport http --scope user tipeline http://127.0.0.1:4002/mcp \
   --header "Authorization: Bearer $(cat ~/.tipeline/.database/core.token)"
 ```
+
+`--scope user` makes Tipeline available in every folder. Leave it out to add it only for the
+folder you run the command in. The `claude` CLI and the Claude Code extension for VS Code share
+this setting, so one command covers both. See [Using it in Claude Code](#using-it-in-claude-code).
+
+The command copies the token in when you run it. If `core.token` changes, remove the server
+(`claude mcp remove tipeline`) and add it again.
 
 ### Cursor and other clients with HTTP support
 
@@ -50,6 +57,63 @@ Bridge to the HTTP server with `mcp-remote`:
   }
 }
 ```
+
+### claude.ai on the web
+
+Connectors on claude.ai run in the cloud and can't reach `127.0.0.1`. To use one, Core has to be
+reachable from the internet. Put the [Tipeline Server](/server/) in front of it rather than
+exposing Core and its token.
+
+## Using it in Claude Code
+
+1. Make sure Core is running: open the Desktop app, or run `tipeline start`.
+2. Start a new session: run `claude` in a terminal, or open a new conversation in the VS Code
+   panel. Sessions that were already open don't see a server you just added.
+3. Type `/mcp` and check that `tipeline` shows as connected.
+
+Then ask in plain words. There are no special commands; Claude picks the Tipeline tools itself:
+
+- "What Tipeline workflows do I have?"
+- "Find a Tipeline workflow that checks if a website is up and run it for example.com"
+- "Run my Tipeline workflow *Daily report* with date = today"
+- "Create a Tipeline draft workflow that reads a CSV from ~/Downloads and emails me the row
+  count. Check it before saving."
+
+Saying "Tipeline" helps, especially inside a code project, where Claude might otherwise answer
+from the files around it.
+
+- **Permissions.** The first time Claude uses each tool (such as `mcp__tipeline__exec_task`), it
+  asks you. Choose "allow always" for tools you trust, like searching and listing; you may want
+  to keep approving `exec_task` each time.
+- **Runs show up in Desktop**, live and in the workflow's run history.
+- **New workflows are drafts.** Open them in Desktop, test them, and click **Mark as ready**.
+
+For a single question without the interactive session, use `claude -p`:
+
+```bash
+claude -p "list my Tipeline workflows"
+```
+
+In this mode Claude can't stop to ask for permission. To let it use the Tipeline tools, including
+running workflows, add `--allowedTools "mcp__tipeline__*"`.
+
+## MCP or a skill file?
+
+Some teams write Claude skills from these docs so Claude knows how to list and create workflows.
+A skill is written instructions: Claude reads it and then works from what the text says, usually
+by running the CLI or writing YAML files. The MCP server lets Claude use the running Core instead.
+
+| | Skill file | MCP server |
+|---|---|---|
+| Which workflows exist | Whatever the CLI prints, as text to parse | `search_workflows`: installed and hub workflows, with their inputs and outputs |
+| Actions and plugins | What the docs describe; misses locally installed plugins, and goes stale when actions change | `list_actions` and `describe_actions` read what this Core actually has |
+| Creating a workflow | Claude writes YAML; mistakes show only when it's installed or run | `check_workflow` checks it the way installing and running does |
+| Untested workflows | Can be installed as ready and run right away | Saved as drafts that can't run until a person marks them ready |
+| Running | `tipeline workflow exec --var` can set any variable, private ones included | Public and protected inputs; private and secret values never come back |
+| Setup | Drop the files in; works wherever Claude has a shell | Core running, plus the token |
+
+Skills are still useful for team conventions such as names, tags and style. The best of both: a
+skill for your conventions that tells Claude to use the Tipeline MCP tools for everything else.
 
 ## Tools
 
