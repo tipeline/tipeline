@@ -807,9 +807,11 @@ or the ones in `detailFields` (the same shape as a Details component's `fields`,
 - `scroll` — every column is as wide as its content and the table scrolls sideways.
   Tables without a `fit` (made before it existed) work this way.
 
-Columns are squeezed down to 56px at most; a column can also set `width` (exactly that
-many pixels) or `minWidth` (never narrower — past that the table scrolls sideways
-instead of squeezing it further):
+Columns are squeezed down to about 9 characters (96px), or to their content when it is
+shorter; past that the table scrolls sideways, so a table with many columns stays
+readable on a phone. A column can also set `width` (exactly that many pixels) or
+`minWidth` (never narrower — past that the table scrolls sideways instead of squeezing
+it further):
 
 ```yaml
 fit: truncate
