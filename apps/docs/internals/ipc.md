@@ -50,9 +50,9 @@ Every operation has a **send channel** and a matching **receive channel** prefix
 | `taskExport` | `onTaskExport` | Export to file |
 | `run` | streamed events (below) | Run from source |
 | `exec` | streamed events (below) | Run an installed task |
-| `pipelineList` | `onPipelineList` | List pipeline history |
+| `pipelineList` | `onPipelineList` | List pipeline history (`{ taskIdentifier?, limit?, offset?, status?, excludeTasks? }`; `excludeTasks`: workflow identifiers to leave out) |
 | `pipelineDetail` | `onPipelineDetail` | Get pipeline detail |
-| `pipelineStats` | `onPipelineStats` | Runs started and failed per period (`{ boundaries }`: ascending ISO instants) |
+| `pipelineStats` | `onPipelineStats` | Runs started and failed per period (`{ boundaries, excludeTasks? }`: ascending ISO instants) |
 | `pipelineResume` | `onPipelineResume` | Resume failed pipeline |
 | `pipelineCancel` | `onPipelineCancel` | Cancel a run (`{ pipelineIdentifier }`, or `{ correlationId }` of the request that started a run that doesn't persist; optional `canceledBy`). Answers `{ status: 'canceling' \| 'canceled' \| 'not_running' }` |
 | `variableList` | `onVariableList` | List global variables |
@@ -76,7 +76,7 @@ Every operation has a **send channel** and a matching **receive channel** prefix
 | `alertList` | `onAlertList` | Alerts raised by workflows, newest raise first: open ones, or all with `includeClosed` (`{ includeClosed?, taskIdentifier?, ids? }`) |
 | `alertDismiss` | `onAlertDismiss` | Acknowledge alerts (`{ id }`, `{ ids }` or `{ all: true }`, plus `dismissedBy?`); returns `{ dismissed }` |
 | `alertReopen` | `onAlertReopen` | Put a dismissed alert back in Needs you (`{ id }`) |
-| `scheduleList` | `onScheduleList` | List schedules |
+| `scheduleList` | `onScheduleList` | List schedules; each entry carries `timezone`, the zone its cron runs in (Core's) |
 | `scheduleSet` | `onScheduleSet` | Create a schedule: `{ identifier, when \| cron \| everySeconds \| runAt, variables }` |
 | `scheduleRemove` | `onScheduleRemove` | Delete schedule |
 | `status` | `onStatus` | Core engine status |

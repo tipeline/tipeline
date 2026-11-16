@@ -6,6 +6,12 @@ import type { ITransport } from '@engine/ITransport';
 
 type BroadcastFn = (event: string, data: any) => void;
 
+/** Workflow identifiers whose runs to leave out: a Server sends a user's hidden ones. */
+const excludeTasks = (payload: any): string[] =>
+  Array.isArray(payload?.excludeTasks)
+    ? payload.excludeTasks.filter((id: unknown): id is string => typeof id === 'string')
+    : [];
+
 export const registerPipelineHandlers = (transport: ITransport, broadcast: BroadcastFn) => {
   transport.on('pipelineList', async (message: any, client: any) => {
     if (!client) return;
@@ -14,7 +20,8 @@ export const registerPipelineHandlers = (transport: ITransport, broadcast: Broad
         message.payload.taskIdentifier,
         message.payload.limit,
         message.payload.offset,
-        typeof message.payload.status === 'string' ? message.payload.status : undefined
+        typeof message.payload.status === 'string' ? message.payload.status : undefined,
+        excludeTasks(message.payload)
       );
       transport.emit(client, 'onPipelineList', IPCMessage.success(result, message.correlationId));
     } catch (error: any) {
@@ -25,7 +32,7 @@ export const registerPipelineHandlers = (transport: ITransport, broadcast: Broad
   transport.on('pipelineStats', async (message: any, client: any) => {
     if (!client) return;
     try {
-      const result = await Core.pipelineStats(message.payload?.boundaries);
+      const result = await Core.pipelineStats(message.payload?.boundaries, excludeTasks(message.payload));
       transport.emit(client, 'onPipelineStats', IPCMessage.success(result, message.correlationId));
     } catch (error: any) {
       transport.emit(client, 'onPipelineStats', IPCMessage.failure(error.message, message.correlationId));

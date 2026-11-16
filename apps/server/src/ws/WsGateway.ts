@@ -84,6 +84,8 @@ const ADMIN_ONLY_COMMANDS = new Set([
   'projectExport', 'projectImport',
   // The Trash holds every user's deleted workflows and apps (owners aren't kept in Core).
   'trashList', 'trashRestore', 'trashDelete', 'trashEmpty',
+  // Deleting run history: runs of every user and every workflow (Core keeps no owner per run).
+  'pipelineClear', 'pipelineClearAll', 'pipelineDelete',
   // Core's assistant history (Desktop's, on that machine) has no user: everyone's at once.
   // The Server's own users have assistantHistory.
   'agentRunList',
@@ -517,6 +519,13 @@ export class WsGateway {
             });
           }
 
+          // Run lists and counts leave out other users' private workflows. Core does it in
+          // the query, so pages stay full and a hidden workflow's runs never leave Core.
+          if ((event === 'pipelineList' || event === 'pipelineStats') && currentUser.role !== 'admin') {
+            const hidden = await TaskOwnershipService.privateOwnedByOthers(currentUser.id);
+            payload.payload = { ...(payload.payload ?? {}), excludeTasks: [...hidden] };
+          }
+
           if (event === 'exec') {
             const taskId = payload.payload?.identifier;
             const cid = payload.correlationId;
@@ -624,6 +633,14 @@ export class WsGateway {
       this.routeOwnAppRuns(event, data);
       return;
     }
+    if (event === 'onPipelineDetail') {
+      void this.routeRunDetail(event, data);
+      return;
+    }
+    if (event === 'onScheduleList') {
+      void this.routeScheduleList(event, data);
+      return;
+    }
     if (SECRET_BEARING_ANSWERS.has(event)) {
       this.routeHidingSecrets(event, data);
       return;
@@ -668,6 +685,44 @@ export class WsGateway {
       if ((event === 'onTaskDetail' || event === 'onTaskRevisionDetail') && answer.source) {
         answer = { ...answer, source: withoutWrittenInSecrets(answer.source) };
       }
+    }
+    ws.send(JSON.stringify({ event, ...data, data: answer }));
+  }
+
+  /**
+   * A run's detail goes only to the asker. A run of another user's private workflow gets the
+   * same answer as a missing one, as for cancel: its steps and variables stay with the owner.
+   */
+  private async routeRunDetail(event: string, data: any): Promise<void> {
+    const correlationId = data?.correlationId;
+    const ws = correlationId ? this.correlationMap.get(correlationId) : undefined;
+    if (correlationId) this.correlationMap.delete(correlationId);
+    const user = ws ? this.clientUser.get(ws) : undefined;
+    if (!ws || !user || ws.readyState !== WebSocket.OPEN) return;
+
+    const taskIdentifier = data?.data?.task?.identifier;
+    if (user.role !== 'admin' && typeof taskIdentifier === 'string') {
+      const owner = await TaskOwnershipService.getOwner(taskIdentifier);
+      if (owner && owner.user_id !== user.id && owner.visibility === 'private') {
+        ws.send(JSON.stringify({ event, correlationId, error: 'Run not found' }));
+        return;
+      }
+    }
+    ws.send(JSON.stringify({ event, ...data }));
+  }
+
+  /** Schedules go only to the asker, without those of other users' private workflows. */
+  private async routeScheduleList(event: string, data: any): Promise<void> {
+    const correlationId = data?.correlationId;
+    const ws = correlationId ? this.correlationMap.get(correlationId) : undefined;
+    if (correlationId) this.correlationMap.delete(correlationId);
+    const user = ws ? this.clientUser.get(ws) : undefined;
+    if (!ws || !user || ws.readyState !== WebSocket.OPEN) return;
+
+    let answer = data?.data;
+    if (Array.isArray(answer) && user.role !== 'admin') {
+      const hidden = await TaskOwnershipService.privateOwnedByOthers(user.id);
+      if (hidden.size > 0) answer = answer.filter((s: any) => !hidden.has(s?.taskIdentifier));
     }
     ws.send(JSON.stringify({ event, ...data, data: answer }));
   }

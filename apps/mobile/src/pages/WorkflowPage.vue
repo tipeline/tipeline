@@ -15,10 +15,11 @@ import {
   IonSkeletonText,
   IonFooter,
 } from '@ionic/vue';
-import { checkmarkCircle, closeCircle, ellipseOutline } from 'ionicons/icons';
+import { checkmarkCircle, closeCircle, ellipseOutline, pauseCircle, removeCircleOutline, star, starOutline } from 'ionicons/icons';
 import ConnectionBanner from '@/components/ConnectionBanner.vue';
 import RunInputsForm from '@/components/RunInputsForm.vue';
 import { useSession } from '@/session';
+import { useStars } from '@/starsStore';
 import { useWorkflowRun } from '@/composables/useWorkflowRun';
 import {
   descriptionLine,
@@ -31,12 +32,16 @@ import {
   type FormProblem,
   type WorkflowSource,
 } from '@/lib/workflows';
-import { finalOutputs, formatValue } from '@/lib/runProgress';
+import { finalOutputs, formatValue, type StepState } from '@/lib/runProgress';
+import { confirmAction } from '@/lib/confirm';
 
 const props = defineProps<{ identifier: string }>();
 
 const { t } = useI18n();
 const session = useSession();
+const stars = useStars();
+// Viewers may look but not run (the Server refuses their runs).
+const canRun = computed(() => session.user?.role !== 'viewer');
 
 const name = ref('');
 const source = ref<WorkflowSource | null>(null);
@@ -76,8 +81,43 @@ function run() {
   start(props.identifier, variables, steps.value);
 }
 
+const STEP_ICONS: Record<StepState, string> = {
+  done: checkmarkCircle,
+  failed: closeCircle,
+  waiting: ellipseOutline,
+  canceled: removeCircleOutline,
+  skipped: removeCircleOutline,
+  paused: pauseCircle,
+};
+
 function runAgain() {
   reset();
+}
+
+// Cancel needs the run's identifier, which the first event brings.
+const canceling = ref(false);
+const cancelError = ref('');
+async function cancel() {
+  const pipelineIdentifier = progress.value?.pipelineIdentifier;
+  if (!pipelineIdentifier) return;
+  const sure = await confirmAction({
+    header: t('run.cancelTitle'),
+    message: t('run.cancelBody'),
+    confirm: t('run.cancel'),
+    cancel: t('run.keepRunning'),
+    destructive: true,
+  });
+  if (!sure || !running.value) return;
+  canceling.value = true;
+  cancelError.value = '';
+  try {
+    // The run's own stream then ends it on this page.
+    await session.api().request('pipelineCancel', { pipelineIdentifier });
+  } catch (err) {
+    cancelError.value = t('run.cancelFailed', { message: (err as Error).message });
+  } finally {
+    canceling.value = false;
+  }
 }
 </script>
 
@@ -89,6 +129,15 @@ function runAgain() {
           <ion-back-button default-href="/tabs/workflows" />
         </ion-buttons>
         <ion-title>{{ name }}</ion-title>
+        <ion-buttons v-if="loaded && !loadError" slot="end">
+          <ion-button
+            :aria-label="stars.isStarred(identifier) ? t('workflow.unstar') : t('workflow.star')"
+            :aria-pressed="stars.isStarred(identifier)"
+            @click="stars.toggle(identifier)"
+          >
+            <ion-icon slot="icon-only" :icon="stars.isStarred(identifier) ? star : starOutline" />
+          </ion-button>
+        </ion-buttons>
       </ion-toolbar>
       <connection-banner />
     </ion-header>
@@ -124,10 +173,16 @@ function runAgain() {
             </span>
             <span v-else-if="progress.state === 'finished'" class="tl-pill success">{{ t('workflow.finished') }}</span>
             <span v-else-if="progress.state === 'failed'" class="tl-pill failed">{{ t('workflow.failed') }}</span>
+            <span v-else-if="progress.state === 'canceled'" class="tl-pill muted">{{ t('runs.status.canceled') }}</span>
+            <span v-else-if="progress.state === 'paused'" class="tl-pill waiting">{{ t('run.waitingApproval') }}</span>
           </div>
 
           <p v-if="progress.state === 'lost'" class="tl-error" role="alert">{{ t('workflow.lostConnection') }}</p>
           <p v-if="progress.error" class="tl-error" role="alert">{{ progress.error }}</p>
+          <p v-if="cancelError" class="tl-error" role="alert">{{ cancelError }}</p>
+          <ion-button v-if="progress.state === 'paused'" fill="outline" size="small" router-link="/tabs/inbox">
+            {{ t('run.reviewApproval') }}
+          </ion-button>
 
           <template v-if="progress.state === 'finished'">
             <h2 class="tl-section-title">{{ t('workflow.result') }}</h2>
@@ -143,25 +198,46 @@ function runAgain() {
             <ol class="tl-card steps">
               <li v-for="step in progress.steps" :key="step.identifier" :class="step.state">
                 <ion-icon
-                  :icon="step.state === 'done' ? checkmarkCircle : step.state === 'failed' ? closeCircle : ellipseOutline"
+                  :icon="STEP_ICONS[step.state]"
                   aria-hidden="true"
                 />
                 <div>
                   <span>{{ step.label }}</span>
                   <small v-if="step.error" class="step-error">{{ step.error }}</small>
+                  <small v-else-if="step.state === 'canceled'" class="tl-muted">{{ t('run.stepCanceled') }}</small>
+                  <small v-else-if="step.state === 'skipped'" class="tl-muted">{{ t('run.stepSkipped') }}</small>
+                  <small v-else-if="step.state === 'paused'" class="tl-muted">{{ t('run.waitingApproval') }}</small>
                 </div>
               </li>
             </ol>
           </template>
+
+          <ion-button
+            v-if="!running && progress.pipelineIdentifier"
+            fill="clear"
+            class="view-run"
+            :router-link="`/tabs/home/runs/${encodeURIComponent(progress.pipelineIdentifier)}`"
+          >
+            {{ t('run.viewRun') }}
+          </ion-button>
         </template>
       </template>
     </ion-content>
 
     <ion-footer v-if="loaded && !loadError" class="ion-no-border">
       <ion-toolbar class="run-bar">
-        <ion-button v-if="!progress" expand="block" size="large" @click="run">{{ t('workflow.run') }}</ion-button>
-        <ion-button v-else-if="running" expand="block" size="large" disabled>
-          <ion-spinner name="crescent" aria-hidden="true" />{{ t('workflow.running') }}
+        <p v-if="!canRun" class="tl-muted viewer-note">{{ t('workflow.viewerCannotRun') }}</p>
+        <ion-button v-else-if="!progress" expand="block" size="large" @click="run">{{ t('workflow.run') }}</ion-button>
+        <ion-button
+          v-else-if="running"
+          expand="block"
+          size="large"
+          fill="outline"
+          color="danger"
+          :disabled="!progress.pipelineIdentifier || canceling"
+          @click="cancel"
+        >
+          <ion-spinner v-if="canceling" name="crescent" aria-hidden="true" />{{ canceling ? t('run.canceling') : t('run.cancel') }}
         </ion-button>
         <ion-button v-else expand="block" size="large" fill="outline" @click="runAgain">
           {{ t('workflow.runAgain') }}
@@ -225,8 +301,23 @@ function runAgain() {
 .steps li.failed ion-icon {
   color: var(--tl-failed-ink);
 }
+.steps li.paused ion-icon {
+  color: var(--tl-waiting-ink);
+}
+.steps li.canceled span,
+.steps li.skipped span {
+  color: var(--tl-muted);
+}
 .step-error {
   color: var(--tl-failed-ink);
+}
+.viewer-note {
+  margin: 4px 0;
+  font-size: 14px;
+  text-align: center;
+}
+.view-run {
+  margin: 16px 0 0;
 }
 .run-bar {
   --background: var(--tl-bg);

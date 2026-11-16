@@ -279,7 +279,7 @@ async function confirmClearHistory() {
             :hidden-columns="['status', 'finished_at']"
             :initial-filters="initialFilters"
             @filters-change="onFiltersChange"
-            selectable
+            :selectable="connectionStore.canDeleteRuns"
             :row-key="(run: Item) => run.identifier"
             v-model:selection="selection"
             :filters="[
@@ -314,7 +314,7 @@ async function confirmClearHistory() {
                 @delete="bulkDeleteOpen = true"
               />
               <Button
-                v-else
+                v-else-if="connectionStore.canDeleteRuns"
                 variant="destructive"
                 class="ml-auto"
                 :disabled="sortedPipelines.length === 0"

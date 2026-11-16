@@ -205,7 +205,7 @@ The full allowlist lives in `apps/server/src/ws/WsGateway.ts` (`ALLOWED_COMMANDS
 
 - **Tasks**: `taskList`, `taskDetail`, `taskNew`, `taskDuplicate`, `taskUpdateSource`, `taskUpdateMeta`, `taskValidate`, `taskInstall`, `taskExportAll`, `taskReload`, `taskUninstall`, `taskUploadImage`
 - **Execution**: `exec`, `debugNext`, `debugRun`, `debugPause`, `debugStop`
-- **Pipelines**: `pipelineList`, `pipelineDetail`, `pipelineStats`, `pipelineResume`, `pipelineClear`, `pipelineClearAll`
+- **Pipelines**: `pipelineList`, `pipelineDetail`, `pipelineStats`, `pipelineResume`, `pipelineCancel`, `pipelineClear`, `pipelineClearAll`, `pipelineDelete`. Deleting runs (`pipelineClear`, `pipelineClearAll`, `pipelineDelete`) is admin only: Core keeps no owner per run, so these reach every user's history.
 - **Apps, Variables, Tags, Schedules, Plugins, Projects, Hubs, Connections**: full CRUD per area (see source for exact names)
 - **System**: `status`, `stop`
 - **Assistant**: `assistantAsk`, `assistantRun`, `assistantChoose`, `assistantHistory`, answered by the Server itself (see [The Assistant](#the-assistant)). `agentRunList` reads Core's own Assistant history, which has no user on it, so it is admin only.
@@ -217,6 +217,8 @@ A `viewer`-scoped connection can only call the read-only subset: `taskList`, `ta
 Task-mutating commands (`taskUpdateSource`, `taskUpdateMeta`, `taskUninstall`, `taskReload`) are additionally gated by **task ownership**: a non-admin gets rejected if someone else owns that specific task, whether it's shared or private.
 
 `taskDetail`, `exec`, `taskValidate`, `taskDuplicate`, and `taskUploadImage` are additionally gated by **visibility**: a non-owner, non-admin calling any of these on a task someone else has marked `private` gets a generic `Task not found` — not a permission error, so probing identifiers can't confirm a private task exists or who owns it. A *shared* task someone else owns can still be viewed/run by anyone (just not edited/reloaded/uninstalled).
+
+Runs follow the same rule. `pipelineList` and `pipelineStats` leave out runs of other people's private workflows (the Server sends Core an `excludeTasks` list, so pages stay full), and `pipelineDetail` of such a run answers `Run not found`, like `pipelineCancel` does. Admins see every run. `scheduleList` leaves out their schedules the same way.
 
 ### The Assistant
 

@@ -1250,20 +1250,28 @@ export default class Core {
     return await TagService.delete(id);
   }
 
-  static async pipelineList(taskIdentifier: string | null, limit = 100, offset = 0, status?: string) {
+  /** `excludeTasks`: workflow identifiers whose runs are left out (a Server's private ones). */
+  static async pipelineList(
+    taskIdentifier: string | null,
+    limit = 100,
+    offset = 0,
+    status?: string,
+    excludeTasks: string[] = []
+  ) {
     if (taskIdentifier) {
+      if (excludeTasks.includes(taskIdentifier)) return [];
       return await PipelineService.getByTaskIdentifier(taskIdentifier, limit, offset, status);
     } else {
-      return await PipelineService.getAllWithTaskName(limit, offset, status);
+      return await PipelineService.getAllWithTaskName(limit, offset, status, excludeTasks);
     }
   }
 
   /** Runs started, and failed, per period: the dashboard's Today row. */
-  static async pipelineStats(boundaries: unknown) {
+  static async pipelineStats(boundaries: unknown, excludeTasks: string[] = []) {
     if (!Array.isArray(boundaries) || !boundaries.every((b) => typeof b === 'string' && !Number.isNaN(Date.parse(b)))) {
       throw new Error('boundaries must be a list of ISO dates');
     }
-    return await PipelineService.countsByPeriod(boundaries as string[]);
+    return await PipelineService.countsByPeriod(boundaries as string[], excludeTasks);
   }
 
   static async pipelineDetail(pipelineIdentifier: string) {
@@ -1869,8 +1877,13 @@ export default class Core {
     await getJobRunner().toggleSchedule(scheduleIdentifier, enabled);
   }
 
+  /**
+   * Every schedule, each with the time zone its cron runs in (Core's), so a client in
+   * another zone can say "At 09:00 (UTC)" instead of a time that reads as its own.
+   */
   static async scheduleList() {
-    return await getJobRunner().listSchedules();
+    const timezone = AppSettings.timezone;
+    return (await getJobRunner().listSchedules()).map((entry) => ({ ...entry, timezone }));
   }
 
   static async settingsList() {
