@@ -109,6 +109,16 @@ export {
 } from './capabilities';
 export type { Capability, CapabilityStep, WorkflowCapability, WorkflowCapabilities } from './capabilities';
 
+export {
+  phoneLayouts,
+  packPhoneLayouts,
+  isPhoneArranged,
+  isPhoneHidden,
+} from './AppPhoneLayout';
+export type { PhoneGridLayout, PhoneLayoutItem, PhonePlacement } from './AppPhoneLayout';
+export { APP_PHONE_COLUMNS } from './App';
+export type { AppComponentMobile } from './App';
+
 export const coreValidations = {
   variableObject: variableObject,
   varObject: varObject,

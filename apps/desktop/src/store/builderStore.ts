@@ -10,14 +10,14 @@ import type {
   AppRunnable,
   AppSource,
 } from '@tipeline/schemas';
-import { coreValidations } from '@tipeline/schemas';
+import { coreValidations, packPhoneLayouts, phoneLayouts } from '@tipeline/schemas';
 import { invokeCore } from '@/utils/invoke';
 import { SEND } from '@/ipc-channels';
 import { i18n } from '@/i18n';
 import { toast } from '@/components/ui/sonner';
 import { renameComponentReferences, renameRunnableReferences } from '@/utils/appRefactor';
 import { mapBindableProps } from '@/utils/appLiteral';
-import { bottomOf, descendantIds, isContainer, refusedInside } from '@/utils/appTree';
+import { bottomOf, childrenOf, descendantIds, isContainer, refusedInside } from '@/utils/appTree';
 import { itemFields } from '@/utils/listItemFields';
 
 const { RESERVED_BINDING_NAMES } = coreValidations.appObject;
@@ -26,6 +26,17 @@ const SAVE_DELAY_MS = 500;
 const HISTORY_LIMIT = 100;
 
 type Layout = { x: number; y: number; w: number; h: number };
+
+/** Which layout the builder's canvas edits. */
+export type CanvasDevice = 'desktop' | 'phone';
+
+/** Drops an empty `mobile` (nothing hidden, no place of its own). */
+function pruneMobile(component: AppComponent) {
+  const mobile = component.mobile;
+  if (!mobile) return;
+  if (!mobile.hidden) delete mobile.hidden;
+  if (!mobile.hidden && !mobile.layout) delete component.mobile;
+}
 
 /** A runnable without its task alias — the alias is resolved from the chosen workflow on save. */
 export type RunnableDraft = AppRunnable extends infer R ? (R extends AppRunnable ? Omit<R, 'workflow'> : never) : never;
@@ -84,6 +95,8 @@ export const useBuilderStore = defineStore('builder', () => {
   const savedIndicator = ref(false);
   const selectedPageId = ref<string | null>(null);
   const selectedComponentId = ref<string | null>(null);
+  /** Which layout the canvas edits: Desktop's, or the phone's (builder only, never saved). */
+  const canvasDevice = ref<CanvasDevice>('desktop');
   /** Palette type being dragged (set on mousedown in the palette). */
   const draggedType = ref<AppComponentType | null>(null);
   /** Asks the properties panel to show something (set by the problems list). */
@@ -129,6 +142,7 @@ export const useBuilderStore = defineStore('builder', () => {
     clipboard.value = null;
     editorTabs.value = {};
     listSamples.value = {};
+    canvasDevice.value = 'desktop';
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = null;
     resaveAfterCurrent = false;
@@ -495,6 +509,11 @@ export const useBuilderStore = defineStore('builder', () => {
     if (parent) component.parent = { ...parent };
     else delete component.parent;
     component.layout = layout ? { ...layout } : { ...component.layout, y };
+    // Its phone place was in the grid it left.
+    if (component.mobile?.layout) {
+      delete component.mobile.layout;
+      pruneMobile(component);
+    }
     revealComponent(id);
     touch();
     return true;
@@ -556,6 +575,112 @@ export const useBuilderStore = defineStore('builder', () => {
         component.layout = { x, y, w, h };
         changed = true;
       }
+    }
+    if (changed) touch();
+  }
+
+  // ------------------------------------------------------------------ phone layout
+
+  /** The components of one grid: the page's own, or a container's or a tab's. */
+  function gridComponents(parent: AppComponentParent | null | undefined): AppComponent[] {
+    return childrenOf(selectedPage.value?.components ?? [], parent ?? null);
+  }
+
+  /**
+   * The first change to a grid's phone layout places all of it: every component gets
+   * the place it was shown in (automatic until then), so moving one doesn't send the
+   * others below it.
+   */
+  function pinPhoneGrid(parent: AppComponentParent | null | undefined) {
+    for (const { item, layout } of phoneLayouts(gridComponents(parent))) {
+      if (!item.mobile?.layout) item.mobile = { ...item.mobile, layout: { ...layout } };
+    }
+  }
+
+  const parentOf = (component: AppComponent) => component.parent ?? null;
+
+  /** Positions from the phone canvas (one grid's). Ignores a report that changes nothing. */
+  function updatePhoneLayouts(parent: AppComponentParent | null, layouts: Array<{ id: string } & Layout>) {
+    const shown = new Map(phoneLayouts(gridComponents(parent)).map((p) => [p.item.id, p.layout]));
+    const changes = layouts.filter(({ id, x, y, w, h }) => {
+      const l = shown.get(id);
+      return l && (l.x !== x || l.y !== y || l.w !== w || l.h !== h);
+    });
+    if (!changes.length) return;
+    pinPhoneGrid(parent);
+    const components = gridComponents(parent);
+    for (const { id, x, y, w, h } of changes) {
+      const component = components.find((c) => c.id === id);
+      if (component) component.mobile = { ...component.mobile, layout: { x, y, w, h } };
+    }
+    touch();
+  }
+
+  /**
+   * Full width (all phone columns) or part of it. The grid is laid out again in its
+   * order on the phone, so the component keeps its place and nothing jumps into a gap.
+   */
+  function setPhoneWidth(id: string, w: number) {
+    const component = selectedPage.value?.components.find((c) => c.id === id);
+    if (!component || component.mobile?.hidden) return;
+    const parent = parentOf(component);
+    pinPhoneGrid(parent);
+    const width = Math.min(Math.max(1, w), coreValidations.appObject.APP_PHONE_COLUMNS);
+    if (component.mobile!.layout!.w === width) return;
+    const order = phoneLayouts(gridComponents(parent)).map((p) => ({
+      id: p.item.id,
+      w: p.item.id === id ? width : p.layout.w,
+      h: p.layout.h,
+    }));
+    applyPhoneLayouts(parent, packPhoneLayouts(order));
+    touch();
+  }
+
+  function applyPhoneLayouts(parent: AppComponentParent | null, layouts: Array<{ id: string } & Layout>) {
+    const components = gridComponents(parent);
+    for (const { id, ...layout } of layouts) {
+      const c = components.find((x) => x.id === id);
+      if (c) c.mobile = { ...c.mobile, layout };
+    }
+  }
+
+  /** One place earlier (-1) or later (1) on phones; its grid is laid out again in that order. */
+  function movePhone(id: string, direction: -1 | 1) {
+    const component = selectedPage.value?.components.find((c) => c.id === id);
+    if (!component || component.mobile?.hidden) return;
+    const parent = parentOf(component);
+    pinPhoneGrid(parent);
+    const order = phoneLayouts(gridComponents(parent));
+    const index = order.findIndex((p) => p.item.id === id);
+    const other = index + direction;
+    if (index < 0 || other < 0 || other >= order.length) return;
+    [order[index], order[other]] = [order[other], order[index]];
+    applyPhoneLayouts(parent, packPhoneLayouts(order.map((p) => ({ id: p.item.id, w: p.layout.w, h: p.layout.h }))));
+    touch();
+  }
+
+  /** Hidden on phones, or shown again (below what is placed there). */
+  function setPhoneHidden(id: string, hidden: boolean) {
+    const component = selectedPage.value?.components.find((c) => c.id === id);
+    if (!component || !!component.mobile?.hidden === hidden) return;
+    if (hidden) component.mobile = { hidden: true };
+    else {
+      delete component.mobile!.hidden;
+      pruneMobile(component);
+    }
+    touch();
+  }
+
+  /** The page's phone layout back to automatic. What is hidden on phones stays hidden. */
+  function resetPhoneLayout() {
+    const page = selectedPage.value;
+    if (!page) return;
+    let changed = false;
+    for (const component of page.components) {
+      if (!component.mobile?.layout) continue;
+      delete component.mobile.layout;
+      pruneMobile(component);
+      changed = true;
     }
     if (changed) touch();
   }
@@ -638,6 +763,11 @@ export const useBuilderStore = defineStore('builder', () => {
       if (!fits) delete root.parent;
     }
     root.layout = { ...root.layout, y: bottomOf(page.components, root.parent) };
+    // On phones the copy goes below what is placed there, like a new component.
+    if (root.mobile?.layout) {
+      delete root.mobile.layout;
+      pruneMobile(root);
+    }
     page.components.push(...copies);
     selectComponent(root.id);
     touch();
@@ -725,6 +855,12 @@ export const useBuilderStore = defineStore('builder', () => {
     selectedPage,
     selectedComponent,
     draggedType,
+    canvasDevice,
+    updatePhoneLayouts,
+    setPhoneWidth,
+    movePhone,
+    setPhoneHidden,
+    resetPhoneLayout,
     load,
     reset,
     save,

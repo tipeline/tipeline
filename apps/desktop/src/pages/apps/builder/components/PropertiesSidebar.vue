@@ -3,8 +3,8 @@ import { computed, provide, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import type { AppAction, AppFormField, AppRunnable, AppTab } from '@tipeline/schemas';
-import { coreValidations } from '@tipeline/schemas';
-import { Plus, Pencil, Trash2, Play, History, Wand2, Loader2 } from 'lucide-vue-next';
+import { APP_PHONE_COLUMNS, coreValidations, phoneLayouts } from '@tipeline/schemas';
+import { Plus, Pencil, Trash2, Play, History, Wand2, Loader2, ChevronUp, ChevronDown } from 'lucide-vue-next';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent } from '@/components/ui/sidebar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -33,7 +33,7 @@ import { bindingScope, itemRootsFor, listItemNames, type AppProblem } from '@/ut
 import ProblemNotes from './ProblemNotes.vue';
 import { WIDGETS_BY_TYPE, frameOf, isBindable, type PropField } from '@/components/app/widgets/registry';
 import { useBuilderStore, type RunnableDraft } from '@/store/builderStore';
-import { descendantIds, isContainer, listViewAround, refusedInside } from '@/utils/appTree';
+import { childrenOf, descendantIds, isContainer, listViewAround, refusedInside } from '@/utils/appTree';
 import { useListItemFields } from '@/composables/useListItemFields';
 import { storeToRefs } from 'pinia';
 import { useQuery } from '@/composables/useQuery';
@@ -353,6 +353,28 @@ const deletePageOpen = ref(false);
 
 const activeTab = ref<string | number>('properties');
 
+// ------------------------------------------------------------------ phone
+
+// The Phone tab is there while the canvas shows the phone layout, and opens with it.
+const phone = computed(() => builderStore.canvasDevice === 'phone');
+watch(phone, (on) => {
+  if (on) activeTab.value = 'phone';
+  else if (activeTab.value === 'phone') activeTab.value = 'properties';
+});
+
+/** Inside a list view's item template: items keep their desktop layout on phones. */
+const inListTemplate = computed(
+  () => !!component.value && !!listViewAround(page.value?.components ?? [], component.value.parent?.id)
+);
+const phoneHidden = computed(() => component.value?.mobile?.hidden === true);
+/** Where phones show the selected component, and its neighbours' order. */
+const phonePlaces = computed(() =>
+  component.value ? phoneLayouts(childrenOf(page.value?.components ?? [], component.value.parent ?? null)) : []
+);
+const phonePlace = computed(() => phonePlaces.value.find((p) => p.item.id === component.value?.id) ?? null);
+const phoneIndex = computed(() => phonePlaces.value.findIndex((p) => p.item.id === component.value?.id));
+const HALF_PHONE = APP_PHONE_COLUMNS / 2;
+
 // The problems list can ask to show a component's properties or a runnable.
 watch(
   () => builderStore.focusRequest,
@@ -525,6 +547,7 @@ function saveState() {
                 <span v-if="runnablesHaveErrors" class="size-1.5 rounded-full bg-destructive" :aria-label="t('builder.problems.title')" />
               </TabsTrigger>
               <TabsTrigger value="state">{{ t('builder.stateTab') }}</TabsTrigger>
+              <TabsTrigger v-if="phone" value="phone">{{ t('builder.phone.tab') }}</TabsTrigger>
             </TabsList>
 
             <!-- PROPERTIES -->
@@ -823,6 +846,94 @@ function saveState() {
                 <p v-if="row.key && stateErrors[index]" class="text-xs text-destructive m-0">{{ t(stateErrors[index]!) }}</p>
               </div>
               <p class="text-xs text-muted-foreground">{{ t('builder.state.hint') }}</p>
+            </TabsContent>
+
+            <!-- PHONE: how the selected component shows on phones -->
+            <TabsContent v-if="phone" value="phone" class="data-[state=inactive]:hidden">
+              <div v-if="component" :key="component.id" class="flex flex-col gap-4 mt-3">
+                <div>
+                  <p class="m-0 text-sm font-medium truncate">{{ component.name }}</p>
+                  <p class="m-0 text-xs text-muted-foreground">{{ t(`builder.components.${component.type}`) }}</p>
+                </div>
+
+                <p v-if="inListTemplate" class="m-0 rounded-md bg-muted p-2.5 text-xs leading-relaxed text-muted-foreground">
+                  {{ t('builder.phone.inListItem') }}
+                </p>
+                <template v-else>
+                  <div class="flex items-center justify-between gap-2">
+                    <Label :for="`phone-shown-${component.id}`" class="text-xs">{{ t('builder.phone.showOnPhones') }}</Label>
+                    <Switch
+                      :id="`phone-shown-${component.id}`"
+                      :model-value="!phoneHidden"
+                      @update:model-value="(v: boolean) => builderStore.setPhoneHidden(component!.id, !v)"
+                    />
+                  </div>
+
+                  <template v-if="!phoneHidden && phonePlace">
+                    <div class="flex flex-col gap-1.5">
+                      <Label class="text-xs">{{ t('builder.phone.width') }}</Label>
+                      <div class="flex items-center self-start rounded-md border p-0.5" role="group" :aria-label="t('builder.phone.width')">
+                        <Button
+                          size="sm"
+                          :variant="phonePlace.layout.w === APP_PHONE_COLUMNS ? 'secondary' : 'ghost'"
+                          class="h-7 px-2 text-xs"
+                          :aria-pressed="phonePlace.layout.w === APP_PHONE_COLUMNS"
+                          @click="builderStore.setPhoneWidth(component!.id, APP_PHONE_COLUMNS)"
+                        >
+                          {{ t('builder.phone.full') }}
+                        </Button>
+                        <Button
+                          size="sm"
+                          :variant="phonePlace.layout.w === HALF_PHONE ? 'secondary' : 'ghost'"
+                          class="h-7 px-2 text-xs"
+                          :aria-pressed="phonePlace.layout.w === HALF_PHONE"
+                          @click="builderStore.setPhoneWidth(component!.id, HALF_PHONE)"
+                        >
+                          {{ t('builder.phone.half') }}
+                        </Button>
+                      </div>
+                      <p
+                        v-if="phonePlace.layout.w !== APP_PHONE_COLUMNS && phonePlace.layout.w !== HALF_PHONE"
+                        class="m-0 text-xs text-muted-foreground"
+                      >
+                        {{ t('builder.phone.columns', { count: phonePlace.layout.w, total: APP_PHONE_COLUMNS }) }}
+                      </p>
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                      <Label class="text-xs">{{ t('builder.phone.order') }}</Label>
+                      <div class="flex gap-1.5">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          class="h-7 px-2 text-xs"
+                          :disabled="phoneIndex <= 0"
+                          @click="builderStore.movePhone(component!.id, -1)"
+                        >
+                          <ChevronUp class="w-3.5 h-3.5 mr-1" /> {{ t('builder.phone.moveUp') }}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          class="h-7 px-2 text-xs"
+                          :disabled="phoneIndex < 0 || phoneIndex >= phonePlaces.length - 1"
+                          @click="builderStore.movePhone(component!.id, 1)"
+                        >
+                          <ChevronDown class="w-3.5 h-3.5 mr-1" /> {{ t('builder.phone.moveDown') }}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <p class="m-0 rounded-md bg-muted p-2.5 text-xs leading-relaxed text-muted-foreground">
+                      {{ phonePlace.placed ? t('builder.phone.placedNote') : t('builder.phone.automaticNote') }}
+                    </p>
+                  </template>
+                </template>
+              </div>
+              <div v-else class="mt-3 flex flex-col gap-2 text-xs leading-relaxed text-muted-foreground">
+                <p class="m-0">{{ t('builder.phone.pageNote') }}</p>
+                <p class="m-0">{{ t('builder.phone.rulesNote') }}</p>
+              </div>
             </TabsContent>
           </Tabs>
         </SidebarGroupContent>

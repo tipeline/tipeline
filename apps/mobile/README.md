@@ -34,7 +34,7 @@ The **Apps** tab runs the apps built in Desktop with Desktop's own app runtime a
   - run events arrive on the same channels Desktop's main process uses;
   - web links open in the phone's browser;
   - opening files on the server machine or file dialogs answer with a message, since a phone can't reach them.
-- **Layout.** Desktop's two app grids are swapped at build time for `src/apps/PhoneGrid.vue`: one column in reading order, with small components (KPIs, buttons) paired two to a row. Wide components such as tables and the kanban board scroll sideways for now.
+- **Layout.** Desktop's page grid (AppGrid) is swapped at build time for `src/apps/PhoneGrid.vue`, which places components by `phoneLayouts` from `@tipeline/schemas`, the rule the app builder's phone canvas uses too. A page arranged in the builder (**Desktop | Phone**) shows each component where it was placed on the 4-column phone grid; otherwise components go in reading order, full width, small ones (KPIs, buttons) two to a row. Components with `mobile.hidden` aren't shown. Wide components such as tables and the kanban board scroll sideways for now.
 - **Styles.** `src/styles/app-area.css` brings Tailwind and Desktop's design tokens (`apps/desktop/src/assets/css/theme.css`, shared with Desktop). Tailwind's reset applies only while an app is open (`body.tl-apps`, see `app-preflight.css`). Ionic's global CSS sits in the lowest cascade layer (`src/styles/ionic.css`), so it doesn't override Desktop's styles.
 - **Loading.** All of it loads the first time an app opens. The rest of the phone app doesn't carry Desktop's code.
 
@@ -54,5 +54,5 @@ npm -w apps/mobile run test     # unit tests (Vitest)
 - **Secure token storage.** The sign-in is kept in `localStorage` for now; the native build must keep it in the Keychain / Keystore (see `src/storage.ts`).
 - **Assistant:** writing new workflows (drafts) and turning a request into a schedule are Desktop-only for now.
 - **Approvals:** no Face ID / fingerprint check before deciding yet (it needs the native projects).
-- **Apps:** tables as cards, phone versions of kanban, calendar, map and gallery, and the optional `mobile:` settings in app YAML (see the plan). Pictures and files stored on the server machine don't show.
+- **Apps:** tables as cards, phone versions of kanban, calendar, map and gallery, (see the plan). Pictures and files stored on the server machine don't show.
 - **Push notifications:** the Server sends them when set up (see the Server docs, "Push notifications"); the phone registers once the native projects exist.
