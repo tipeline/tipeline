@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ArrowRightLeft } from 'lucide-vue-next';
 import {
@@ -108,20 +108,21 @@ function onDragStart(e: DragEvent, card: KanbanCard) {
   e.dataTransfer?.setData('text/plain', card.key);
   if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
 }
+// Where in a column's list a card dropped at `y` lands: before the first card whose middle
+// is below it.
+function indexAt(list: HTMLElement, y: number) {
+  const cards = list.querySelectorAll<HTMLElement>('[data-card]');
+  for (let i = 0; i < cards.length; i++) {
+    const box = cards[i].getBoundingClientRect();
+    if (y < box.top + box.height / 2) return i;
+  }
+  return cards.length;
+}
 function onDragOver(e: DragEvent, column: KanbanColumn) {
   if (!dragging.value || column.other) return;
   e.preventDefault();
   if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
-  const list = (e.currentTarget as HTMLElement).querySelectorAll<HTMLElement>('[data-card]');
-  let index = list.length;
-  for (let i = 0; i < list.length; i++) {
-    const box = list[i].getBoundingClientRect();
-    if (e.clientY < box.top + box.height / 2) {
-      index = i;
-      break;
-    }
-  }
-  target.value = { column: column.id, index };
+  target.value = { column: column.id, index: indexAt(e.currentTarget as HTMLElement, e.clientY) };
 }
 function onDragLeave(e: DragEvent) {
   const to = e.relatedTarget as Node | null;
@@ -137,6 +138,147 @@ function onDragEnd() {
   target.value = null;
 }
 const lineAt = (column: KanbanColumn, i: number) => target.value?.column === column.id && target.value.index === i;
+
+// ---- touch drag: native drag and drop never starts from a finger. Hold a card still for
+// a moment to pick it up, then drag; moving sooner is a swipe and scrolls as usual. The
+// card follows the finger as a copy, and near an edge the board (or column) scrolls.
+const HOLD_MS = 350;
+const SLOP_PX = 8;
+const EDGE_PX = 40;
+const boardEl = ref<HTMLElement | null>(null);
+let hold: { pointerId: number; x: number; y: number; card: KanbanCard; el: HTMLElement; timer: ReturnType<typeof setTimeout> } | null = null;
+let touchDrag = false;
+let ghost: HTMLElement | null = null;
+let ghostFrom = { x: 0, y: 0 };
+let point = { x: 0, y: 0 };
+let scrollFrame = 0;
+let skipClick = false;
+
+function onPointerDown(e: PointerEvent, card: KanbanCard) {
+  if (e.pointerType === 'mouse' || !canMove.value || !e.isPrimary) return;
+  if ((e.target as HTMLElement).closest('[data-testid="move-menu"]')) return;
+  endTouch();
+  const el = e.currentTarget as HTMLElement;
+  point = { x: e.clientX, y: e.clientY };
+  hold = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, card, el, timer: setTimeout(pickUp, HOLD_MS) };
+  window.addEventListener('pointermove', onTouchMove);
+  window.addEventListener('pointerup', onTouchUp);
+  window.addEventListener('pointercancel', endTouch);
+  // Not passive: once a card is picked up, the finger moves it instead of scrolling.
+  window.addEventListener('touchmove', blockScroll, { passive: false });
+}
+
+function pickUp() {
+  if (!hold) return;
+  touchDrag = true;
+  dragging.value = hold.card.key;
+  const box = hold.el.getBoundingClientRect();
+  ghost = hold.el.cloneNode(true) as HTMLElement;
+  Object.assign(ghost.style, {
+    position: 'fixed',
+    left: `${box.left}px`,
+    top: `${box.top}px`,
+    width: `${box.width}px`,
+    margin: '0',
+    zIndex: '9999',
+    pointerEvents: 'none',
+    opacity: '0.95',
+    boxShadow: '0 8px 24px rgb(0 0 0 / 0.18)',
+    transform: 'rotate(2deg)',
+  });
+  document.body.appendChild(ghost);
+  ghostFrom = { x: hold.x, y: hold.y };
+  navigator.vibrate?.(10);
+  findTarget();
+  scrollFrame = requestAnimationFrame(edgeScroll);
+}
+
+function onTouchMove(e: PointerEvent) {
+  if (!hold || e.pointerId !== hold.pointerId) return;
+  point = { x: e.clientX, y: e.clientY };
+  if (!touchDrag) {
+    if (Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > SLOP_PX) endTouch();
+    return;
+  }
+  if (ghost) ghost.style.translate = `${point.x - ghostFrom.x}px ${point.y - ghostFrom.y}px`;
+  findTarget();
+}
+
+function onTouchUp(e: PointerEvent) {
+  if (!hold || e.pointerId !== hold.pointerId) return;
+  if (touchDrag) {
+    // The tap that ends a drag is not a click on the card.
+    skipClick = true;
+    setTimeout(() => (skipClick = false), 400);
+    if (dragging.value && target.value) move(dragging.value, target.value.column, target.value.index);
+  }
+  endTouch();
+}
+
+function blockScroll(e: TouchEvent) {
+  if (touchDrag && e.cancelable) e.preventDefault();
+}
+
+// The column list under the finger (this board's only), and where in it the card lands.
+function findTarget() {
+  const list = document
+    .elementFromPoint(point.x, point.y)
+    ?.closest<HTMLElement>('[data-kanban-list]');
+  const column = list && boardEl.value?.contains(list) ? list.dataset.kanbanList : undefined;
+  target.value = column ? { column, index: indexAt(list!, point.y) } : null;
+}
+
+function edgeScroll() {
+  if (!touchDrag) return;
+  const step = (pos: number, start: number, end: number) =>
+    pos < start + EDGE_PX ? -8 : pos > end - EDGE_PX ? 8 : 0;
+  const board = boardEl.value;
+  let moved = false;
+  if (board) {
+    const box = board.getBoundingClientRect();
+    const dx = step(point.x, box.left, box.right);
+    if (dx && board.scrollWidth > board.clientWidth) {
+      board.scrollLeft += dx;
+      moved = true;
+    }
+  }
+  const list = document.elementFromPoint(point.x, point.y)?.closest<HTMLElement>('[data-kanban-list]');
+  if (list && list.scrollHeight > list.clientHeight) {
+    const box = list.getBoundingClientRect();
+    const dy = step(point.y, box.top, box.bottom);
+    if (dy) {
+      list.scrollTop += dy;
+      moved = true;
+    }
+  }
+  if (moved) findTarget();
+  scrollFrame = requestAnimationFrame(edgeScroll);
+}
+
+function endTouch() {
+  if (hold) clearTimeout(hold.timer);
+  if (touchDrag) onDragEnd();
+  hold = null;
+  touchDrag = false;
+  ghost?.remove();
+  ghost = null;
+  cancelAnimationFrame(scrollFrame);
+  window.removeEventListener('pointermove', onTouchMove);
+  window.removeEventListener('pointerup', onTouchUp);
+  window.removeEventListener('pointercancel', endTouch);
+  window.removeEventListener('touchmove', blockScroll);
+}
+onBeforeUnmount(endTouch);
+
+// A long press on a phone opens the browser's menu; while a card is held it is a pick-up.
+function onContextMenu(e: Event) {
+  if (hold || touchDrag) e.preventDefault();
+}
+
+function onCardClick(card: KanbanCard) {
+  if (skipClick) return;
+  open(card);
+}
 </script>
 
 <template>
@@ -146,7 +288,7 @@ const lineAt = (column: KanbanColumn, i: number) => target.value?.column === col
       <span class="ml-auto text-xs text-muted-foreground tabular-nums">{{ t('apps.kanban.cards', { count: total }, total) }}</span>
     </div>
     <AppSkeleton v-if="!total && busy && !editable" variant="board" class="flex-1" />
-    <div v-else class="flex-1 min-h-0 flex gap-2.5 overflow-x-auto p-(--app-pad-tight)" data-testid="kanban">
+    <div v-else ref="boardEl" class="flex-1 min-h-0 flex gap-2.5 overflow-x-auto p-(--app-pad-tight)" data-testid="kanban">
       <section
         v-for="column in board"
         :key="column.id"
@@ -167,6 +309,7 @@ const lineAt = (column: KanbanColumn, i: number) => target.value?.column === col
         </header>
         <div
           class="flex-1 min-h-12 overflow-y-auto scroll-fade px-2 pb-2 flex flex-col gap-1.5"
+          :data-kanban-list="column.other ? undefined : column.id"
           @dragover="onDragOver($event, column)"
           @dragleave="onDragLeave"
           @drop="onDrop"
@@ -182,16 +325,18 @@ const lineAt = (column: KanbanColumn, i: number) => target.value?.column === col
               :class="
                 cn(
                   'group/card relative rounded-md border bg-background px-2.5 py-2 text-sm shadow-xs text-left',
-                  canMove && 'cursor-grab active:cursor-grabbing',
+                  canMove && 'cursor-grab active:cursor-grabbing select-none [-webkit-touch-callout:none]',
                   !editable && 'hover:border-primary/40 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
                   dragging === card.key && 'opacity-40'
                 )
               "
               :style="card.color ? { borderLeft: `3px solid ${BADGE_HEX[card.color]}` } : undefined"
-              @click="open(card)"
+              @click="onCardClick(card)"
               @keydown.enter.prevent="open(card)"
               @dragstart="onDragStart($event, card)"
               @dragend="onDragEnd"
+              @pointerdown="onPointerDown($event, card)"
+              @contextmenu="onContextMenu"
             >
               <div class="flex items-start gap-1.5">
                 <span class="flex-1 min-w-0 font-medium leading-snug break-words">{{ card.title }}</span>
@@ -199,7 +344,7 @@ const lineAt = (column: KanbanColumn, i: number) => target.value?.column === col
                   <DropdownMenuTrigger as-child>
                     <button
                       type="button"
-                      class="-mr-1 -mt-0.5 p-1 rounded text-muted-foreground opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100 hover:bg-accent hover:text-foreground"
+                      class="-mr-1 -mt-0.5 p-1 rounded text-muted-foreground opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 pointer-coarse:p-1.5 hover:bg-accent hover:text-foreground"
                       :aria-label="t('apps.kanban.moveTo')"
                       :title="t('apps.kanban.moveTo')"
                       data-testid="move-menu"
