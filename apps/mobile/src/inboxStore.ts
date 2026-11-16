@@ -26,7 +26,7 @@ const RUN_ENDS = new Set(['onTaskEnd', 'onTaskEndAll', 'onTaskError', 'onAlertDi
  * Failures and missed runs are dismissed on this phone; alerts are dismissed on the Server.
  * Also holds the workflow and schedule lists Home reads.
  */
-export const useInbox = defineStore('inbox', () => {
+export const useInbox = defineStore('mobile-inbox', () => {
   const session = useSession();
   const approvals = useApprovals();
 

@@ -1,0 +1,44 @@
+/*
+ * What Desktop's app components need on the phone: Tailwind's theme and utilities (no global
+ * reset, see app-preflight.css), Desktop's design tokens and app Markdown styles. Only the
+ * classes Desktop's app code uses are generated, so the phone's own screens are untouched.
+ * Loaded with the Apps pages.
+ */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities) source(none);
+@import 'tw-animate-css';
+@import './app-preflight.css';
+@import '../../../desktop/src/assets/css/theme.css';
+@import '../../../desktop/src/assets/css/app-markdown.css';
+
+@source '../../../desktop/src/components/app';
+@source '../../../desktop/src/components/ui';
+@source '../../../desktop/src/components/Dialog.vue';
+@source '../../../desktop/src/components/CancelRunButton.vue';
+@source '../../../desktop/src/utils';
+@source '../../../desktop/src/composables';
+@source '../apps';
+
+/* Desktop's base layer, only while an app is open. */
+@layer base {
+  :where(.tl-apps) *,
+  :where(.tl-apps) ::after,
+  :where(.tl-apps) ::before {
+    border-color: var(--border);
+    outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
+  }
+  :where(.tl-apps) :where(button, [role='button']):not([disabled]) {
+    cursor: pointer;
+  }
+  :where(.tl-apps) :where([role='dialog'], [role='alertdialog'])[data-state] {
+    pointer-events: auto !important;
+  }
+}
+
+/*
+ * Phone layout for Desktop's own grids inside components: a list view (repeater) sets its
+ * items per row from the app; on a phone each item gets the whole width.
+ */
+.tl-apps .app-area [role='list'].grid[style*='grid-template-columns'] {
+  grid-template-columns: minmax(0, 1fr) !important;
+}

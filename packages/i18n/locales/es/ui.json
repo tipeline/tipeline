@@ -1679,7 +1679,6 @@
   },
   "agent": {
     "tooltip": "Asistente (⌘K)",
-    "disabledRemote": "El asistente solo funciona con el espacio de trabajo local por ahora.",
     "notConfigured": "Asistente sin configurar",
     "notConfiguredDescription": "Agrega una clave API de {provider} en Configuración y asegúrate de que Tipeline Core esté en ejecución.",
     "openSettings": "Abrir Configuración",
@@ -1869,7 +1868,12 @@
       "openWorkflow": "Abrir flujo de trabajo",
       "failed": "No se pudo crear la programación."
     },
-    "notConfiguredNoProvider": "Elige un proveedor de IA y agrega su clave API en Configuración, y asegúrate de que Tipeline Core esté en ejecución."
+    "notConfiguredNoProvider": "Elige un proveedor de IA y agrega su clave API en Configuración, y asegúrate de que Tipeline Core esté en ejecución.",
+    "disabledViewer": "En este servidor, el Asistente es para editores y administradores.",
+    "remote": {
+      "noDrafts": "Por ahora, crear flujos nuevos con el Asistente funciona en un espacio de trabajo local.",
+      "historyNote": "Tus solicitudes en este servidor. Los administradores configuran el Asistente en Ajustes → Asistente."
+    }
   },
   "jsonEditor": {
     "invalid": "JSON no válido (línea {line}): {detail}"

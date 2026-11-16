@@ -488,9 +488,9 @@ const sectionTitle = 'text-[11px] font-semibold uppercase tracking-wide text-mut
       </div>
       <div class="flex gap-2 px-3.5 py-2.5 border-t border-border">
         <Button class="flex-1 h-8" @click="open('/')">{{ t('tray.open') }}</Button>
-        <!-- The Assistant panel isn't offered on a remote workspace, so neither is the button. -->
+        <!-- No Assistant for a viewer on a Server, so no button either. -->
         <Button
-          v-if="!connection.isRemote"
+          v-if="connection.assistantAvailable"
           variant="outline"
           class="h-8 gap-1.5"
           :title="t('tray.askHint')"

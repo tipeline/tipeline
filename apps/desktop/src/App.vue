@@ -195,9 +195,9 @@ function onNavigate(_: unknown, path: unknown) {
 
 // The tray popover's Ask button: opens the Assistant panel, which lives in the default
 // layout — from the builder or an editor, Home opens first (its own leave checks still
-// apply). Remote workspaces have no Assistant panel; the popover hides the button there.
+// apply). Viewers on a Server have no Assistant; the popover hides the button for them.
 async function onOpenAssistant() {
-  if (connectionStore.isRemote) return;
+  if (!connectionStore.assistantAvailable) return;
   if (route.meta.layout !== 'DefaultLayout') {
     await router.push('/');
     if (route.meta.layout !== 'DefaultLayout') return; // leaving was cancelled

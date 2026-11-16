@@ -14,6 +14,7 @@ import { SEND } from '@/ipc-channels';
 import { useRecentItemsStore } from '@/store/recentItems';
 import { invokeCore } from '@/utils/invoke';
 import { useSettingsStore } from '@/store/settingsStore';
+import { useConnectionStore } from '@/store/connectionStore';
 import { useStreamStore } from '@/store/stream';
 import { toast } from '@/components/ui/sonner';
 import router from '@/router';
@@ -81,6 +82,8 @@ export interface AgentTurn {
   draftError?: { text: string; errors: string[] };
   /** The request's key for remembering which workflow the user picks (see @tipeline/agent/choices). */
   requestKey?: string;
+  /** On a Server workspace: the Server's id for this request, which its run is tied to. */
+  requestId?: string;
   /** Values the run used, after the user's edits. */
   variables?: Record<string, unknown>;
   /** The run, matched from the live stream while it's going (exec_task only reports it at the end). */
@@ -124,6 +127,46 @@ interface AgentConnection {
   model?: string;
   mcpToken: string;
   mcpUrl: string;
+}
+
+/** One of the user's requests as a Server keeps them (assistantHistory). */
+interface ServerAssistantRequest {
+  id: string;
+  prompt: string;
+  status: 'thinking' | 'answered' | 'proposed' | 'running' | 'completed' | 'failed';
+  taskIdentifier: string | null;
+  taskName: string | null;
+  pipelineIdentifier: string | null;
+  answer: string | null;
+  error: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const SERVER_STATUS: Record<ServerAssistantRequest['status'], AgentRunRecord['status']> = {
+  thinking: 'running',
+  running: 'running',
+  proposed: 'proposed',
+  answered: 'done',
+  completed: 'done',
+  failed: 'error',
+};
+
+/** A Server's history in the shape the History page shows. */
+export function fromServerHistory(items: ServerAssistantRequest[]): AgentRunRecord[] {
+  return items.map((item, index) => ({
+    id: index + 1,
+    correlation_id: item.id,
+    prompt: item.prompt,
+    answer: item.answer,
+    status: SERVER_STATUS[item.status] ?? 'done',
+    task_identifier: item.taskIdentifier,
+    task_name: item.taskName,
+    pipeline_identifier: item.pipelineIdentifier,
+    error: item.error,
+    created_at: item.createdAt,
+    finished_at: item.status === 'running' || item.status === 'thinking' ? null : item.updatedAt,
+  }));
 }
 
 function readStored(key: string): string | null {
@@ -243,6 +286,7 @@ export const useAgentStore = defineStore('agent', () => {
   function onPhase(id: string, response: any) {
     const entry = turn(id);
     if (!entry) return;
+    if (response?.requestId) entry.requestId = response.requestId;
     switch (response.phase) {
       case 'thinking':
         entry.phase = 'thinking';
@@ -371,8 +415,16 @@ export const useAgentStore = defineStore('agent', () => {
     return PROVIDERS.find((provider) => settingsStore.get(`agent_${provider}_api_key`)) ?? null;
   }
 
+  /**
+   * On a Server workspace the Server's own Assistant answers, with the key its admin set
+   * (Settings → Assistant there): nothing to set up on this machine. Drafting new
+   * workflows still happens on a local workspace.
+   */
+  const remote = computed(() => useConnectionStore().isRemote);
+
   /** The chosen provider has a key: the Assistant can answer. */
   const configured = computed(() => {
+    if (remote.value) return true;
     const provider = chosenProvider();
     return !!provider && !!useSettingsStore().get(`agent_${provider}_api_key`);
   });
@@ -421,6 +473,20 @@ export const useAgentStore = defineStore('agent', () => {
     if (!configured.value) {
       pendingPrompt.value = text;
       sidebarOpen.value = true;
+      return true;
+    }
+
+    if (remote.value) {
+      pendingPrompt.value = '';
+      const id = generateIdentifier();
+      turns.value.push({ id, prompt: text, phase: 'thinking' });
+      listen(id);
+      // The Server reads its own instructions and the project's.
+      const project = await refreshActiveProject();
+      window.ipcRenderer.send(SEND.ASSISTANT_ASK, {
+        correlationId: id,
+        payload: { prompt: text, ...(project ? { projectIdentifier: project.identifier } : {}) },
+      });
       return true;
     }
 
@@ -490,6 +556,24 @@ export const useAgentStore = defineStore('agent', () => {
   async function runProposal(id: string, variables: Record<string, unknown>) {
     const entry = turn(id);
     if (!entry?.proposal || entry.phase !== 'proposal') return;
+    if (remote.value) {
+      entry.phase = 'running';
+      entry.variables = variables;
+      entry.livePipeline = undefined;
+      listen(id);
+      window.ipcRenderer.send(SEND.ASSISTANT_RUN, {
+        correlationId: id,
+        payload: JSON.parse(
+          JSON.stringify({
+            requestId: entry.requestId,
+            identifier: entry.proposal.identifier,
+            name: entry.proposal.name,
+            variables,
+          })
+        ),
+      });
+      return;
+    }
     const config = await connection();
     if (!config) return;
 
@@ -552,6 +636,10 @@ export const useAgentStore = defineStore('agent', () => {
     const entry = turn(id);
     const text = request.trim();
     if (entry?.phase !== 'nomatch' || !text) return;
+    if (remote.value) {
+      toast.info(t('agent.remote.noDrafts'));
+      return;
+    }
     const config = await connection();
     if (!config) return;
 
@@ -604,6 +692,13 @@ export const useAgentStore = defineStore('agent', () => {
   /** Saves which workflow the user picked for this kind of request, so next time it's proposed first. */
   async function remember(entry: AgentTurn, choice: { identifier: string; name: string }) {
     if (!entry.requestKey) return;
+    if (remote.value) {
+      // Each user's picks are kept on the Server.
+      await invokeCore(SEND.ASSISTANT_CHOOSE, { requestKey: entry.requestKey, identifier: choice.identifier, name: choice.name }).catch(
+        (error) => console.error('[agentStore] Could not save the choice:', error)
+      );
+      return;
+    }
     const settingsStore = useSettingsStore();
     try {
       const memory = parseChoiceMemory(settingsStore.get(CHOICE_MEMORY_SETTING));
@@ -671,7 +766,7 @@ export const useAgentStore = defineStore('agent', () => {
     };
     delete next.hub;
     // A pick remembered as the hub entry now means the installed copy.
-    const memory = parseChoiceMemory(useSettingsStore().get(CHOICE_MEMORY_SETTING));
+    const memory = remote.value ? {} : parseChoiceMemory(useSettingsStore().get(CHOICE_MEMORY_SETTING));
     if (entry.requestKey && memory[entry.requestKey]?.identifier === entry.proposal.identifier) {
       void remember(entry, next);
     }
@@ -688,7 +783,9 @@ export const useAgentStore = defineStore('agent', () => {
   async function loadHistory() {
     historyLoading.value = true;
     try {
-      history.value = (await invokeCore<AgentRunRecord[]>(SEND.AGENT_RUN_LIST)) ?? [];
+      history.value = remote.value
+        ? fromServerHistory((await invokeCore<ServerAssistantRequest[]>(SEND.ASSISTANT_HISTORY, {})) ?? [])
+        : ((await invokeCore<AgentRunRecord[]>(SEND.AGENT_RUN_LIST)) ?? []);
     } finally {
       historyLoading.value = false;
     }

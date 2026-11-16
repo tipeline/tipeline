@@ -164,6 +164,15 @@ describe('TipelineClient runs', () => {
     expect(server.received[0]).toMatchObject({ event: 'exec', correlationId: run.correlationId });
   });
 
+  it("runs under the caller's own correlation id when given one", async () => {
+    const c = makeClient();
+    server.script = (msg, reply) => reply({ event: 'onTaskEndAll', correlationId: msg.correlationId, data: {} });
+    const run = c.run('appRun', { runnable: 'load' }, () => {}, { correlationId: 'mine-1' });
+    expect(run.correlationId).toBe('mine-1');
+    expect((await run.done).correlationId).toBe('mine-1');
+    expect(server.received[0]).toMatchObject({ event: 'appRun', correlationId: 'mine-1' });
+  });
+
   it('finishes on a run error', async () => {
     const c = makeClient();
     server.script = (msg, reply) => reply({ event: 'onTaskError', correlationId: msg.correlationId, error: 'boom' });

@@ -249,7 +249,11 @@ export class WsGateway {
   private readonly assistant: AssistantService;
   private readonly assistantLimiter = new RateLimiter(ASSISTANT_WINDOW_MS, ASSISTANT_ASKS_PER_WINDOW);
 
-  constructor(private readonly coreClient: CoreIpcClient) {
+  constructor(
+    private readonly coreClient: CoreIpcClient,
+    /** Push notifications, when the Server sends them: told about every Core event. */
+    private readonly push: { onCoreEvent(event: string, data: any): Promise<void> } | null = null
+  ) {
     this.assistant = new AssistantService({
       core: coreClient,
       history: AssistantHistoryService,
@@ -612,6 +616,7 @@ export class WsGateway {
   private route(event: string, data: any): void {
     // Fire-and-forget async side-effects; routing uses the original data synchronously
     void this.handleCoreEventSideEffects(event, data);
+    if (this.push) void this.push.onCoreEvent(event, data);
 
     if (event === 'onTaskList' || event === 'onTaskUsage') {
       void this.routeTaskListFiltered(event, data);

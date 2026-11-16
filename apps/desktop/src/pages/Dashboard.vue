@@ -24,7 +24,7 @@ const { data: tasks } = useQuery<TaskItem[]>(SEND.TASK_LIST, {});
 const { data: schedules } = useQuery<ScheduleItem[]>(SEND.SCHEDULE_LIST, {});
 
 const connectionStore = useConnectionStore();
-const assistantAvailable = computed(() => !connectionStore.isRemote);
+const assistantAvailable = computed(() => connectionStore.assistantAvailable);
 
 const now = new Date();
 const greeting = computed(() => {

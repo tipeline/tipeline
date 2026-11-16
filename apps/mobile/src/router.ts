@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from '@ionic/vue-router';
 import type { RouteLocationNormalized, RouteRecordRaw } from 'vue-router';
 import { useSession } from './session';
 
-// Tabs as in the designs: Home, Workflows, Assistant, Inbox (Apps comes with phase 2).
+// Tabs as in the designs: Home, Workflows, Assistant, Apps, Inbox.
 // Runs, Schedules and More open from Home, so they stack under it.
 const routes: RouteRecordRaw[] = [
   { path: '/', redirect: '/tabs/home' },
@@ -20,6 +20,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'workflows', component: () => import('./pages/WorkflowsPage.vue') },
       { path: 'workflows/:identifier', component: () => import('./pages/WorkflowPage.vue'), props: true },
       { path: 'assistant', component: () => import('./pages/AssistantPage.vue') },
+      { path: 'apps', component: () => import('./pages/AppsPage.vue') },
+      { path: 'apps/:identifier', component: () => import('./pages/AppPage.vue'), props: true },
       { path: 'inbox', component: () => import('./pages/InboxPage.vue') },
     ],
   },

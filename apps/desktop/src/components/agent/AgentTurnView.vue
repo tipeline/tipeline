@@ -53,6 +53,12 @@ function openLiveRun() {
 
     <AgentChoiceCard v-else-if="turn.phase === 'choice'" :turn="turn" />
 
+    <!-- A Server's Assistant doesn't draft workflows yet: it only says nothing fits. -->
+    <div v-else-if="turn.phase === 'nomatch' && turn.requestId && !turn.draftRequest" class="space-y-1.5 text-sm">
+      <p>{{ turn.text }}</p>
+      <p class="text-xs text-muted-foreground">{{ t('agent.remote.noDrafts') }}</p>
+    </div>
+
     <AgentNoMatchCard v-else-if="turn.phase === 'nomatch'" :turn="turn" />
 
     <div v-else-if="turn.phase === 'drafting'" class="flex items-center gap-2 text-sm text-muted-foreground">
