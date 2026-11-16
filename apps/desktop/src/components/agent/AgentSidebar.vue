@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { BotIcon, HistoryIcon, SquarePenIcon, XIcon, ArrowUpIcon } from 'lucide-vue-next';
@@ -46,10 +46,18 @@ function focusComposer() {
   (el as HTMLTextAreaElement | null)?.focus();
 }
 
+// The tray's Ask button: the window may still be coming forward, so focus again once it has.
+function focusComposerWhenShown() {
+  focusComposer();
+  if (!document.hasFocus()) window.addEventListener('focus', focusComposer, { once: true });
+}
+watch(() => agentStore.composerFocusRequest, () => nextTick(focusComposerWhenShown));
+onUnmounted(() => window.removeEventListener('focus', focusComposer));
+
 onMounted(async () => {
   await settingsStore.load().catch(() => {});
   settingsReady.value = true;
-  focusComposer();
+  focusComposerWhenShown();
 });
 
 async function send() {

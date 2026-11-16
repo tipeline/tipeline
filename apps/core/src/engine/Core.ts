@@ -64,6 +64,7 @@ import { BackupService, type RestoreMode, type RestoreResult } from '@/backup/Ba
 import { splitAppDocument } from '@utils/appDocument';
 import { runScriptPreview, type ScriptPreviewParams } from '@action/actions/script/preview';
 import { CORE_VERSION } from '@utils/coreVersion';
+import { AlertService, type AlertListQuery } from '@database/services/AlertService';
 
 export default class Core {
   /**
@@ -1249,20 +1250,28 @@ export default class Core {
     return await TagService.delete(id);
   }
 
-  static async pipelineList(taskIdentifier: string | null, limit = 100, offset = 0, status?: string) {
+  /** `excludeTasks`: workflow identifiers whose runs are left out (a Server's private ones). */
+  static async pipelineList(
+    taskIdentifier: string | null,
+    limit = 100,
+    offset = 0,
+    status?: string,
+    excludeTasks: string[] = []
+  ) {
     if (taskIdentifier) {
+      if (excludeTasks.includes(taskIdentifier)) return [];
       return await PipelineService.getByTaskIdentifier(taskIdentifier, limit, offset, status);
     } else {
-      return await PipelineService.getAllWithTaskName(limit, offset, status);
+      return await PipelineService.getAllWithTaskName(limit, offset, status, excludeTasks);
     }
   }
 
   /** Runs started, and failed, per period: the dashboard's Today row. */
-  static async pipelineStats(boundaries: unknown) {
+  static async pipelineStats(boundaries: unknown, excludeTasks: string[] = []) {
     if (!Array.isArray(boundaries) || !boundaries.every((b) => typeof b === 'string' && !Number.isNaN(Date.parse(b)))) {
       throw new Error('boundaries must be a list of ISO dates');
     }
-    return await PipelineService.countsByPeriod(boundaries as string[]);
+    return await PipelineService.countsByPeriod(boundaries as string[], excludeTasks);
   }
 
   static async pipelineDetail(pipelineIdentifier: string) {
@@ -1459,6 +1468,39 @@ export default class Core {
       cacheMode: toCacheMode(params.cache),
     });
     return { taskIdentifier };
+  }
+
+  /**
+   * Alerts raised by workflows (alert.raise), newest raise first: open ones only, or
+   * with `includeClosed` also acknowledged and resolved ones. `taskIdentifier` narrows
+   * it to one workflow, `ids` to some alerts.
+   */
+  static async alertList(params: AlertListQuery = {}) {
+    return await AlertService.list({
+      includeClosed: params.includeClosed === true,
+      taskIdentifier: typeof params.taskIdentifier === 'string' ? params.taskIdentifier : undefined,
+      ids: Array.isArray(params.ids) ? params.ids.map(String) : undefined,
+    });
+  }
+
+  /**
+   * Acknowledges alerts: `{ id }`, `{ ids }` or `{ all: true }`. They leave Needs you and
+   * stay quiet while their workflow keeps raising the same key, until it resolves it.
+   */
+  static async alertDismiss(params: { id?: string; ids?: string[]; all?: boolean; dismissedBy?: string } = {}) {
+    if (!params.all && !params.id && !params.ids?.length) throw new Error('Say which alert to dismiss: id, ids or all');
+    const dismissed = await AlertService.dismiss(
+      { id: params.id, ids: params.ids, all: params.all === true },
+      params.dismissedBy ?? null
+    );
+    return { dismissed };
+  }
+
+  /** Puts an acknowledged alert back in Needs you. */
+  static async alertReopen(params: { id?: string } = {}) {
+    if (!params.id) throw new Error('Say which alert to reopen');
+    if (!(await AlertService.reopen(params.id))) throw new Error('No dismissed alert with this id');
+    return { reopened: true };
   }
 
   /**
@@ -1835,8 +1877,13 @@ export default class Core {
     await getJobRunner().toggleSchedule(scheduleIdentifier, enabled);
   }
 
+  /**
+   * Every schedule, each with the time zone its cron runs in (Core's), so a client in
+   * another zone can say "At 09:00 (UTC)" instead of a time that reads as its own.
+   */
   static async scheduleList() {
-    return await getJobRunner().listSchedules();
+    const timezone = AppSettings.timezone;
+    return (await getJobRunner().listSchedules()).map((entry) => ({ ...entry, timezone }));
   }
 
   static async settingsList() {

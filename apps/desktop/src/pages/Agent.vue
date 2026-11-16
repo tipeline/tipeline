@@ -49,8 +49,10 @@ const selectedRun = ref<AgentRunRecord | null>(null);
 const detailOpen = ref(false);
 
 onMounted(() => {
-  if (!connectionStore.isRemote) agentStore.loadHistory();
+  if (connectionStore.assistantAvailable) agentStore.loadHistory();
 });
+// On a Server only History: drafts, picks and findability belong to this machine's Core.
+const remote = computed(() => connectionStore.isRemote);
 
 const columns = computed<ColumnDef<any>[]>(() => createColumns(t, router));
 
@@ -66,13 +68,13 @@ function onRowClick(row: AgentRunRecord) {
     <template #description>{{ t('agent.history.description') }}</template>
 
     <template #content>
-      <div v-if="connectionStore.isRemote" class="flex items-center justify-center py-8 text-muted-foreground text-sm">
-        {{ t('agent.disabledRemote') }}
+      <div v-if="!connectionStore.assistantAvailable" class="flex items-center justify-center py-8 text-muted-foreground text-sm">
+        {{ t('agent.disabledViewer') }}
       </div>
 
       <div v-else class="space-y-4 h-full flex flex-col">
         <div class="flex flex-wrap items-center justify-between gap-3">
-          <Tabs :model-value="tab" @update:model-value="selectTab">
+          <Tabs v-if="!remote" :model-value="tab" @update:model-value="selectTab">
             <TabsList>
               <TabsTrigger value="history">{{ t('agent.page.tabs.history') }}</TabsTrigger>
               <TabsTrigger value="drafts">
@@ -95,12 +97,13 @@ function onRowClick(row: AgentRunRecord) {
               </TabsTrigger>
             </TabsList>
           </Tabs>
+          <p v-else class="text-sm text-muted-foreground">{{ t('agent.remote.historyNote') }}</p>
           <Button variant="outline" @click="agentStore.sidebarOpen = true">
             <BotIcon class="w-4 h-4 mr-2" /> {{ t('agent.sidebar.open') }}
           </Button>
         </div>
 
-        <Card v-show="tab === 'history'" classContent="p-0" class="flex-1">
+        <Card v-show="tab === 'history' || remote" classContent="p-0" class="flex-1">
           <template #content>
             <div
               v-if="agentStore.historyLoading && agentStore.history.length === 0"
@@ -127,15 +130,17 @@ function onRowClick(row: AgentRunRecord) {
         </Card>
 
         <!-- All tabs load on open so their counts can show in the labels. -->
-        <Card v-show="tab === 'drafts'" classContent="p-0" class="flex-1">
-          <template #content><AssistantDrafts @count="counts.drafts = $event" /></template>
-        </Card>
-        <Card v-show="tab === 'picks'" classContent="p-0" class="flex-1">
-          <template #content><AssistantPicks @count="counts.picks = $event" /></template>
-        </Card>
-        <Card v-show="tab === 'findability'" classContent="p-0" class="flex-1">
-          <template #content><AssistantFindability @count="counts.findability = $event" /></template>
-        </Card>
+        <template v-if="!remote">
+          <Card v-show="tab === 'drafts'" classContent="p-0" class="flex-1">
+            <template #content><AssistantDrafts @count="counts.drafts = $event" /></template>
+          </Card>
+          <Card v-show="tab === 'picks'" classContent="p-0" class="flex-1">
+            <template #content><AssistantPicks @count="counts.picks = $event" /></template>
+          </Card>
+          <Card v-show="tab === 'findability'" classContent="p-0" class="flex-1">
+            <template #content><AssistantFindability @count="counts.findability = $event" /></template>
+          </Card>
+        </template>
       </div>
     </template>
   </Page>

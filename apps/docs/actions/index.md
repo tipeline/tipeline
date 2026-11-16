@@ -71,6 +71,7 @@ Every action in a workflow YAML has the same structure:
 |----------|---------|-------------|
 | [Flow](/actions/flow) | 8 | If/else, switch, loops, wait |
 | [Approval](/actions/approval) | 1 | Pause a run until someone approves or rejects it |
+| [Alert](/actions/alert) | 2 | Tell the user something happened in Needs you, and clear it later |
 | [System](/actions/system) | 6 | Log messages, run processes, env vars |
 | [API](/actions/api) | — | Generic API integration |
 

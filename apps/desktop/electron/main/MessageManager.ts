@@ -65,6 +65,9 @@ const QUERY_OPS: Array<{ send: string; core: string; coreResp: string; timeoutMs
   { send: SEND.APPROVAL_HISTORY, core: CORE.APPROVAL_HISTORY, coreResp: CORE_RESP.APPROVAL_HISTORY },
   { send: SEND.APP_APPROVAL_LIST, core: CORE.APP_APPROVAL_LIST, coreResp: CORE_RESP.APP_APPROVAL_LIST },
   { send: SEND.APP_APPROVAL_DECIDE, core: CORE.APP_APPROVAL_DECIDE, coreResp: CORE_RESP.APP_APPROVAL_DECIDE },
+  { send: SEND.ALERT_LIST, core: CORE.ALERT_LIST, coreResp: CORE_RESP.ALERT_LIST },
+  { send: SEND.ALERT_DISMISS, core: CORE.ALERT_DISMISS, coreResp: CORE_RESP.ALERT_DISMISS },
+  { send: SEND.ALERT_REOPEN, core: CORE.ALERT_REOPEN, coreResp: CORE_RESP.ALERT_REOPEN },
   { send: SEND.APP_RUNS_ACTIVE, core: CORE.APP_RUNS_ACTIVE, coreResp: CORE_RESP.APP_RUNS_ACTIVE },
   { send: SEND.APP_RUNS_LIST, core: CORE.APP_RUNS_LIST, coreResp: CORE_RESP.APP_RUNS_LIST },
   { send: SEND.VARIABLE_LIST, core: CORE.VARIABLE_LIST, coreResp: CORE_RESP.VARIABLE_LIST },
@@ -121,6 +124,9 @@ const QUERY_OPS: Array<{ send: string; core: string; coreResp: string; timeoutMs
   { send: SEND.PROJECT_MAP_LINK, core: CORE.PROJECT_MAP_LINK, coreResp: CORE_RESP.PROJECT_MAP_LINK },
   { send: SEND.AGENT_RUN_LIST, core: CORE.AGENT_RUN_LIST, coreResp: CORE_RESP.AGENT_RUN_LIST },
   { send: SEND.ASSISTANT_FINDABILITY, core: CORE.ASSISTANT_FINDABILITY, coreResp: CORE_RESP.ASSISTANT_FINDABILITY },
+  // A Server's own Assistant (only sent on a Server workspace)
+  { send: SEND.ASSISTANT_CHOOSE, core: CORE.ASSISTANT_CHOOSE, coreResp: CORE_RESP.ASSISTANT_CHOOSE },
+  { send: SEND.ASSISTANT_HISTORY, core: CORE.ASSISTANT_HISTORY, coreResp: CORE_RESP.ASSISTANT_HISTORY },
   { send: SEND.AGENT_RUN_SET_PIPELINE, core: CORE.AGENT_RUN_SET_PIPELINE, coreResp: CORE_RESP.AGENT_RUN_SET_PIPELINE },
   { send: SEND.HUB_LIST, core: CORE.HUB_LIST, coreResp: CORE_RESP.HUB_LIST },
   { send: SEND.HUB_ADD, core: CORE.HUB_ADD, coreResp: CORE_RESP.HUB_ADD },
@@ -151,6 +157,44 @@ const QUERY_OPS: Array<{ send: string; core: string; coreResp: string; timeoutMs
 
 const QUERY_RESPONSES: string[] = QUERY_OPS.map((op) => op.coreResp);
 
+// Changes that can alter what "Needs you" and "Running" show (Home, the sidebar badges, the
+// tray popover). After one succeeds the other windows are told (`data:changed`) so they
+// re-read their lists: a workflow deleted in the main window must leave the popover, an
+// approval decided in the popover must leave the main window's badge. Runs starting and
+// ending already reach every window as stream events.
+export const NEEDS_YOU_CHANGES = new Set<string>([
+  SEND.TASK_UPDATE_META,
+  SEND.TASK_UPDATE_SOURCE,
+  SEND.TASK_INSTALL,
+  SEND.TASK_UNINSTALL,
+  SEND.TASK_REVISION_RESTORE,
+  SEND.PIPELINE_CLEAR,
+  SEND.PIPELINE_CLEAR_ALL,
+  SEND.PIPELINE_DELETE,
+  SEND.PIPELINE_CANCEL,
+  SEND.APPROVAL_DECIDE,
+  SEND.APP_APPROVAL_DECIDE,
+  SEND.ALERT_DISMISS,
+  SEND.ALERT_REOPEN,
+  SEND.TRASH_RESTORE,
+  SEND.FULL_RESTORE,
+  SEND.SCHEDULE_SET,
+  SEND.SCHEDULE_REMOVE,
+  SEND.SCHEDULE_TOGGLE,
+  SEND.PROJECT_DELETE,
+  SEND.PROJECT_IMPORT,
+  SEND.HUB_INSTALL_TASK,
+  SEND.HUB_UPDATE_TASK,
+]);
+
+/** Tells every window but the one that made the change to re-read what it shows. */
+function announceChange(sender: Electron.WebContents, channel: string) {
+  if (!NEEDS_YOU_CHANGES.has(channel)) return;
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed() && win.webContents !== sender) win.webContents.send('data:changed', { channel });
+  }
+}
+
 // Connection response events — always settle via localRequest (IpcClient), not CoreClientProxy
 const CONNECTION_RESPONSES: string[] = [
   CORE_RESP.CONNECTION_LIST,
@@ -180,7 +224,14 @@ const STREAM_OPS: Array<{ send: string; core: string }> = [
   { send: SEND.DEBUG_PAUSE, core: CORE.DEBUG_PAUSE },
   { send: SEND.DEBUG_STOP, core: CORE.DEBUG_STOP },
   { send: SEND.DEBUG_COMMAND, core: CORE.DEBUG_COMMAND },
+  // A Server's own Assistant: its steps come back as ASSISTANT_RESPONSES, the run's own
+  // events as the usual stream events on the same correlationId.
+  { send: SEND.ASSISTANT_ASK, core: CORE.ASSISTANT_ASK },
+  { send: SEND.ASSISTANT_RUN, core: CORE.ASSISTANT_RUN },
 ];
+
+/** The Server Assistant's steps, forwarded on `agent:<correlationId>` like the local one's. */
+const ASSISTANT_RESPONSES: string[] = [CORE_RESP.ASSISTANT_ASK, CORE_RESP.ASSISTANT_RUN];
 
 const STREAM_RESPONSES: Array<{ resp: string; type: string }> = [
   { resp: CORE_RESP.TASK_START, type: 'start' },
@@ -248,6 +299,15 @@ export class MessageManager {
       };
     }
 
+    for (const resp of ASSISTANT_RESPONSES) {
+      handlers[resp] = (response: any) => {
+        const step = response.error
+          ? { phase: 'error', error: response.error, requestId: response.data?.requestId }
+          : response.data;
+        this.send(`agent:${response.correlationId}`, step);
+      };
+    }
+
     for (const { resp, type } of STREAM_RESPONSES) {
       handlers[resp] = (response: any) => {
         console.log(`[MessageManager] core event: ${resp}, correlationId: ${response?.correlationId}`);
@@ -266,21 +326,27 @@ export class MessageManager {
 
   private registerRendererHandlers() {
     for (const { send, core, timeoutMs } of QUERY_OPS) {
-      ipcMain.handle(send, (_, payload) => CoreService.request(core, payload, timeoutMs));
+      ipcMain.handle(send, async (event, payload) => {
+        const result = await CoreService.request(core, payload, timeoutMs);
+        announceChange(event.sender, send);
+        return result;
+      });
     }
 
     ipcMain.removeHandler(SEND.TASK_INSTALL);
-    ipcMain.handle(SEND.TASK_INSTALL, async (_, { correlationId, payload: filePath }) => {
+    ipcMain.handle(SEND.TASK_INSTALL, async (event, { correlationId, payload: filePath }) => {
       let content: string;
       try {
         content = fs.readFileSync(filePath as string, 'utf8');
       } catch {
         throw new Error('Could not read the selected file. It may have been moved or deleted.');
       }
-      return CoreService.request(CORE.TASK_INSTALL, {
+      const result = await CoreService.request(CORE.TASK_INSTALL, {
         correlationId,
         payload: { content, baseDir: path.dirname(path.resolve(filePath as string)) },
       });
+      announceChange(event.sender, SEND.TASK_INSTALL);
+      return result;
     });
 
     for (const { send, core } of STREAM_OPS) {

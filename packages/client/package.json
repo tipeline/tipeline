@@ -1,0 +1,47 @@
+{
+  "name": "@tipeline/client",
+  "version": "0.0.0",
+  "description": "Browser client for a Tipeline Server: sign-in, requests and live runs over WebSocket",
+  "license": "Apache-2.0",
+  "author": "José Daniel Estrada Guzmán",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "prepack": "rm -rf dist && npm run build"
+  },
+  "keywords": [
+    "tipeline",
+    "websocket",
+    "client"
+  ],
+  "files": [
+    "dist",
+    "NOTICE"
+  ],
+  "devDependencies": {
+    "@types/ws": "^8.18.1",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.10",
+    "ws": "^8.20.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tipeline/tipeline.git",
+    "directory": "packages/client"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

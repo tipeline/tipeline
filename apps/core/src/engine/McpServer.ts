@@ -3,6 +3,8 @@ import { timingSafeEqual } from 'crypto';
 import { randomUUID } from 'crypto';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { z } from 'zod';
 import Core from '@engine/Core';
 import { TaskStreamListener } from '@engine/TaskStreamListener';
@@ -21,7 +23,26 @@ import { HubWorkflowCatalog } from '@/hub/HubWorkflowCatalog';
 // How much of a workflow's description goes back with its run, for writing the answer.
 const DESCRIPTION_LIMIT = 1500;
 
+// How long an in-process tool call may take: exec_task waits for its run.
+const IN_PROCESS_TIMEOUT_MS = 24 * 60 * 60 * 1000;
+
 type BroadcastFn = (event: string, data: any) => void;
+
+/**
+ * Who the tools answer for. The HTTP endpoint has one all-access token, so it uses none of
+ * this; the Tipeline Server calls the tools over IPC for one of its users (see callInProcess).
+ */
+export interface ToolContext {
+  /** Workflows the caller may not see: left out of list_tasks and search_workflows, and exec_task won't run them. */
+  exclude?: ReadonlySet<string>;
+  /** The correlationId exec_task's run streams on, so the caller can route its events (default: a new one). */
+  runCorrelationId?: string;
+}
+
+export interface InProcessToolResult {
+  text: string;
+  isError: boolean;
+}
 
 /**
  * Embeds an MCP tool server inside Core, alongside the existing IPC/WebSocket
@@ -89,7 +110,42 @@ export class TipelineMcpServer {
     return tokenBuffer.length === expectedBuffer.length && timingSafeEqual(tokenBuffer, expectedBuffer);
   }
 
-  private createServer(): McpServer {
+  /** Core's tools for an IPC caller, with the same definitions as the HTTP endpoint. */
+  async listToolsInProcess(): Promise<Array<{ name: string; description?: string; inputSchema: unknown }>> {
+    return this.inProcess({}, async (client) => {
+      const { tools } = await client.listTools();
+      return tools.map((tool) => ({ name: tool.name, description: tool.description, inputSchema: tool.inputSchema }));
+    });
+  }
+
+  /** Calls one tool for an IPC caller (the Tipeline Server), through the same code as the HTTP endpoint. */
+  async callToolInProcess(name: string, args: Record<string, unknown>, context: ToolContext = {}): Promise<InProcessToolResult> {
+    return this.inProcess(context, async (client) => {
+      // A run waits here until it ends (an approval step ends it as 'paused'), past the SDK's 60 s default.
+      const result = await client.callTool({ name, arguments: args }, undefined, { timeout: IN_PROCESS_TIMEOUT_MS });
+      const content = result.content as Array<{ type: string; text?: string }> | undefined;
+      const text = content?.filter((c) => c.type === 'text').map((c) => c.text).join('\n') ?? '';
+      return { text, isError: !!result.isError };
+    });
+  }
+
+  private async inProcess<T>(context: ToolContext, use: (client: Client) => Promise<T>): Promise<T> {
+    const server = this.createServer(context);
+    const client = new Client({ name: 'tipeline-in-process', version: '1.0.0' });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await server.connect(serverTransport);
+    await client.connect(clientTransport);
+    try {
+      return await use(client);
+    } finally {
+      await client.close().catch(() => {});
+      await server.close().catch(() => {});
+    }
+  }
+
+  private createServer(context: ToolContext = {}): McpServer {
+    const visible = (identifier: string) => !context.exclude?.has(identifier);
+
     const server = new McpServer({ name: 'tipeline-core', version: '1.0.0' });
 
     server.registerTool(
@@ -99,7 +155,7 @@ export class TipelineMcpServer {
           'List all installed Tipeline workflows (also called tasks): identifier, name, one-line description, tags and inputs (public and protected variables a caller can set). Drafts are marked draft: true and cannot be run with exec_task. Prefer search_workflows when you have keywords.',
       },
       async () => {
-        const workflows = (await TaskService.getAllWithSource()).map((task) => ({
+        const workflows = (await TaskService.getAllWithSource()).filter((task) => visible(task.identifier)).map((task) => ({
           ...toWorkflowSummary(task),
           ...(isDraft(task) ? { draft: true } : {}),
         }));
@@ -122,7 +178,9 @@ export class TipelineMcpServer {
       },
       async ({ query, limit }: { query?: string; limit?: number }) => {
         // Drafts aren't offered: nobody has checked them yet, and they won't run from here anyway.
-        const installed = (await TaskService.getAllWithSource()).filter((task) => !isDraft(task)).map(toWorkflowSummary);
+        const installed = (await TaskService.getAllWithSource())
+          .filter((task) => !isDraft(task) && visible(task.identifier))
+          .map(toWorkflowSummary);
         const fromHubs = await HubWorkflowCatalog.uninstalledWorkflows().catch(() => ({
           workflows: [],
           unreachableHubs: [] as string[],
@@ -232,25 +290,25 @@ export class TipelineMcpServer {
         inputSchema: execTaskInputSchema,
       },
       async ({ identifier, variables }: { identifier: string; variables?: Record<string, any> }) =>
-        this.execTask(identifier, variables ?? {})
+        this.execTask(identifier, variables ?? {}, context)
     );
 
     return server;
   }
 
-  private async execTask(identifier: string, variables: Record<string, any>) {
+  private async execTask(identifier: string, variables: Record<string, any>, context: ToolContext) {
     const reply = (result: Record<string, unknown>, isError = false) => ({
       content: [{ type: 'text' as const, text: JSON.stringify(result) }],
       ...(isError ? { isError: true } : {}),
     });
 
-    const task = await TaskService.getByIdentifier(identifier);
+    const task = context.exclude?.has(identifier) ? null : await TaskService.getByIdentifier(identifier);
     const source = task?.source ? JSON.parse(task.source) : null;
     if (!source) {
       return reply({ status: 'failed', pipelineIdentifier: '', durationMs: 0, outputs: {}, error: `Workflow not found: ${identifier}` }, true);
     }
 
-    const correlationId = `mcp-${randomUUID()}`;
+    const correlationId = context.runCorrelationId ?? `mcp-${randomUUID()}`;
     // Core.exec() only submits the job — it doesn't broadcast progress on its own
     // (that only happens automatically for cron jobs). Wire the same
     // TaskStreamListener the IPC 'exec' handler uses so this run shows up live in

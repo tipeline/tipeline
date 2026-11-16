@@ -132,7 +132,8 @@
       "kind": {
         "approval": "Aprobación",
         "failed": "Falló",
-        "missed": "Perdida"
+        "missed": "Perdida",
+        "alert": "Alerta"
       },
       "approvalDetail": "{workflow} espera tu decisión",
       "failedOnce": "La última ejecución falló",
@@ -144,9 +145,12 @@
       "dismiss": "Descartar",
       "allFailing": "Todos los flujos con fallos",
       "clearTitle": "Todo en orden: nada te necesita",
-      "clearDetail": "Aquí aparecen las aprobaciones, las ejecuciones fallidas y las programaciones perdidas.",
+      "clearDetail": "Aquí aparecen las aprobaciones, las alertas, las ejecuciones fallidas y las programaciones perdidas.",
       "comingUp": "Próximamente",
-      "tomorrowAt": "Mañana {time}"
+      "tomorrowAt": "Mañana {time}",
+      "alertRepeated": "×{n} desde las {time}",
+      "seeRun": "Ver ejecución",
+      "openWorkflow": "Abrir flujo"
     },
     "continue": {
       "title": "Continuar",
@@ -1388,7 +1392,9 @@
       "autoStartHint": "Inicia Core al iniciar sesión y de nuevo si falla, para que las programaciones se ejecuten sin la aplicación abierta.",
       "autoStartHintLogin": "Inicia Core al iniciar sesión, para que las programaciones se ejecuten sin la aplicación abierta.",
       "autoStartNotice": "Tipeline ahora sigue ejecutándose en segundo plano para que tus programaciones puedan ejecutarse.",
-      "autoStartNoticeAction": "Ajustes"
+      "autoStartNoticeAction": "Ajustes",
+      "keepRunning": "Seguir en la barra de menús / bandeja",
+      "keepRunningHint": "Cerrar la ventana la oculta: Tipeline sigue en la barra de menús (macOS) o el área de notificaciones (Windows, Linux) con lo que te necesita y lo que está en ejecución. Desactivado: cerrar la ventana cierra Tipeline. Core sigue en marcha en ambos casos."
     },
     "hubs": {
       "title": "Hubs"
@@ -1673,7 +1679,6 @@
   },
   "agent": {
     "tooltip": "Asistente (⌘K)",
-    "disabledRemote": "El asistente solo funciona con el espacio de trabajo local por ahora.",
     "notConfigured": "Asistente sin configurar",
     "notConfiguredDescription": "Agrega una clave API de {provider} en Configuración y asegúrate de que Tipeline Core esté en ejecución.",
     "openSettings": "Abrir Configuración",
@@ -1863,7 +1868,12 @@
       "openWorkflow": "Abrir flujo de trabajo",
       "failed": "No se pudo crear la programación."
     },
-    "notConfiguredNoProvider": "Elige un proveedor de IA y agrega su clave API en Configuración, y asegúrate de que Tipeline Core esté en ejecución."
+    "notConfiguredNoProvider": "Elige un proveedor de IA y agrega su clave API en Configuración, y asegúrate de que Tipeline Core esté en ejecución.",
+    "disabledViewer": "En este servidor, el Asistente es para editores y administradores.",
+    "remote": {
+      "noDrafts": "Por ahora, crear flujos nuevos con el Asistente funciona en un espacio de trabajo local.",
+      "historyNote": "Tus solicitudes en este servidor. Los administradores configuran el Asistente en Ajustes → Asistente."
+    }
   },
   "jsonEditor": {
     "invalid": "JSON no válido (línea {line}): {detail}"
@@ -2556,7 +2566,37 @@
     "stepOut": "Salir",
     "stepOutHint": "Ejecuta el resto de este subflujo y pausa en el flujo de trabajo que lo llamó",
     "inProjects": "En {count} proyectos",
-    "inProjectsHint": "En {names}. Al guardar cambia en todos ellos."
+    "inProjectsHint": "En {names}. Al guardar cambia en todos ellos.",
+    "phone": {
+      "device": "Diseño que editas",
+      "desktop": "Escritorio",
+      "phone": "Teléfono",
+      "tab": "Teléfono",
+      "layout": "Diseño para teléfonos",
+      "automatic": "automático, a partir del diseño de escritorio",
+      "arranged": "organizado para teléfonos",
+      "reset": "Volver a automático",
+      "hide": "Ocultar en teléfonos",
+      "show": "Mostrar",
+      "hiddenTitle": "No se muestra en teléfonos",
+      "noneHidden": "Todo lo de esta página se muestra en teléfonos.",
+      "hiddenMark": "Oculto en teléfonos",
+      "canvasHint": "Arrastra un componente en el teléfono para moverlo, o arrastra su borde para cambiar su ancho. Suprimir lo oculta en teléfonos; sigue en la app.",
+      "paletteNote": "Agrega componentes en el diseño de escritorio. Aquí los organizas para teléfonos.",
+      "showOnPhones": "Mostrar en teléfonos",
+      "width": "Ancho",
+      "full": "Ancho completo",
+      "half": "Medio ancho",
+      "columns": "{count} de {total} columnas",
+      "order": "Orden",
+      "moveUp": "Subir",
+      "moveDown": "Bajar",
+      "placedNote": "Colocado para teléfonos. Volver a automático, encima del teléfono, vuelve a colocar toda la página a partir del diseño de escritorio.",
+      "automaticNote": "Automático: colocado a partir del diseño de escritorio, en orden de lectura. Mover o cambiar el tamaño de algo en esta cuadrícula lo coloca para teléfonos.",
+      "inListItem": "Dentro de un elemento de lista: conserva su diseño de escritorio, porque en teléfonos cada elemento es una tarjeta de ancho completo.",
+      "pageNote": "Selecciona un componente para elegir cómo se muestra en teléfonos.",
+      "rulesNote": "Hasta que organices una página, los teléfonos muestran sus componentes en el orden de lectura del diseño de escritorio, cada uno de ancho completo. Los pequeños que están lado a lado, como KPI y botones, comparten fila de dos en dos."
+    }
   },
   "debugFooter": {
     "log": "Registro",
@@ -2887,7 +2927,8 @@
       "notRun": "no se ejecutó"
     },
     "resultColumn": "Resultado",
-    "savedTo": "→ guardado en {name}"
+    "savedTo": "→ guardado en {name}",
+    "raisedAlert": "Esta ejecución generó una alerta: | Esta ejecución generó {n} alertas:"
   },
   "agentInstructions": {
     "length": "{count} / {max} caracteres. Se envían con cada petición: mejor cortas."
@@ -3489,5 +3530,49 @@
       "notAllBuilt": "{count} elemento planeado aún no está en la app. | {count} elementos planeados aún no están en la app.",
       "removeFromPlan": "Quitar del plan"
     }
+  },
+  "alerts": {
+    "notifyTitle": "Alerta",
+    "notifyCritical": "Alerta crítica",
+    "notifyMany": "{count} alertas nuevas",
+    "notifyManyBody": "Abre Te necesita en el panel para verlas.",
+    "open": "Abrir",
+    "overviewTitle": "Alertas",
+    "acknowledged": "Descartada: queda en silencio hasta que el flujo la resuelva",
+    "reopen": "Reabrir",
+    "level": {
+      "info": "Información",
+      "warning": "Aviso",
+      "critical": "Crítica"
+    }
+  },
+  "tray": {
+    "open": "Abrir Tipeline",
+    "quit": "Salir de Tipeline",
+    "ask": "Preguntar",
+    "askHint": "Abre Tipeline con el panel del Asistente",
+    "settings": "Ajustes",
+    "coreRunning": "Core en marcha",
+    "coreStopped": "Core detenido",
+    "seeAll": "Ver todo",
+    "seeAllCount": "Ver todo ({n})",
+    "allClear": "Todo en orden: nada te necesita",
+    "critical": "Crítica",
+    "approve": "Aprobar",
+    "reject": "Rechazar",
+    "missedAt": "No se ejecutó a las {time}",
+    "running": "En ejecución",
+    "moreRunning": "+{n} más en ejecución",
+    "moreRunningMenu": "Más en ejecución…",
+    "stop": "Detener ejecución",
+    "stopRun": "Detener {name}",
+    "stopConfirm": "¿Detener {name}?",
+    "stopYes": "Detener",
+    "keep": "Seguir",
+    "stopping": "Deteniendo…",
+    "next": "Siguiente: {name} a las {when}",
+    "hintTitle": "Tipeline sigue en marcha",
+    "hintBodyMac": "Sigue en la barra de menús. Para cerrarlo, usa Salir de Tipeline allí o desactiva esto en Ajustes → Acerca de.",
+    "hintBody": "Sigue en el área de notificaciones. Para cerrarlo, usa Salir de Tipeline allí o desactiva esto en Ajustes → Acerca de."
   }
 }

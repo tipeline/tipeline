@@ -1,4 +1,4 @@
-import type { McpClient } from '@/McpClient';
+import type { ToolClient } from '@/types';
 import { explainModelError } from '@/errors';
 import { instructionsSection, type AgentInstructions } from '@/instructions';
 import type {
@@ -79,7 +79,7 @@ export const CANNOT_DO_TOOL: ToolDefinition = {
 export type DraftProgress = 'reading' | 'writing' | 'checking' | 'saving' | 'fixing';
 
 export interface DraftLoopConfig {
-  mcpClient: McpClient;
+  toolClient: ToolClient;
   provider: LLMProvider;
   providerLabel?: string;
   onProgress?: (step: DraftProgress) => void;
@@ -149,7 +149,7 @@ export function stripFence(yaml: string): string {
  * (still on a hub, deleted, drafts) are built from actions instead.
  */
 export async function draftRequestMessage(
-  mcpClient: McpClient,
+  toolClient: ToolClient,
   request: string,
   options: DraftOptions = {}
 ): Promise<string> {
@@ -168,7 +168,7 @@ export async function draftRequestMessage(
 
   let installed: Array<WorkflowSummary & { draft?: boolean }> = [];
   try {
-    const parsed = JSON.parse(await mcpClient.callTool('list_tasks', {}));
+    const parsed = JSON.parse(await toolClient.callTool('list_tasks', {}));
     if (Array.isArray(parsed)) installed = parsed;
   } catch {
     // Without the list every workflow counts as not installed; the model can still search.
@@ -226,13 +226,13 @@ export async function draftWorkflow(
   request: string,
   options: DraftOptions = {}
 ): Promise<DraftOutcome> {
-  const { mcpClient, provider } = config;
+  const { toolClient, provider } = config;
   const label = config.providerLabel ?? 'The AI provider';
 
   const [guide, available, content] = await Promise.all([
-    mcpClient.callTool('authoring_guide', {}),
-    mcpClient.listTools(),
-    draftRequestMessage(mcpClient, request, options),
+    toolClient.callTool('authoring_guide', {}),
+    toolClient.listTools(),
+    draftRequestMessage(toolClient, request, options),
   ]);
   const mcpTools = available.filter((tool) => DRAFT_MCP_TOOLS.includes(tool.name));
   if (mcpTools.length < DRAFT_MCP_TOOLS.length) {
@@ -278,7 +278,7 @@ export async function draftWorkflow(
             options.schedule?.trim() ||
             (typeof call.arguments.schedule === 'string' ? call.arguments.schedule.trim() : '');
           saved = JSON.parse(
-            await mcpClient.callTool('create_draft_workflow', { yaml, ...(schedule ? { schedule } : {}) })
+            await toolClient.callTool('create_draft_workflow', { yaml, ...(schedule ? { schedule } : {}) })
           );
         } catch (error: any) {
           saved = { created: false, errors: [error.message ?? String(error)] };
@@ -329,7 +329,7 @@ export async function draftWorkflow(
       let output: string;
       if (DRAFT_MCP_TOOLS.includes(call.name)) {
         try {
-          output = await mcpClient.callTool(call.name, call.arguments);
+          output = await toolClient.callTool(call.name, call.arguments);
         } catch (error: any) {
           output = `Error: ${error.message ?? String(error)}`;
         }

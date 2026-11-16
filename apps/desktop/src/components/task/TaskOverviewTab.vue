@@ -34,6 +34,7 @@ import { descriptionSummary } from '@tipeline/utils';
 import { useWorkflowUsage } from '@/composables/useWorkflowUsage';
 import DraftBanner from '@/components/task/DraftBanner.vue';
 import TaskSchedulesCard from '@/components/schedule/TaskSchedulesCard.vue';
+import TaskAlertsCard from '@/components/task/TaskAlertsCard.vue';
 import { formatStepDuration } from '@/utils/runSteps';
 import CapabilityChips from '@/components/task/CapabilityChips.vue';
 import type { CapabilityReport } from '@/utils/capabilities';
@@ -502,6 +503,8 @@ const updateAvailable = computed(
             </div>
           </template>
         </Card>
+
+        <TaskAlertsCard v-if="task?.identifier" class="mt-4" :task-identifier="task.identifier" />
 
         <TaskSchedulesCard
           v-if="task?.identifier"

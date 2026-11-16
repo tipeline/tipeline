@@ -205,12 +205,16 @@ export class PipelineService {
    * ascending ISO instants, n + 1 of them for n periods, so the caller decides where its
    * days start in its own time zone. Runs that never started (pending) aren't counted.
    */
-  static async countsByPeriod(boundaries: string[]) {
+  static async countsByPeriod(boundaries: string[], excludeTasks: string[] = []) {
     if (boundaries.length < 2) return [];
-    const rows = await PipelineModel.query()
-      .select('status', 'started_at', 'finished_at')
-      .where('started_at', '>=', boundaries[0])
-      .where('started_at', '<', boundaries[boundaries.length - 1]);
+    const query = PipelineModel.query()
+      .select('pipeline.status', 'pipeline.started_at', 'pipeline.finished_at')
+      .where('pipeline.started_at', '>=', boundaries[0])
+      .where('pipeline.started_at', '<', boundaries[boundaries.length - 1]);
+    if (excludeTasks.length) {
+      query.join('task', 'pipeline.task_id', 'task.id').whereNotIn('task.identifier', excludeTasks);
+    }
+    const rows = await query;
     // `finished` runs and their `durationMs` in total, so callers can average over any span.
     const periods = boundaries
       .slice(0, -1)
@@ -230,8 +234,11 @@ export class PipelineService {
     return periods;
   }
 
-  /** `status` filters in the query, so a page of failed runs isn't cut from the newest runs. */
-  static async getAllWithTaskName(limit = 100, offset = 0, status?: string) {
+  /**
+   * `status` filters in the query, so a page of failed runs isn't cut from the newest runs.
+   * `excludeTasks` (workflow identifiers) too: a Server leaves out workflows the user may not see.
+   */
+  static async getAllWithTaskName(limit = 100, offset = 0, status?: string, excludeTasks: string[] = []) {
     const query = PipelineModel.query()
       .join('task', 'pipeline.task_id', 'task.id')
       .select(
@@ -247,6 +254,7 @@ export class PipelineService {
       .limit(limit)
       .offset(offset);
     if (status) query.where('pipeline.status', status);
+    if (excludeTasks.length) query.whereNotIn('task.identifier', excludeTasks);
     return await query;
   }
 

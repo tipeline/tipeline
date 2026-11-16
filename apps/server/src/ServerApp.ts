@@ -10,7 +10,13 @@ import { TaskOwnershipService } from './ownership/TaskOwnershipService.js';
 import { PipelineAuditService } from './audit/PipelineAuditService.js';
 import { AuditLogService } from './audit/AuditLogService.js';
 import { RateLimiter } from './security/RateLimiter.js';
+import { applyCors, corsOrigins } from './security/cors.js';
 import { readBody, MAX_BODY_BYTES } from './utils/httpBody.js';
+import { pushConfigFrom, pushPlatforms } from './push/pushConfig.js';
+import { PushRoutes } from './push/PushRoutes.js';
+import { PushNotifier } from './push/PushNotifier.js';
+import { PushDeviceService } from './push/PushDeviceService.js';
+import { ApnsSender, FcmSender, LogSender, type PushSender } from './push/senders.js';
 
 const PORT = parseInt(process.env.TIPELINE_SERVER_PORT ?? '4001', 10);
 const RATE_LIMIT_WINDOW_MS = parseInt(process.env.TIPELINE_RATE_LIMIT_WINDOW_MS ?? '60000', 10);
@@ -25,15 +31,17 @@ const LOGIN_RATE_LIMIT_MAX = 10;
 export class ServerApp {
   private webhookRoutes!: WebhookRoutes;
   private tokenRoutes = new TokenRoutes();
+  private pushRoutes = new PushRoutes([]);
   private generalLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX);
   private loginLimiter = new RateLimiter(RATE_LIMIT_WINDOW_MS, LOGIN_RATE_LIMIT_MAX);
+  private corsOrigins = corsOrigins();
 
   async start(): Promise<void> {
     await runMigrations();
     await this.seedAdminUser();
 
     const coreClient = new CoreIpcClient();
-    const wsGateway = new WsGateway(coreClient);
+    const wsGateway = new WsGateway(coreClient, this.setUpPush(coreClient));
     this.webhookRoutes = new WebhookRoutes(coreClient, wsGateway);
 
     const httpServer = http.createServer((req, res) => {
@@ -59,6 +67,45 @@ export class ServerApp {
     };
     process.on('SIGTERM', shutdown);
     process.on('SIGINT', shutdown);
+  }
+
+  /**
+   * Push notifications are optional: off unless the Server is given Apple and/or Google
+   * credentials (or TIPELINE_PUSH_LOG=true while developing). See push/pushConfig.ts.
+   */
+  private setUpPush(coreClient: CoreIpcClient): PushNotifier | null {
+    let config;
+    try {
+      config = pushConfigFrom();
+    } catch (err: any) {
+      console.error(`[Server] Push notifications are off: ${err?.message ?? err}`);
+      return null;
+    }
+    const platforms = pushPlatforms(config);
+    this.pushRoutes = new PushRoutes(platforms);
+    if (platforms.length === 0) {
+      console.log('[Server] Push notifications: off');
+      return null;
+    }
+    const log = config.log ? new LogSender() : null;
+    const senders: Partial<Record<'ios' | 'android', PushSender>> = log
+      ? { ios: log, android: log }
+      : {
+          ...(config.apns ? { ios: new ApnsSender(config.apns) } : {}),
+          ...(config.fcm ? { android: new FcmSender(config.fcm) } : {}),
+        };
+    console.log(`[Server] Push notifications: ${platforms.join(', ')}${log ? ' (logged, not sent)' : ''}`);
+    return new PushNotifier({
+      senders,
+      recipients: (userIds) => PushDeviceService.recipients(userIds),
+      forgetToken: (token) => PushDeviceService.forgetToken(token),
+      getApproval: async (pipelineIdentifier) => {
+        const pending = (await coreClient.request('approvalList', {})) ?? [];
+        return pending.find((p: any) => p?.pipelineIdentifier === pipelineIdentifier) ?? null;
+      },
+      getOwner: (taskIdentifier) => TaskOwnershipService.getOwner(taskIdentifier),
+      getRequester: (pipelineIdentifier) => PipelineAuditService.getRequester(pipelineIdentifier),
+    });
   }
 
   private async seedAdminUser(): Promise<void> {
@@ -116,6 +163,9 @@ export class ServerApp {
   }
 
   private async handleHttp(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+    // Preflights are answered here, before the rate limits: the browser sends one ahead of
+    // each new kind of request, and the real request that follows is counted.
+    if (applyCors(req, res, this.corsOrigins)) return;
     res.setHeader('Content-Type', 'application/json');
 
     const ip = this.clientIp(req);
@@ -136,6 +186,7 @@ export class ServerApp {
     const requireUser = () => this.requireUser(req, res);
     if (await this.webhookRoutes.handle(req, res, requireAdmin, ip)) return;
     if (await this.tokenRoutes.handle(req, res, requireUser, ip)) return;
+    if (await this.pushRoutes.handle(req, res, requireUser)) return;
 
     if (req.method === 'GET' && req.url === '/health') {
       res.writeHead(200).end(JSON.stringify({ ok: true }));

@@ -1,5 +1,6 @@
 // registry.ts
 import * as aiGroup from './actions/ai';
+import * as alertGroup from './actions/alert';
 import * as apiGroup from './actions/api';
 import * as approvalGroup from './actions/approval';
 import * as arrayGroup from './actions/array';
@@ -52,6 +53,7 @@ import * as hubObject from './Hub';
 
 const registry = {
   ai: aiGroup,
+  alert: alertGroup,
   api: apiGroup,
   approval: approvalGroup,
   array: arrayGroup,
@@ -87,6 +89,7 @@ const registry = {
 
 // Separate registry for core validations
 export { parseApprovalTimeout } from './actions/approval';
+export { ALERT_LEVELS, type AlertLevel } from './actions/alert';
 export {
   isCacheableAction,
   isCacheableCall,
@@ -105,6 +108,16 @@ export {
   workflowCapabilities,
 } from './capabilities';
 export type { Capability, CapabilityStep, WorkflowCapability, WorkflowCapabilities } from './capabilities';
+
+export {
+  phoneLayouts,
+  packPhoneLayouts,
+  isPhoneArranged,
+  isPhoneHidden,
+} from './AppPhoneLayout';
+export type { PhoneGridLayout, PhoneLayoutItem, PhonePlacement } from './AppPhoneLayout';
+export { APP_PHONE_COLUMNS } from './App';
+export type { AppComponentMobile } from './App';
 
 export const coreValidations = {
   variableObject: variableObject,
@@ -260,6 +273,7 @@ export function getGroupActionsMap(): Record<string, string[]> {
 // Export pre-built validation collections for direct import
 export const validations = {
   ai: aiGroup.validations,
+  alert: alertGroup.validations,
   api: apiGroup.validations,
   approval: approvalGroup.validations,
   array: arrayGroup.validations,

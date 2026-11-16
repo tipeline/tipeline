@@ -9,8 +9,13 @@ import { withoutCredentialSettings, withoutSecretValues, withoutWrittenInSecrets
 import { authorizeCancel } from './cancelAuthorization.js';
 import { authorizeAppCommand, visibleAppWorkflows } from './appAuthorization.js';
 import { authorizeDecision, visibleApprovals, visibleHistory, type PendingApprovalItem } from './approvalAuthorization.js';
+import { authorizeAlertTargets, visibleAlerts, type AlertListItem } from './alertAuthorization.js';
 import { AuditLogService } from '../audit/AuditLogService.js';
 import { hideInProjectDetail, hideInProjectMap } from './hideWorkflows.js';
+import { chooseProtocol, tokenFromRequest } from './wsAuth.js';
+import { ASSISTANT_COMMANDS, AssistantService } from '../assistant/AssistantService.js';
+import { AssistantHistoryService } from '../assistant/AssistantHistoryService.js';
+import { RateLimiter } from '../security/RateLimiter.js';
 
 // Events in the middle of a run: the request stays routed to its connection. (A
 // sub-workflow's onTaskEnd arrives mid-run too — only onTaskEndAll / onTaskError end it.)
@@ -40,13 +45,14 @@ const VIEWER_ALLOWED = new Set([
   'appList', 'appDetail', 'tableDataFetch', 'appHistoryFetch', 'appRunsActive', 'appRunsList',
   // Deciding is checked per request: a viewer named as an approver may decide.
   'approvalList', 'approvalDecide', 'appApprovalList', 'appApprovalDecide', 'approvalHistory',
+  // Anyone who can see an alert may dismiss it (see alertAuthorization).
+  'alertList', 'alertDismiss', 'alertReopen',
   'variableList', 'variableUsage',
   'tagList', 'scheduleList', 'status',
   // Without credentials: see routeHidingSecrets.
   'settingsList',
   'pluginList', 'pluginDetail', 'pluginUsage',
   'projectList', 'projectDetail', 'projectMap',
-  'agentRunList',
   'hubList', 'hubCatalog', 'hubUpdateEvents',
 ]);
 
@@ -78,6 +84,11 @@ const ADMIN_ONLY_COMMANDS = new Set([
   'projectExport', 'projectImport',
   // The Trash holds every user's deleted workflows and apps (owners aren't kept in Core).
   'trashList', 'trashRestore', 'trashDelete', 'trashEmpty',
+  // Deleting run history: runs of every user and every workflow (Core keeps no owner per run).
+  'pipelineClear', 'pipelineClearAll', 'pipelineDelete',
+  // Core's assistant history (Desktop's, on that machine) has no user: everyone's at once.
+  // The Server's own users have assistantHistory.
+  'agentRunList',
 ]);
 
 const SECRET_BEARING_ANSWERS = new Set(['onSettingsList', 'onVariableList', 'onTaskDetail', 'onTaskRevisionDetail']);
@@ -98,6 +109,8 @@ const ALL_CORE_EVENTS = [
   'onAppUploadImage', 'onAppInstall', 'onAppExport', 'onAppUninstall', 'onTableDataFetch', 'onAppHistoryFetch',
   // Approvals
   'onApprovalList', 'onApprovalDecide', 'onAppApprovalList', 'onAppApprovalDecide', 'onApprovalHistory',
+  // Alerts
+  'onAlertList', 'onAlertDismiss', 'onAlertReopen',
   'onAppRunsActive', 'onAppRunsList',
   // Variables
   'onVariableList', 'onVariableNew', 'onVariableEdit', 'onVariableDuplicate',
@@ -155,6 +168,8 @@ const ALLOWED_COMMANDS = new Set([
   'appRunsActive', 'appRunsList',
   // Approvals
   'approvalList', 'approvalDecide', 'appApprovalList', 'appApprovalDecide', 'approvalHistory',
+  // Alerts
+  'alertList', 'alertDismiss', 'alertReopen',
   // Variables
   'variableList', 'variableNew', 'variableEdit', 'variableDuplicate',
   'variableDelete', 'variableUsage', 'variableExportAll',
@@ -174,8 +189,8 @@ const ALLOWED_COMMANDS = new Set([
   'projectList', 'projectNew', 'projectDetail', 'projectUpdate', 'projectDelete', 'projectDeletePreview',
   'projectAssignTask', 'projectUnassignTask', 'projectAssignApp', 'projectUnassignApp',
   'projectExport', 'projectImport', 'projectMap', 'projectMapSave', 'projectMapLink',
-  // Agent
-  'agentPrompt', 'agentRunList', 'agentRunSetPipeline',
+  // Agent (writing Core's history is Desktop's own; the Server records its users' requests itself)
+  'agentRunList',
   // Connections
   'connectionList', 'connectionAdd', 'connectionRemove', 'connectionUpdate',
   'connectionSetActive', 'connectionGetActive',
@@ -192,6 +207,10 @@ const ALLOWED_COMMANDS = new Set([
   'trashList', 'trashRestore', 'trashDelete', 'trashEmpty',
 ]);
 
+// What one user may ask the assistant: each request is a call to the organization's LLM.
+const ASSISTANT_ASKS_PER_WINDOW = 30;
+const ASSISTANT_WINDOW_MS = 10 * 60 * 1000;
+
 const APPROVAL_LISTS = new Set(['onApprovalList', 'onAppApprovalList', 'onApprovalHistory']);
 
 interface PendingDecision {
@@ -201,6 +220,13 @@ interface PendingDecision {
   approved: boolean;
   comment: string;
   appIdentifier: string | null;
+}
+
+interface PendingAlertChange {
+  user: User;
+  ip: string | null;
+  action: 'alert.dismiss' | 'alert.reopen';
+  items: AlertListItem[];
 }
 
 interface PendingTrigger {
@@ -218,8 +244,23 @@ export class WsGateway {
   private clientUser = new Map<WebSocket, User>();
   private pendingTriggers = new Map<string, PendingTrigger>();
   private pendingDecisions = new Map<string, PendingDecision>();
+  private pendingAlertChanges = new Map<string, PendingAlertChange>();
 
-  constructor(private readonly coreClient: CoreIpcClient) {}
+  private readonly assistant: AssistantService;
+  private readonly assistantLimiter = new RateLimiter(ASSISTANT_WINDOW_MS, ASSISTANT_ASKS_PER_WINDOW);
+
+  constructor(
+    private readonly coreClient: CoreIpcClient,
+    /** Push notifications, when the Server sends them: told about every Core event. */
+    private readonly push: { onCoreEvent(event: string, data: any): Promise<void> } | null = null
+  ) {
+    this.assistant = new AssistantService({
+      core: coreClient,
+      history: AssistantHistoryService,
+      getOwner: (taskIdentifier) => TaskOwnershipService.getOwner(taskIdentifier),
+      privateOwnedByOthers: (userId) => TaskOwnershipService.privateOwnedByOthers(userId),
+    });
+  }
 
   registerWebhookTrigger(
     correlationId: string,
@@ -236,14 +277,18 @@ export class WsGateway {
   }
 
   attach(httpServer: Server): void {
-    const wss = new WebSocketServer({ server: httpServer });
+    const wss = new WebSocketServer({
+      server: httpServer,
+      // Browser clients send their token as a subprotocol (see wsAuth.ts).
+      handleProtocols: (protocols) => chooseProtocol(protocols),
+    });
 
     wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
       const ip = req.socket.remoteAddress ?? null;
 
       // A client may send as soon as the connection opens, before the token check below is
       // done. The listener is attached first so that message waits instead of being lost.
-      const token = this.extractToken(req);
+      const token = tokenFromRequest(req);
       const authenticated = (token ? AuthService.validateToken(token) : Promise.resolve(null))
         .catch((err) => {
           console.error('[WsGateway] Token check failed:', err?.message ?? err);
@@ -267,7 +312,7 @@ export class WsGateway {
           const { event, ...payload } = msg;
           const currentUser = this.clientUser.get(ws)!;
 
-          if (!ALLOWED_COMMANDS.has(event)) {
+          if (!ALLOWED_COMMANDS.has(event) && !ASSISTANT_COMMANDS.has(event)) {
             ws.send(JSON.stringify({ event: 'error', data: { message: `Unknown command: ${event}` } }));
             return;
           }
@@ -281,6 +326,11 @@ export class WsGateway {
             const responseEvent = `on${event.charAt(0).toUpperCase()}${event.slice(1)}`;
             ws.send(JSON.stringify({ event: responseEvent, correlationId: payload.correlationId, error: message }));
           };
+
+          if (ASSISTANT_COMMANDS.has(event)) {
+            this.handleAssistant(event, payload, currentUser, ws, deny);
+            return;
+          }
 
           if (currentUser.role === 'viewer' && !VIEWER_ALLOWED.has(event)) {
             deny(`Permission denied: viewers cannot run "${event}"`);
@@ -408,6 +458,47 @@ export class WsGateway {
             }
           }
 
+          if (event === 'alertDismiss' || event === 'alertReopen') {
+            const params = payload.payload ?? {};
+            const responseEvent = event === 'alertDismiss' ? 'onAlertDismiss' : 'onAlertReopen';
+            const deny = (error: string) => {
+              if (payload.correlationId) this.correlationMap.delete(payload.correlationId);
+              ws.send(JSON.stringify({ event: responseEvent, correlationId: payload.correlationId, error }));
+            };
+            let alerts: AlertListItem[];
+            try {
+              alerts = (await this.coreClient.request('alertList', { includeClosed: true })) ?? [];
+            } catch (error: any) {
+              deny(error?.message ?? 'Could not read alerts');
+              return;
+            }
+            const auth = await authorizeAlertTargets(params, alerts, currentUser, {
+              getOwner: (taskIdentifier) => TaskOwnershipService.getOwner(taskIdentifier),
+            }, event === 'alertDismiss');
+            if (!auth.allowed) {
+              deny(auth.error);
+              return;
+            }
+            if (event === 'alertDismiss' && !auth.items.length) {
+              if (payload.correlationId) this.correlationMap.delete(payload.correlationId);
+              ws.send(JSON.stringify({ event: responseEvent, correlationId: payload.correlationId, data: { dismissed: 0 } }));
+              return;
+            }
+            // "All" becomes the alerts this user can see; recorded as the signed-in user.
+            payload.payload =
+              event === 'alertDismiss'
+                ? { ids: auth.items.map((a) => a.id), dismissedBy: currentUser.email }
+                : { id: auth.items[0].id };
+            if (payload.correlationId) {
+              this.pendingAlertChanges.set(payload.correlationId, {
+                user: currentUser,
+                ip,
+                action: event === 'alertDismiss' ? 'alert.dismiss' : 'alert.reopen',
+                items: auth.items,
+              });
+            }
+          }
+
           if (event === 'pipelineCancel') {
             const auth = await authorizeCancel(payload.payload, currentUser, {
               getRun: (pipelineIdentifier) => this.coreClient.request('pipelineDetail', { pipelineIdentifier }),
@@ -430,6 +521,13 @@ export class WsGateway {
               metadata: { workflow: auth.taskIdentifier },
               ip,
             });
+          }
+
+          // Run lists and counts leave out other users' private workflows. Core does it in
+          // the query, so pages stay full and a hidden workflow's runs never leave Core.
+          if ((event === 'pipelineList' || event === 'pipelineStats') && currentUser.role !== 'admin') {
+            const hidden = await TaskOwnershipService.privateOwnedByOthers(currentUser.id);
+            payload.payload = { ...(payload.payload ?? {}), excludeTasks: [...hidden] };
           }
 
           if (event === 'exec') {
@@ -473,9 +571,52 @@ export class WsGateway {
     }
   }
 
+  /**
+   * The Server's own assistant (AssistantService), for editors and admins only. Its runs are
+   * routed to the asker and recorded as theirs, like a run they start from a workflow page.
+   */
+  private handleAssistant(
+    event: string,
+    message: { correlationId?: string; payload?: any },
+    user: User,
+    ws: WebSocket,
+    deny: (message: string) => void
+  ): void {
+    if (user.role === 'viewer') {
+      deny('Permission denied: the Assistant is for editors and admins.');
+      return;
+    }
+    const correlationId = message.correlationId;
+    if (!correlationId) {
+      deny(`"${event}" needs a correlationId`);
+      return;
+    }
+    if (event === 'assistantAsk' && !this.assistantLimiter.hit(user.id)) {
+      const minutes = Math.max(1, Math.ceil(this.assistantLimiter.retryAfter(user.id) / 60));
+      deny(`Too many requests to the Assistant: try again in ${minutes} minute${minutes === 1 ? '' : 's'}.`);
+      return;
+    }
+    void this.assistant.handle(event, correlationId, message.payload ?? {}, user, {
+      send: (msg) => {
+        if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+      },
+      beforeRun: (runCorrelationId, taskIdentifier) => {
+        this.correlationMap.set(runCorrelationId, ws);
+        this.pendingTriggers.set(runCorrelationId, {
+          type: 'user',
+          ref: user.id,
+          name: `${user.email} · Assistant`,
+          taskIdentifier,
+          requestedBy: { id: user.id, email: user.email },
+        });
+      },
+    });
+  }
+
   private route(event: string, data: any): void {
     // Fire-and-forget async side-effects; routing uses the original data synchronously
     void this.handleCoreEventSideEffects(event, data);
+    if (this.push) void this.push.onCoreEvent(event, data);
 
     if (event === 'onTaskList' || event === 'onTaskUsage') {
       void this.routeTaskListFiltered(event, data);
@@ -489,8 +630,20 @@ export class WsGateway {
       void this.routeApprovalsFiltered(event, data);
       return;
     }
+    if (event === 'onAlertList') {
+      void this.routeAlertsFiltered(event, data);
+      return;
+    }
     if (event === 'onAppRunsActive') {
       this.routeOwnAppRuns(event, data);
+      return;
+    }
+    if (event === 'onPipelineDetail') {
+      void this.routeRunDetail(event, data);
+      return;
+    }
+    if (event === 'onScheduleList') {
+      void this.routeScheduleList(event, data);
       return;
     }
     if (SECRET_BEARING_ANSWERS.has(event)) {
@@ -537,6 +690,44 @@ export class WsGateway {
       if ((event === 'onTaskDetail' || event === 'onTaskRevisionDetail') && answer.source) {
         answer = { ...answer, source: withoutWrittenInSecrets(answer.source) };
       }
+    }
+    ws.send(JSON.stringify({ event, ...data, data: answer }));
+  }
+
+  /**
+   * A run's detail goes only to the asker. A run of another user's private workflow gets the
+   * same answer as a missing one, as for cancel: its steps and variables stay with the owner.
+   */
+  private async routeRunDetail(event: string, data: any): Promise<void> {
+    const correlationId = data?.correlationId;
+    const ws = correlationId ? this.correlationMap.get(correlationId) : undefined;
+    if (correlationId) this.correlationMap.delete(correlationId);
+    const user = ws ? this.clientUser.get(ws) : undefined;
+    if (!ws || !user || ws.readyState !== WebSocket.OPEN) return;
+
+    const taskIdentifier = data?.data?.task?.identifier;
+    if (user.role !== 'admin' && typeof taskIdentifier === 'string') {
+      const owner = await TaskOwnershipService.getOwner(taskIdentifier);
+      if (owner && owner.user_id !== user.id && owner.visibility === 'private') {
+        ws.send(JSON.stringify({ event, correlationId, error: 'Run not found' }));
+        return;
+      }
+    }
+    ws.send(JSON.stringify({ event, ...data }));
+  }
+
+  /** Schedules go only to the asker, without those of other users' private workflows. */
+  private async routeScheduleList(event: string, data: any): Promise<void> {
+    const correlationId = data?.correlationId;
+    const ws = correlationId ? this.correlationMap.get(correlationId) : undefined;
+    if (correlationId) this.correlationMap.delete(correlationId);
+    const user = ws ? this.clientUser.get(ws) : undefined;
+    if (!ws || !user || ws.readyState !== WebSocket.OPEN) return;
+
+    let answer = data?.data;
+    if (Array.isArray(answer) && user.role !== 'admin') {
+      const hidden = await TaskOwnershipService.privateOwnedByOthers(user.id);
+      if (hidden.size > 0) answer = answer.filter((s: any) => !hidden.has(s?.taskIdentifier));
     }
     ws.send(JSON.stringify({ event, ...data, data: answer }));
   }
@@ -633,8 +824,44 @@ export class WsGateway {
     ws.send(JSON.stringify({ event, ...outData }));
   }
 
+  /** Alert lists go only to the asker, without alerts from workflows they may not see. */
+  private async routeAlertsFiltered(event: string, data: any): Promise<void> {
+    const correlationId = data?.correlationId;
+    const ws = correlationId ? this.correlationMap.get(correlationId) : undefined;
+    if (correlationId) this.correlationMap.delete(correlationId);
+    const user = ws ? this.clientUser.get(ws) : undefined;
+    if (!ws || !user || ws.readyState !== WebSocket.OPEN) return;
+
+    let outData = data;
+    if (Array.isArray(data?.data)) {
+      const items = await visibleAlerts(data.data, user, {
+        getOwner: (taskIdentifier) => TaskOwnershipService.getOwner(taskIdentifier),
+      });
+      outData = { ...data, data: items };
+    }
+    ws.send(JSON.stringify({ event, ...outData }));
+  }
+
   private async handleCoreEventSideEffects(event: string, data: any): Promise<void> {
     const correlationId = data?.correlationId;
+
+    if ((event === 'onAlertDismiss' || event === 'onAlertReopen') && correlationId) {
+      const change = this.pendingAlertChanges.get(correlationId);
+      this.pendingAlertChanges.delete(correlationId);
+      if (change && !data?.error) {
+        for (const item of change.items) {
+          await AuditLogService.log({
+            actorId: change.user.id,
+            actorEmail: change.user.email,
+            action: change.action,
+            targetType: 'alert',
+            targetId: item.id,
+            metadata: { title: item.title ?? null, workflow: item.taskIdentifier },
+            ip: change.ip,
+          });
+        }
+      }
+    }
 
     if ((event === 'onApprovalDecide' || event === 'onAppApprovalDecide') && correlationId) {
       const decision = this.pendingDecisions.get(correlationId);
@@ -658,7 +885,8 @@ export class WsGateway {
     }
 
     if (event === 'onTaskNew' || event === 'onTaskInstall') {
-      const taskId = data?.data?.identifier;
+      // taskNew answers with the workflow; taskInstall with a message and the identifier beside it.
+      const taskId = data?.data?.identifier ?? data?.identifier;
       if (taskId && !data.error && correlationId) {
         const ws = this.correlationMap.get(correlationId);
         const user = ws ? this.clientUser.get(ws) : undefined;
@@ -704,11 +932,5 @@ export class WsGateway {
     for (const client of this.clients) {
       if (client.readyState === WebSocket.OPEN) client.send(msg);
     }
-  }
-
-  private extractToken(req: IncomingMessage): string | null {
-    const auth = req.headers['authorization'];
-    if (auth?.startsWith('Bearer ')) return auth.slice(7);
-    return null;
   }
 }

@@ -25,6 +25,7 @@ import { EditorView } from '@codemirror/view'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { useColorMode } from '@vueuse/core'
 import AutoFormLabel from './AutoFormLabel.vue'
+import { useOpenWhenFilled } from './useOpenWhenFilled'
 import AutoFormCodeMirrorEditor from './AutoFormCodeMirrorEditor.vue'
 import type { ConfigItem } from './interface'
 import { beautifyObjectName } from './utils'
@@ -61,6 +62,7 @@ const valueEntries = computed(() =>
 )
 
 const { value, setValue } = useField<any>(props.fieldName)
+const { open, setOpen } = useOpenWhenFilled(value)
 
 const taskVariables = inject<Ref<{ name: string; type: string }[]> | null>('taskVariables', null)
 const showModeToggle = computed(() => taskVariables !== null)
@@ -247,7 +249,15 @@ const removePair = (i: number) => pairs.value.splice(i, 1)
 </script>
 
 <template>
-  <Accordion type="single" as-child class="w-full" collapsible :disabled="disabled">
+  <Accordion
+    type="single"
+    as-child
+    class="w-full"
+    collapsible
+    :disabled="disabled"
+    :model-value="open ? fieldName : ''"
+    @update:model-value="(v) => setOpen(v === fieldName)"
+  >
     <FormItem>
       <AccordionItem :value="fieldName" class="border-none bg-muted/50 rounded-md px-2">
         <AccordionTrigger>

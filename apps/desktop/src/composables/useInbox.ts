@@ -2,6 +2,7 @@ import { computed, type Ref } from 'vue';
 import type { TaskItem } from '@/config/tables/TasksList';
 import type { ScheduleItem } from '@/config/tables/SchedulesList';
 import { useApprovalsStore } from '@/store/approvalsStore';
+import { useAlertsStore } from '@/store/alertsStore';
 import { useInboxStore } from '@/store/inbox';
 
 // Which failed run a dismissal is about: its identifier, or its time for older cores.
@@ -11,9 +12,10 @@ export const failedRunKey = (task: TaskItem) => task.last_run_identifier ?? task
 const missedKey = (schedule: ScheduleItem) => `schedule:${schedule.scheduleIdentifier}`;
 
 /**
- * What only the user can act on: approvals they can decide, workflows whose latest run
- * failed, and scheduled runs that didn't happen (Core was off) — minus the ones they
- * dismissed. Home's "Needs you" list and its count both read from here, so they agree.
+ * What only the user can act on: approvals they can decide, open alerts raised by
+ * workflows, workflows whose latest run failed, and scheduled runs that didn't happen
+ * (Core was off) — minus the ones they dismissed. Info alerts are listed but not counted.
+ * Home's "Needs you" list and its count both read from here, so they agree.
  */
 export function useInbox(
   tasks: Ref<TaskItem[] | null | undefined>,
@@ -21,6 +23,7 @@ export function useInbox(
 ) {
   const approvals = useApprovalsStore();
   const inbox = useInboxStore();
+  const alertsStore = useAlertsStore();
 
   const failing = computed<TaskItem[]>(() =>
     (tasks.value ?? [])
@@ -34,7 +37,9 @@ export function useInbox(
       .sort((a, b) => Date.parse(b.missedAt!) - Date.parse(a.missedAt!))
   );
 
-  const count = computed(() => approvals.actionable.length + failing.value.length + missed.value.length);
+  const count = computed(
+    () => approvals.actionable.length + alertsStore.count + failing.value.length + missed.value.length
+  );
 
   function dismiss(task: TaskItem) {
     inbox.dismiss(task.identifier, failedRunKey(task));
@@ -44,5 +49,14 @@ export function useInbox(
     if (schedule.missedAt) inbox.dismiss(missedKey(schedule), schedule.missedAt);
   }
 
-  return { approvals: computed(() => approvals.actionable), failing, missed, count, dismiss, dismissMissed };
+  return {
+    approvals: computed(() => approvals.actionable),
+    alerts: computed(() => alertsStore.items),
+    failing,
+    missed,
+    count,
+    dismiss,
+    dismissMissed,
+    dismissAlert: alertsStore.dismiss,
+  };
 }

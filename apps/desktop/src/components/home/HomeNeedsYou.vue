@@ -8,12 +8,13 @@ import { Button } from '@/components/ui/button';
 import type { TaskItem } from '@/config/tables/TasksList';
 import type { ScheduleItem } from '@/config/tables/SchedulesList';
 import { useInbox } from '@/composables/useInbox';
+import type { AlertItem } from '@/store/alertsStore';
 import { useTaskExecution } from '@/composables/useTaskExecution';
 import { HOME_HEADING, HOME_HEADING_ROW, HOME_LINK } from '@/config/homeStyles';
 
-// Home's first section: everything only the user can act on — approvals to decide, workflows
-// whose last run failed, scheduled runs that didn't happen — newest first, each with what to
-// do about it. With nothing there it says so plainly, and shows what runs next, so a glance
+// Home's first section: everything only the user can act on — approvals to decide, alerts
+// workflows raised, workflows whose last run failed, scheduled runs that didn't happen —
+// newest first, each with what to do about it. With nothing there it says so plainly, and shows what runs next, so a glance
 // is enough.
 const props = defineProps<{
   tasks: TaskItem[] | null | undefined;
@@ -22,13 +23,13 @@ const props = defineProps<{
 
 const { t } = useI18n();
 const router = useRouter();
-const { approvals, failing, missed, count, dismiss, dismissMissed } = useInbox(
+const { approvals, alerts, failing, missed, count, dismiss, dismissMissed, dismissAlert } = useInbox(
   toRef(props, 'tasks'),
   toRef(props, 'schedules')
 );
 const { executeTask } = useTaskExecution();
 
-type Kind = 'approval' | 'failed' | 'missed';
+type Kind = 'approval' | 'alert' | 'failed' | 'missed';
 type Row = {
   key: string;
   kind: Kind;
@@ -65,6 +66,24 @@ function missedTime(iso: string): string {
   return isToday(date) ? format(date, 'HH:mm') : format(date, 'EEE d MMM HH:mm');
 }
 
+// "Traffic report · ×3 since 09:00 · 1240 visits in the last hour"
+function alertDetail(alert: AlertItem): string {
+  const parts = [alert.workflowName ?? alert.taskIdentifier];
+  if (alert.count > 1) {
+    parts.push(t('dashboard.needs.alertRepeated', { n: alert.count, time: missedTime(alert.firstRaisedAt) }));
+  }
+  if (alert.message) parts.push(alert.message);
+  return parts.join(' · ');
+}
+
+function openAlert(alert: AlertItem) {
+  if (alert.pipelineIdentifier) {
+    router.push({ name: 'PipelineDetail', params: { tid: alert.taskIdentifier, pipelineId: alert.pipelineIdentifier } });
+  } else {
+    router.push(`/tasks/${alert.taskIdentifier}`);
+  }
+}
+
 const rows = computed<Row[]>(() => {
   const list: Row[] = [
     ...approvals.value.map((item) => ({
@@ -74,6 +93,18 @@ const rows = computed<Row[]>(() => {
       detail: t('dashboard.needs.approvalDetail', { workflow: item.workflowName }),
       at: item.requestedAt ?? null,
       primary: { label: t('dashboard.needs.review'), run: () => router.push('/approvals') },
+    })),
+    ...alerts.value.map((alert) => ({
+      key: `alert:${alert.id}`,
+      kind: 'alert' as const,
+      title: alert.title,
+      detail: alertDetail(alert),
+      at: alert.lastRaisedAt,
+      primary: {
+        label: alert.pipelineIdentifier ? t('dashboard.needs.seeRun') : t('dashboard.needs.openWorkflow'),
+        run: () => openAlert(alert),
+      },
+      secondary: { label: t('dashboard.needs.dismiss'), run: () => void dismissAlert(alert) },
     })),
     ...failing.value.map((task) => {
       const times = failedInARow(task);
@@ -100,10 +131,12 @@ const rows = computed<Row[]>(() => {
   return list.sort((a, b) => Date.parse(b.at ?? '0') - Date.parse(a.at ?? '0'));
 });
 
+// Same colours as the tray mock-up: approval purple, alert orange, failed red, missed blue.
 const badge: Record<Kind, string> = {
+  approval: 'bg-violet-500/15 text-violet-800 dark:text-violet-300',
+  alert: 'bg-orange-500/15 text-orange-800 dark:text-orange-300',
   failed: 'bg-destructive/10 text-red-700 dark:text-red-400',
-  approval: 'bg-amber-500/15 text-amber-800 dark:text-amber-300',
-  missed: 'bg-muted text-foreground/80',
+  missed: 'bg-blue-500/15 text-blue-800 dark:text-blue-300',
 };
 
 const ago = (iso: string | null) => (iso ? formatDistanceToNow(new Date(iso), { addSuffix: true }) : '');

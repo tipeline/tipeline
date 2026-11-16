@@ -14,7 +14,7 @@ The sidebar groups every part of the app:
 
 | Group | Section | What you'll find there |
 |-------|---------|----------------------|
-| | **Home** | What needs you (approvals, failed and missed runs), your starred and recent items, today's runs |
+| | **Home** | What needs you (approvals, alerts, failed and missed runs), your starred and recent items, today's runs |
 | **Build** | **Workflows** | Every installed workflow — run, edit, see its runs ([builder](/desktop/builder)) |
 | | **Apps** | Dashboards and tools built on your workflows ([Apps](/apps/)) |
 | | **Projects** | Workflows and apps grouped by project ([Projects](/desktop/projects)) |
@@ -49,6 +49,12 @@ From top to bottom:
 - **Needs you**, with how many things are waiting. Newest first, each row says what
   happened and has a button for it:
   - **Approval**: a run waiting for your decision. **Review** opens the Approvals page.
+  - **Alert**: something a workflow told you about with [`alert.raise`](/workflows/alerts),
+    with the workflow, how many times it was raised since when (×3 since 09:00) and its
+    message. **See run** opens the latest run that raised it (**Open workflow** when that
+    run wasn't saved); **Dismiss** acknowledges it, so it stays quiet while the workflow
+    keeps raising it, until the workflow resolves it. Warning and critical alerts count in
+    the number next to Needs you; info alerts are only listed.
   - **Failed**: a workflow whose latest run failed, and how many times in a row.
     **Open run** shows that run; **Dismiss** hides it until the workflow fails again (it also
     leaves on its own when the next run succeeds). **All failing workflows** opens the
@@ -67,6 +73,37 @@ From top to bottom:
 When Needs you is long, the whole page scrolls.
 
 Starred items, recent items and dismissed failures and missed runs are kept per workspace.
+
+## In the menu bar and tray
+
+Closing the Tipeline window doesn't quit it: it keeps running in the **menu bar** (macOS)
+or the **notification area** (Windows, Linux), so notifications keep coming and scheduled
+runs keep being watched. The first time, a notification says so. To really quit, use
+**Quit Tipeline** from the icon's menu (right-click on macOS and Windows) or ⌘Q while the
+window is open. To make closing the window quit Tipeline instead, turn off **Keep running
+in the menu bar / tray** in **Settings → About**. Core keeps running either way.
+
+The icon shows how many things need you: a number next to it on macOS, a red dot on
+Windows and Linux. Click it to open a small window with:
+
+- **Needs you**: the 4 most urgent items: critical alerts first, then approvals, failed
+  runs, other alerts and missed schedules, each with its button (**Approve** / **Reject**,
+  **See run**, **Open run**, **Run now**, **Dismiss**). With more, **See all (N)** opens
+  Needs you on Home.
+- **Running**: up to 3 runs in progress and how long they've been running. **■** stops one
+  after you confirm; **+N more running** opens the Runs page filtered to running ones.
+- **Next**: when the next scheduled run starts.
+- **Open Tipeline**, and **Ask**, which brings the main window forward with the
+  [Assistant](/assistant/) panel open on the page you were on (Home, when you were in the
+  builder or an editor), with the cursor in its box so you can start typing. Ask isn't
+  shown when connected to a server workspace.
+
+Clicking a title opens it in the main window. Dismissing in either place dismisses it in
+both. Press Esc or click elsewhere to close it.
+
+On Linux many desktops don't report clicks on tray icons, so the icon opens a menu with
+the same items instead. GNOME needs the AppIndicator extension (Ubuntu has it already) to
+show tray icons at all.
 
 ### Search
 
@@ -113,6 +150,10 @@ From the **Workflows** list, click any workflow to open its detail view. From th
 - **Run (Debug)** — execute in step-through mode, pausing before each action
 - **Edit** — open the workflow in the visual builder
 - **View history** — see all past pipeline runs for this workflow
+
+When the workflow has [alerts](/workflows/alerts) that are open or dismissed, its Overview
+lists them in an **Alerts** card, with **See run**, **Dismiss** and, for dismissed ones,
+**Reopen** to put them back in Needs you.
 
 <div class="screenshot-placeholder" style="height: 320px;">
   <span class="placeholder-icon">▶️</span>

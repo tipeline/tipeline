@@ -4,6 +4,7 @@ import {
   columnWeight,
   FIT_COMFORT_COLUMN,
   FIT_MIN_COLUMN,
+  FIT_READABLE_COLUMN,
   fitLayout,
   type TableFitColumn,
 } from '@/utils/tableFit';
@@ -66,20 +67,33 @@ describe('fitLayout', () => {
   });
 
   it('short of room: cut columns shrink to their minimum before whole ones shrink', () => {
-    // 40 + 96 (amount) + 120 (notes, comfortable) don't fit in 220
-    let { widths } = fitLayout(columns, rows, valueOf, 220);
+    // 40 + 96 (amount) + 120 (notes, comfortable) don't fit in 246
+    let { widths } = fitLayout(columns, rows, valueOf, 246);
     expect(widths.amount).toBe('96px');
-    expect(widths.notes).toBe('84px');
-    ({ widths } = fitLayout(columns, rows, valueOf, 40 + 56 + 76));
-    expect(widths.notes).toBe(`${FIT_MIN_COLUMN}px`);
-    expect(widths.amount).toBe('76px');
+    expect(widths.notes).toBe('110px');
+    ({ widths } = fitLayout(columns, rows, valueOf, 40 + 96 + 96));
+    expect(widths.notes).toBe(`${FIT_READABLE_COLUMN}px`);
+    expect(widths.amount).toBe('96px');
   });
 
   it('below the minimums every column keeps its minimum and the table scrolls', () => {
     const layout = fitLayout([...columns.slice(0, 2), col('notes', { minWidth: 200 })], rows, valueOf, 100);
-    expect(layout.widths.amount).toBe(`${FIT_MIN_COLUMN}px`);
+    expect(layout.widths.amount).toBe(`${FIT_READABLE_COLUMN}px`);
     expect(layout.widths.notes).toBe('200px');
-    expect(layout.minWidth).toBe(40 + FIT_MIN_COLUMN + 200);
+    expect(layout.minWidth).toBe(40 + FIT_READABLE_COLUMN + 200);
+  });
+
+  it('many columns on a narrow table: readable widths and a sideways scroll, not letter-wide strips', () => {
+    const many = ['created', 'log', 'title', 'status'].map((id) => col(id));
+    const row = { created: 'Nov 15, 2026, 10:59 PM', log: 'Exported the static site', title: 'Our company history', status: 'Published' };
+    const layout = fitLayout(many, [row], valueOf, 300);
+    for (const c of many) expect(px(layout.widths[c.id])).toBeGreaterThanOrEqual(FIT_READABLE_COLUMN);
+    expect(layout.minWidth).toBeGreaterThan(300);
+  });
+
+  it('a column of very short content may still go down to its content', () => {
+    const layout = fitLayout([col('id'), col('notes')], [{ id: 7, notes: 'x'.repeat(40) }], valueOf, 100);
+    expect(layout.widths.id).toBe(`${FIT_MIN_COLUMN}px`);
   });
 
   it('a minWidth past the comfortable width is kept when there is room', () => {

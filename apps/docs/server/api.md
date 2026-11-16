@@ -22,7 +22,7 @@ They share one authentication mechanism (a bearer token), but you'll use them fo
 
 ## 1. Authentication
 
-Every request (REST or WebSocket) authenticates the same way: an `Authorization: Bearer <token>` header. There are two kinds of token, and they're created differently:
+Every request (REST or WebSocket) authenticates the same way: an `Authorization: Bearer <token>` header. (A browser can't set headers on a WebSocket, so browser clients send the token as a subprotocol instead: see [§4](#_4-websocket-gateway).) There are two kinds of token, and they're created differently:
 
 | | Session token | API token |
 |---|---|---|
@@ -147,13 +147,54 @@ Webhooks are the answer to "let an external system (GitHub, Stripe, a cron servi
 | `GET /workflows/ownership` | any | All task ownership/visibility records |
 | `PATCH /workflows/:identifier/visibility` | owner or admin | `{visibility: "shared"\|"private"}` |
 | `GET /pipeline-audit?limit=&offset=` | any | Past task runs: `task_identifier`, `status` (`running`\|`completed`\|`error`), `triggered_by_type`, timestamps. `limit` capped at 500 |
-| `GET /audit-log?limit=&offset=&action=` | admin | Security/admin activity: logins, token/user/webhook/session changes. Same pagination cap |
+| `GET /audit-log?limit=&offset=&action=` | admin | Security/admin activity: logins, token/user/webhook/session changes, approval decisions, canceled runs, dismissed and reopened alerts. Same pagination cap |
 
 ### Misc
 
 | Method & path | Auth |
 |---|---|
 | `GET /health` | none (still rate-limited) |
+
+### Push notifications
+
+Optional: the Server sends push notifications to the phone app only when it has the credentials. Without them, everything else works the same and phones just aren't told.
+
+| Variable | For | Value |
+|---|---|---|
+| `TIPELINE_PUSH_APNS_KEY` | iPhones | The `.p8` key from Apple (Certificates, IDs & Profiles → Keys, with Apple Push Notifications), its contents or a path to the file |
+| `TIPELINE_PUSH_APNS_KEY_ID` / `TIPELINE_PUSH_APNS_TEAM_ID` | iPhones | The key's id and your Apple developer team id |
+| `TIPELINE_PUSH_APNS_TOPIC` | iPhones | The app's bundle id. Default `com.bananacore.tipeline.mobile` |
+| `TIPELINE_PUSH_APNS_SANDBOX` | iPhones | `true` for development builds (Xcode, TestFlight uses production) |
+| `TIPELINE_PUSH_FCM_SERVICE_ACCOUNT` | Android | A Firebase service account JSON (Project settings → Service accounts), its contents or a path to the file |
+| `TIPELINE_PUSH_LOG` | testing | `true` writes each notification to the Server's log instead of sending it, for both platforms |
+
+In Docker, a path must be inside the container: mount the file (for example `./secrets:/run/secrets:ro`) and point the variable at `/run/secrets/AuthKey.p8`.
+
+**Who is told what.** Each phone chooses what it hears about. By default it hears about runs waiting for approval and failed runs, but not finished runs.
+
+- *Waiting for approval*: everyone who may decide it, by the same rules as `approvalDecide`. That is the approvers the request names (or editors and admins), never the person who started it when the four-eyes rule is on, and nobody who can't see a private workflow.
+- *Failed*: whoever started the run, or the workflow's owner for schedules and webhooks.
+- *Finished*: whoever started the run, when their phone turned these on.
+
+Only the run a request started counts, not the sub-workflows it calls.
+
+**The lock screen** shows no workflow names unless the phone turns on details ("A run failed" instead of "Supplier payments failed"), since run names can be private. The run's identifier travels as data, so tapping a notification opens the run.
+
+| Method & path | Auth | Body / notes |
+|---|---|---|
+| `GET /push` | any user | `{ enabled, platforms }`: whether this Server sends push notifications, and to which phones |
+| `GET /devices` | any user | Your registered phones (`id`, `platform`, `preferences`, …). The token itself is never returned |
+| `POST /devices` | any user | `{ platform: "ios"\|"android", token, locale?, preferences? }` registers this phone. A token is one phone, so when someone else signs in on it, it moves to them. `409` when the Server doesn't send to that platform |
+| `PATCH /devices/:id` | owner | `{ preferences: { approvals?, failures?, finished?, details? } }`. Only booleans count |
+| `DELETE /devices/:id` | owner | Stop sending to this phone (the app calls it when you sign out) |
+
+Apple or Google saying a token is no longer valid (the app was removed, say) deletes that device.
+
+### Browser clients (CORS)
+
+Browsers only let a page call the REST endpoints when the Server allows the page's origin. The mobile app's own origins (`capacitor://localhost` on iOS, `https://localhost` on Android) are always allowed. Add others with `TIPELINE_CORS_ORIGINS`, comma-separated, for example `http://localhost:5173` while developing a web client; `*` allows every origin. Desktop, the CLI, scripts and webhook callers aren't browsers, so this doesn't apply to them.
+
+Tokens travel in the `Authorization` header, never in a cookie, so the Server doesn't use credentialed CORS.
 
 ---
 
@@ -169,6 +210,14 @@ const ws = new WebSocket('wss://your-server:4001', {
   headers: { Authorization: `Bearer ${TOKEN}` },
 });
 ```
+
+**From a browser** (or the mobile app's WebView), which can't set headers on a WebSocket: send the token as a second subprotocol, next to `tipeline`. The Server answers with `tipeline` only, so the token is never sent back. A handshake that doesn't ask for `tipeline` fails.
+
+```js
+const ws = new WebSocket('wss://your-server:4001', ['tipeline', `bearer.${TOKEN}`]);
+```
+
+A missing or unknown token closes the connection with code `4001`. When both are sent, the `Authorization` header wins.
 
 **Send a command** — every message needs an `event` name and a `correlationId` you choose, so you can match the response:
 
@@ -191,18 +240,58 @@ The full allowlist lives in `apps/server/src/ws/WsGateway.ts` (`ALLOWED_COMMANDS
 
 - **Tasks**: `taskList`, `taskDetail`, `taskNew`, `taskDuplicate`, `taskUpdateSource`, `taskUpdateMeta`, `taskValidate`, `taskInstall`, `taskExportAll`, `taskReload`, `taskUninstall`, `taskUploadImage`
 - **Execution**: `exec`, `debugNext`, `debugRun`, `debugPause`, `debugStop`
-- **Pipelines**: `pipelineList`, `pipelineDetail`, `pipelineStats`, `pipelineResume`, `pipelineClear`, `pipelineClearAll`
+- **Pipelines**: `pipelineList`, `pipelineDetail`, `pipelineStats`, `pipelineResume`, `pipelineCancel`, `pipelineClear`, `pipelineClearAll`, `pipelineDelete`. Deleting runs (`pipelineClear`, `pipelineClearAll`, `pipelineDelete`) is admin only: Core keeps no owner per run, so these reach every user's history.
 - **Apps, Variables, Tags, Schedules, Plugins, Projects, Hubs, Connections**: full CRUD per area (see source for exact names)
 - **System**: `status`, `stop`
-- **Agent**: `agentPrompt`, `agentRunList`, `agentRunSetPipeline`
+- **Assistant**: `assistantAsk`, `assistantRun`, `assistantChoose`, `assistantHistory`, answered by the Server itself (see [The Assistant](#the-assistant)). `agentRunList` reads Core's own Assistant history, which has no user on it, so it is admin only.
 
 ### Viewer-scoped tokens
 
-A `viewer`-scoped connection can only call the read-only subset: `taskList`, `taskDetail`, `pipelineList`, `pipelineDetail`, `pipelineStats`, `appList`, `appDetail`, `tableDataFetch`, `variableList`, `variableUsage`, `tagList`, `scheduleList`, `status`, `settingsList`, `settingsGetApiToken`, `pluginList`, `pluginDetail`, `pluginUsage`, `projectList`, `projectDetail`, `agentRunList`, `connectionList`, `connectionGetActive`, `hubList`, `hubCatalog`. Everything else — including `exec` — gets `{"event":"error","data":{"message":"Permission denied: viewers cannot run \"...\""}}`.
+A `viewer`-scoped connection can only call the read-only subset: `taskList`, `taskDetail`, `pipelineList`, `pipelineDetail`, `pipelineStats`, `appList`, `appDetail`, `tableDataFetch`, `variableList`, `variableUsage`, `tagList`, `scheduleList`, `status`, `settingsList`, `settingsGetApiToken`, `pluginList`, `pluginDetail`, `pluginUsage`, `projectList`, `projectDetail`, `connectionList`, `connectionGetActive`, `hubList`, `hubCatalog`. Everything else — including `exec` — gets `{"event":"error","data":{"message":"Permission denied: viewers cannot run \"...\""}}`.
 
 Task-mutating commands (`taskUpdateSource`, `taskUpdateMeta`, `taskUninstall`, `taskReload`) are additionally gated by **task ownership**: a non-admin gets rejected if someone else owns that specific task, whether it's shared or private.
 
 `taskDetail`, `exec`, `taskValidate`, `taskDuplicate`, and `taskUploadImage` are additionally gated by **visibility**: a non-owner, non-admin calling any of these on a task someone else has marked `private` gets a generic `Task not found` — not a permission error, so probing identifiers can't confirm a private task exists or who owns it. A *shared* task someone else owns can still be viewed/run by anyone (just not edited/reloaded/uninstalled).
+
+Runs follow the same rule. `pipelineList` and `pipelineStats` leave out runs of other people's private workflows (the Server sends Core an `excludeTasks` list, so pages stay full), and `pipelineDetail` of such a run answers `Run not found`, like `pipelineCancel` does. Admins see every run. `scheduleList` leaves out their schedules the same way.
+
+### The Assistant
+
+The Server runs the Assistant for its users, the same one as Desktop's: it finds the workflow for a request in plain words, asks which one when several fit, and proposes a run with the values it read. Nothing runs until the person confirms. It is for **editors and admins**: a viewer gets `Permission denied: the Assistant is for editors and admins.`
+
+Desktop connected to a Server uses this one: its Assistant panel sends requests to the Server instead of running its own, so nobody needs a key on their machine. On a Server workspace the Assistant page shows the person's history from the Server. Writing new workflows (drafts) still happens on a local workspace for now.
+
+**Setting it up.** The Assistant uses the organization's key, never the person's. An admin connects Desktop to the Server and sets a provider and key in **Settings → Assistant**: those settings are stored in the Server's Core, only admins can change them, and nobody else can read the key. Until a key is set, asking answers `The Assistant isn't set up on this Server yet…`. The global instructions from the same page apply to every request, and a project's own instructions apply when the request names the project.
+
+**What each person sees.** The Assistant searches only the workflows the person could open themselves: other people's private workflows are left out before the model sees anything, and a run goes through the same checks as a run from the workflow page. A run started this way is recorded as the person's, named `<email> · Assistant` in the run history.
+
+**Asking** streams updates on `onAssistantAsk`, all with the same `requestId`:
+
+```json
+{ "event": "assistantAsk", "correlationId": "a-1", "payload": { "prompt": "greet Northwind formally", "projectIdentifier": "acme" } }
+```
+
+```jsonc
+{ "event": "onAssistantAsk", "correlationId": "a-1", "data": { "requestId": "…", "phase": "thinking" } }
+{ "event": "onAssistantAsk", "correlationId": "a-1", "data": { "requestId": "…", "phase": "searching", "query": "greet client" } }
+{ "event": "onAssistantAsk", "correlationId": "a-1", "data": { "requestId": "…", "phase": "proposal", "text": "…", "proposal": { "identifier": "…", "name": "Greet a client", "variables": { "client": "Northwind" }, "inputs": […], "alternatives": […] }, "requestKey": "…" } }
+```
+
+It ends on one of `answer` (`text`), `nomatch` (`text`; writing a new workflow isn't offered on the Server yet), `choice` (`text`, `options`, `variables`: pick one, then run it) or `proposal`, or on an `error`.
+
+**Running** the confirmed workflow streams the run's own events (`onTaskStart`, `onAction`…) and then the answer written from its outputs, on `onAssistantRun`:
+
+```json
+{ "event": "assistantRun", "correlationId": "r-1", "payload": { "requestId": "…", "identifier": "…", "name": "Greet a client", "variables": { "client": "Northwind" } } }
+```
+
+Phases: `task_running` → `run_finished` (`result`: `status`, `pipelineIdentifier`, `durationMs`, `outputs`) → `done` (`answer`, `result`). Only the person who asked can run for a request.
+
+**Other commands:** `assistantChoose` `{requestKey, identifier, name}` remembers which workflow the person meant for that kind of request, for their next one (each person has their own). `assistantHistory` `{limit?, scope?}` lists the person's own requests, newest first; an admin may pass `scope: "everyone"` to see every user's.
+
+**Limit:** 30 requests per person per 10 minutes, since each is a call to the organization's model.
+
+The `@tipeline/client` package (`packages/client`) wraps all of this: `ask()`, `runForAssistant()`, `rememberAssistantChoice()`, `assistantHistory()`.
 
 ---
 
@@ -213,6 +302,7 @@ Task-mutating commands (`taskUpdateSource`, `taskUpdateMeta`, `taskUninstall`, `
 | General requests | 100/min per IP | `TIPELINE_RATE_LIMIT_MAX`, `TIPELINE_RATE_LIMIT_WINDOW_MS` |
 | `/auth/login`, `/auth/login/mfa` | 10/min per IP | fixed |
 | Request body size | 1 MB | `TIPELINE_MAX_BODY_BYTES` |
+| Assistant requests (`assistantAsk`) | 30 per 10 min per user | fixed |
 | `/pipeline-audit`, `/audit-log` page size | 500 max | fixed (`limit` query param, defaults to 100) |
 
 Exceeding a rate limit returns `429` with a `Retry-After` header.

@@ -205,6 +205,28 @@ pipeline
   );
 
 // Cache Commands
+const alert = program.command('alert').description('See and dismiss alerts raised by workflows');
+
+alert
+  .command('list')
+  .description('List open alerts, newest first')
+  .option('-a, --all', 'Also acknowledged and resolved alerts')
+  .option('-w, --workflow <identifier>', 'Only alerts from this workflow')
+  .action((options) => CommandService.alertList(options));
+
+alert
+  .command('dismiss')
+  .description('Dismiss alerts: they leave Needs you and stay quiet until their workflow resolves them')
+  .argument('[ids...]', 'Alert identifiers')
+  .option('--all', 'Dismiss every open alert')
+  .action((ids, options) => CommandService.alertDismiss(ids ?? [], options));
+
+alert
+  .command('reopen')
+  .description('Put a dismissed alert back in Needs you')
+  .argument('<id>', 'Alert identifier')
+  .action((id) => CommandService.alertReopen(id));
+
 const cache = program.command('cache').description('Manage cached step results and workflow outputs');
 
 cache

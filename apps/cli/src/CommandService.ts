@@ -862,6 +862,53 @@ export default class CommandService {
     }
   }
 
+  static async alertList(options: { all?: boolean; workflow?: string } = {}) {
+    try {
+      const alerts =
+        (await CommandService.request<any[]>('alertList', 'onAlertList', {
+          includeClosed: options.all === true,
+          ...(options.workflow ? { taskIdentifier: options.workflow } : {}),
+        })) ?? [];
+      Printer.printAlertList(alerts, options.all === true);
+      process.exit(0);
+    } catch (error: any) {
+      Printer.printError(error?.message ?? String(error));
+      process.exit(1);
+    }
+  }
+
+  static async alertDismiss(ids: string[], options: { all?: boolean } = {}) {
+    try {
+      if (!options.all && !ids.length) throw new Error('Name an alert id, or use --all');
+      const result = await CommandService.request<{ dismissed: number }>(
+        'alertDismiss',
+        'onAlertDismiss',
+        options.all ? { all: true, dismissedBy: 'cli' } : { ids, dismissedBy: 'cli' }
+      );
+      const n = result?.dismissed ?? 0;
+      Printer.printMessage(
+        n === 0
+          ? 'No open alert to dismiss.'
+          : `Dismissed ${n} alert${n === 1 ? '' : 's'}. They stay quiet until their workflow resolves them.`
+      );
+      process.exit(0);
+    } catch (error: any) {
+      Printer.printError(error?.message ?? String(error));
+      process.exit(1);
+    }
+  }
+
+  static async alertReopen(id: string) {
+    try {
+      await CommandService.request('alertReopen', 'onAlertReopen', { id });
+      Printer.printMessage('Reopened. The alert is back in Needs you.');
+      process.exit(0);
+    } catch (error: any) {
+      Printer.printError(error?.message ?? String(error));
+      process.exit(1);
+    }
+  }
+
   static async pipelineResume(
     pipelineIdentifier: string,
     options: { verbose?: boolean; var?: string[] }
@@ -1476,7 +1523,7 @@ export default class CommandService {
         }
         if (project.instructions) instructions.project = { name: project.name, text: project.instructions };
       }
-      const outcome = await runAgent({ mcpClient, provider, providerLabel, rememberedChoices: memory, instructions }, prompt);
+      const outcome = await runAgent({ toolClient: mcpClient, provider, providerLabel, rememberedChoices: memory, instructions }, prompt);
       if (outcome.kind === 'answer') {
         Printer.printAgentAnswer(outcome.text);
         process.exit(0);
@@ -1611,7 +1658,7 @@ export default class CommandService {
     };
     let last = '';
     const loopConfig = {
-      mcpClient: context.mcpClient,
+      toolClient: context.mcpClient,
       provider: context.provider,
       providerLabel: context.providerLabel,
       instructions: context.instructions,

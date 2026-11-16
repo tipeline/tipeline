@@ -36,6 +36,7 @@ Apps are a desktop feature: you build them in the App Builder and open them from
 | Problems | Toolbar badge: missing workflows, inputs/outputs the workflow doesn't allow, bindings to things that don't exist or aren't closed, runnables nothing runs. Click one to jump to it. The same problems show in **Properties** under the field, event or runnable they're about |
 | YAML | Edit the whole app as YAML; **Apply** validates it first |
 | Preview | Runs the page (with dialogs) against your real workflows — the app is saved first |
+| Phone layout | Toolbar **Desktop \| Phone**: arrange the page for the phone app (see [On phones](#on-phones)) |
 
 Renaming a component or a runnable updates every binding that refers to it.
 
@@ -236,6 +237,45 @@ component instead, so the page scrolls as before. In a dialog (`openModal`), who
 follows its content, it also reaches the lowest component; drawers fill to their bottom.
 The builder canvas keeps the height you set
 and marks the component "Fills to bottom".
+
+### On phones
+
+The phone app, a client of a [Tipeline Server](/server/), shows apps too, one page at a time on a narrow screen. Until
+you arrange a page, phones place its components from the desktop layout: in reading
+order (top to bottom, then left to right), each the full width, except small ones that
+sat side by side — KPIs, buttons, badges, up to 4 of the 12 columns — which share a row
+in pairs. A component keeps its desktop height. A list view's items keep their own
+layout: each item is a full-width card.
+
+To change that, switch the builder's toolbar from **Desktop** to **Phone**. The canvas
+becomes a phone with a grid of 4 columns:
+
+- **Drag** a component to move it, or drag its edge to change its width or height. The
+  first change places the whole grid (the page, or that container or tab) for phones, as
+  it was shown; components added later go below what is placed.
+- **Properties → Phone**: *Show on phones*, *Full width* / *Half width*, and *Move up* /
+  *Move down*.
+- **Hide on phones** with the eye icon on a component, or Delete. It stays in the app and
+  on Desktop; **Not shown on phones**, next to the phone, lists what is hidden, with a
+  **Show** button. In **Layers** a hidden component has an eye-off mark.
+- **Back to automatic**, above the phone, drops the page's phone places. What is hidden
+  stays hidden.
+
+In phone mode the palette is off: components are added in the desktop layout. In YAML
+it's `mobile` next to `layout`, with `layout` on the 4 phone columns and the same 10px rows:
+
+```yaml
+- id: revenue
+  type: kpi
+  layout: { x: 9, y: 0, w: 3, h: 9 }
+  mobile:
+    layout: { x: 0, y: 9, w: 4, h: 9 }   # full width, second row
+- id: help
+  type: text
+  layout: { x: 0, y: 40, w: 12, h: 6 }
+  mobile:
+    hidden: true
+```
 
 ### Markdown text
 
@@ -767,9 +807,11 @@ or the ones in `detailFields` (the same shape as a Details component's `fields`,
 - `scroll` — every column is as wide as its content and the table scrolls sideways.
   Tables without a `fit` (made before it existed) work this way.
 
-Columns are squeezed down to 56px at most; a column can also set `width` (exactly that
-many pixels) or `minWidth` (never narrower — past that the table scrolls sideways
-instead of squeezing it further):
+Columns are squeezed down to about 9 characters (96px), or to their content when it is
+shorter; past that the table scrolls sideways, so a table with many columns stays
+readable on a phone. A column can also set `width` (exactly that many pixels) or
+`minWidth` (never narrower — past that the table scrolls sideways instead of squeezing
+it further):
 
 ```yaml
 fit: truncate

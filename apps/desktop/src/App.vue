@@ -26,6 +26,8 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { applyLocaleFromStorage, applyStoredLocale } from '@/composables/useLocale';
 import { applyStoredTimezone } from '@/composables/useTimezone';
 import { useNavHistoryInput } from '@/composables/useNavHistoryInput';
+import { useAgentStore } from '@/store/agentStore';
+import { useConnectionStore } from '@/store/connectionStore';
 
 const route = useRoute();
 useNavHistoryInput();
@@ -33,6 +35,8 @@ const router = useRouter();
 const { t } = useI18n();
 const streamStore = useStreamStore();
 const settingsStore = useSettingsStore();
+const agentStore = useAgentStore();
+const connectionStore = useConnectionStore();
 const { ready, statusKey, errorText, coreUpdateOffer, desktopOutdated, autoStartNotice, init, restartCore, checkHealth, handleCoreDown, handleCoreBack } = useAppInit();
 const appVisible = ref(false);
 
@@ -184,6 +188,24 @@ function onBroadcast(_: any, msg: any) {
   streamStore.addEvent(event);
 }
 
+// The tray popover (or the main process) asks this window to open a page.
+function onNavigate(_: unknown, path: unknown) {
+  if (typeof path === 'string' && path.startsWith('/') && !path.startsWith('//')) void router.push(path);
+}
+
+// The tray popover's Ask button: opens the Assistant panel, which lives in the default
+// layout — from the builder or an editor, Home opens first (its own leave checks still
+// apply). Viewers on a Server have no Assistant; the popover hides the button for them.
+async function onOpenAssistant() {
+  if (!connectionStore.assistantAvailable) return;
+  if (route.meta.layout !== 'DefaultLayout') {
+    await router.push('/');
+    if (route.meta.layout !== 'DefaultLayout') return; // leaving was cancelled
+  }
+  agentStore.sidebarOpen = true;
+  agentStore.composerFocusRequest++;
+}
+
 onMounted(async () => {
   // Apply locale from localStorage immediately — before init() —
   // so the loading screen shows in the correct language.
@@ -194,6 +216,8 @@ onMounted(async () => {
   window.ipcRenderer.on('core:reconnected', handleCoreBack);
   window.ipcRenderer.on('workspace-unavailable', onWorkspaceUnavailable);
   window.ipcRenderer.on('app-update:ready', onAppUpdateReady);
+  window.ipcRenderer.on('app:navigate', onNavigate);
+  window.ipcRenderer.on('app:assistant', onOpenAssistant);
   window.addEventListener('focus', onWindowFocus);
   pendingAppUpdate.value = await window.ipcRenderer.invoke(SEND.APP_UPDATE_STATE);
   await init();
@@ -211,6 +235,8 @@ onUnmounted(() => {
   window.ipcRenderer.off('core:reconnected', handleCoreBack);
   window.ipcRenderer.off('workspace-unavailable', onWorkspaceUnavailable);
   window.ipcRenderer.off('app-update:ready', onAppUpdateReady);
+  window.ipcRenderer.off('app:navigate', onNavigate);
+  window.ipcRenderer.off('app:assistant', onOpenAssistant);
   window.removeEventListener('focus', onWindowFocus);
 });
 

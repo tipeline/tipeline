@@ -24,6 +24,7 @@ import AutoFormField from './AutoFormField.vue'
 import AutoFormLabel from './AutoFormLabel.vue'
 import { beautifyObjectName, getBaseSchema, getBaseType } from './utils'
 import { parseLenientJsonArray } from '@/utils/lenientJson'
+import { useOpenWhenFilled } from './useOpenWhenFilled'
 
 type Mode = 'ui' | 'raw' | 'variable'
 
@@ -63,6 +64,7 @@ const showModeToggle = computed(() => taskVariables !== null)
 
 const fieldContext = useField<any>(props.fieldName)
 const { value, setValue } = fieldContext
+const { open, setOpen } = useOpenWhenFilled(value)
 // @ts-expect-error ignore missing `id`
 provide(FieldContextKey, fieldContext)
 
@@ -156,7 +158,15 @@ const setMode = async (newMode: Mode) => {
 <template>
   <section>
     <slot v-bind="props">
-      <Accordion type="multiple" class="w-full" collapsible :disabled="disabled" as-child>
+      <Accordion
+        type="multiple"
+        class="w-full"
+        collapsible
+        :disabled="disabled"
+        as-child
+        :model-value="open ? [fieldName] : []"
+        @update:model-value="(v) => setOpen(Array.isArray(v) && v.includes(fieldName))"
+      >
         <FormItem>
           <AccordionItem :value="fieldName" class="border-none bg-muted/50 rounded-md px-2">
             <AccordionTrigger>

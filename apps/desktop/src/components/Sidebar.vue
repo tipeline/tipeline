@@ -34,6 +34,8 @@ import WorkspaceSwitcher from '@/components/WorkspaceSwitcher.vue';
 import SidebarNavItem from '@/components/SidebarNavItem.vue';
 import { usePluginStore } from '@/store/pluginStore';
 import { useApprovalsStore } from '@/store/approvalsStore';
+import { useAlertsStore, type AlertItem } from '@/store/alertsStore';
+import { bringToFront } from '@/utils/mainWindow';
 import { useHubUpdatesStore, type HubUpdateEvent } from '@/store/hubUpdatesStore';
 import { toast } from '@/components/ui/sonner';
 import type { PendingApproval } from '@/components/approvals/ApprovalCard.vue';
@@ -42,6 +44,7 @@ const mode = useColorMode();
 const { t } = useI18n();
 const pluginStore = usePluginStore();
 const approvals = useApprovalsStore();
+const alerts = useAlertsStore();
 const hubUpdates = useHubUpdatesStore();
 const router = useRouter();
 
@@ -113,7 +116,7 @@ const bottomItems = computed<NavItem[]>(() => [
 // windows opened on their own don't notify a second time.
 function announce(added: PendingApproval[]) {
   const openPage = () => {
-    window.focus();
+    bringToFront();
     router.push('/approvals');
   };
   const title = added.length === 1 ? added[0].title : t('approvals.notifyMany', { count: added.length });
@@ -126,10 +129,34 @@ function announce(added: PendingApproval[]) {
   notification.onclick = openPage;
 }
 
+// New alerts (or ones that got louder) from workflows. Only loud ones reach here: a warning
+// shows a toast while Tipeline is in front; a critical one also sends a system
+// notification. Both open Needs you on the dashboard.
+function announceAlerts(added: AlertItem[]) {
+  const openPage = () => {
+    bringToFront();
+    router.push('/');
+  };
+  const first = added[0];
+  const title = added.length === 1 ? first.title : t('alerts.notifyMany', { count: added.length });
+  const body =
+    added.length === 1
+      ? [first.workflowName ?? first.taskIdentifier, first.message].filter(Boolean).join('\n')
+      : t('alerts.notifyManyBody');
+  const heading = t(added.some((a) => a.level === 'critical') ? 'alerts.notifyCritical' : 'alerts.notifyTitle');
+  if (document.hasFocus() || typeof Notification === 'undefined') {
+    toast(heading, { description: title, action: { label: t('alerts.open'), onClick: openPage } });
+  }
+  if (typeof Notification !== 'undefined' && added.some((a) => a.level === 'critical')) {
+    const notification = new Notification(heading, { body: `${title}\n${body}` });
+    notification.onclick = openPage;
+  }
+}
+
 // Updates installed, held back or failed in the background, announced the same way.
 function announceHubUpdates(added: HubUpdateEvent[]) {
   const openPage = () => {
-    window.focus();
+    bringToFront();
     router.push({ name: 'HubUpdates' });
   };
   const first = added[0];
@@ -145,12 +172,24 @@ function announceHubUpdates(added: HubUpdateEvent[]) {
   notification.onclick = openPage;
 }
 
+// Decided or dismissed in another window (the tray popover): the badges follow right away.
+function onDataChanged() {
+  void approvals.refresh();
+  void alerts.refresh();
+}
+
 onMounted(() => {
   pluginStore.refreshAttentionCount();
   approvals.start(announce);
+  alerts.start(announceAlerts);
   hubUpdates.start(announceHubUpdates);
+  window.ipcRenderer.on('data:changed', onDataChanged);
 });
-onUnmounted(() => approvals.stop());
+onUnmounted(() => {
+  approvals.stop();
+  alerts.stop();
+  window.ipcRenderer.off('data:changed', onDataChanged);
+});
 </script>
 
 <template>

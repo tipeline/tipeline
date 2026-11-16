@@ -10,7 +10,7 @@ const connectionStore = useConnectionStore();
 
 <template>
   <Transition name="assistant-slide">
-    <AgentSidebar v-if="agentStore.sidebarOpen && !connectionStore.isRemote" />
+    <AgentSidebar v-if="agentStore.sidebarOpen && connectionStore.assistantAvailable" />
   </Transition>
 </template>
 

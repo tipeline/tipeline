@@ -59,9 +59,10 @@ async function openEditor(group: string, name: string, params: Record<string, un
 const fixButton = () =>
   [...document.body.querySelectorAll('button')].find((b) => b.textContent?.trim().startsWith('Use {='));
 
+// Groups with a value already start open — only click a closed one.
 async function openAccordion(label: string) {
   const trigger = [...document.body.querySelectorAll('button')].find((b) => b.textContent?.includes(label));
-  trigger?.click();
+  if (trigger?.getAttribute('data-state') !== 'open') trigger?.click();
   await flushPromises();
 }
 

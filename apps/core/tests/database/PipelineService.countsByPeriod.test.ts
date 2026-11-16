@@ -61,3 +61,23 @@ describe('PipelineService.countsByPeriod', () => {
     expect(await Core.pipelineStats(boundaries)).toHaveLength(2);
   });
 });
+
+describe('leaving workflows out (a Server hides other users’ private ones)', () => {
+  it('in the counts and in the run list, before paging', async () => {
+    const [secret] = await knex('task').insert({ identifier: 'secret', name: 'S', source: '{}' });
+    await knex('pipeline').insert([
+      { identifier: 's-1', task_id: secret, status: 'failed', source: '{}', started_at: '2026-10-20T20:00:00.000Z' },
+      { identifier: 's-2', task_id: secret, status: 'completed', source: '{}', started_at: '2026-10-23T00:00:00.000Z' },
+    ]);
+
+    const [day1] = await PipelineService.countsByPeriod(boundaries, ['secret']);
+    expect(day1).toMatchObject({ total: 2, failed: 1 });
+    expect((await PipelineService.countsByPeriod(boundaries))[0]).toMatchObject({ total: 3, failed: 2 });
+
+    // The newest run is the hidden one: a page of one still holds a visible run.
+    const [newest] = await Core.pipelineList(null, 1, 0, undefined, ['secret']);
+    expect(newest.identifier).toBe('after');
+    expect((await Core.pipelineList(null, 1, 0))[0].identifier).toBe('s-2');
+    expect(await Core.pipelineList('secret', 10, 0, undefined, ['secret'])).toEqual([]);
+  });
+});

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { ArrowDownToLine, Copy, X } from 'lucide-vue-next';
+import { ArrowDownToLine, Copy, EyeOff, X } from 'lucide-vue-next';
 import type { AppComponent } from '@tipeline/schemas';
+import { APP_PHONE_COLUMNS, phoneLayouts } from '@tipeline/schemas';
 import AppGrid from '@/components/app/AppGrid.vue';
 import AppWidget from '@/components/app/AppWidget.vue';
 import { PALETTE_BY_KEY, frameOf } from '@/components/app/widgets/registry';
@@ -23,7 +24,25 @@ const { t } = useI18n();
 const builderStore = useBuilderStore();
 
 const parent = computed(() => (props.parentId ? { id: props.parentId, tab: props.tab } : null));
-const items = computed(() => childrenOf(builderStore.selectedPage?.components ?? [], parent.value));
+const children = computed(() => childrenOf(builderStore.selectedPage?.components ?? [], parent.value));
+
+// The phone canvas arranges each grid for phones (see phoneLayouts). A list view's item
+// template keeps its desktop layout: on a phone each item is a full-width card.
+const phone = computed(
+  () =>
+    builderStore.canvasDevice === 'phone' &&
+    !listViewAround(builderStore.selectedPage?.components ?? [], props.parentId)
+);
+const items = computed(() =>
+  phone.value
+    ? phoneLayouts(children.value).map((p) => ({ ...p.item, layout: p.layout }) as AppComponent)
+    : children.value
+);
+
+function onLayoutChange(layouts: Array<{ id: string; x: number; y: number; w: number; h: number }>) {
+  if (phone.value) builderStore.updatePhoneLayouts(parent.value, layouts);
+  else builderStore.updateLayouts(layouts);
+}
 
 /** Says why a component can't go in this grid (a list view's item template). */
 function refuse(type: string) {
@@ -67,20 +86,36 @@ function duplicate(id: string) {
 
 <template>
   <AppGrid
+    :key="phone ? 'phone' : 'desktop'"
     editable
+    :phone="phone"
+    :columns="phone ? APP_PHONE_COLUMNS : 12"
     :nested="!!parentId"
     :items="items"
     :frameless="frameless"
     :selected-id="builderStore.selectedComponentId"
     @select="onSelect"
-    @layout-change="builderStore.updateLayouts"
+    @layout-change="onLayoutChange"
     @drop="onDrop"
     @remove="builderStore.removeComponent"
     @move="onMove"
   >
     <template #default="{ item }">
       <div class="relative h-full group/widget">
-        <div class="absolute top-1 right-1 z-20 flex gap-1 opacity-0 group-hover/widget:opacity-100 transition-opacity">
+        <div
+          v-if="phone"
+          class="absolute top-1 right-1 z-20 flex gap-1 opacity-0 group-hover/widget:opacity-100 transition-opacity"
+        >
+          <button
+            class="w-5 h-5 rounded bg-secondary text-secondary-foreground border flex items-center justify-center"
+            :title="t('builder.phone.hide')"
+            :aria-label="t('builder.phone.hide')"
+            @click.stop="builderStore.setPhoneHidden(item.id, true)"
+          >
+            <EyeOff class="w-3 h-3" />
+          </button>
+        </div>
+        <div v-else class="absolute top-1 right-1 z-20 flex gap-1 opacity-0 group-hover/widget:opacity-100 transition-opacity">
           <button
             class="w-5 h-5 rounded bg-secondary text-secondary-foreground border flex items-center justify-center"
             :title="t('builder.duplicate')"
@@ -98,7 +133,7 @@ function duplicate(id: string) {
         </div>
         <!-- Fill is only applied when the app runs; the canvas keeps the set height. -->
         <div
-          v-if="(item as AppComponent).fill"
+          v-if="(item as AppComponent).fill && !phone"
           class="absolute bottom-1 left-1/2 -translate-x-1/2 z-20 px-1.5 h-5 rounded bg-secondary text-secondary-foreground border flex items-center gap-1 text-[10px] pointer-events-none"
         >
           <ArrowDownToLine class="w-3 h-3" />

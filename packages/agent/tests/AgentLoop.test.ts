@@ -50,7 +50,7 @@ describe('runAgent', () => {
     const { client } = fakeMcp();
     const { provider, calls } = scriptedProvider([{ text: 'Hello!' }]);
 
-    await runAgent({ mcpClient: client, provider }, 'hi');
+    await runAgent({ toolClient: client, provider }, 'hi');
 
     expect(calls[0].tools.map((t) => t.name)).toEqual(['search_workflows', 'propose_run', 'ask_choice', 'no_match']);
   });
@@ -60,7 +60,7 @@ describe('runAgent', () => {
     const { provider, calls } = scriptedProvider([{ text: 'Hello!' }]);
 
     await runAgent(
-      { mcpClient: client, provider, instructions: { global: 'Prod is web-01.', project: { name: 'ACME', text: 'Prod is acme-web-01.' } } },
+      { toolClient: client, provider, instructions: { global: 'Prod is web-01.', project: { name: 'ACME', text: 'Prod is acme-web-01.' } } },
       'hi'
     );
 
@@ -74,7 +74,7 @@ describe('runAgent', () => {
     const { client } = fakeMcp();
     const { provider } = scriptedProvider([{ text: 'No workflow does that yet.' }]);
 
-    const outcome = await runAgent({ mcpClient: client, provider }, 'annual salary of Maria');
+    const outcome = await runAgent({ toolClient: client, provider }, 'annual salary of Maria');
 
     expect(outcome).toEqual({ kind: 'answer', text: 'No workflow does that yet.', requestKey: 'annual maria salary' });
   });
@@ -100,7 +100,7 @@ describe('runAgent', () => {
     ]);
     const onToolCall = vi.fn();
 
-    const outcome = await runAgent({ mcpClient: client, provider, onToolCall }, 'reports of April');
+    const outcome = await runAgent({ toolClient: client, provider, onToolCall }, 'reports of April');
 
     expect(callTool).toHaveBeenCalledWith('search_workflows', { query: 'sales report' });
     expect(onToolCall).toHaveBeenCalledTimes(2);
@@ -138,7 +138,7 @@ describe('runAgent', () => {
       },
     ]);
 
-    const outcome = await runAgent({ mcpClient: client, provider }, 'run the sales report every 40 seconds');
+    const outcome = await runAgent({ toolClient: client, provider }, 'run the sales report every 40 seconds');
 
     expect(outcome).toMatchObject({ kind: 'proposal', schedule: 'every 40 seconds', proposal: { identifier: 'sales' } });
     expect(defaultSystemPrompt(new Date())).toContain('pass that timing as schedule with propose_run or ask_choice');
@@ -151,7 +151,7 @@ describe('runAgent', () => {
       { toolCalls: [{ id: 't1', name: 'search_workflows', arguments: { query: 'sales' } }] },
       { toolCalls: [{ id: 't2', name: 'propose_run', arguments: { identifier: 'sales', variables: {}, message: 'ok', schedule: '' } }] },
     ]);
-    const outcome = await runAgent({ mcpClient: client, provider }, 'sales report');
+    const outcome = await runAgent({ toolClient: client, provider }, 'sales report');
     expect(outcome).not.toHaveProperty('schedule');
   });
 
@@ -162,7 +162,7 @@ describe('runAgent', () => {
       { text: 'I could not find one.' },
     ]);
 
-    const outcome = await runAgent({ mcpClient: client, provider }, 'something');
+    const outcome = await runAgent({ toolClient: client, provider }, 'something');
 
     expect(calls[1].messages.at(-1)?.content).toMatch(/not a workflow from search_workflows/);
     expect(outcome).toMatchObject({ kind: 'answer', text: 'I could not find one.' });
@@ -176,7 +176,7 @@ describe('runAgent', () => {
       { text: 'done' },
     ]);
 
-    await runAgent({ mcpClient: client, provider }, 'x');
+    await runAgent({ toolClient: client, provider }, 'x');
 
     const assistant = calls[1].messages.find((m) => m.role === 'assistant');
     expect(assistant?.raw).toBe(raw);
@@ -194,7 +194,7 @@ describe('runAgent', () => {
       { text: 'Tipeline Core is not running.' },
     ]);
 
-    const outcome = await runAgent({ mcpClient: client, provider }, 'x');
+    const outcome = await runAgent({ toolClient: client, provider }, 'x');
 
     expect(calls[1].messages.at(-1)?.content).toBe('Error: Core is not running');
     expect(outcome.kind).toBe('answer');
@@ -219,7 +219,7 @@ describe('runAgent when nothing fits', () => {
       },
     ]);
 
-    const outcome = await runAgent({ mcpClient: client, provider }, 'get the annual salary of Maria');
+    const outcome = await runAgent({ toolClient: client, provider }, 'get the annual salary of Maria');
 
     expect(outcome).toEqual({
       kind: 'nomatch',
@@ -258,7 +258,7 @@ describe('runAgent when nothing fits', () => {
       },
     ]);
 
-    const outcome = await runAgent({ mcpClient: client, provider }, 'email me the php version');
+    const outcome = await runAgent({ toolClient: client, provider }, 'email me the php version');
 
     expect(outcome).toMatchObject({
       kind: 'nomatch',
@@ -273,7 +273,7 @@ describe('runAgent when nothing fits', () => {
     const { client } = fakeMcp();
     const { provider } = scriptedProvider([{ toolCalls: [{ id: 't1', name: 'no_match', arguments: { message: '' } }] }]);
 
-    const outcome = await runAgent({ mcpClient: client, provider }, 'send a weekly digest');
+    const outcome = await runAgent({ toolClient: client, provider }, 'send a weekly digest');
 
     expect(outcome).toMatchObject({ kind: 'nomatch', text: 'No workflow does this yet.', draftRequest: 'send a weekly digest' });
   });
@@ -292,7 +292,7 @@ describe('runAgent when nothing fits', () => {
       },
     ]);
 
-    const outcome = await runAgent({ mcpClient: client, provider }, 'run the random numbers every 30 seconds');
+    const outcome = await runAgent({ toolClient: client, provider }, 'run the random numbers every 30 seconds');
 
     expect(outcome).toMatchObject({ kind: 'nomatch', draftRequest: 'Generates random numbers.', schedule: 'every 30 seconds' });
     expect(NO_MATCH_TOOL.inputSchema.properties.draftRequest.description).toContain('goes in schedule, never here');
@@ -328,7 +328,7 @@ describe('runAgent asking which one', () => {
     const { client } = fakeMcp(deployReply);
     const { provider } = deployScript(['deploy-app', 'deploy-site', 'deploy-app', 'made-up']);
 
-    const outcome = await runAgent({ mcpClient: client, provider }, 'run the deployment workflow to prod');
+    const outcome = await runAgent({ toolClient: client, provider }, 'run the deployment workflow to prod');
 
     expect(outcome).toEqual({
       kind: 'choice',
@@ -347,7 +347,7 @@ describe('runAgent asking which one', () => {
     const { provider } = deployScript(['deploy-app', 'deploy-site']);
     const rememberedChoices = { 'deploy prod': { identifier: 'deploy-site', name: 'Deploy website', at: '2026-10-16T00:00:00Z' } };
 
-    const outcome = await runAgent({ mcpClient: client, provider, rememberedChoices }, 'deployment to prod please');
+    const outcome = await runAgent({ toolClient: client, provider, rememberedChoices }, 'deployment to prod please');
 
     expect(outcome.kind).toBe('proposal');
     if (outcome.kind !== 'proposal') return;
@@ -364,7 +364,7 @@ describe('runAgent asking which one', () => {
     const { provider } = deployScript(['deploy-app', 'deploy-site']);
     const rememberedChoices = { 'deploy prod': { identifier: 'gone', name: 'Old', at: '2026-10-16T00:00:00Z' } };
 
-    const outcome = await runAgent({ mcpClient: client, provider, rememberedChoices }, 'deployment to prod');
+    const outcome = await runAgent({ toolClient: client, provider, rememberedChoices }, 'deployment to prod');
 
     expect(outcome.kind).toBe('choice');
   });
@@ -373,7 +373,7 @@ describe('runAgent asking which one', () => {
     const { client } = fakeMcp(deployReply);
     const { provider } = deployScript(['deploy-app', 'made-up']);
 
-    const outcome = await runAgent({ mcpClient: client, provider }, 'deploy');
+    const outcome = await runAgent({ toolClient: client, provider }, 'deploy');
 
     expect(outcome.kind).toBe('proposal');
     if (outcome.kind !== 'proposal') return;
@@ -412,7 +412,7 @@ describe('runAgent with hub workflows', () => {
       },
     ]);
 
-    const outcome = await runAgent({ mcpClient: client, provider }, 'greet Ana');
+    const outcome = await runAgent({ toolClient: client, provider }, 'greet Ana');
 
     expect(outcome.kind).toBe('proposal');
     if (outcome.kind !== 'proposal') return;
@@ -449,7 +449,7 @@ describe('runAgent with helper workflows', () => {
       },
     ]);
 
-    const outcome = await runAgent({ mcpClient: client, provider }, 'views and visits for Northfield');
+    const outcome = await runAgent({ toolClient: client, provider }, 'views and visits for Northfield');
 
     expect(calls[2].messages.at(-1)?.content).toMatch(/"Data: Views and visits API" is a helper/);
     expect(outcome).toMatchObject({ kind: 'proposal', proposal: { identifier: 'traffic-views', alternatives: [] } });
@@ -466,7 +466,7 @@ describe('runAgent with helper workflows', () => {
       },
     ]);
 
-    const outcome = await runAgent({ mcpClient: client, provider }, 'views and visits');
+    const outcome = await runAgent({ toolClient: client, provider }, 'views and visits');
 
     // One real option left, so it's proposed straight away.
     expect(outcome).toMatchObject({ kind: 'proposal', proposal: { identifier: 'traffic-views' } });
@@ -480,7 +480,7 @@ describe('runAgent with helper workflows', () => {
       { text: 'Nothing answers that yet.' },
     ]);
 
-    await runAgent({ mcpClient: client, provider }, 'views api');
+    await runAgent({ toolClient: client, provider }, 'views api');
 
     expect(calls[2].messages.at(-1)?.content).toMatch(/is a helper/);
   });
@@ -500,7 +500,7 @@ describe('runAgent with helper workflows', () => {
       },
     ]);
 
-    const outcome = await runAgent({ mcpClient: client, provider }, 'compare views month over month');
+    const outcome = await runAgent({ toolClient: client, provider }, 'compare views month over month');
 
     expect(outcome).toMatchObject({ kind: 'nomatch', reuse: [{ identifier: 'data-views', name: 'Data: Views and visits API' }] });
   });
@@ -515,7 +515,7 @@ describe('runAgent with an older Core', () => {
     const client = { listTools: async () => [EXEC_TOOL], callTool: async () => '' } as unknown as McpClient;
     const { provider } = scriptedProvider([{ text: 'unused' }]);
 
-    await expect(runAgent({ mcpClient: client, provider }, 'x')).rejects.toThrow(/Restart Core/);
+    await expect(runAgent({ toolClient: client, provider }, 'x')).rejects.toThrow(/Restart Core/);
   });
 });
 

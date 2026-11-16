@@ -51,6 +51,11 @@ export const useConnectionStore = defineStore('connection', () => {
   /** True when connected to a remote server (not local Core). */
   const isRemote = computed(() => activeId.value !== null);
 
+  /** Deleting run history: always on this machine, only admins on a Server (it refuses others). */
+  const canDeleteRuns = computed(() => !serverMe.value || serverMe.value.role === 'admin');
+  /** The Assistant: always on this machine; on a Server for editors and admins (it refuses viewers). */
+  const assistantAvailable = computed(() => !isRemote.value || serverMe.value?.role !== 'viewer');
+
   /** True if the current server user owns the given task, or if local (no ownership concept). */
   function isOwner(taskIdentifier: string): boolean {
     if (!serverMe.value) return true; // local mode — always can edit
@@ -162,6 +167,8 @@ export const useConnectionStore = defineStore('connection', () => {
     serverContextError,
     activeConnection,
     isRemote,
+    canDeleteRuns,
+    assistantAvailable,
     isOwner,
     load,
     loadServerContext,

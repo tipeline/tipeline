@@ -29,6 +29,8 @@ const CORE_EVENTS = [
   'onAppUploadImage', 'onAppInstall', 'onAppExport', 'onAppUninstall', 'onTableDataFetch', 'onAppHistoryFetch',
   // Approvals
   'onApprovalList', 'onApprovalDecide', 'onAppApprovalList', 'onAppApprovalDecide', 'onApprovalHistory',
+  // Alerts
+  'onAlertList', 'onAlertDismiss', 'onAlertReopen',
   'onAppRunsActive', 'onAppRunsList',
   // Variables
   'onVariableList', 'onVariableNew', 'onVariableEdit', 'onVariableDuplicate',
@@ -52,6 +54,8 @@ const CORE_EVENTS = [
   // Agent run history
   'onAgentRunCreate', 'onAgentRunMarkTaskRunning', 'onAgentRunSetPipeline',
   'onAgentRunComplete', 'onAgentRunFail', 'onAgentRunList',
+  // The assistant's tools, for the Server's own assistant (answered to request() only)
+  'onAgentToolList', 'onAgentToolCall',
   // Connections
   'onConnectionList', 'onConnectionAdd', 'onConnectionRemove', 'onConnectionUpdate',
   'onConnectionSetActive', 'onConnectionGetActive',

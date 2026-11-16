@@ -79,7 +79,7 @@ export class AgentService {
 
       const outcome = await runAgent(
         {
-          mcpClient,
+          toolClient: mcpClient,
           provider,
           providerLabel,
           rememberedChoices: payload.rememberedChoices ?? {},
@@ -186,7 +186,7 @@ export class AgentService {
       send({ phase: 'draft_progress', step: 'writing' });
       const outcome = await draftWorkflow(
         {
-          mcpClient,
+          toolClient: mcpClient,
           provider,
           providerLabel,
           instructions: payload.instructions,

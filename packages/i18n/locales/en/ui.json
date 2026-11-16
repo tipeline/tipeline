@@ -132,7 +132,8 @@
       "kind": {
         "approval": "Approval",
         "failed": "Failed",
-        "missed": "Missed"
+        "missed": "Missed",
+        "alert": "Alert"
       },
       "approvalDetail": "{workflow} is waiting for your decision",
       "failedOnce": "The last run failed",
@@ -144,9 +145,12 @@
       "dismiss": "Dismiss",
       "allFailing": "All failing workflows",
       "clearTitle": "All clear: nothing needs you",
-      "clearDetail": "Approvals, failed runs and missed schedules show up here.",
+      "clearDetail": "Approvals, alerts, failed runs and missed schedules show up here.",
       "comingUp": "Coming up",
-      "tomorrowAt": "Tomorrow {time}"
+      "tomorrowAt": "Tomorrow {time}",
+      "alertRepeated": "×{n} since {time}",
+      "seeRun": "See run",
+      "openWorkflow": "Open workflow"
     },
     "continue": {
       "title": "Continue",
@@ -1388,7 +1392,9 @@
       "autoStartHint": "Starts Core when you log in and again if it crashes, so schedules run without the app open.",
       "autoStartHintLogin": "Starts Core when you log in, so schedules run without the app open.",
       "autoStartNotice": "Tipeline now keeps running in the background so your schedules can run.",
-      "autoStartNoticeAction": "Settings"
+      "autoStartNoticeAction": "Settings",
+      "keepRunning": "Keep running in the menu bar / tray",
+      "keepRunningHint": "Closing the window hides it: Tipeline stays in the menu bar (macOS) or notification area (Windows, Linux) with what needs you and what's running. Off: closing the window quits Tipeline. Core keeps running either way."
     },
     "hubs": {
       "title": "Hubs"
@@ -1673,7 +1679,6 @@
   },
   "agent": {
     "tooltip": "Assistant (⌘K)",
-    "disabledRemote": "The assistant only works with the local workspace for now.",
     "notConfigured": "Assistant not set up",
     "notConfiguredDescription": "Add a {provider} API key in Settings, and make sure Tipeline Core is running.",
     "openSettings": "Open Settings",
@@ -1863,7 +1868,12 @@
       "openWorkflow": "Open workflow",
       "failed": "Couldn't create the schedule."
     },
-    "notConfiguredNoProvider": "Choose an AI provider and add its API key in Settings, and make sure Tipeline Core is running."
+    "notConfiguredNoProvider": "Choose an AI provider and add its API key in Settings, and make sure Tipeline Core is running.",
+    "disabledViewer": "On this server, the Assistant is for editors and admins.",
+    "remote": {
+      "noDrafts": "Writing new workflows with the Assistant works on a local workspace for now.",
+      "historyNote": "Your requests on this server. Admins set up the Assistant in Settings → Assistant."
+    }
   },
   "jsonEditor": {
     "invalid": "Invalid JSON (line {line}): {detail}"
@@ -2556,7 +2566,37 @@
     "stepOut": "Step out",
     "stepOutHint": "Run the rest of this sub-workflow, then pause in the workflow that called it",
     "inProjects": "In {count} projects",
-    "inProjectsHint": "In {names}. Saving changes it in every one of them."
+    "inProjectsHint": "In {names}. Saving changes it in every one of them.",
+    "phone": {
+      "device": "Layout to edit",
+      "desktop": "Desktop",
+      "phone": "Phone",
+      "tab": "Phone",
+      "layout": "Phone layout",
+      "automatic": "automatic, from the desktop layout",
+      "arranged": "arranged for phones",
+      "reset": "Back to automatic",
+      "hide": "Hide on phones",
+      "show": "Show",
+      "hiddenTitle": "Not shown on phones",
+      "noneHidden": "Everything on this page shows on phones.",
+      "hiddenMark": "Hidden on phones",
+      "canvasHint": "Drag a component on the phone to move it, or drag its edge to change its width. Delete hides it on phones; it stays in the app.",
+      "paletteNote": "Add components in the Desktop layout. Here you arrange them for phones.",
+      "showOnPhones": "Show on phones",
+      "width": "Width",
+      "full": "Full width",
+      "half": "Half width",
+      "columns": "{count} of {total} columns",
+      "order": "Order",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "placedNote": "Placed for phones. Back to automatic, above the phone, places the whole page from the desktop layout again.",
+      "automaticNote": "Automatic: placed from the desktop layout, in reading order. Moving or resizing anything on this grid places it for phones.",
+      "inListItem": "Inside a list item: it keeps its desktop layout, since each item is a full-width card on phones.",
+      "pageNote": "Select a component to choose how it shows on phones.",
+      "rulesNote": "Until you arrange a page, phones show its components in reading order of the desktop layout, each the full width. Small ones that sit side by side, like KPIs and buttons, share a row in pairs."
+    }
   },
   "debugFooter": {
     "log": "Log",
@@ -2887,7 +2927,8 @@
       "notRun": "not run"
     },
     "resultColumn": "Result",
-    "savedTo": "→ saved to {name}"
+    "savedTo": "→ saved to {name}",
+    "raisedAlert": "This run raised an alert: | This run raised {n} alerts:"
   },
   "agentInstructions": {
     "length": "{count} / {max} characters. They go with every request: shorter is better."
@@ -3489,5 +3530,49 @@
       "notAllBuilt": "{count} planned item isn't in the app yet. | {count} planned items aren't in the app yet.",
       "removeFromPlan": "Remove from plan"
     }
+  },
+  "alerts": {
+    "notifyTitle": "Alert",
+    "notifyCritical": "Critical alert",
+    "notifyMany": "{count} new alerts",
+    "notifyManyBody": "Open Needs you on the dashboard to see them.",
+    "open": "Open",
+    "overviewTitle": "Alerts",
+    "acknowledged": "Dismissed: stays quiet until the workflow resolves it",
+    "reopen": "Reopen",
+    "level": {
+      "info": "Info",
+      "warning": "Warning",
+      "critical": "Critical"
+    }
+  },
+  "tray": {
+    "open": "Open Tipeline",
+    "quit": "Quit Tipeline",
+    "ask": "Ask",
+    "askHint": "Opens Tipeline with the Assistant panel",
+    "settings": "Settings",
+    "coreRunning": "Core running",
+    "coreStopped": "Core not running",
+    "seeAll": "See all",
+    "seeAllCount": "See all ({n})",
+    "allClear": "All clear: nothing needs you",
+    "critical": "Critical",
+    "approve": "Approve",
+    "reject": "Reject",
+    "missedAt": "Didn't run at {time}",
+    "running": "Running",
+    "moreRunning": "+{n} more running",
+    "moreRunningMenu": "More running…",
+    "stop": "Stop run",
+    "stopRun": "Stop {name}",
+    "stopConfirm": "Stop {name}?",
+    "stopYes": "Stop",
+    "keep": "Keep",
+    "stopping": "Stopping…",
+    "next": "Next: {name} at {when}",
+    "hintTitle": "Tipeline is still running",
+    "hintBodyMac": "It keeps running in the menu bar. To quit it, use Quit Tipeline there or turn this off in Settings → About.",
+    "hintBody": "It keeps running in the notification area. To quit it, use Quit Tipeline there or turn this off in Settings → About."
   }
 }

@@ -64,6 +64,8 @@ export interface ConfigItem {
   suggestedName?: string
   /** For `codemirror` fields: adds a Run button + Output tab that runs the code as a `script.runScript` step. */
   scriptPreview?: boolean
+  /** For `codemirror` fields: syntax highlighting language. Defaults to JavaScript. */
+  language?: 'javascript' | 'sql'
   /** For `record` fields: holds any value (a request body) — Raw JSON also takes arrays/scalars/text, and it opens there. */
   anyJson?: boolean
 }

@@ -71,10 +71,22 @@ export const SEND = {
   APPROVAL_HISTORY: 'approvalHistory',
   APP_APPROVAL_LIST: 'appApprovalList',
   APP_APPROVAL_DECIDE: 'appApprovalDecide',
+  ALERT_LIST: 'alertList',
+  ALERT_DISMISS: 'alertDismiss',
+  ALERT_REOPEN: 'alertReopen',
   APP_RUNS_ACTIVE: 'appRunsActive',
   APP_RUNS_LIST: 'appRunsList',
   APP_RUN: 'appRun',
   OPEN_WINDOW: 'openWindow', // main process only — opens a page (app, run, workflow) in its own window
+  WINDOW_SHOW: 'windowShow', // main process only — shows the main window (hidden while Tipeline runs in the tray)
+  // Menu bar / tray popover (main process only, see electron/main/TrayPopover.ts)
+  TRAY_STATE: 'trayState',
+  TRAY_RESIZE: 'trayResize',
+  TRAY_OPEN: 'trayOpen',
+  TRAY_HIDE: 'trayHide',
+  TRAY_ASSISTANT: 'trayAssistant',
+  TRAY_SETTINGS_GET: 'traySettingsGet',
+  TRAY_SETTINGS_SET: 'traySettingsSet',
   // Variables
   VARIABLE_LIST: 'variableList',
   VARIABLE_NEW: 'variableNew',
@@ -153,6 +165,12 @@ export const SEND = {
   AGENT_RUN_SET_PIPELINE: 'agentRunSetPipeline',
   AGENT_RUN_LIST: 'agentRunList',
   ASSISTANT_FINDABILITY: 'assistantFindability',
+  // The Server's own Assistant, on a Server workspace: ask/run stream back on
+  // `agent:<correlationId>` like the local one; choose/history are plain requests.
+  ASSISTANT_ASK: 'assistantAsk',
+  ASSISTANT_RUN: 'assistantRun',
+  ASSISTANT_CHOOSE: 'assistantChoose',
+  ASSISTANT_HISTORY: 'assistantHistory',
   // Connections (handled locally in main — never forwarded to core)
   CONNECTION_LIST: 'connectionList',
   CONNECTION_ADD: 'connectionAdd',
@@ -270,6 +288,9 @@ export const CORE = {
   APPROVAL_HISTORY: 'approvalHistory',
   APP_APPROVAL_LIST: 'appApprovalList',
   APP_APPROVAL_DECIDE: 'appApprovalDecide',
+  ALERT_LIST: 'alertList',
+  ALERT_DISMISS: 'alertDismiss',
+  ALERT_REOPEN: 'alertReopen',
   APP_RUNS_ACTIVE: 'appRunsActive',
   APP_RUNS_LIST: 'appRunsList',
   APP_RUN: 'appRun',
@@ -336,6 +357,11 @@ export const CORE = {
   AGENT_RUN_FAIL: 'agentRunFail',
   AGENT_RUN_LIST: 'agentRunList',
   ASSISTANT_FINDABILITY: 'assistantFindability',
+  // Answered by a Tipeline Server itself (never by a local Core)
+  ASSISTANT_ASK: 'assistantAsk',
+  ASSISTANT_RUN: 'assistantRun',
+  ASSISTANT_CHOOSE: 'assistantChoose',
+  ASSISTANT_HISTORY: 'assistantHistory',
   // Connections — stored in Core's DB, always routed to local Core via IPC
   CONNECTION_LIST: 'connectionList',
   CONNECTION_ADD: 'connectionAdd',
@@ -429,6 +455,9 @@ export const CORE_RESP = {
   APPROVAL_HISTORY: 'onApprovalHistory',
   APP_APPROVAL_LIST: 'onAppApprovalList',
   APP_APPROVAL_DECIDE: 'onAppApprovalDecide',
+  ALERT_LIST: 'onAlertList',
+  ALERT_DISMISS: 'onAlertDismiss',
+  ALERT_REOPEN: 'onAlertReopen',
   APP_RUNS_ACTIVE: 'onAppRunsActive',
   APP_RUNS_LIST: 'onAppRunsList',
   // Variables
@@ -499,6 +528,10 @@ export const CORE_RESP = {
   AGENT_RUN_FAIL: 'onAgentRunFail',
   AGENT_RUN_LIST: 'onAgentRunList',
   ASSISTANT_FINDABILITY: 'onAssistantFindability',
+  ASSISTANT_ASK: 'onAssistantAsk',
+  ASSISTANT_RUN: 'onAssistantRun',
+  ASSISTANT_CHOOSE: 'onAssistantChoose',
+  ASSISTANT_HISTORY: 'onAssistantHistory',
   // Connections
   CONNECTION_LIST: 'onConnectionList',
   CONNECTION_ADD: 'onConnectionAdd',

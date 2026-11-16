@@ -23,7 +23,7 @@ tokens, webhooks, and an audit log. Source lives in `apps/server/`.
 
 | Role | Can |
 |------|-----|
-| **Viewer** | See workflows, apps and runs; open apps; decide approvals they're named on |
+| **Viewer** | See workflows, apps and runs; open apps; decide approvals they're named on; dismiss alerts they can see |
 | **Editor** | Everything a viewer can, plus create, edit and run |
 | **Admin** | Everything, plus manage users, webhooks and the cache, and see credentials |
 
@@ -48,6 +48,10 @@ assistant. It keeps using the keys on their own machine. Admins can still set th
 
 See [Roles & scopes](/server/api#_2-roles-scopes) for the exact permissions, and
 [Who can approve on a server](/workflows/approvals#who-can-approve-on-a-server).
+
+Everyone sees the [alerts](/workflows/alerts) of the workflows they can see, so another
+user's private workflow keeps its alerts private too. Dismissing an alert dismisses it for
+everyone, and the audit log records it as `alert.dismiss` (reopening as `alert.reopen`).
 
 ## The shape of it
 
