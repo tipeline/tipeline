@@ -1,33 +1,70 @@
 import { describe, expect, it, vi } from 'vitest';
-import { phoneLayout } from '../src/apps/phoneLayout';
+import { packPhoneLayouts, phoneLayouts } from '@tipeline/schemas';
 import { createDesktopBridge } from '../src/apps/desktopBridge';
 
-const item = (id: string, x: number, y: number, w: number, h = 10) => ({ id, layout: { x, y, w, h } });
+type Mobile = { hidden?: boolean; layout?: { x: number; y: number; w: number; h: number } };
+const item = (id: string, x: number, y: number, w: number, h = 10, mobile?: Mobile) => ({
+  id,
+  layout: { x, y, w, h },
+  ...(mobile ? { mobile } : {}),
+});
+const places = (items: ReturnType<typeof item>[]) =>
+  phoneLayouts(items).map((p) => [p.item.id, p.layout.x, p.layout.y, p.layout.w, p.layout.h]);
 
-describe('phoneLayout', () => {
+describe('phoneLayouts', () => {
   it('stacks components in reading order, full width', () => {
-    const cells = phoneLayout([item('table', 0, 20, 12), item('chart', 6, 0, 6), item('text', 0, 0, 6)]);
-    expect(cells.map((c) => [c.item.id, c.half])).toEqual([
-      ['text', false],
-      ['chart', false],
-      ['table', false],
+    expect(places([item('table', 0, 20, 12), item('chart', 6, 0, 6), item('text', 0, 0, 6)])).toEqual([
+      ['text', 0, 0, 4, 10],
+      ['chart', 0, 10, 4, 10],
+      ['table', 0, 20, 4, 10],
     ]);
   });
 
-  it('pairs small components that sat side by side', () => {
-    const kpis = [item('a', 0, 0, 3), item('b', 3, 0, 3), item('c', 6, 0, 3), item('d', 9, 0, 3), item('table', 0, 10, 12)];
-    expect(phoneLayout(kpis).map((c) => [c.item.id, c.half])).toEqual([
-      ['a', true],
-      ['b', true],
-      ['c', true],
-      ['d', true],
-      ['table', false],
+  it('pairs small components that sat side by side, a pair as tall as its taller one', () => {
+    const kpis = [item('a', 0, 0, 3, 8), item('b', 3, 0, 3, 12), item('c', 6, 0, 3), item('d', 9, 0, 3), item('table', 0, 12, 12)];
+    expect(places(kpis)).toEqual([
+      ['a', 0, 0, 2, 12],
+      ['b', 2, 0, 2, 12],
+      ['c', 0, 12, 2, 10],
+      ['d', 2, 12, 2, 10],
+      ['table', 0, 22, 4, 10],
     ]);
   });
 
   it('keeps a small one alone when its neighbour is wide or on another row', () => {
-    expect(phoneLayout([item('kpi', 0, 0, 4), item('wide', 4, 0, 8)]).map((c) => c.half)).toEqual([false, false]);
-    expect(phoneLayout([item('a', 0, 0, 3, 10), item('b', 0, 10, 3, 10)]).map((c) => c.half)).toEqual([false, false]);
+    expect(places([item('kpi', 0, 0, 4), item('wide', 4, 0, 8)]).map((p) => p[3])).toEqual([4, 4]);
+    expect(places([item('a', 0, 0, 3, 10), item('b', 0, 10, 3, 10)]).map((p) => p[3])).toEqual([4, 4]);
+  });
+
+  it('leaves out components hidden on phones', () => {
+    expect(places([item('a', 0, 0, 6), item('help', 6, 0, 6, 10, { hidden: true }), item('b', 0, 10, 12)])).toEqual([
+      ['a', 0, 0, 4, 10],
+      ['b', 0, 10, 4, 10],
+    ]);
+  });
+
+  it('keeps placed components where the builder put them, the rest below them', () => {
+    const items = [
+      item('chart', 0, 0, 12, 20, { layout: { x: 0, y: 6, w: 4, h: 20 } }),
+      item('kpi', 0, 20, 3, 6, { layout: { x: 0, y: 0, w: 4, h: 6 } }),
+      item('added', 0, 30, 12, 8),
+    ];
+    expect(phoneLayouts(items).map((p) => [p.item.id, p.layout.y, p.placed])).toEqual([
+      ['kpi', 0, true],
+      ['chart', 6, true],
+      ['added', 26, false],
+    ]);
+  });
+});
+
+describe('packPhoneLayouts', () => {
+  it('fills rows left to right and starts a new row when the next does not fit', () => {
+    expect(packPhoneLayouts([{ id: 'a', w: 2, h: 6 }, { id: 'b', w: 2, h: 8 }, { id: 'c', w: 3, h: 4 }, { id: 'd', w: 9, h: 5 }])).toEqual([
+      { id: 'a', x: 0, y: 0, w: 2, h: 6 },
+      { id: 'b', x: 2, y: 0, w: 2, h: 8 },
+      { id: 'c', x: 0, y: 8, w: 3, h: 4 },
+      { id: 'd', x: 0, y: 12, w: 4, h: 5 },
+    ]);
   });
 });
 

@@ -39,6 +39,12 @@ const props = defineProps<{
   nested?: boolean;
   /** Items drawn without the card (no background, no border). */
   frameless?: (item: { id: string; layout: GridLayout }) => boolean;
+  /**
+   * The builder's phone canvas: `columns` phone columns, items packed upwards, and
+   * only rearranged — nothing dropped in from the palette or moved between grids.
+   */
+  phone?: boolean;
+  columns?: number;
 }>();
 
 const emit = defineEmits<{
@@ -102,6 +108,7 @@ function accepts(el: Element): boolean {
   const from = (el as GridItemHTMLElement).gridstackNode?.grid?.el;
   return (
     !!from?.classList.contains('app-grid--editable') &&
+    !from.classList.contains('app-grid--phone') &&
     !!gridEl.value &&
     !el.contains(gridEl.value)
   );
@@ -111,15 +118,16 @@ onMounted(() => {
   if (!gridEl.value) return;
   grid = GridStack.init(
     {
-      column: 12,
+      column: props.columns ?? 12,
       cellHeight: ROW,
       margin: GRID_MARGIN,
-      float: true,
+      // On a phone nothing stays where a component was moved away from.
+      float: !props.phone,
       // An empty builder page still offers a drop area (420px).
-      minRow: props.editable && !props.nested ? 42 : 1,
+      minRow: props.editable && !props.nested && !props.phone ? 42 : 1,
       staticGrid: !props.editable,
-      acceptWidgets: props.editable ? accepts : false,
-      removable: props.editable ? '#app-builder-trash' : false,
+      acceptWidgets: props.editable && !props.phone ? accepts : false,
+      removable: props.editable && !props.phone ? '#app-builder-trash' : false,
       resizable: { handles: 'se,e,s,sw,w' },
     },
     gridEl.value
@@ -146,7 +154,7 @@ onMounted(() => {
     return;
   }
 
-  if (!props.nested)
+  if (!props.nested && !props.phone)
     GridStack.setupDragIn('.app-palette-item', {
       appendTo: 'body',
       helper: 'clone',
@@ -263,6 +271,7 @@ onBeforeUnmount(() => {
     :class="{
       'app-grid--editable': editable,
       'app-grid--nested': nested,
+      'app-grid--phone': phone,
       'app-grid--flush': !editable && !nested,
     }"
     :style="{ '--app-grid-margin': `${GRID_MARGIN}px` }"

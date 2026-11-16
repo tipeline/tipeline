@@ -20,7 +20,7 @@ import { useIcon } from '@/composables/useIcon';
 import { useBuilderStore } from '@/store/builderStore';
 import { PALETTE, WIDGETS_BY_TYPE } from '@/components/app/widgets/registry';
 import { computed } from 'vue';
-import { Copy, Trash2 } from 'lucide-vue-next';
+import { Copy, EyeOff, Trash2 } from 'lucide-vue-next';
 import { treeOrder } from '@/utils/appTree';
 
 const builderStore = useBuilderStore();
@@ -30,6 +30,7 @@ const { t } = useI18n();
 // Layers: the page's components in reading order (top to bottom, left to right),
 // what is inside a container or tab indented under it.
 const layers = computed(() => treeOrder(builderStore.selectedPage?.components ?? []));
+const phone = computed(() => builderStore.canvasDevice === 'phone');
 
 const isNewPageDialogOpen = ref(false);
 const newPageName = ref('');
@@ -134,6 +135,10 @@ function onPageKeydown(e: KeyboardEvent, id: string, index: number) {
               >
                 <component :is="getIconComponent(WIDGETS_BY_TYPE[c.type]?.icon ?? 'Box')" class="size-3.5 shrink-0 text-muted-foreground" />
                 <span class="font-mono truncate flex-1">{{ c.id }}</span>
+                <span v-if="c.mobile?.hidden" class="inline-flex shrink-0" :title="t('builder.phone.hiddenMark')">
+                  <EyeOff class="size-3 text-muted-foreground" aria-hidden="true" />
+                  <span class="sr-only">{{ t('builder.phone.hiddenMark') }}</span>
+                </span>
                 <span class="text-muted-foreground shrink-0">{{ t(`builder.components.${c.type}`) }}</span>
                 <button class="opacity-0 group-hover/layer:opacity-100" :title="t('builder.duplicate')" @click.stop="builderStore.duplicateComponent(c.id)">
                   <Copy class="size-3" />
@@ -201,7 +206,14 @@ function onPageKeydown(e: KeyboardEvent, id: string, index: number) {
               </div>
               <Separator class="mb-3" />
 
-              <div class="grid grid-cols-2 gap-2 px-1">
+              <p
+                v-if="phone"
+                class="m-0 mb-3 mx-1 rounded-md border border-dashed p-2.5 text-xs leading-relaxed text-muted-foreground"
+              >
+                {{ t('builder.phone.paletteNote') }}
+              </p>
+
+              <div class="grid grid-cols-2 gap-2 px-1" :class="{ 'opacity-40 pointer-events-none': phone }" :inert="phone || undefined">
                 <div
                   v-for="widget in PALETTE"
                   :key="widget.key"
@@ -219,7 +231,7 @@ function onPageKeydown(e: KeyboardEvent, id: string, index: number) {
                 </div>
               </div>
 
-              <div class="mt-4">
+              <div v-show="!phone" class="mt-4">
                 <span class="text-xs text-muted-foreground font-medium uppercase tracking-wide px-1">{{ t('builder.trash') }}</span>
                 <div
                   id="app-builder-trash"

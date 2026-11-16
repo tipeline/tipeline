@@ -2,7 +2,23 @@
 import { computed, onBeforeUnmount, onMounted, provide, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
-import { ArrowLeft, Check, Code2, Eye, LayoutGrid, Loader2, Play, Redo2, Save, Trash2, TriangleAlert, Undo2 } from 'lucide-vue-next';
+import {
+  ArrowLeft,
+  Check,
+  Code2,
+  Eye,
+  LayoutGrid,
+  Loader2,
+  Monitor,
+  Play,
+  Redo2,
+  RotateCcw,
+  Save,
+  Smartphone,
+  Trash2,
+  TriangleAlert,
+  Undo2,
+} from 'lucide-vue-next';
 import yaml from 'js-yaml';
 import { coreValidations } from '@tipeline/schemas';
 import AppRunner from '@/components/app/AppRunner.vue';
@@ -89,6 +105,19 @@ function showDesign() {
   mode.value = 'design';
 }
 
+// ------------------------------------------------------------------ phone layout
+
+const phone = computed(() => builderStore.canvasDevice === 'phone');
+const pageComponents = computed(() => builderStore.selectedPage?.components ?? []);
+/** Hidden on phones, anywhere on the page. */
+const phoneHidden = computed(() => pageComponents.value.filter((c) => c.mobile?.hidden));
+const phoneArranged = computed(() => pageComponents.value.some((c) => !c.mobile?.hidden && c.mobile?.layout));
+const menuPages = computed(() => (builderStore.source?.pages ?? []).filter((p) => p.showInMenu !== false));
+
+function setDevice(device: 'desktop' | 'phone') {
+  builderStore.canvasDevice = device;
+}
+
 function showYaml() {
   if (!builderStore.source) return;
   yamlText.value = yaml.dump(JSON.parse(JSON.stringify(builderStore.source)), { lineWidth: 120, noRefs: true });
@@ -135,6 +164,15 @@ const hasSelection = computed(() => inDesign.value && !!builderStore.selectedCom
 
 // Edit shortcuts stay out of text fields (skipWhenEditable) so typing keeps its own
 // undo, copy and paste; Cmd+S and Cmd+D work everywhere.
+// On the phone canvas, Delete takes the component off phones (not out of the app), and
+// nothing is added: components are added in the desktop layout.
+const onDesktop = computed(() => !phone.value);
+function removeSelected() {
+  const id = builderStore.selectedComponentId!;
+  if (phone.value) builderStore.setPhoneHidden(id, true);
+  else builderStore.removeComponent(id);
+}
+
 useKeyboardShortcuts([
   {
     key: 's',
@@ -144,7 +182,15 @@ useKeyboardShortcuts([
   },
   { key: 'z', meta: true, skipWhenEditable: true, enabled: inDesign, handler: () => builderStore.undo() },
   { key: 'z', meta: true, shift: true, skipWhenEditable: true, enabled: inDesign, handler: () => builderStore.redo() },
-  { key: 'd', meta: true, enabled: hasSelection, handler: (e) => { e.preventDefault(); duplicateSelected(); } },
+  {
+    key: 'd',
+    meta: true,
+    enabled: computed(() => hasSelection.value && onDesktop.value),
+    handler: (e) => {
+      e.preventDefault();
+      duplicateSelected();
+    },
+  },
   {
     key: 'c',
     meta: true,
@@ -152,19 +198,15 @@ useKeyboardShortcuts([
     enabled: hasSelection,
     handler: () => builderStore.copyComponent(builderStore.selectedComponentId!),
   },
-  { key: 'v', meta: true, skipWhenEditable: true, enabled: inDesign, handler: pasteClipboard },
   {
-    key: 'Delete',
+    key: 'v',
+    meta: true,
     skipWhenEditable: true,
-    enabled: hasSelection,
-    handler: () => builderStore.removeComponent(builderStore.selectedComponentId!),
+    enabled: computed(() => inDesign.value && onDesktop.value),
+    handler: pasteClipboard,
   },
-  {
-    key: 'Backspace',
-    skipWhenEditable: true,
-    enabled: hasSelection,
-    handler: () => builderStore.removeComponent(builderStore.selectedComponentId!),
-  },
+  { key: 'Delete', skipWhenEditable: true, enabled: hasSelection, handler: removeSelected },
+  { key: 'Backspace', skipWhenEditable: true, enabled: hasSelection, handler: removeSelected },
   { key: 'Escape', skipWhenEditable: true, enabled: hasSelection, handler: () => builderStore.selectComponent(null) },
 ]);
 
@@ -231,6 +273,32 @@ function handleClear() {
           </Button>
           <Button size="sm" :variant="mode === 'preview' ? 'secondary' : 'ghost'" class="h-7 gap-1 px-2" :disabled="!builderStore.source" @click="showPreview">
             <Eye class="w-3.5 h-3.5" /> {{ t('builder.modes.preview') }}
+          </Button>
+        </div>
+
+        <!-- Which layout the canvas edits -->
+        <div v-if="mode === 'design'" class="flex items-center rounded-md border p-0.5" role="group" :aria-label="t('builder.phone.device')">
+          <Button
+            size="sm"
+            :variant="phone ? 'ghost' : 'secondary'"
+            class="h-7 w-8 px-0"
+            :aria-pressed="!phone"
+            :aria-label="t('builder.phone.desktop')"
+            :title="t('builder.phone.desktop')"
+            @click="setDevice('desktop')"
+          >
+            <Monitor class="w-3.5 h-3.5" />
+          </Button>
+          <Button
+            size="sm"
+            :variant="phone ? 'secondary' : 'ghost'"
+            class="h-7 w-8 px-0"
+            :aria-pressed="phone"
+            :aria-label="t('builder.phone.phone')"
+            :title="t('builder.phone.phone')"
+            @click="setDevice('phone')"
+          >
+            <Smartphone class="w-3.5 h-3.5" />
           </Button>
         </div>
 
@@ -310,6 +378,69 @@ function handleClear() {
           <pre class="text-xs text-muted-foreground whitespace-pre-wrap max-w-2xl m-0">{{ loadError }}</pre>
         </div>
 
+        <!-- Phone: the page as phones show it, arranged on the phone grid -->
+        <div v-else-if="builderStore.selectedPage && phone" class="flex flex-col items-center gap-3">
+          <div class="flex w-full max-w-3xl flex-wrap items-center gap-3 rounded-lg border bg-background py-1.5 pl-3 pr-1.5">
+            <Smartphone class="size-4 text-muted-foreground" />
+            <span class="text-sm">
+              <span class="font-medium">{{ t('builder.phone.layout') }}</span>
+              <span class="text-muted-foreground">
+                · {{ phoneArranged ? t('builder.phone.arranged') : t('builder.phone.automatic') }}
+              </span>
+            </span>
+            <span class="flex-1" />
+            <Button size="sm" variant="outline" class="h-7" :disabled="!phoneArranged" @click="builderStore.resetPhoneLayout()">
+              <RotateCcw class="w-3.5 h-3.5 mr-1" /> {{ t('builder.phone.reset') }}
+            </Button>
+          </div>
+
+          <div class="flex flex-wrap items-start justify-center gap-6">
+            <div class="builder-phone shrink-0" data-builder-phone>
+              <div class="border-b bg-background px-3 pb-2 pt-6">
+                <p class="m-0 mb-2 text-center text-sm font-semibold truncate">{{ builderStore.appName }}</p>
+                <div v-if="menuPages.length > 1" class="flex gap-1.5 overflow-x-auto">
+                  <button
+                    v-for="p in menuPages"
+                    :key="p.id"
+                    type="button"
+                    class="h-7 shrink-0 rounded-full px-3 text-xs"
+                    :class="p.id === builderStore.selectedPageId ? 'bg-primary text-primary-foreground' : 'bg-muted'"
+                    @click="builderStore.selectPage(p.id)"
+                  >
+                    {{ p.name }}
+                  </button>
+                </div>
+              </div>
+              <div class="p-1">
+                <BuilderGrid :key="builderStore.selectedPage.id" />
+              </div>
+            </div>
+
+            <div class="w-52 shrink-0">
+              <p class="m-0 mb-2 text-xs font-semibold text-muted-foreground">{{ t('builder.phone.hiddenTitle') }}</p>
+              <p v-if="!phoneHidden.length" class="m-0 rounded-md border border-dashed p-2.5 text-xs text-muted-foreground">
+                {{ t('builder.phone.noneHidden') }}
+              </p>
+              <div class="flex flex-col gap-1.5">
+                <div
+                  v-for="c in phoneHidden"
+                  :key="c.id"
+                  class="flex items-center gap-2 rounded-md border bg-background py-1 pl-2.5 pr-1 text-xs"
+                  :class="{ 'ring-2 ring-primary': builderStore.selectedComponentId === c.id }"
+                >
+                  <button type="button" class="min-w-0 flex-1 truncate text-left" @click="builderStore.selectComponent(c.id)">
+                    {{ c.name }}
+                  </button>
+                  <Button size="sm" variant="outline" class="h-6 px-2 text-xs" @click="builderStore.setPhoneHidden(c.id, false)">
+                    {{ t('builder.phone.show') }}
+                  </Button>
+                </div>
+              </div>
+              <p class="m-0 mt-3 text-xs leading-relaxed text-muted-foreground">{{ t('builder.phone.canvasHint') }}</p>
+            </div>
+          </div>
+        </div>
+
         <BuilderGrid v-else-if="builderStore.selectedPage" :key="builderStore.selectedPage.id" />
       </div>
     </div>
@@ -319,6 +450,16 @@ function handleClear() {
 </template>
 
 <style scoped>
+/* A phone's width (390px) inside its frame; it grows with the page. */
+.builder-phone {
+  width: 390px;
+  min-height: 720px;
+  border: 10px solid #1c1c1c;
+  border-radius: 46px;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--muted) 40%, var(--background));
+  box-sizing: content-box;
+}
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.4s ease;

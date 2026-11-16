@@ -672,3 +672,106 @@ describe('builderStore: containers and tabs', () => {
     expectValid(store);
   });
 });
+
+describe('builderStore: phone layout', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.useFakeTimers();
+    vi.mocked(invokeCore).mockReset();
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  /** home: button1 and kpi1 side by side, chart1 below, container1 holding text1. */
+  async function dashboard() {
+    const store = await loaded();
+    store.addComponent('kpi', { x: 3, y: 0, w: 3, h: 1 }, { name: 'Open', props: {} });
+    store.addComponent('chart', { x: 0, y: 1, w: 12, h: 20 }, { name: 'Trend', props: {} });
+    store.addComponent('container', { x: 0, y: 21, w: 12, h: 10 }, { name: 'Box', props: {} });
+    store.addComponent('text', { x: 0, y: 0, w: 6, h: 4 }, { name: 'Note', props: {} }, { id: 'container1' });
+    store.canvasDevice = 'phone';
+    return store;
+  }
+  const byId = (store: ReturnType<typeof useBuilderStore>, id: string) =>
+    store.source!.pages[0].components.find((c) => c.id === id)!;
+  const phonePlace = (store: ReturnType<typeof useBuilderStore>, id: string) => byId(store, id).mobile?.layout;
+
+  it('a report of the automatic places changes nothing', async () => {
+    const store = await dashboard();
+    store.updatePhoneLayouts(null, [{ id: 'button1', x: 0, y: 0, w: 2, h: 1 }]);
+    expect(store.source!.pages[0].components.some((c) => c.mobile)).toBe(false);
+  });
+
+  it('the first move places the whole grid, and only that grid', async () => {
+    const store = await dashboard();
+    store.updatePhoneLayouts(null, [{ id: 'chart1', x: 0, y: 0, w: 4, h: 20 }, { id: 'button1', x: 0, y: 20, w: 2, h: 1 }]);
+    expect(phonePlace(store, 'chart1')).toEqual({ x: 0, y: 0, w: 4, h: 20 });
+    expect(phonePlace(store, 'button1')).toEqual({ x: 0, y: 20, w: 2, h: 1 });
+    // Not moved, but placed where it was shown: automatic places would now go below.
+    expect(phonePlace(store, 'kpi1')).toEqual({ x: 2, y: 0, w: 2, h: 1 });
+    expect(phonePlace(store, 'container1')).toEqual({ x: 0, y: 21, w: 4, h: 10 });
+    expect(byId(store, 'text1').mobile).toBeUndefined();
+    expect(store.isDirty).toBe(true);
+    expectValid(store);
+  });
+
+  it('sets a width on the phone grid, laying the grid out again in its order', async () => {
+    const store = await dashboard();
+    store.setPhoneWidth('button1', 4);
+    expect(phonePlace(store, 'button1')).toEqual({ x: 0, y: 0, w: 4, h: 1 });
+    expect(phonePlace(store, 'kpi1')).toEqual({ x: 0, y: 1, w: 2, h: 1 });
+    expect(phonePlace(store, 'chart1')).toEqual({ x: 0, y: 2, w: 4, h: 20 });
+    expect(phonePlace(store, 'container1')).toEqual({ x: 0, y: 22, w: 4, h: 10 });
+    store.setPhoneWidth('kpi1', 3);
+    expect(phonePlace(store, 'kpi1')).toEqual({ x: 0, y: 1, w: 3, h: 1 });
+    expectValid(store);
+  });
+
+  it('moves a component one place up or down on phones', async () => {
+    const store = await dashboard();
+    store.movePhone('chart1', -1);
+    const order = store.source!.pages[0].components
+      .filter((c) => !c.parent)
+      .map((c) => [c.id, c.mobile!.layout!])
+      .sort((a: any, b: any) => a[1].y - b[1].y || a[1].x - b[1].x)
+      .map((e) => e[0]);
+    expect(order).toEqual(['button1', 'chart1', 'kpi1', 'container1']);
+    expect(phonePlace(store, 'chart1')).toEqual({ x: 0, y: 1, w: 4, h: 20 });
+    expect(phonePlace(store, 'kpi1')).toEqual({ x: 0, y: 21, w: 2, h: 1 });
+    expectValid(store);
+  });
+
+  it('hides on phones (dropping its place) and shows again', async () => {
+    const store = await dashboard();
+    store.setPhoneWidth('chart1', 2);
+    store.setPhoneHidden('chart1', true);
+    expect(byId(store, 'chart1').mobile).toEqual({ hidden: true });
+    expectValid(store);
+    store.setPhoneHidden('chart1', false);
+    expect(byId(store, 'chart1').mobile).toBeUndefined();
+  });
+
+  it('back to automatic drops every phone place, in one undo step, and keeps what is hidden', async () => {
+    const store = await dashboard();
+    store.setPhoneHidden('text1', true);
+    store.movePhone('chart1', -1);
+    await vi.advanceTimersByTimeAsync(0);
+    store.resetPhoneLayout();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(store.source!.pages[0].components.filter((c) => c.mobile?.layout)).toEqual([]);
+    expect(byId(store, 'text1').mobile).toEqual({ hidden: true });
+    store.undo();
+    expect(phonePlace(store, 'chart1')).toEqual({ x: 0, y: 1, w: 4, h: 20 });
+  });
+
+  it('a component moved to another grid, or copied, goes to the automatic place there', async () => {
+    const store = await dashboard();
+    store.setPhoneWidth('kpi1', 4);
+    store.moveComponent('kpi1', { id: 'container1' });
+    expect(byId(store, 'kpi1').mobile).toBeUndefined();
+    store.setPhoneWidth('chart1', 2);
+    store.duplicateComponent('chart1');
+    expect(byId(store, 'chart1Copy').mobile).toBeUndefined();
+    expectValid(store);
+  });
+});

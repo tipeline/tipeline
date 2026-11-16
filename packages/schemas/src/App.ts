@@ -250,6 +250,34 @@ export const appLayoutSchema = z
   .strict()
   .refine((l) => l.x + l.w <= 12, 'x + w must not exceed the 12 grid columns');
 
+/** Columns of the phone grid a component's `mobile.layout` is placed on (rows as on Desktop). */
+export const APP_PHONE_COLUMNS = 4;
+
+/** A component's place on phones: the same rows as `layout`, on APP_PHONE_COLUMNS columns. */
+export const appPhoneLayoutSchema = z
+  .object({
+    x: z.number().int().min(0).max(APP_PHONE_COLUMNS - 1),
+    y: z.number().int().min(0),
+    w: z.number().int().min(1).max(APP_PHONE_COLUMNS),
+    h: z.number().int().min(1),
+  })
+  .strict()
+  .refine((l) => l.x + l.w <= APP_PHONE_COLUMNS, `x + w must not exceed the ${APP_PHONE_COLUMNS} phone columns`);
+
+/**
+ * How a component shows on phones. Without it, phones place it from its desktop
+ * `layout` (see phoneLayouts): in reading order, small components two to a row.
+ *  - hidden: not shown on phones at all
+ *  - layout: placed here on the phone grid; components without one go below these
+ */
+export const appComponentMobileSchema = z
+  .object({
+    hidden: z.boolean().optional(),
+    layout: appPhoneLayoutSchema.optional(),
+  })
+  .strict();
+export type AppComponentMobile = z.infer<typeof appComponentMobileSchema>;
+
 /** How a table column or details field shows its value (`badge`: a colored status pill). */
 export const APP_VALUE_FORMATS = ['text', 'number', 'currency', 'percent', 'date', 'datetime', 'badge', 'color'] as const;
 
@@ -1477,6 +1505,8 @@ const componentOf = <T extends AppComponentType, P extends z.AnyZodObject>(type:
        * height follows their content, it reaches the lowest component instead.
        */
       fill: z.boolean().optional(),
+      /** Phones only: hidden, or a place of its own on the phone grid. */
+      mobile: appComponentMobileSchema.optional(),
       props: props.default({}),
       events: eventsSchemaFor(type),
     })
