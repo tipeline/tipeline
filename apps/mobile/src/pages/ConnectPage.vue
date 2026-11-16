@@ -41,7 +41,7 @@ async function signIn() {
       return;
     }
     password.value = '';
-    router.replace('/tabs/workflows');
+    router.replace('/tabs/home');
   } catch (err) {
     error.value = messageFor(err);
   } finally {
@@ -58,7 +58,7 @@ async function verify() {
     password.value = '';
     code.value = '';
     challengeId.value = null;
-    router.replace('/tabs/workflows');
+    router.replace('/tabs/home');
   } catch (err) {
     error.value = messageFor(err);
   } finally {

@@ -2,9 +2,6 @@ import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import { useSession } from './session';
 
-const POLL_MS = 30_000;
-/** Messages after which a run may have paused at an approval, or stopped waiting at one. */
-const RUN_ENDS = new Set(['onTaskEnd', 'onTaskEndAll', 'onTaskError', 'onApprovalDecide', 'onPipelineCancel']);
 
 /** A run waiting at an approval.request, as the Server lists it for this user. */
 export interface PendingApproval {
@@ -38,9 +35,8 @@ export interface ApprovalDecision {
 }
 
 /**
- * Runs waiting for approval: the Approvals tab and its badge read from here. Checks every
- * 30 s while signed in and right after any run ends. The badge counts only the ones this
- * user may decide.
+ * Runs waiting for approval, for the Inbox and Home. The Inbox store refreshes it (every
+ * 30 s and when runs end). `count` is only the ones this user may decide.
  */
 export const useApprovals = defineStore('approvals', () => {
   const session = useSession();
@@ -89,42 +85,13 @@ export const useApprovals = defineStore('approvals', () => {
     return (await session.api().request<ApprovalDecision[]>('approvalHistory', { limit })) ?? [];
   }
 
-  let timer: ReturnType<typeof setInterval> | null = null;
-  let stopMessages: (() => void) | null = null;
-  function stop() {
-    if (timer) clearInterval(timer);
-    timer = null;
-    stopMessages?.();
-    stopMessages = null;
-  }
-  function start() {
-    stop();
-    const client = session.client;
-    if (!client) return;
-    void refresh();
-    timer = setInterval(() => void refresh(), POLL_MS);
-    stopMessages = client.subscribe((message) => {
-      if (RUN_ENDS.has(message.event)) void refresh();
-    });
-  }
-
-  // Another sign-in is another list; signed out, nothing.
+  // Another sign-in is another list. The Inbox store keeps it fresh (polling, run ends).
   watch(
     () => session.client,
-    (client) => {
+    () => {
       items.value = [];
       loaded.value = false;
       error.value = '';
-      if (client) start();
-      else stop();
-    },
-    { immediate: true }
-  );
-  // Back online: the list may have changed meanwhile.
-  watch(
-    () => session.status,
-    (status, before) => {
-      if (status === 'open' && before && before !== 'open') void refresh();
     }
   );
 

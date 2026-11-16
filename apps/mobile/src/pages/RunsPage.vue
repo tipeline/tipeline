@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute } from 'vue-router';
 import {
   IonPage,
   IonHeader,
@@ -18,6 +19,8 @@ import {
   IonInfiniteScrollContent,
   IonSkeletonText,
   IonButton,
+  IonButtons,
+  IonBackButton,
   onIonViewDidEnter,
   onIonViewDidLeave,
 } from '@ionic/vue';
@@ -35,7 +38,10 @@ const LIST_CHANGES = new Set(['onTaskStart', 'onTaskEnd', 'onTaskEndAll', 'onTas
 const { t, locale } = useI18n();
 const session = useSession();
 
-const filter = ref<RunFilter>('all');
+// Home's tiles open this list already filtered (?filter=failed).
+const route = useRoute();
+const asked = String(route.query.filter ?? '');
+const filter = ref<RunFilter>((RUN_FILTERS as readonly string[]).includes(asked) ? (asked as RunFilter) : 'all');
 const runs = ref<RunRow[]>([]);
 const loaded = ref(false);
 const error = ref('');
@@ -139,6 +145,9 @@ function meta(run: RunRow): string {
   <ion-page>
     <ion-header>
       <ion-toolbar>
+        <ion-buttons slot="start">
+          <ion-back-button default-href="/tabs/home" />
+        </ion-buttons>
         <ion-title>{{ t('runs.title') }}</ion-title>
       </ion-toolbar>
       <ion-toolbar>
@@ -175,7 +184,7 @@ function meta(run: RunRow): string {
           <ion-item
             v-for="run in runs"
             :key="run.identifier"
-            :router-link="`/tabs/runs/${encodeURIComponent(run.identifier)}`"
+            :router-link="`/tabs/home/runs/${encodeURIComponent(run.identifier)}`"
             detail
           >
             <ion-label class="ion-text-wrap">

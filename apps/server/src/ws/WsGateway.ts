@@ -84,6 +84,8 @@ const ADMIN_ONLY_COMMANDS = new Set([
   'projectExport', 'projectImport',
   // The Trash holds every user's deleted workflows and apps (owners aren't kept in Core).
   'trashList', 'trashRestore', 'trashDelete', 'trashEmpty',
+  // Deleting run history: runs of every user and every workflow (Core keeps no owner per run).
+  'pipelineClear', 'pipelineClearAll', 'pipelineDelete',
   // Core's assistant history (Desktop's, on that machine) has no user: everyone's at once.
   // The Server's own users have assistantHistory.
   'agentRunList',
@@ -635,6 +637,10 @@ export class WsGateway {
       void this.routeRunDetail(event, data);
       return;
     }
+    if (event === 'onScheduleList') {
+      void this.routeScheduleList(event, data);
+      return;
+    }
     if (SECRET_BEARING_ANSWERS.has(event)) {
       this.routeHidingSecrets(event, data);
       return;
@@ -703,6 +709,22 @@ export class WsGateway {
       }
     }
     ws.send(JSON.stringify({ event, ...data }));
+  }
+
+  /** Schedules go only to the asker, without those of other users' private workflows. */
+  private async routeScheduleList(event: string, data: any): Promise<void> {
+    const correlationId = data?.correlationId;
+    const ws = correlationId ? this.correlationMap.get(correlationId) : undefined;
+    if (correlationId) this.correlationMap.delete(correlationId);
+    const user = ws ? this.clientUser.get(ws) : undefined;
+    if (!ws || !user || ws.readyState !== WebSocket.OPEN) return;
+
+    let answer = data?.data;
+    if (Array.isArray(answer) && user.role !== 'admin') {
+      const hidden = await TaskOwnershipService.privateOwnedByOthers(user.id);
+      if (hidden.size > 0) answer = answer.filter((s: any) => !hidden.has(s?.taskIdentifier));
+    }
+    ws.send(JSON.stringify({ event, ...data, data: answer }));
   }
 
   /**

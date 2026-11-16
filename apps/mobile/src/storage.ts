@@ -58,3 +58,25 @@ export function rememberServer(serverUrl: string): void {
     // Not important.
   }
 }
+
+/** A small per-server list kept on this phone (stars, dismissed Inbox items). */
+function serverListKey(name: string, serverUrl: string): string {
+  return `tipeline.${name}:${serverUrl}`;
+}
+
+export function loadServerList(name: string, serverUrl: string): string[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(serverListKey(name, serverUrl)) ?? '[]');
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveServerList(name: string, serverUrl: string, values: string[]): void {
+  try {
+    localStorage.setItem(serverListKey(name, serverUrl), JSON.stringify(values));
+  } catch {
+    // Not important: it is only this phone's preference.
+  }
+}

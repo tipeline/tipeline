@@ -42,7 +42,9 @@ class FakeCore {
   send(event: string, payload: any) {
     this.sent.push({ event, payload: payload.payload });
     const data =
-      event === 'pipelineDetail'
+      event === 'scheduleList'
+        ? [{ scheduleIdentifier: 's1', taskIdentifier: 'secret' }, { scheduleIdentifier: 's2', taskIdentifier: 'shared' }]
+        : event === 'pipelineDetail'
         ? { identifier: payload.payload.pipelineIdentifier, task: { identifier: payload.payload.pipelineIdentifier.split(':')[0] } }
         : [];
     setTimeout(() =>
@@ -68,7 +70,10 @@ async function send(event: string, payload: any) {
   const ws = new WebSocket(`ws://127.0.0.1:${port}`, { headers: { authorization: 'Bearer t' } });
   await new Promise((r) => ws.on('open', r));
   const reply = await new Promise<any>((resolve) => {
-    ws.on('message', (raw: any) => resolve(JSON.parse(raw.toString())));
+    ws.on('message', (raw: any) => {
+      const message = JSON.parse(raw.toString());
+      if (message.event !== 'error') resolve(message); // a refusal also sends a general error first
+    });
     ws.send(JSON.stringify({ event, correlationId: 'c-1', payload }));
   });
   ws.close();
@@ -100,5 +105,22 @@ describe('WsGateway: runs of private workflows', () => {
     expect((await send('pipelineDetail', { pipelineIdentifier: 'shared:run-1' })).data.identifier).toBe('shared:run-1');
     state.role = 'admin';
     expect((await send('pipelineDetail', { pipelineIdentifier: 'secret:run-1' })).data.identifier).toBe('secret:run-1');
+  });
+
+  it('lets only admins delete run history', async () => {
+    for (const event of ['pipelineClear', 'pipelineClearAll', 'pipelineDelete']) {
+      const reply = await send(event, { taskIdentifier: 'shared', identifiers: ['shared:run-1'] });
+      expect(reply.error).toMatch(/Permission denied/);
+    }
+    expect(core.sent).toEqual([]);
+    state.role = 'admin';
+    await send('pipelineClearAll', {});
+    expect(core.sent.map((s) => s.event)).toEqual(['pipelineClearAll']);
+  });
+
+  it('leaves schedules of other users’ private workflows out, except for admins', async () => {
+    expect((await send('scheduleList', {})).data.map((s: any) => s.scheduleIdentifier)).toEqual(['s2']);
+    state.role = 'admin';
+    expect((await send('scheduleList', {})).data.map((s: any) => s.scheduleIdentifier)).toEqual(['s1', 's2']);
   });
 });

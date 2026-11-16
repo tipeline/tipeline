@@ -20,7 +20,7 @@ Sign in with server `http://127.0.0.1:4011` and the stack's admin account (`admi
 
 The dev server always uses port 5180 because the Server only answers browsers from origins it lists.
 
-The **Runs** tab lists the runs you may see and opens each one (steps, result, Cancel). **Approvals** lists runs waiting for a decision; the badge counts the ones you may decide.
+The tabs follow the designs: **Home** (today's runs and failures, what is waiting for you, starred workflows, the next scheduled run), **Workflows**, **Assistant** and **Inbox** (approvals, alerts, workflows whose latest run failed, missed scheduled runs). **More** opens from the avatar on Home: the account, **Runs** (each run's steps, result and Cancel) and **Schedules** (admins add, pause and delete them in plain words). Stars and dismissed Inbox items are kept on the phone, per server.
 
 The **Assistant** tab (editors and admins) needs an LLM key on the Server: connect Desktop to it as an admin and set one in Settings → Assistant.
 
@@ -38,4 +38,4 @@ npm -w apps/mobile run test     # unit tests (Vitest)
 - **Secure token storage.** The sign-in is kept in `localStorage` for now; the native build must keep it in the Keychain / Keystore (see `src/storage.ts`).
 - **Assistant:** writing new workflows (drafts) and turning a request into a schedule are Desktop-only for now.
 - **Approvals:** no Face ID / fingerprint check before deciding yet (it needs the native projects).
-- Inbox, Schedules, apps and push notifications: see the plan.
+- Apps and push notifications: see the plan.

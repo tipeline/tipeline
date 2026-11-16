@@ -19,6 +19,7 @@ import {
 import type { ColumnDef } from '@tanstack/vue-table';
 import { useRouter } from 'vue-router';
 import { useStreamListener } from '@/composables/useStreamListener';
+import { useConnectionStore } from '@/store/connectionStore';
 import { useStream } from '@/composables/useStream';
 import { SEND } from '@/ipc-channels';
 import { invokeCore } from '@/utils/invoke';
@@ -137,6 +138,7 @@ onUnmounted(() => {
   if (pollTimer) clearInterval(pollTimer);
 });
 
+const connection = useConnectionStore();
 const openClearHistory = ref(false);
 const isClearing = ref(false);
 
@@ -325,6 +327,7 @@ const sortedPipelines = computed(() =>
     <template #title>{{ t('taskHistory.title') }}</template>
     <template #actions>
       <Button
+        v-if="connection.canDeleteRuns"
         variant="destructive"
         size="sm"
         :disabled="isLoading || sortedPipelines.length === 0"

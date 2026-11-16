@@ -15,10 +15,11 @@ import {
   IonSkeletonText,
   IonFooter,
 } from '@ionic/vue';
-import { checkmarkCircle, closeCircle, ellipseOutline, pauseCircle, removeCircleOutline } from 'ionicons/icons';
+import { checkmarkCircle, closeCircle, ellipseOutline, pauseCircle, removeCircleOutline, star, starOutline } from 'ionicons/icons';
 import ConnectionBanner from '@/components/ConnectionBanner.vue';
 import RunInputsForm from '@/components/RunInputsForm.vue';
 import { useSession } from '@/session';
+import { useStars } from '@/starsStore';
 import { useWorkflowRun } from '@/composables/useWorkflowRun';
 import {
   descriptionLine,
@@ -38,6 +39,9 @@ const props = defineProps<{ identifier: string }>();
 
 const { t } = useI18n();
 const session = useSession();
+const stars = useStars();
+// Viewers may look but not run (the Server refuses their runs).
+const canRun = computed(() => session.user?.role !== 'viewer');
 
 const name = ref('');
 const source = ref<WorkflowSource | null>(null);
@@ -125,6 +129,15 @@ async function cancel() {
           <ion-back-button default-href="/tabs/workflows" />
         </ion-buttons>
         <ion-title>{{ name }}</ion-title>
+        <ion-buttons v-if="loaded && !loadError" slot="end">
+          <ion-button
+            :aria-label="stars.isStarred(identifier) ? t('workflow.unstar') : t('workflow.star')"
+            :aria-pressed="stars.isStarred(identifier)"
+            @click="stars.toggle(identifier)"
+          >
+            <ion-icon slot="icon-only" :icon="stars.isStarred(identifier) ? star : starOutline" />
+          </ion-button>
+        </ion-buttons>
       </ion-toolbar>
       <connection-banner />
     </ion-header>
@@ -167,7 +180,7 @@ async function cancel() {
           <p v-if="progress.state === 'lost'" class="tl-error" role="alert">{{ t('workflow.lostConnection') }}</p>
           <p v-if="progress.error" class="tl-error" role="alert">{{ progress.error }}</p>
           <p v-if="cancelError" class="tl-error" role="alert">{{ cancelError }}</p>
-          <ion-button v-if="progress.state === 'paused'" fill="outline" size="small" router-link="/tabs/approvals">
+          <ion-button v-if="progress.state === 'paused'" fill="outline" size="small" router-link="/tabs/inbox">
             {{ t('run.reviewApproval') }}
           </ion-button>
 
@@ -203,7 +216,7 @@ async function cancel() {
             v-if="!running && progress.pipelineIdentifier"
             fill="clear"
             class="view-run"
-            :router-link="`/tabs/runs/${encodeURIComponent(progress.pipelineIdentifier)}`"
+            :router-link="`/tabs/home/runs/${encodeURIComponent(progress.pipelineIdentifier)}`"
           >
             {{ t('run.viewRun') }}
           </ion-button>
@@ -213,7 +226,8 @@ async function cancel() {
 
     <ion-footer v-if="loaded && !loadError" class="ion-no-border">
       <ion-toolbar class="run-bar">
-        <ion-button v-if="!progress" expand="block" size="large" @click="run">{{ t('workflow.run') }}</ion-button>
+        <p v-if="!canRun" class="tl-muted viewer-note">{{ t('workflow.viewerCannotRun') }}</p>
+        <ion-button v-else-if="!progress" expand="block" size="large" @click="run">{{ t('workflow.run') }}</ion-button>
         <ion-button
           v-else-if="running"
           expand="block"
@@ -296,6 +310,11 @@ async function cancel() {
 }
 .step-error {
   color: var(--tl-failed-ink);
+}
+.viewer-note {
+  margin: 4px 0;
+  font-size: 14px;
+  text-align: center;
 }
 .view-run {
   margin: 16px 0 0;

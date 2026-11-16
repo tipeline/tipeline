@@ -77,7 +77,7 @@ function decide(approved: boolean) {
       fill="clear"
       size="small"
       class="view-run"
-      :router-link="`/tabs/runs/${encodeURIComponent(item.pipelineIdentifier)}`"
+      :router-link="`/tabs/home/runs/${encodeURIComponent(item.pipelineIdentifier)}`"
     >
       {{ t('approvals.viewRun') }}
     </ion-button>

@@ -153,7 +153,7 @@ function stepNote(state: RunStepState): string {
     <ion-header>
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button default-href="/tabs/runs" />
+          <ion-back-button default-href="/tabs/home/runs" />
         </ion-buttons>
         <ion-title>{{ run?.task?.name }}</ion-title>
       </ion-toolbar>
@@ -190,7 +190,7 @@ function stepNote(state: RunStepState): string {
           </div>
           <p v-if="approval.title" class="approval-title">{{ approval.title }}</p>
           <p v-if="approval.details" class="approval-details">{{ approval.details }}</p>
-          <ion-button fill="outline" size="small" router-link="/tabs/approvals">{{ t('run.reviewApproval') }}</ion-button>
+          <ion-button fill="outline" size="small" router-link="/tabs/inbox">{{ t('run.reviewApproval') }}</ion-button>
         </div>
 
         <template v-if="run.status === 'completed'">

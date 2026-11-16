@@ -1877,8 +1877,13 @@ export default class Core {
     await getJobRunner().toggleSchedule(scheduleIdentifier, enabled);
   }
 
+  /**
+   * Every schedule, each with the time zone its cron runs in (Core's), so a client in
+   * another zone can say "At 09:00 (UTC)" instead of a time that reads as its own.
+   */
   static async scheduleList() {
-    return await getJobRunner().listSchedules();
+    const timezone = AppSettings.timezone;
+    return (await getJobRunner().listSchedules()).map((entry) => ({ ...entry, timezone }));
   }
 
   static async settingsList() {
