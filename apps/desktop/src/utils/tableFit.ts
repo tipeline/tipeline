@@ -21,8 +21,14 @@ export interface TableFitColumn extends TableColumnSize {
   header: string;
 }
 
-/** The narrowest a shared column gets (wrap / truncate) before the table scrolls. */
+/** The narrowest a shared column gets (wrap / truncate): one with very short content. */
 export const FIT_MIN_COLUMN = 56;
+/**
+ * The narrowest a column of longer content gets (about 9 characters) before the table
+ * scrolls sideways — any narrower and wrapped text stands a word or a few letters a line
+ * (a five-column table on a phone).
+ */
+export const FIT_READABLE_COLUMN = 96;
 /** What a shared column keeps, if its content is that wide, before others grow. */
 export const FIT_COMFORT_COLUMN = 120;
 /** About a character of cell text (14px), and a cell's side padding. */
@@ -74,8 +80,9 @@ export interface TableFitLayout {
  *    short values — amounts, dates — aren't cut while long ones still fit;
  * 2. what's left goes by weight to the columns still narrower than their content;
  * 3. short of room, columns whose content is cut anyway shrink first, then the
- *    others — each down to its minimum (its minWidth, at least FIT_MIN_COLUMN); below
- *    the minimums the table scrolls sideways.
+ *    others — each down to its minimum (its minWidth, else FIT_READABLE_COLUMN or its
+ *    content if narrower, at least FIT_MIN_COLUMN); below the minimums the table
+ *    scrolls sideways.
  *
  * `available` is the table's width in px; before it is known the shares are
  * percentages of the natural widths.
@@ -96,8 +103,9 @@ export function fitLayout(
       continue;
     }
     const weight = columnWeight(column, rows, valueOf);
-    const min = Math.max(column.minWidth ?? 0, FIT_MIN_COLUMN);
-    const natural = Math.max(weight * CHAR_PX + CELL_PAD, min);
+    const content = Math.max(weight * CHAR_PX + CELL_PAD, FIT_MIN_COLUMN);
+    const min = Math.max(column.minWidth ?? 0, Math.min(content, FIT_READABLE_COLUMN));
+    const natural = Math.max(content, min);
     shared.push({ id: column.id, weight, min, natural, comfort: Math.max(Math.min(natural, FIT_COMFORT_COLUMN), min) });
   }
   const sum = (key: 'min' | 'comfort' | 'natural' | 'weight', list = shared) =>

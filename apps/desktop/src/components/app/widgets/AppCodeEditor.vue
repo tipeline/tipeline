@@ -93,6 +93,10 @@ const extensionsFor = (fill: boolean) => [
   ...(colorMode.value === 'dark' ? [oneDark] : []),
 ];
 const extensions = computed(() => extensionsFor(!!props.fill));
+// Where CodeMirror puts its styles. Left to itself it walks up through slots, so inside a
+// web component's slot (the phone app's <ion-content>) it would style that shadow root,
+// which the editor isn't in — unstyled until another editor (full screen) styled the page.
+const editorRoot = document;
 const bigExtensions = computed(() => extensionsFor(true));
 
 // Full screen: edits a draft, kept when the dialog closes.
@@ -221,6 +225,7 @@ const hasVariables = computed(() => (props.variables ?? []).length > 0 && !props
       :extensions="extensions"
       :indent-with-tab="true"
       :tab-size="2"
+      :root="editorRoot"
       :style="fill ? { height: '100%' } : undefined"
       :class="(preview || hasVariables) && fill ? 'flex-1 min-h-0' : undefined"
       @update:model-value="(v: string) => emit('update:modelValue', v)"
@@ -274,6 +279,7 @@ const hasVariables = computed(() => (props.variables ?? []).length > 0 && !props
             :extensions="bigExtensions"
             :indent-with-tab="true"
             :tab-size="2"
+            :root="editorRoot"
             class="flex-1 min-h-0 border rounded-md overflow-hidden"
             :style="{ height: '100%' }"
             @ready="onBigReady"

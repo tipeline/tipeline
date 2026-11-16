@@ -910,9 +910,9 @@ describe('TableWidget: fitting the width', () => {
     expect(widths[1]).toBe('60px'); // id: width 60
     expect(parseFloat(widths[3])).toBeGreaterThan(parseFloat(widths[2])); // notes holds more than name
     expect(widths[4]).toBe(`${24 + 4 * 7 + 18}px`); // one "Open" button
-    // past its minimums (name 56px, notes 200px) the table scrolls instead
+    // past its minimums (name 96px — readable, notes 200px) the table scrolls instead
     const minWidth = (wrapper.find('.table-wrapper').element as HTMLElement).style.getPropertyValue('--table-min-width');
-    expect(minWidth).toBe(`${40 + 60 + 56 + 200 + (24 + 4 * 7 + 18)}px`);
+    expect(minWidth).toBe(`${40 + 60 + 96 + 200 + (24 + 4 * 7 + 18)}px`);
   });
 
   it('wrap: the same column widths as truncate', () => {
