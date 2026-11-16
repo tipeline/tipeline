@@ -20,7 +20,8 @@
     "home": "Inicio",
     "workflows": "Flujos",
     "assistant": "Asistente",
-    "inbox": "Bandeja"
+    "inbox": "Bandeja",
+    "apps": "Apps"
   },
   "connection": {
     "connecting": "Conectando…",
@@ -279,5 +280,16 @@
       "mixedTimes": "Estas horas necesitan programaciones separadas.",
       "inPast": "Esa hora ya pasó."
     }
+  },
+  "appsTab": {
+    "title": "Apps",
+    "search": "Buscar apps",
+    "empty": "Todavía no hay apps. Las apps se crean en Tipeline Desktop.",
+    "noMatch": "Ninguna app coincide con “{query}”.",
+    "loadFailed": "No se pudieron cargar las apps: {message}",
+    "tryAgain": "Reintentar",
+    "notFound": "No se encontró la app.",
+    "brokenSource": "Esta app no se puede abrir: {message}",
+    "computerOnly": "Esto necesita el equipo donde corre el servidor, así que no se puede hacer desde el teléfono."
   }
 }

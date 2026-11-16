@@ -20,7 +20,8 @@
     "home": "Home",
     "workflows": "Workflows",
     "assistant": "Assistant",
-    "inbox": "Inbox"
+    "inbox": "Inbox",
+    "apps": "Apps"
   },
   "connection": {
     "connecting": "Connecting…",
@@ -279,5 +280,16 @@
       "mixedTimes": "These times need separate schedules.",
       "inPast": "That time has already passed."
     }
+  },
+  "appsTab": {
+    "title": "Apps",
+    "search": "Search apps",
+    "empty": "No apps yet. Apps are built in Tipeline Desktop.",
+    "noMatch": "No app matches “{query}”.",
+    "loadFailed": "Could not load apps: {message}",
+    "tryAgain": "Try again",
+    "notFound": "App not found.",
+    "brokenSource": "This app can't open: {message}",
+    "computerOnly": "This needs the computer the server runs on, so it can't be done from a phone."
   }
 }

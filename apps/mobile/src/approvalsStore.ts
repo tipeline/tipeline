@@ -38,7 +38,7 @@ export interface ApprovalDecision {
  * Runs waiting for approval, for the Inbox and Home. The Inbox store refreshes it (every
  * 30 s and when runs end). `count` is only the ones this user may decide.
  */
-export const useApprovals = defineStore('approvals', () => {
+export const useApprovals = defineStore('mobile-approvals', () => {
   const session = useSession();
   const items = ref<PendingApproval[]>([]);
   const loaded = ref(false);

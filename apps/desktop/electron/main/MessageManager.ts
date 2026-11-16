@@ -124,6 +124,9 @@ const QUERY_OPS: Array<{ send: string; core: string; coreResp: string; timeoutMs
   { send: SEND.PROJECT_MAP_LINK, core: CORE.PROJECT_MAP_LINK, coreResp: CORE_RESP.PROJECT_MAP_LINK },
   { send: SEND.AGENT_RUN_LIST, core: CORE.AGENT_RUN_LIST, coreResp: CORE_RESP.AGENT_RUN_LIST },
   { send: SEND.ASSISTANT_FINDABILITY, core: CORE.ASSISTANT_FINDABILITY, coreResp: CORE_RESP.ASSISTANT_FINDABILITY },
+  // A Server's own Assistant (only sent on a Server workspace)
+  { send: SEND.ASSISTANT_CHOOSE, core: CORE.ASSISTANT_CHOOSE, coreResp: CORE_RESP.ASSISTANT_CHOOSE },
+  { send: SEND.ASSISTANT_HISTORY, core: CORE.ASSISTANT_HISTORY, coreResp: CORE_RESP.ASSISTANT_HISTORY },
   { send: SEND.AGENT_RUN_SET_PIPELINE, core: CORE.AGENT_RUN_SET_PIPELINE, coreResp: CORE_RESP.AGENT_RUN_SET_PIPELINE },
   { send: SEND.HUB_LIST, core: CORE.HUB_LIST, coreResp: CORE_RESP.HUB_LIST },
   { send: SEND.HUB_ADD, core: CORE.HUB_ADD, coreResp: CORE_RESP.HUB_ADD },
@@ -221,7 +224,14 @@ const STREAM_OPS: Array<{ send: string; core: string }> = [
   { send: SEND.DEBUG_PAUSE, core: CORE.DEBUG_PAUSE },
   { send: SEND.DEBUG_STOP, core: CORE.DEBUG_STOP },
   { send: SEND.DEBUG_COMMAND, core: CORE.DEBUG_COMMAND },
+  // A Server's own Assistant: its steps come back as ASSISTANT_RESPONSES, the run's own
+  // events as the usual stream events on the same correlationId.
+  { send: SEND.ASSISTANT_ASK, core: CORE.ASSISTANT_ASK },
+  { send: SEND.ASSISTANT_RUN, core: CORE.ASSISTANT_RUN },
 ];
+
+/** The Server Assistant's steps, forwarded on `agent:<correlationId>` like the local one's. */
+const ASSISTANT_RESPONSES: string[] = [CORE_RESP.ASSISTANT_ASK, CORE_RESP.ASSISTANT_RUN];
 
 const STREAM_RESPONSES: Array<{ resp: string; type: string }> = [
   { resp: CORE_RESP.TASK_START, type: 'start' },
@@ -286,6 +296,15 @@ export class MessageManager {
     for (const coreEvent of [...QUERY_RESPONSES, ...CONNECTION_RESPONSES, ...AGENT_WRITE_RESPONSES]) {
       handlers[coreEvent] = (response: any) => {
         CoreService.settle(response.correlationId, response.data, response.error);
+      };
+    }
+
+    for (const resp of ASSISTANT_RESPONSES) {
+      handlers[resp] = (response: any) => {
+        const step = response.error
+          ? { phase: 'error', error: response.error, requestId: response.data?.requestId }
+          : response.data;
+        this.send(`agent:${response.correlationId}`, step);
       };
     }
 

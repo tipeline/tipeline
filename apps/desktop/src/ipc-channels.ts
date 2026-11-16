@@ -129,6 +129,11 @@ export const SEND = {
   AGENT_DRAFT: 'agentDraft',
   AGENT_RUN_LIST: 'agentRunList',
   ASSISTANT_FINDABILITY: 'assistantFindability',
+  // On a Server workspace: the Server's own Assistant (ask/run stream on `agent:<correlationId>`)
+  ASSISTANT_ASK: 'assistantAsk',
+  ASSISTANT_RUN: 'assistantRun',
+  ASSISTANT_CHOOSE: 'assistantChoose',
+  ASSISTANT_HISTORY: 'assistantHistory',
   AGENT_RUN_SET_PIPELINE: 'agentRunSetPipeline',
   // Plugins
   PLUGIN_LIST: 'pluginList',

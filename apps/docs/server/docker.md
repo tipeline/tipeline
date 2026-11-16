@@ -61,6 +61,7 @@ TIPELINE_DB_SSL=false
 | `TIPELINE_SERVER_HOST_PORT` | `4001` | Compose only: the port on your machine. Set another (e.g. `4011`) to run a second stack next to this one. |
 | `TIPELINE_DB_CLIENT` | `pg` | Knex client — `pg`, `mysql2`, etc. |
 | `TIPELINE_DB_HOST` / `_PORT` / `_NAME` / `_USER` / `_PASSWORD` / `_SSL` | see compose file | Postgres connection. Use the compose service name (`postgres`) for `_HOST` inside Docker. |
+| `TIPELINE_PUSH_*` | — | Optional push notifications for the phone app. Off unless set. See [Push notifications](/server/api#push-notifications). |
 
 ---
 

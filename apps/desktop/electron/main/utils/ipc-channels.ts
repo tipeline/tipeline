@@ -165,6 +165,12 @@ export const SEND = {
   AGENT_RUN_SET_PIPELINE: 'agentRunSetPipeline',
   AGENT_RUN_LIST: 'agentRunList',
   ASSISTANT_FINDABILITY: 'assistantFindability',
+  // The Server's own Assistant, on a Server workspace: ask/run stream back on
+  // `agent:<correlationId>` like the local one; choose/history are plain requests.
+  ASSISTANT_ASK: 'assistantAsk',
+  ASSISTANT_RUN: 'assistantRun',
+  ASSISTANT_CHOOSE: 'assistantChoose',
+  ASSISTANT_HISTORY: 'assistantHistory',
   // Connections (handled locally in main — never forwarded to core)
   CONNECTION_LIST: 'connectionList',
   CONNECTION_ADD: 'connectionAdd',
@@ -351,6 +357,11 @@ export const CORE = {
   AGENT_RUN_FAIL: 'agentRunFail',
   AGENT_RUN_LIST: 'agentRunList',
   ASSISTANT_FINDABILITY: 'assistantFindability',
+  // Answered by a Tipeline Server itself (never by a local Core)
+  ASSISTANT_ASK: 'assistantAsk',
+  ASSISTANT_RUN: 'assistantRun',
+  ASSISTANT_CHOOSE: 'assistantChoose',
+  ASSISTANT_HISTORY: 'assistantHistory',
   // Connections — stored in Core's DB, always routed to local Core via IPC
   CONNECTION_LIST: 'connectionList',
   CONNECTION_ADD: 'connectionAdd',
@@ -517,6 +528,10 @@ export const CORE_RESP = {
   AGENT_RUN_FAIL: 'onAgentRunFail',
   AGENT_RUN_LIST: 'onAgentRunList',
   ASSISTANT_FINDABILITY: 'onAssistantFindability',
+  ASSISTANT_ASK: 'onAssistantAsk',
+  ASSISTANT_RUN: 'onAssistantRun',
+  ASSISTANT_CHOOSE: 'onAssistantChoose',
+  ASSISTANT_HISTORY: 'onAssistantHistory',
   // Connections
   CONNECTION_LIST: 'onConnectionList',
   CONNECTION_ADD: 'onConnectionAdd',

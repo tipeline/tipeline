@@ -55,7 +55,7 @@ export interface Turn {
  * The conversation with the Server's Assistant. It lives here, not in the page, so leaving
  * the tab and coming back keeps it. Nothing runs without the person pressing Run.
  */
-export const useAssistant = defineStore('assistant', () => {
+export const useAssistant = defineStore('mobile-assistant', () => {
   const turns = ref<Turn[]>([]);
   let nextId = 1;
   const handles = new Map<number, AssistantHandle>();

@@ -23,7 +23,7 @@ export type SignInResult = { status: 'ok' } | { status: 'mfa_required'; challeng
 /**
  * Who is signed in, to which Server, and the one client every screen shares.
  */
-export const useSession = defineStore('session', () => {
+export const useSession = defineStore('mobile-session', () => {
   const serverUrl = ref('');
   const token = ref('');
   const user = ref<ServerUser | null>(null);

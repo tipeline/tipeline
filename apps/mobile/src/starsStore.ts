@@ -4,7 +4,7 @@ import { useSession } from './session';
 import { loadServerList, saveServerList } from './storage';
 
 /** Workflows starred on this phone for Home, per Server (Desktop keeps its own the same way). */
-export const useStars = defineStore('stars', () => {
+export const useStars = defineStore('mobile-stars', () => {
   const session = useSession();
   const starred = ref<string[]>([]);
 

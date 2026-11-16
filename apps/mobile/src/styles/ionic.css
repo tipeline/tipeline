@@ -1,0 +1,15 @@
+/*
+ * Ionic's global styles in the lowest cascade layer. Unlayered, they would beat every layered
+ * style, so Desktop's Tailwind utilities in the Apps pages (layer `utilities`) would lose to
+ * Ionic's element resets (a button's background, say). Ionic's components keep their own
+ * styles; the phone's theme.css stays unlayered on top of everything.
+ */
+@layer ionic, theme, base, components, utilities;
+
+@import '@ionic/vue/css/core.css' layer(ionic);
+@import '@ionic/vue/css/normalize.css' layer(ionic);
+@import '@ionic/vue/css/structure.css' layer(ionic);
+@import '@ionic/vue/css/typography.css' layer(ionic);
+@import '@ionic/vue/css/padding.css' layer(ionic);
+@import '@ionic/vue/css/display.css' layer(ionic);
+@import '@ionic/vue/css/palettes/dark.system.css' layer(ionic);

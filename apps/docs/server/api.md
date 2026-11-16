@@ -155,6 +155,41 @@ Webhooks are the answer to "let an external system (GitHub, Stripe, a cron servi
 |---|---|
 | `GET /health` | none (still rate-limited) |
 
+### Push notifications
+
+Optional: the Server sends push notifications to the phone app only when it has the credentials. Without them, everything else works the same and phones just aren't told.
+
+| Variable | For | Value |
+|---|---|---|
+| `TIPELINE_PUSH_APNS_KEY` | iPhones | The `.p8` key from Apple (Certificates, IDs & Profiles → Keys, with Apple Push Notifications), its contents or a path to the file |
+| `TIPELINE_PUSH_APNS_KEY_ID` / `TIPELINE_PUSH_APNS_TEAM_ID` | iPhones | The key's id and your Apple developer team id |
+| `TIPELINE_PUSH_APNS_TOPIC` | iPhones | The app's bundle id. Default `com.bananacore.tipeline.mobile` |
+| `TIPELINE_PUSH_APNS_SANDBOX` | iPhones | `true` for development builds (Xcode, TestFlight uses production) |
+| `TIPELINE_PUSH_FCM_SERVICE_ACCOUNT` | Android | A Firebase service account JSON (Project settings → Service accounts), its contents or a path to the file |
+| `TIPELINE_PUSH_LOG` | testing | `true` writes each notification to the Server's log instead of sending it, for both platforms |
+
+In Docker, a path must be inside the container: mount the file (for example `./secrets:/run/secrets:ro`) and point the variable at `/run/secrets/AuthKey.p8`.
+
+**Who is told what.** Each phone chooses what it hears about. By default it hears about runs waiting for approval and failed runs, but not finished runs.
+
+- *Waiting for approval*: everyone who may decide it, by the same rules as `approvalDecide`. That is the approvers the request names (or editors and admins), never the person who started it when the four-eyes rule is on, and nobody who can't see a private workflow.
+- *Failed*: whoever started the run, or the workflow's owner for schedules and webhooks.
+- *Finished*: whoever started the run, when their phone turned these on.
+
+Only the run a request started counts, not the sub-workflows it calls.
+
+**The lock screen** shows no workflow names unless the phone turns on details ("A run failed" instead of "Supplier payments failed"), since run names can be private. The run's identifier travels as data, so tapping a notification opens the run.
+
+| Method & path | Auth | Body / notes |
+|---|---|---|
+| `GET /push` | any user | `{ enabled, platforms }`: whether this Server sends push notifications, and to which phones |
+| `GET /devices` | any user | Your registered phones (`id`, `platform`, `preferences`, …). The token itself is never returned |
+| `POST /devices` | any user | `{ platform: "ios"\|"android", token, locale?, preferences? }` registers this phone. A token is one phone, so when someone else signs in on it, it moves to them. `409` when the Server doesn't send to that platform |
+| `PATCH /devices/:id` | owner | `{ preferences: { approvals?, failures?, finished?, details? } }`. Only booleans count |
+| `DELETE /devices/:id` | owner | Stop sending to this phone (the app calls it when you sign out) |
+
+Apple or Google saying a token is no longer valid (the app was removed, say) deletes that device.
+
 ### Browser clients (CORS)
 
 Browsers only let a page call the REST endpoints when the Server allows the page's origin. The mobile app's own origins (`capacitor://localhost` on iOS, `https://localhost` on Android) are always allowed. Add others with `TIPELINE_CORS_ORIGINS`, comma-separated, for example `http://localhost:5173` while developing a web client; `*` allows every origin. Desktop, the CLI, scripts and webhook callers aren't browsers, so this doesn't apply to them.
@@ -223,6 +258,8 @@ Runs follow the same rule. `pipelineList` and `pipelineStats` leave out runs of 
 ### The Assistant
 
 The Server runs the Assistant for its users, the same one as Desktop's: it finds the workflow for a request in plain words, asks which one when several fit, and proposes a run with the values it read. Nothing runs until the person confirms. It is for **editors and admins**: a viewer gets `Permission denied: the Assistant is for editors and admins.`
+
+Desktop connected to a Server uses this one: its Assistant panel sends requests to the Server instead of running its own, so nobody needs a key on their machine. On a Server workspace the Assistant page shows the person's history from the Server. Writing new workflows (drafts) still happens on a local workspace for now.
 
 **Setting it up.** The Assistant uses the organization's key, never the person's. An admin connects Desktop to the Server and sets a provider and key in **Settings → Assistant**: those settings are stored in the Server's Core, only admins can change them, and nobody else can read the key. Until a key is set, asking answers `The Assistant isn't set up on this Server yet…`. The global instructions from the same page apply to every request, and a project's own instructions apply when the request names the project.
 

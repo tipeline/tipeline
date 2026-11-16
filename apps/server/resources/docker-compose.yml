@@ -44,6 +44,15 @@ services:
       TIPELINE_DB_NAME: tipeline_server
       TIPELINE_DB_USER: tipeline
       TIPELINE_DB_PASSWORD: tipeline
+      # Push notifications are off unless these are set (see apps/server README, "Push
+      # notifications"). TIPELINE_PUSH_LOG=true logs them instead of sending, for testing.
+      TIPELINE_PUSH_LOG: ${TIPELINE_PUSH_LOG:-}
+      TIPELINE_PUSH_APNS_KEY: ${TIPELINE_PUSH_APNS_KEY:-}
+      TIPELINE_PUSH_APNS_KEY_ID: ${TIPELINE_PUSH_APNS_KEY_ID:-}
+      TIPELINE_PUSH_APNS_TEAM_ID: ${TIPELINE_PUSH_APNS_TEAM_ID:-}
+      TIPELINE_PUSH_APNS_TOPIC: ${TIPELINE_PUSH_APNS_TOPIC:-}
+      TIPELINE_PUSH_APNS_SANDBOX: ${TIPELINE_PUSH_APNS_SANDBOX:-}
+      TIPELINE_PUSH_FCM_SERVICE_ACCOUNT: ${TIPELINE_PUSH_FCM_SERVICE_ACCOUNT:-}
     volumes:
       - ipc-socket:/tmp/tipeline
       # Read-only: the Server reads Core's IPC token (.database/core.token) from here.

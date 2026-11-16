@@ -1679,7 +1679,6 @@
   },
   "agent": {
     "tooltip": "Assistant (⌘K)",
-    "disabledRemote": "The assistant only works with the local workspace for now.",
     "notConfigured": "Assistant not set up",
     "notConfiguredDescription": "Add a {provider} API key in Settings, and make sure Tipeline Core is running.",
     "openSettings": "Open Settings",
@@ -1869,7 +1868,12 @@
       "openWorkflow": "Open workflow",
       "failed": "Couldn't create the schedule."
     },
-    "notConfiguredNoProvider": "Choose an AI provider and add its API key in Settings, and make sure Tipeline Core is running."
+    "notConfiguredNoProvider": "Choose an AI provider and add its API key in Settings, and make sure Tipeline Core is running.",
+    "disabledViewer": "On this server, the Assistant is for editors and admins.",
+    "remote": {
+      "noDrafts": "Writing new workflows with the Assistant works on a local workspace for now.",
+      "historyNote": "Your requests on this server. Admins set up the Assistant in Settings → Assistant."
+    }
   },
   "jsonEditor": {
     "invalid": "Invalid JSON (line {line}): {detail}"

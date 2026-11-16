@@ -9,7 +9,12 @@ import {
   wsUrlFor,
   type RunEventType,
 } from './protocol.js';
-import { ASSISTANT_FINAL_PHASES, type AssistantHandle, type AssistantRequestItem, type AssistantUpdate } from './assistant.js';
+import {
+  ASSISTANT_FINAL_PHASES,
+  type AssistantHandle,
+  type AssistantRequestItem,
+  type AssistantUpdate,
+} from './assistant.js';
 
 export type ConnectionStatus =
   /** Not started yet, or `close()` was called. */
@@ -246,12 +251,18 @@ export class TipelineClient {
   }
 
   /** Sends a command and resolves with its answer's data. */
-  request<T = any>(command: string, payload: unknown = {}, options: { timeoutMs?: number } = {}): Promise<T> {
+  request<T = any>(
+    command: string,
+    payload: unknown = {},
+    options: { timeoutMs?: number } = {}
+  ): Promise<T> {
     if (RUN_COMMANDS.has(command)) {
       return Promise.reject(new Error(`"${command}" starts a run: use run() to follow it`));
     }
     if (command === 'assistantAsk' || command === 'assistantRun') {
-      return Promise.reject(new Error(`"${command}" answers in several steps: use ask() or runForAssistant()`));
+      return Promise.reject(
+        new Error(`"${command}" answers in several steps: use ask() or runForAssistant()`)
+      );
     }
     if (this.status === 'unauthorized') return Promise.reject(this.unauthorizedError(command));
     const correlationId = newCorrelationId();
@@ -267,32 +278,50 @@ export class TipelineClient {
     });
   }
 
-  /** Starts a run (`exec`, `appRun`, …) and reports each event until it ends. */
-  run(command: string, payload: unknown, onEvent: (event: RunEvent) => void = () => {}): RunHandle {
+  /**
+   * Starts a run (`exec`, `appRun`, …) and reports each event until it ends. `correlationId`
+   * names the request, for callers that recognize their runs by an id of their own (the app
+   * runtime); a new one by default.
+   */
+  run(
+    command: string,
+    payload: unknown,
+    onEvent: (event: RunEvent) => void = () => {},
+    options: { correlationId?: string } = {}
+  ): RunHandle {
     let resolve!: (event: RunEvent) => void;
     let reject!: (err: Error) => void;
     const done = new Promise<RunEvent>((res, rej) => {
       resolve = res;
       reject = rej;
     });
-    const started = this.startStream(command, payload, {
+    const started = this.startStream(
       command,
-      sent: false,
-      reject,
-      receive: (message) => {
-        const type = RUN_EVENTS[message.event];
-        // A refused run is answered on the command's own event (onExec) with an error.
-        const refused = !type && message.event === answerEventFor(command) && message.error;
-        if (!type && !refused) return false;
-        const event: RunEvent = { ...message, type: type ?? 'error', correlationId: started.correlationId };
-        onEvent(event);
-        if (refused || FINAL_RUN_EVENTS.has(event.type)) {
-          resolve(event);
-          return true;
-        }
-        return false;
+      payload,
+      {
+        command,
+        sent: false,
+        reject,
+        receive: (message) => {
+          const type = RUN_EVENTS[message.event];
+          // A refused run is answered on the command's own event (onExec) with an error.
+          const refused = !type && message.event === answerEventFor(command) && message.error;
+          if (!type && !refused) return false;
+          const event: RunEvent = {
+            ...message,
+            type: type ?? 'error',
+            correlationId: started.correlationId,
+          };
+          onEvent(event);
+          if (refused || FINAL_RUN_EVENTS.has(event.type)) {
+            resolve(event);
+            return true;
+          }
+          return false;
+        },
       },
-    });
+      options.correlationId
+    );
     return { ...started, done };
   }
 
@@ -314,7 +343,12 @@ export class TipelineClient {
    * from its outputs. `onRunEvent` gets the run's own events, to show it live.
    */
   runForAssistant(
-    input: { requestId: string; identifier: string; name?: string; variables?: Record<string, unknown> },
+    input: {
+      requestId: string;
+      identifier: string;
+      name?: string;
+      variables?: Record<string, unknown>;
+    },
     onUpdate: (update: AssistantUpdate) => void = () => {},
     onRunEvent: (event: RunEvent) => void = () => {}
   ): AssistantHandle {
@@ -322,12 +356,17 @@ export class TipelineClient {
   }
 
   /** Remembers which workflow the user meant for a kind of request (a choice's `requestKey`). */
-  rememberAssistantChoice(requestKey: string, workflow: { identifier: string; name: string }): Promise<void> {
+  rememberAssistantChoice(
+    requestKey: string,
+    workflow: { identifier: string; name: string }
+  ): Promise<void> {
     return this.request('assistantChoose', { requestKey, ...workflow }).then(() => undefined);
   }
 
   /** The user's own requests, newest first; an admin may ask for everyone's. */
-  assistantHistory(options: { scope?: 'mine' | 'everyone'; limit?: number } = {}): Promise<AssistantRequestItem[]> {
+  assistantHistory(
+    options: { scope?: 'mine' | 'everyone'; limit?: number } = {}
+  ): Promise<AssistantRequestItem[]> {
     return this.request('assistantHistory', options);
   }
 
@@ -376,8 +415,9 @@ export class TipelineClient {
     return { ...started, done };
   }
 
-  private startStream(command: string, payload: unknown, stream: Stream) {
-    const correlationId = newCorrelationId();
+  private startStream(command: string, payload: unknown, stream: Stream, given?: string) {
+    const correlationId =
+      given && !this.streams.has(given) && !this.pending.has(given) ? given : newCorrelationId();
     const handle = {
       correlationId,
       stopListening: () => {

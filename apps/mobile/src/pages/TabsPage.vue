@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { IonPage, IonTabs, IonRouterOutlet, IonTabBar, IonTabButton, IonIcon, IonLabel, IonBadge } from '@ionic/vue';
-import { chatbubbleOutline, fileTrayOutline, gitNetworkOutline, homeOutline } from 'ionicons/icons';
+import { appsOutline, chatbubbleOutline, fileTrayOutline, gitNetworkOutline, homeOutline } from 'ionicons/icons';
 import { useSession } from '@/session';
 import { useInbox } from '@/inboxStore';
 
@@ -30,6 +30,10 @@ const showAssistant = computed(() => session.user?.role !== 'viewer');
         <ion-tab-button v-if="showAssistant" tab="assistant" href="/tabs/assistant">
           <ion-icon :icon="chatbubbleOutline" aria-hidden="true" />
           <ion-label>{{ t('tabs.assistant') }}</ion-label>
+        </ion-tab-button>
+        <ion-tab-button tab="apps" href="/tabs/apps">
+          <ion-icon :icon="appsOutline" aria-hidden="true" />
+          <ion-label>{{ t('tabs.apps') }}</ion-label>
         </ion-tab-button>
         <ion-tab-button tab="inbox" href="/tabs/inbox">
           <ion-icon :icon="fileTrayOutline" aria-hidden="true" />

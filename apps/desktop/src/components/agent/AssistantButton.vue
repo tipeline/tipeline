@@ -15,7 +15,7 @@ const { t } = useI18n();
 const agentStore = useAgentStore();
 const connectionStore = useConnectionStore();
 
-const disabled = computed(() => connectionStore.isRemote);
+const disabled = computed(() => !connectionStore.assistantAvailable);
 
 function toggle() {
   agentStore.sidebarOpen = !agentStore.sidebarOpen;
@@ -29,7 +29,7 @@ useKeyboardShortcuts([{ key: 'k', meta: true, enabled: () => !disabled.value, ha
     :variant="agentStore.sidebarOpen ? 'secondary' : 'ghost'"
     size="icon"
     :disabled="disabled"
-    :title="disabled ? t('agent.disabledRemote') : t('agent.tooltip')"
+    :title="disabled ? t('agent.disabledViewer') : t('agent.tooltip')"
     :aria-label="t('agent.tooltip')"
     :aria-pressed="agentStore.sidebarOpen"
     @click="toggle"
