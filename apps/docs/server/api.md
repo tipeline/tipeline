@@ -80,7 +80,7 @@ Three roles, each a strict superset of the next (defined in `apps/server/src/aut
 
 | Role | Can do |
 |---|---|
-| `admin` | Everything below, plus manage members, tokens (anyone's), webhooks, security settings, view the audit log, and read credentials ([who can see what](/server/#who-can-see-credentials)) |
+| `admin` | Everything below, plus manage members, tokens (anyone's), webhooks, security settings, view the audit log, and read credentials ([who can see what](/server#who-can-see-credentials)) |
 | `editor` | View, run, and edit tasks; manage their own tokens |
 | `viewer` | View tasks only; manage their own tokens |
 
@@ -314,4 +314,4 @@ Exceeding a rate limit returns `429` with a `Retry-After` header.
 - **Building a UI or a tool a human watches live?** WebSocket — you want the streamed `onAction` progress.
 - **Want one specific external system (GitHub, Stripe, a cron host) to kick off one specific task when something happens over there?** A webhook — no token management on their end, the URL itself is the credential, and it's already wired to one task.
 - **Want a script/CI job to run a task on a schedule and check later whether it succeeded, without maintaining a live connection?** An API token: WS to trigger (`exec`), then plain `GET /pipeline-audit` later to check status.
-- **Want a single credential to dynamically pick *which* task to run at call time** (a bot command, a dashboard)? Nothing built for this yet — see the design notes on the [Server overview](/server/#design-decisions-worth-knowing-before-you-extend-this). Webhooks and scoped API tokens cover every need we've actually had so far; this would be new surface, not something that already exists under a different name.
+- **Want a single credential to dynamically pick *which* task to run at call time** (a bot command, a dashboard)? Nothing built for this yet — see the design notes on the [Server overview](/server#design-decisions-worth-knowing-before-you-extend-this). Webhooks and scoped API tokens cover every need we've actually had so far; this would be new surface, not something that already exists under a different name.

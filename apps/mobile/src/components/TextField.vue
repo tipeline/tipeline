@@ -104,10 +104,8 @@ const note = computed(() => props.error || props.hint || '');
   overflow: hidden;
   font-size: 15px;
 }
-@media (prefers-color-scheme: dark) {
-  .box {
-    border-color: var(--tl-border);
-  }
+.ion-palette-dark .box {
+  border-color: var(--tl-border);
 }
 .box.has-focus {
   border-color: var(--tl-accent);

@@ -254,7 +254,7 @@ approval. Use the WebSocket for those.
 ## Tipeline Server
 
 The ways in above all use Core's single token, which gives full access. For several people,
-or when outside systems need their own credentials, run [Tipeline Server](/server/) in front
+or when outside systems need their own credentials, run [Tipeline Server](/server) in front
 of Core. Each person gets a sign-in, each script gets its own
 [API token](/server/api#creating-an-api-token-for-scripts-ci) with a role (viewer, editor or
 admin), and every token can be revoked and shows up in the audit log.
@@ -320,4 +320,4 @@ workflows. Give it only to programs you trust, and keep `core.token` private.
   and connect with `wss://`.
 - When more than one person or system needs access, use [Tipeline Server](#tipeline-server)
   instead of sharing Core's token. Only its admins can read Core's token and other credentials
-  ([who can see what](/server/#who-can-see-credentials)).
+  ([who can see what](/server#who-can-see-credentials)).

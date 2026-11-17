@@ -8,7 +8,7 @@ apps to it from the project's page.
   use can be in all of them. Pick its projects in its **Edit** dialog, or add it from a
   project's page or [map](/desktop/project-map).
 - A project is a label for organising. It never decides who can see or run a workflow: on
-  [Tipeline Server](/server/), that's set on the workflow itself. In a project shared by
+  [Tipeline Server](/server), that's set on the workflow itself. In a project shared by
   several people, each one sees only the workflows they have access to. To give someone a
   workflow they can't see, an admin duplicates it and shares the copy.
 - The projects show in lists and on each workflow's page, and search matches them:

@@ -71,7 +71,7 @@ channel has a matching response channel (`taskList` → `onTaskList`). See [IPC 
 ### WebSocket (remote)
 
 Core exposes the same message protocol over WebSocket (`TIPELINE_WS_PORT`, default `4000`).
-For several users, roles and audit, put the [Tipeline Server](/server/) in front instead.
+For several users, roles and audit, put the [Tipeline Server](/server) in front instead.
 
 ### MCP (AI clients)
 

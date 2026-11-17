@@ -16,12 +16,15 @@ import {
   IonNote,
   IonButton,
   IonIcon,
+  IonSegment,
+  IonSegmentButton,
   onIonViewDidEnter,
 } from '@ionic/vue';
 import { desktopOutline } from 'ionicons/icons';
 import ConnectionBanner from '@/components/ConnectionBanner.vue';
 import { useSession } from '@/session';
 import { useInbox } from '@/inboxStore';
+import { THEME_MODES, parseThemeMode, setThemeMode, themeMode } from '@/theme';
 
 const { t } = useI18n();
 const router = useRouter();
@@ -99,6 +102,18 @@ function signOut() {
         </ion-item>
       </ion-list>
 
+      <h2 class="section-title">{{ t('more.appearance') }}</h2>
+      <ion-segment
+        :value="themeMode"
+        class="appearance"
+        @ion-change="setThemeMode(parseThemeMode($event.detail.value))"
+      >
+        <ion-segment-button v-for="mode in THEME_MODES" :key="mode" :value="mode">
+          <ion-label>{{ t(`more.themes.${mode}`) }}</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+      <p class="tl-muted appearance-note">{{ t('more.appearanceNote') }}</p>
+
       <h2 class="desktop-title">
         <ion-icon :icon="desktopOutline" aria-hidden="true" />{{ t('more.desktopTitle') }}
       </h2>
@@ -168,6 +183,21 @@ function signOut() {
   margin: 14px 0 0;
   border-radius: 14px;
   border: 1px solid var(--tl-border);
+}
+.section-title {
+  margin: 22px 2px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tl-muted);
+}
+.appearance {
+  --background: var(--tl-card);
+  border: 1px solid var(--tl-border);
+  border-radius: 12px;
+}
+.appearance-note {
+  margin: 6px 2px 0;
+  font-size: 13px;
 }
 .desktop-title {
   display: flex;

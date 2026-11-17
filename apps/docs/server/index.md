@@ -43,7 +43,7 @@ can read, including Core's token. The roles above stop credentials being handed 
 stop an editor who sets out to get them. Viewers can't run or edit anything, so they can't do this.
 :::
 
-The [assistant](/assistant/) doesn't run in a Server workspace, so hiding these doesn't affect anyone's
+The [assistant](/assistant) doesn't run in a Server workspace, so hiding these doesn't affect anyone's
 assistant. It keeps using the keys on their own machine. Admins can still set the keys in Settings.
 
 See [Roles & scopes](/server/api#_2-roles-scopes) for the exact permissions, and

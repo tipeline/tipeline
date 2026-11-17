@@ -240,7 +240,7 @@ and marks the component "Fills to bottom".
 
 ### On phones
 
-The phone app, a client of a [Tipeline Server](/server/), shows apps too, one page at a time on a narrow screen. Until
+The phone app, a client of a [Tipeline Server](/server), shows apps too, one page at a time on a narrow screen. Until
 you arrange a page, phones place its components from the desktop layout: in reading
 order (top to bottom, then left to right), each the full width, except small ones that
 sat side by side — KPIs, buttons, badges, up to 4 of the 12 columns — which share a row
@@ -1215,7 +1215,7 @@ components:
 When no built-in component fits, a **Custom (HTML)** component (`custom`) is your own HTML,
 CSS and JavaScript. It gets **Data** as `tipeline.data`, fires its own events with
 `tipeline.emit(name, payload)` (**On “name”**) and sets `<id>.value` with
-`tipeline.setValue(…)`, in the app's colors. See [Custom Components](./custom).
+`tipeline.setValue(…)`, in the app's colors. See [Custom Components](/apps/custom).
 
 ### Video and audio
 
@@ -1226,7 +1226,7 @@ A `media` component (**Video / audio** in the builder) plays:
   access**). Files are streamed, so long recordings seek instantly, and they're played
   again from the start whenever a run they're bound to finishes;
 - a **web link** to a video or audio file (`https://…/clip.mp4`). For YouTube and similar
-  sites, use a [Web page](./embed) component with the site's embed address instead;
+  sites, use a [Web page](/apps/embed) component with the site's embed address instead;
 - a **data URL** (`data:audio/wav;base64,…`).
 
 Video or audio follows the file's type unless `kind` says. `autoplay`, `loop`, `muted`,
@@ -1305,7 +1305,7 @@ board whose workflow refuses one move on purpose.
 A **Web page / HTML** component (`embed`) shows a website, an HTML file a workflow
 wrote, or HTML text a workflow returned, in a sandbox. The page can send data back with
 `parent.postMessage(...)`: it arrives as `<id>.message` and fires the embed's
-**On message from the page**. See [Embedding Pages & HTML](./embed) for the full guide.
+**On message from the page**. See [Embedding Pages & HTML](/apps/embed) for the full guide.
 
 ### Run Console
 

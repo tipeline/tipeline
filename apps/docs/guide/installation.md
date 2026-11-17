@@ -1,6 +1,6 @@
 # Installation
 
-Tipeline is available as a **Desktop app** for building visually, and a **CLI** for the terminal. Both connect to the same Core engine. To share Tipeline with a team, run a [Tipeline Server](/server/).
+Tipeline is available as a **Desktop app** for building visually, and a **CLI** for the terminal. Both connect to the same Core engine. To share Tipeline with a team, run a [Tipeline Server](/server).
 
 ---
 
