@@ -89,5 +89,8 @@ yarn.lock
 # VitePress dev cache
 apps/docs/.vitepress/cache/
 
+# Wrangler (Cloudflare deploy) local state
+apps/docs/.wrangler/
+
 # Claude Code personal settings (the shared CLAUDE.md stays tracked)
 .claude/settings.local.json
