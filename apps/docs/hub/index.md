@@ -82,7 +82,7 @@ tipeline hub install app <hubId> <itemIdentifier>
 tipeline hub install plugin <hubId> <itemIdentifier>
 ```
 
-The [assistant](/assistant/) also searches your enabled hubs, and offers to install a
+The [assistant](/assistant) also searches your enabled hubs, and offers to install a
 workflow — and to install and turn on the plugin it needs — when that's what fits your
 request.
 

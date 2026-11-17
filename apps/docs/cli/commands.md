@@ -387,7 +387,7 @@ On a Tipeline Server, only admins can delete projects.
 
 ## Hub Commands
 
-Install and update workflows, apps and plugins from [hubs](/hub/).
+Install and update workflows, apps and plugins from [hubs](/hub).
 
 | Command | What it does |
 |---------|--------------|
@@ -445,7 +445,7 @@ files next to it (`path: ./child.yml`) can't be sent this way and is refused: in
 remote and call them by identifier. Paths inside a workflow's steps always mean the machine that runs it.
 
 This talks to Core directly, with Core's single token. To work with a
-[Tipeline Server](/server/) — user accounts, roles, audit — add it as a workspace in the Desktop app
+[Tipeline Server](/server) — user accounts, roles, audit — add it as a workspace in the Desktop app
 (**Manage workspaces…** in the workspace switcher).
 
 ### `tipeline remote list`

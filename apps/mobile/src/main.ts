@@ -9,6 +9,9 @@ import App from './App.vue';
 import { router } from './router';
 import { i18n } from './i18n';
 import { useSession } from './session';
+import { initTheme } from './theme';
+
+initTheme();
 
 const app = createApp(App).use(IonicVue).use(createPinia()).use(i18n);
 

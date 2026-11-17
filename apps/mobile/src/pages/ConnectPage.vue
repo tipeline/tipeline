@@ -9,6 +9,7 @@ import logoOnLight from '@shared-assets/logo-dark.svg';
 import logoOnDark from '@shared-assets/logo-light.svg';
 import { useSession } from '@/session';
 import { lastServer } from '@/storage';
+import { isDark } from '@/theme';
 
 const { t } = useI18n();
 const router = useRouter();
@@ -77,10 +78,7 @@ function back() {
   <ion-page>
     <ion-content class="ion-padding">
       <main class="connect">
-        <picture>
-          <source :srcset="logoOnDark" media="(prefers-color-scheme: dark)" />
-          <img :src="logoOnLight" alt="Tipeline" class="logo" />
-        </picture>
+        <img :src="isDark ? logoOnDark : logoOnLight" alt="Tipeline" class="logo" />
 
         <template v-if="!challengeId">
           <h1>{{ t('connect.title') }}</h1>

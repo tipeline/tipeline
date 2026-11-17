@@ -266,7 +266,7 @@ A table column's `highlight` and a progress bar's or KPI card's `colorRules` are
     - { compareAs: string, operator: eq, value: overdue, ignoreCase: true, color: red }
 ```
 
-A cell that can't be read as `compareAs` (`n/a` in a number column) just doesn't match. See [Table columns](/apps/#table-columns-links-images-colors-and-filters).
+A cell that can't be read as `compareAs` (`n/a` in a number column) just doesn't match. See [Table columns](/apps#table-columns-links-images-colors-and-filters).
 
 ## Not a condition: Switch
 

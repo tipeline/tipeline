@@ -13,7 +13,7 @@ Some features use tools from your system. Install the ones you plan to use:
 |------|-----------|
 | Chrome or Chromium | Browser actions. Tipeline finds an installed copy, or set `chromePath` on `browser.launch` |
 | ffmpeg (with `ffprobe`) | Audio and video actions |
-| PostgreSQL | [Tipeline Server](/server/) only |
+| PostgreSQL | [Tipeline Server](/server) only |
 | Redis | The optional [BullMQ job runner](/internals/job-runners) only |
 
 ## Clone and Install
@@ -146,7 +146,7 @@ See [Architecture Overview → Repository Layout](/internals/overview#repository
 2. Register it in `apps/core/src/action/ActionRegistry.ts`
 3. Add the Zod schema in `packages/schemas/src/` and export it from `packages/schemas/src/index.ts`
 4. Write the JSDoc (description, `@returns`, `@example`) on the action — the
-   [Actions reference](/actions/) is generated from it with `npm -w apps/docs run generate`
+   [Actions reference](/actions) is generated from it with `npm -w apps/docs run generate`
 
 To add actions without touching Core, write a [plugin](/hub/plugins#writing-a-plugin) instead.
 

@@ -25,7 +25,7 @@ The assistant turns your request into a few keywords and searches with them. It'
 - **There are no synonyms.** "Sessions" doesn't find "visits", and "disk" doesn't find "file system". Put the other words people use in the [tags](#tags).
 - **Words of one or two letters are ignored**, so "IP", "DB" and "FS" don't count. Write "IP addresses", "database" and "file system" in full.
 - **If no keyword matches anything,** the assistant gets the first 25 workflows by name and picks by meaning. With a bigger library, a workflow it can't find by a keyword may not be among them.
-- **If two to four workflows fit about equally,** it asks you which one you mean and remembers your answer. See [When several workflows fit](/assistant/#when-several-workflows-fit).
+- **If two to four workflows fit about equally,** it asks you which one you mean and remembers your answer. See [When several workflows fit](/assistant#when-several-workflows-fit).
 
 ## Plan the workflows
 
@@ -61,13 +61,13 @@ This pays off quickly:
 - **Each source is set up and fixed in one place.** When an API changes its address, its sign-in or its paging, you fix one helper and every question workflow that uses it keeps working.
 - **Question workflows stay short.** They only hold the part that is specific to the question.
 - **Inputs and outputs match.** Every workflow that needs a customer calls the same lookup, so they all take `customer` as a name and get the same `customerId` back.
-- **The assistant reuses them.** When it [drafts a new workflow](/assistant/#drafts), it searches your workflows first and calls the helpers it finds instead of rebuilding the API calls.
+- **The assistant reuses them.** When it [drafts a new workflow](/assistant#drafts), it searches your workflows first and calls the helpers it finds instead of rebuilding the API calls.
 
 ::: tip Not just for one kind of work
 This works for any work where several questions read the same few sources: support tickets, sales figures, server checks, files on disk. If you only have one or two workflows per source, keep them whole and split them out when a second question needs the same data.
 :::
 
-Mark each helper with `helper: true` (in Desktop, **Helper workflow** in the **Edit** dialog). The assistant then never offers it as the answer to a request, even when its name shares every word with the request. A helper called `Data: Views and visits API` would otherwise compete with `Traffic: Views and visits by month` for "views and visits for Northfield", and the helper returns every row, not an answer. Helpers stay in the search for [drafts](/assistant/#drafts), which reuse them as steps, and you can still run one yourself.
+Mark each helper with `helper: true` (in Desktop, **Helper workflow** in the **Edit** dialog). The assistant then never offers it as the answer to a request, even when its name shares every word with the request. A helper called `Data: Views and visits API` would otherwise compete with `Traffic: Views and visits by month` for "views and visits for Northfield", and the helper returns every row, not an answer. Helpers stay in the search for [drafts](/assistant#drafts), which reuse them as steps, and you can still run one yourself.
 
 Name helpers by what they get, and start the description with what they are:
 
@@ -109,7 +109,7 @@ Meetings: Draft agenda for a customer meeting
 - **Make the prefix a topic, not a team or role.** People look for workflows by topic, and a team name only helps the search when someone types that team's name. Who wrote a workflow goes in `author`. A workflow meant for one team gets that team's name as a [tag](#tags).
 - **Use the words people type.** "Views and visits" rather than "Traffic metrics"; "file system" rather than "FS".
 - **Say what comes back, not that it gets something.** Write `Traffic: Top paths and IP addresses for a customer application`, not `Traffic: Get customer app traffic`. Almost every workflow gets something, so "get", "fetch", "show" or "check" add no points that set one workflow apart, and they take the place of the words that would: what it returns (top paths, IP addresses) and for what (a customer application).
-- **Avoid names that say nothing on their own:** "Get data", "Run tool", "Check", "Test 2", "Copy of …". The **Search tips** tab on the [Assistant page](/assistant/#the-assistant-page) flags these.
+- **Avoid names that say nothing on their own:** "Get data", "Run tool", "Check", "Test 2", "Copy of …". The **Search tips** tab on the [Assistant page](/assistant#the-assistant-page) flags these.
 - **The identifier doesn't count.** Tipeline gives each workflow a random identifier when it's installed, and the search leaves it out.
 
 ## Description
@@ -388,7 +388,7 @@ pipeline:
 
 ## Check your work
 
-- **Search tips.** The **Search tips** tab on the [Assistant page](/assistant/#the-assistant-page) lists workflows that are hard to find, and why: no description, a name that doesn't say what it does, no tags, inputs without a label or description, still a draft.
+- **Search tips.** The **Search tips** tab on the [Assistant page](/assistant#the-assistant-page) lists workflows that are hard to find, and why: no description, a name that doesn't say what it does, no tags, inputs without a label or description, still a draft.
 - **Ask three ways.** Before you call a workflow done, try it in the assistant with:
   1. a plain request: "views and visits for Northfield last month",
   2. other words: "pageviews and sessions for Northfield",

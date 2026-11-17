@@ -235,6 +235,13 @@
     "runsToday": "{count} today",
     "schedules": "Schedules",
     "schedulesOn": "{count} on",
+    "appearance": "Appearance",
+    "themes": {
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "appearanceNote": "System follows the phone's light or dark setting.",
     "desktopTitle": "In Tipeline Desktop",
     "desktopItems": {
       "builder": "Workflow builder",

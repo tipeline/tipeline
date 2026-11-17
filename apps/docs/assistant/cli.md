@@ -1,7 +1,7 @@
 # Assistant in the Terminal
 
 `tipeline assistant prompt` (or `tipeline agent prompt`) does what the Desktop
-[assistant](/assistant/) does, from a terminal or a script: it finds the workflow, fills in
+[assistant](/assistant) does, from a terminal or a script: it finds the workflow, fills in
 what it can from your request, asks for the rest, and runs it once you confirm.
 
 ```bash
@@ -22,7 +22,7 @@ tipeline assistant prompt "give me the sales report for April"
   under **Runs on its own** and asks `Create this schedule for "Random Numbers"? [Y/n]`
   instead of running it. The values you give are used for every scheduled run. For a
   workflow it drafts, the timing becomes the draft's proposed schedule, which you turn on
-  when you mark the draft ready in the Desktop app. See [Schedules](/assistant/#schedules).
+  when you mark the draft ready in the Desktop app. See [Schedules](/assistant#schedules).
 - A question it can answer without running anything is answered directly.
 
 ## Options

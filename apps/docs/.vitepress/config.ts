@@ -4,11 +4,34 @@ import path from 'path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+const SITE = 'https://tipeline.com';
+
+// 'actions/index' or 'actions/' -> 'actions'; the home page -> ''.
+const pagePath = (p: string) => p.replace(/(^|\/)index$/, '').replace(/\/$/, '');
+
 export default defineConfig({
   title: 'Tipeline',
   description: 'Workflow Automation & Orchestration Platform',
   cleanUrls: true,
   appearance: true,
+
+  // No trailing slashes, matching wrangler.jsonc (html_handling: drop-trailing-slash).
+  sitemap: {
+    hostname: SITE,
+    transformItems: (items) => items.map((item) => ({ ...item, url: pagePath(item.url) })),
+  },
+
+  // Serve each section index as /actions rather than /actions/. VitePress derives the
+  // URL from the file path and rewrites the address bar to it, so the slash has to go here.
+  rewrites: Object.fromEntries(
+    ['actions', 'apps', 'assistant', 'hub', 'server'].map((s) => [`${s}/index.md`, `${s}.md`]),
+  ),
+
+  transformPageData(pageData) {
+    const url = pagePath(pageData.relativePath.replace(/\.md$/, ''));
+    pageData.frontmatter.head ??= [];
+    pageData.frontmatter.head.push(['link', { rel: 'canonical', href: `${SITE}/${url}` }]);
+  },
 
   vite: {
     publicDir: path.resolve(__dirname, '../../../assets'),
@@ -50,18 +73,18 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/guide/introduction' },
       { text: 'Workflows', link: '/workflows/files' },
-      { text: 'Actions', link: '/actions/' },
-      { text: 'Apps', link: '/apps/' },
+      { text: 'Actions', link: '/actions' },
+      { text: 'Apps', link: '/apps' },
       {
         text: 'Tools',
         items: [
           { text: 'Desktop', link: '/desktop/overview' },
-          { text: 'Assistant', link: '/assistant/' },
+          { text: 'Assistant', link: '/assistant' },
           { text: 'CLI', link: '/cli/commands' },
-          { text: 'Hub & Plugins', link: '/hub/' },
+          { text: 'Hub & Plugins', link: '/hub' },
         ],
       },
-      { text: 'Server', link: '/server/' },
+      { text: 'Server', link: '/server' },
       { text: 'Internals', link: '/internals/overview' },
     ],
 
@@ -91,10 +114,10 @@ export default defineConfig({
           ],
         },
       ],
-      '/actions/': [
+      '/actions': [
         {
           text: 'Actions',
-          items: [{ text: 'Overview', link: '/actions/' }],
+          items: [{ text: 'Overview', link: '/actions' }],
         },
         {
           text: 'Automation',
@@ -155,11 +178,11 @@ export default defineConfig({
           ],
         },
       ],
-      '/apps/': [
+      '/apps': [
         {
           text: 'Apps',
           items: [
-            { text: 'Building Apps', link: '/apps/' },
+            { text: 'Building Apps', link: '/apps' },
             { text: 'Embedding Pages & HTML', link: '/apps/embed' },
             { text: 'Custom Components', link: '/apps/custom' },
           ],
@@ -182,11 +205,11 @@ export default defineConfig({
           ],
         },
       ],
-      '/assistant/': [
+      '/assistant': [
         {
           text: 'Assistant & AI',
           items: [
-            { text: 'Using the Assistant', link: '/assistant/' },
+            { text: 'Using the Assistant', link: '/assistant' },
             { text: 'Workflows It Can Find', link: '/assistant/findable-workflows' },
             { text: 'Instructions', link: '/assistant/instructions' },
             { text: 'In the Terminal', link: '/assistant/cli' },
@@ -200,21 +223,21 @@ export default defineConfig({
           items: [{ text: 'Commands', link: '/cli/commands' }],
         },
       ],
-      '/hub/': [
+      '/hub': [
         {
           text: 'Hub & Plugins',
           items: [
-            { text: 'Hubs', link: '/hub/' },
+            { text: 'Hubs', link: '/hub' },
             { text: 'Publishing to a Hub', link: '/hub/publishing' },
             { text: 'Plugins', link: '/hub/plugins' },
           ],
         },
       ],
-      '/server/': [
+      '/server': [
         {
           text: 'Tipeline Server',
           items: [
-            { text: 'Overview', link: '/server/' },
+            { text: 'Overview', link: '/server' },
             { text: 'Docker Setup', link: '/server/docker' },
             { text: 'Bare-Metal Setup', link: '/server/bare-metal' },
             { text: 'API Reference', link: '/server/api' },

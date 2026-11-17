@@ -16,21 +16,21 @@ The sidebar groups every part of the app:
 |-------|---------|----------------------|
 | | **Home** | What needs you (approvals, alerts, failed and missed runs), your starred and recent items, today's runs |
 | **Build** | **Workflows** | Every installed workflow — run, edit, see its runs ([builder](/desktop/builder)) |
-| | **Apps** | Dashboards and tools built on your workflows ([Apps](/apps/)) |
+| | **Apps** | Dashboards and tools built on your workflows ([Apps](/apps)) |
 | | **Projects** | Workflows and apps grouped by project ([Projects](/desktop/projects)) |
-| | **Assistant** | Past requests, drafts and remembered picks ([Assistant](/assistant/)) |
+| | **Assistant** | Past requests, drafts and remembered picks ([Assistant](/assistant)) |
 | **Operate** | **Runs** | Every run of every workflow, live ([Runs](/desktop/pipelines)) |
 | | **Approvals** | Runs waiting for someone to approve or reject them ([Approvals](/workflows/approvals)) |
 | | **Schedules** | When workflows run on their own ([Schedules](/desktop/schedules)) |
 | **Resources** | **Global Variables** | Values every workflow can read ([Global Variables](/desktop/variables)) |
 | | **Tags** | Create, rename and delete the tags used on workflows |
 | | **Plugins** | Extra action groups ([Plugins](/hub/plugins)) |
-| | **Hub** | Workflows, apps and plugins to install from your hubs ([Hubs](/hub/)) |
+| | **Hub** | Workflows, apps and plugins to install from your hubs ([Hubs](/hub)) |
 | | **Trash** | Deleted workflows and apps, kept 30 days to restore ([Trash](/desktop/trash)) |
 | | **Settings** | Appearance, defaults, assistant, hubs, cache, connections, backup ([Settings](/desktop/settings)) |
 | | **Help** | Opens this documentation |
 
-The **Bot** icon in the top bar (⌘K) opens the [assistant](/assistant/) on any page.
+The **Bot** icon in the top bar (⌘K) opens the [assistant](/assistant) on any page.
 
 ## Home
 
@@ -94,7 +94,7 @@ Windows and Linux. Click it to open a small window with:
   after you confirm; **+N more running** opens the Runs page filtered to running ones.
 - **Next**: when the next scheduled run starts.
 - **Open Tipeline**, and **Ask**, which brings the main window forward with the
-  [Assistant](/assistant/) panel open on the page you were on (Home, when you were in the
+  [Assistant](/assistant) panel open on the page you were on (Home, when you were in the
   builder or an editor), with the cursor in its box so you can start typing. Ask isn't
   shown when connected to a server workspace.
 
@@ -184,7 +184,7 @@ closed.
 ## Remote workspaces
 
 By default, the Desktop app talks to the local Core engine. To work on a
-[Tipeline Server](/server/), add it with **Manage workspaces…** in the sidebar's **workspace switcher** and sign in, then
+[Tipeline Server](/server), add it with **Manage workspaces…** in the sidebar's **workspace switcher** and sign in, then
 switch to it there (see [Workspaces](/desktop/settings#workspaces)). Each connection is a
 separate **workspace**: its own workflows, apps, runs and settings. Switching workspace closes
 windows that belong to the previous one.

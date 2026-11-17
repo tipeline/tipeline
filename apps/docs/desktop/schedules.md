@@ -30,7 +30,7 @@ From the workflow itself:
 
 The **Schedules** page (sidebar → Operate) has the same form, with a workflow picker, and lists every schedule.
 
-A [draft](/assistant/#drafts) can't be scheduled until you mark it ready.
+A [draft](/assistant#drafts) can't be scheduled until you mark it ready.
 
 ## Saying when
 
@@ -127,13 +127,13 @@ Every scheduled run creates a run record, just like a manual run. Open the workf
 
 ## From the assistant
 
-Say how often in your request and the [assistant](/assistant/) offers a schedule. Nothing is created until you click.
+Say how often in your request and the [assistant](/assistant) offers a schedule. Nothing is created until you click.
 
 **For a workflow you already have**, for example *"run the random numbers every 40 seconds"*, the assistant shows the workflow's form with a **Runs on its own** box reading *Every 40 seconds*. Change the timing there if you like, fill in the inputs, and click **Create schedule**. The inputs are used for every scheduled run. **Run once now** runs it a single time instead.
 
 **For a new workflow**, for example *"create the sales report and save it to my Documents every day"*, the assistant first shows the workflow it would draft, with the timing in its own **Runs on its own** box. Edit or clear the box before clicking **Draft this workflow**. The draft does the work once, with no loop or wait for the timing, and comes with that **proposed schedule**. You'll see it on the draft card, the draft banner and the Assistant's Drafts list, and it stays off. When you've tested the draft, click **Mark ready and schedule** to turn it on, or **Mark as ready** to leave it off.
 
-See [Assistant → Schedules](/assistant/#schedules).
+See [Assistant → Schedules](/assistant#schedules).
 
 ## CLI
 

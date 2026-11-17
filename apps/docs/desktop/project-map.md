@@ -21,7 +21,7 @@ still needs before anything is built.
 Nodes this project uses that aren't in it (a sub-workflow from another project, say) show
 faded, and are listed under **Used, not in this project** in the left sidebar.
 
-On [Tipeline Server](/server/), a workflow on the map that you don't have access to
+On [Tipeline Server](/server), a workflow on the map that you don't have access to
 (someone else's private one) shows as a locked **Hidden workflow** card: its lines stay, so
 the map still makes sense, but its name and details don't show.
 
@@ -89,7 +89,7 @@ A planned node's details offer a way to make it real:
 
 | Planned | Action |
 |---|---|
-| Workflow or helper | **Build this with the Assistant**: the [Assistant](/assistant/) drafts it from the description and planned inputs and outputs, and the draft is linked to the node |
+| Workflow or helper | **Build this with the Assistant**: the [Assistant](/assistant) drafts it from the description and planned inputs and outputs, and the draft is linked to the node |
 | App | **Create the app**: with planned pages and components, it builds them, each connected to its workflow (see below) |
 | Global | **Create the global**, with its type, in Variables |
 | Schedule | **Create the schedule**, once it's connected to a built workflow: say when, in plain words ("every weekday at 8am") |

@@ -123,7 +123,7 @@ Core.variableDelete(identifier: string): Promise<void>
 
 Apps are desktop dashboards whose actions are backed by workflows. Their source
 follows the App v2 schema (`packages/schemas/src/App.ts`, see
-[Apps](/apps/)); every write path migrates v1 sources and validates.
+[Apps](/apps)); every write path migrates v1 sources and validates.
 
 ```typescript
 Core.appList(): Promise<App[]>

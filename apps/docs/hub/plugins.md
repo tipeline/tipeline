@@ -7,7 +7,7 @@ ones: in the builder, in workflow files, in apps and with the assistant.
 ## Installing a plugin
 
 - **From a hub:** open **Hub → Plugins** and click **Install**, or run
-  `tipeline hub install plugin <hubId> <identifier>`. See [Hubs](/hub/).
+  `tipeline hub install plugin <hubId> <identifier>`. See [Hubs](/hub).
 - **By hand:** put the plugin's folder in `~/.tipeline/plugins/` (for example
   `~/.tipeline/plugins/drupal/index.mjs`), then open **Plugins**. If it has a `package.json`
   with dependencies, run `npm install` in its folder first.
@@ -16,7 +16,7 @@ A new plugin is listed **turned off**, because its code runs inside Core with fu
 your computer. Read it, or trust where it came from, then turn it on with its switch. Its
 actions are available right away; until then its page doesn't list them. Installing a hub
 workflow that needs a plugin offers to install and turn it on for you (see
-[Hubs](/hub/#installing)).
+[Hubs](/hub#installing)).
 
 ## Managing plugins
 

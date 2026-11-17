@@ -2,7 +2,7 @@
 
 Core has a built-in **MCP server**, so AI tools and bots — Claude Code, Claude Desktop, Cursor,
 or your own agent — can find your workflows, run them, and draft new ones. The Desktop
-[assistant](/assistant/) uses this same server.
+[assistant](/assistant) uses this same server.
 
 ## Connection details
 
@@ -61,7 +61,7 @@ Bridge to the HTTP server with `mcp-remote`:
 ### claude.ai on the web
 
 Connectors on claude.ai run in the cloud and can't reach `127.0.0.1`. To use one, Core has to be
-reachable from the internet. Put the [Tipeline Server](/server/) in front of it rather than
+reachable from the internet. Put the [Tipeline Server](/server) in front of it rather than
 exposing Core and its token.
 
 ## Using it in Claude Code
@@ -126,7 +126,7 @@ skill for your conventions that tells Claude to use the Tipeline MCP tools for e
 | `list_actions` | Every action group, built-in and plugin, with what each action does |
 | `describe_actions` | The fields, return type and an example of named actions, e.g. `["http.request"]` |
 | `check_workflow` | Checks workflow YAML the way installing and running it would; returns `{ valid, errors, warnings }` |
-| `create_draft_workflow` | Saves workflow YAML as a [draft](/assistant/#drafts) after checking it |
+| `create_draft_workflow` | Saves workflow YAML as a [draft](/assistant#drafts) after checking it |
 
 A typical bot asks `search_workflows` with the user's request, fills in the inputs, and calls
 `exec_task`. To build something new: `authoring_guide` → `search_workflows` (to reuse
@@ -163,7 +163,7 @@ as `--var` in the CLI) — and save drafts. Give it only to tools you trust, and
   `TIPELINE_BIND_HOST` before Core starts, and block port `4002` with a firewall from anyone
   who doesn't need it.
 - For several people, or when you need roles and an audit trail, put the
-  [Tipeline Server](/server/) in front of Core instead of sharing the Core token.
+  [Tipeline Server](/server) in front of Core instead of sharing the Core token.
 - If port `4002` is taken, Core starts without the MCP server and logs a warning; set
   `TIPELINE_MCP_PORT` to another port, and point your clients (and the assistant's **MCP
   connection** setting) at it.

@@ -19,9 +19,9 @@ The system is built around three key ideas:
 | **Core** | The engine that runs workflows and stores their runs. Runs in the background on your computer (or a server). | [Internals](/internals/overview) |
 | **Desktop** | The app: build workflows and apps, watch runs, approve, schedule. Starts Core for you. | [Desktop](/desktop/overview) |
 | **CLI** | `tipeline` in the terminal: run, install and schedule workflows, use hubs, ask the assistant. | [CLI](/cli/commands) |
-| **Assistant** | Ask in plain language; it finds the workflow, fills it in and runs it when you confirm. In the Desktop, the CLI, or any MCP client. | [Assistant](/assistant/) |
-| **Hubs & plugins** | Catalogs of workflows, apps and plugins to install — a website or a shared folder. Plugins add new action groups. | [Hub & Plugins](/hub/) |
-| **Server** | Shares one Core with a team: accounts, roles, API tokens, webhooks, audit log. | [Server](/server/) |
+| **Assistant** | Ask in plain language; it finds the workflow, fills it in and runs it when you confirm. In the Desktop, the CLI, or any MCP client. | [Assistant](/assistant) |
+| **Hubs & plugins** | Catalogs of workflows, apps and plugins to install — a website or a shared folder. Plugins add new action groups. | [Hub & Plugins](/hub) |
+| **Server** | Shares one Core with a team: accounts, roles, API tokens, webhooks, audit log. | [Server](/server) |
 
 ## Key Concepts
 
@@ -38,7 +38,7 @@ A run (a *pipeline* in the code) is the record of one execution of a workflow. I
 Variables are the glue between actions. An action's `destination` field captures its result into a named variable, and any later action can reference it via `{{ varName }}` templates or `{= varName =}` raw injection. See [Variables & Templates](/workflows/variables).
 
 ### Apps
-An app is a set of pages — tables, forms, charts and more — where every button and table runs a workflow. See [Apps](/apps/).
+An app is a set of pages — tables, forms, charts and more — where every button and table runs a workflow. See [Apps](/apps).
 
 ## Next Steps
 

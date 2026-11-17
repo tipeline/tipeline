@@ -150,7 +150,7 @@ The WebSocket API exposes the same operations as the IPC protocol. See the [IPC 
 
 ### Canceling runs through a Tipeline Server
 
-Through the [Tipeline Server](/server/)'s gateway (not Core's own port), these rules apply:
+Through the [Tipeline Server](/server)'s gateway (not Core's own port), these rules apply:
 
 
 `pipelineCancel` isn't available to viewers. A run named by `pipelineIdentifier` follows the
