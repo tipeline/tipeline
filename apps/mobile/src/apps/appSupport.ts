@@ -1,6 +1,7 @@
 import { watch } from 'vue';
 import { i18n } from '@/i18n';
 import { useSession } from '@/session';
+import { isDark } from '@/theme';
 import { createDesktopBridge, type DesktopBridge } from './desktopBridge';
 import '@/styles/app-area.css';
 
@@ -20,7 +21,7 @@ let prepared: Promise<void> | null = null;
  *    connection and rebuilt again when someone else signs in;
  *  - Desktop's connection store set to "a Server workspace", so app code doesn't offer the
  *    desktop computer's own files;
- *  - Desktop's dark colors following the phone's.
+ *  - Desktop's dark colors following the app's light/dark choice (theme.ts).
  */
 export function prepareApps(): Promise<void> {
   prepared ??= load();
@@ -69,10 +70,7 @@ async function load() {
     { immediate: true }
   );
 
-  const dark = window.matchMedia?.('(prefers-color-scheme: dark)');
-  const applyDark = () => document.documentElement.classList.toggle('dark', !!dark?.matches);
-  applyDark();
-  dark?.addEventListener?.('change', applyDark);
+  watch(isDark, (dark) => document.documentElement.classList.toggle('dark', dark), { immediate: true });
 }
 
 /** While an app is on screen: Desktop's reset applies (see styles/app-preflight.css). */

@@ -12,4 +12,4 @@
 @import '@ionic/vue/css/typography.css' layer(ionic);
 @import '@ionic/vue/css/padding.css' layer(ionic);
 @import '@ionic/vue/css/display.css' layer(ionic);
-@import '@ionic/vue/css/palettes/dark.system.css' layer(ionic);
+@import '@ionic/vue/css/palettes/dark.class.css' layer(ionic);

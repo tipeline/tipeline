@@ -235,6 +235,13 @@
     "runsToday": "{count} hoy",
     "schedules": "Programaciones",
     "schedulesOn": "{count} activas",
+    "appearance": "Apariencia",
+    "themes": {
+      "system": "Sistema",
+      "light": "Claro",
+      "dark": "Oscuro"
+    },
+    "appearanceNote": "Sistema sigue el modo claro u oscuro del teléfono.",
     "desktopTitle": "En Tipeline Desktop",
     "desktopItems": {
       "builder": "Editor de flujos",
