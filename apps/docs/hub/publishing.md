@@ -20,7 +20,7 @@ my-hub/
 
 For a remote hub, serve the same folder over HTTPS: Tipeline reads `<url>/hub.json` and
 resolves every `file` and `image` against `<url>`. A GitHub repo works the same way —
-commit the folder and add the repo's link as the hub (see [A GitHub repo as a hub](/hub/#a-github-repo-as-a-hub)).
+commit the folder and add the repo's link as the hub (see [A GitHub repo as a hub](/hub#a-github-repo-as-a-hub)).
 
 ## `hub.json`
 
@@ -76,7 +76,7 @@ workflows:
   orders: { hub: list-orders }
 ```
 
-See [Shipping workflows with an app](/apps/#shipping-workflows-with-an-app).
+See [Shipping workflows with an app](/apps#shipping-workflows-with-an-app).
 
 ### Plugins
 
@@ -213,7 +213,7 @@ requests review changes, and GitHub decides who can read it.
 
 **Settings → Hubs → Add Hub**, type **Remote (URL)**, target
 `https://github.com/acme/tipeline-hub`. A public repo needs nothing else: open **Hub** in
-the sidebar and its items are there. See [A GitHub repo as a hub](/hub/#a-github-repo-as-a-hub)
+the sidebar and its items are there. See [A GitHub repo as a hub](/hub#a-github-repo-as-a-hub)
 for branches and folders.
 
 ### 3. Create a token (private repos)
@@ -245,7 +245,7 @@ requests** before it works. Until then, the hub fails with a 404.
 
 A token is a plain string: everyone who pastes it can read the repo. Pick one of:
 
-- **[Tipeline Server](/server/)** — add the hub once on the Server's Core. People install
+- **[Tipeline Server](/server)** — add the hub once on the Server's Core. People install
   through the Server and never see the token.
 - **One shared token from a bot account** — create a GitHub user such as
   `acme-hub-reader` with read access to the repo, and make the token from that account.

@@ -114,7 +114,7 @@ A value passed in when the run starts (a run form, `--var`, an app) wins over th
 - A token a workflow saves to a file (some OAuth examples use `~/Tipeline/.tokens/token.json`) stays
   as that workflow wrote it. Keep tokens in a secret global variable instead.
 - **On a Tipeline Server**, viewers see secret values as empty, and only admins can read API keys and
-  tokens ([who can see what](/server/#who-can-see-credentials)).
+  tokens ([who can see what](/server#who-can-see-credentials)).
 - The key is in `~/.tipeline/.database/secret.key`. It protects the database when it's copied on its
   own, not from someone who can read your whole home folder. Back it up along with the database:
   without it, encrypted values can't be read and have to be set again.

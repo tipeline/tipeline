@@ -372,7 +372,7 @@ Things to know:
   Neither stops the run, so a misspelled key shows up later as a failed step.
 - Tipeline doesn't know an `_env` value is a secret, so it isn't hidden like a secret
   variable. Use a secret variable for passwords and keys.
-- On a [Tipeline Server](/server/), the environment is the one on the machine Core runs on,
+- On a [Tipeline Server](/server), the environment is the one on the machine Core runs on,
   not yours.
 
 See [Environment files](/workflows/variables#environment-files) for more.

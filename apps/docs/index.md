@@ -135,13 +135,13 @@ pipeline:
       <p>Run workflows, inspect pipelines and control the engine from any terminal or CI job.</p>
       <span class="tl-way-more">CLI commands →</span>
     </a>
-    <a class="tl-way" href="/server/">
+    <a class="tl-way" href="/server">
       <svg class="tl-icon" viewBox="0 0 24 24"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><path d="M6 6h.01"/><path d="M6 18h.01"/></svg>
       <h3>Server</h3>
       <p>Share one Core with your team: accounts, roles, webhooks and an audit log.</p>
       <span class="tl-way-more">Tipeline Server →</span>
     </a>
-    <a class="tl-way" href="/assistant/">
+    <a class="tl-way" href="/assistant">
       <svg class="tl-icon" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg>
       <h3>Assistant &amp; MCP</h3>
       <p>Ask in plain language, or let Claude and other MCP clients find and run your workflows.</p>

@@ -25,7 +25,7 @@ const variables = [
   <section class="tl-hero">
     <div class="tl-hero-glow" aria-hidden="true" />
     <div class="tl-hero-inner">
-      <a class="tl-pill" href="/assistant/">
+      <a class="tl-pill" href="/assistant">
         <span class="tl-pill-tag">New</span>
         <span class="tl-pill-text">The Assistant drafts workflows from plain language</span>
         <span class="tl-pill-arrow">→</span>
@@ -38,7 +38,7 @@ const variables = [
       </p>
       <div class="tl-hero-actions">
         <a class="tl-btn tl-btn-primary" href="/guide/introduction">Get started</a>
-        <a class="tl-btn tl-btn-ghost" href="/actions/">Browse actions <span>→</span></a>
+        <a class="tl-btn tl-btn-ghost" href="/actions">Browse actions <span>→</span></a>
       </div>
     </div>
 

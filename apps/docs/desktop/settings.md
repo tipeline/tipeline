@@ -6,9 +6,9 @@ Open **Settings** at the bottom of the sidebar.
 |------|--------------|
 | **Appearance** | Light, dark or system theme; language (English, Spanish); the time zone dates are shown in |
 | **Defaults** | What new workflows and apps start with: the author, and whether a new workflow is marked for this computer's platform. You can still change both in the **New** dialog. |
-| **Assistant** | The AI provider, API key and model the [assistant](/assistant/#setting-it-up) uses, and its global [instructions](/assistant/instructions) |
+| **Assistant** | The AI provider, API key and model the [assistant](/assistant#setting-it-up) uses, and its global [instructions](/assistant/instructions) |
 | **Backup** | [Full backup and restore](/desktop/backup) |
-| **Hubs** | The [hubs](/hub/) Tipeline installs from and checks for updates |
+| **Hubs** | The [hubs](/hub) Tipeline installs from and checks for updates |
 | **Run history** | [How long finished runs are kept](/desktop/pipelines#how-long-runs-are-kept) |
 | **Cache** | Stored results of [cached](/workflows/caching) steps and workflows: how much space they use, the size limit, and **Clear all** |
 | **About** | The versions of the Tipeline parts running on this computer, starting Core at login, and whether Tipeline [keeps running in the menu bar / tray](/desktop/overview#in-the-menu-bar-and-tray) when you close the window |
@@ -16,7 +16,7 @@ Open **Settings** at the bottom of the sidebar.
 ## Workspaces
 
 A **workspace** is the Core you're working on: **Local** (this computer), or a
-[Tipeline Server](/server/). Switch with the workspace switcher in the sidebar; **Manage
+[Tipeline Server](/server). Switch with the workspace switcher in the sidebar; **Manage
 workspaces…** at the bottom of it lists your connections.
 
 - **Add** a server with its address and your email and password (and a code, if your
@@ -35,7 +35,7 @@ workspaces…** at the bottom of it lists your connections.
 | **Webhooks** | URLs that start a workflow when something calls them |
 | **Audit Log** | Who did what on the server |
 
-See [Tipeline Server](/server/) for what each of these means on the server side.
+See [Tipeline Server](/server) for what each of these means on the server side.
 
 Removing a connection only removes it from this computer. It doesn't affect the server or its
 data.

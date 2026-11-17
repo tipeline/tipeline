@@ -61,7 +61,7 @@ while it was stopped:
   destination: decision
 ```
 
-See [Apps → Approvals](/apps/#approvals) for approvals inside an app: the `approvals`
+See [Apps → Approvals](/apps#approvals) for approvals inside an app: the `approvals`
 component and what a runnable does while its run waits (`onPaused`).
 
 ## Who can approve on a server

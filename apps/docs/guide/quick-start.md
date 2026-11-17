@@ -132,6 +132,6 @@ Each action supports an `onError` field:
 ## Next Steps
 
 - [Workflow Files](/workflows/files) — full workflow file schema and examples
-- [Actions Reference](/actions/) — browse all 30+ action categories
+- [Actions Reference](/actions) — browse all 30+ action categories
 - [CLI Reference](/cli/commands) — all available CLI commands
 - [Desktop App](/desktop/overview) — build workflows visually
