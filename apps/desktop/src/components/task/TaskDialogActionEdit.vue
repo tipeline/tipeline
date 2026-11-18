@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, watch, toRaw, computed, provide, inject, defineComponent } from 'vue';
+import { ref, watch, toRaw, computed, provide, inject, defineComponent, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useActionT } from '@/composables/useActionT';
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
 import { z } from 'zod';
-import { useFieldValue, useSetFieldValue } from 'vee-validate';
+import { useFieldValue, useFormValues, useSetFieldValue } from 'vee-validate';
 import { ListTree } from 'lucide-vue-next';
 import { html as htmlLang } from '@codemirror/lang-html';
 import { json as jsonLang } from '@codemirror/lang-json';
@@ -20,6 +20,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -263,7 +273,13 @@ provide('unregisterPendingVariable', unregisterPendingVariable);
 watch(
   () => props.open,
   (isOpen) => {
-    if (!isOpen) pendingVariableCreations.value.clear();
+    if (!isOpen) {
+      pendingVariableCreations.value.clear();
+      extraFieldsBaseline.value = null;
+      formBaseline.value = null;
+      formLive.value = null;
+      confirmDiscardOpen.value = false;
+    }
   }
 );
 
@@ -293,13 +309,75 @@ function focusFirstField(event: Event) {
   field.focus();
 }
 
-function handleOpenChange(newOpen: boolean) {
-  if (!newOpen && props.isNew && !isParamsValid.value) {
-    // X / Escape / backdrop on an unconfigured new action = cancel → remove the item
+// Unsaved changes: X / Escape / a click outside the dialog asks before throwing away
+// what the user typed. "Changed" = the values differ from a snapshot taken once the
+// dialog has settled (fields may tidy their value right after mounting, and that
+// shouldn't count as an edit).
+function stableJson(value: unknown): string {
+  return JSON.stringify(value, (_key, v) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, v[k]]))
+      : v
+  );
+}
+
+const extraFieldsJson = () =>
+  stableJson({
+    comment: comment.value,
+    destination: destination.value,
+    createNewVariable: createNewVariable.value,
+    newVariableName: newVariableName.value,
+    onError: onError.value,
+    cacheTtl: cacheTtl.value,
+    plugin: isPluginAction.value ? pluginParamValues.value : null,
+    pendingVariables: Array.from(pendingVariableCreations.value.entries()),
+  });
+
+const extraFieldsBaseline = ref<string | null>(null);
+const formBaseline = ref<string | null>(null);
+const formLive = ref<string | null>(null);
+
+// Lives inside the AutoForm (like the bridges above) to read vee-validate's values.
+const FormDirtyBridge = defineComponent({
+  setup() {
+    const values = useFormValues();
+    watch(values, (v) => (formLive.value = stableJson(v)), { deep: true, immediate: true });
+    onMounted(() => {
+      setTimeout(() => (formBaseline.value = stableJson(values.value)));
+    });
+    return () => null;
+  },
+});
+
+const hasUnsavedChanges = computed(() => {
+  if (extraFieldsBaseline.value !== null && extraFieldsJson() !== extraFieldsBaseline.value) {
+    return true;
+  }
+  return formBaseline.value !== null && formLive.value !== formBaseline.value;
+});
+
+const confirmDiscardOpen = ref(false);
+
+function closeWithoutSaving() {
+  confirmDiscardOpen.value = false;
+  if (props.isNew && !isParamsValid.value) {
+    // Closing an unconfigured new action = cancel → remove the item
     emit('cancel');
     return;
   }
-  emit('update:open', newOpen);
+  emit('update:open', false);
+}
+
+function handleOpenChange(newOpen: boolean) {
+  if (newOpen) {
+    emit('update:open', true);
+    return;
+  }
+  if (hasUnsavedChanges.value) {
+    confirmDiscardOpen.value = true;
+    return;
+  }
+  closeWithoutSaving();
 }
 
 provide('taskVariables', variableOptions);
@@ -499,6 +577,10 @@ watch(
       comment.value = rawValue?.comment || '';
       onError.value = rawValue?.onError === 'continue' ? 'continue' : 'throw';
       cacheTtl.value = rawValue?.cache?.ttl != null ? String(rawValue.cache.ttl) : '';
+      extraFieldsBaseline.value = null;
+      setTimeout(() => {
+        if (props.open) extraFieldsBaseline.value = extraFieldsJson();
+      });
     }
   }
 );
@@ -611,6 +693,7 @@ const formDependencies = computed<Dependency<any>[] | undefined>(() =>
               @change="onLiveIdentifierChange"
             />
             <ConditionTypeBridge v-if="conditionCompareTo" />
+            <FormDirtyBridge />
             <DialogDescription>{{ dialogDescription }}</DialogDescription>
 
             <AutoFormField
@@ -865,6 +948,24 @@ const formDependencies = computed<Dependency<any>[] | undefined>(() =>
           <Button v-if="isNew" variant="outline" @click="emit('cancel')">Remove</Button>
         </DialogFooter>
       </div>
+
+      <AlertDialog v-model:open="confirmDiscardOpen">
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{{ t('actionEdit.unsavedTitle') }}</AlertDialogTitle>
+            <AlertDialogDescription>{{ t('actionEdit.unsavedDescription') }}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{{ t('actionEdit.keepEditing') }}</AlertDialogCancel>
+            <AlertDialogAction
+              class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              @click="closeWithoutSaving"
+            >
+              {{ t('actionEdit.discardChanges') }}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DialogContent>
   </Dialog>
 </template>
