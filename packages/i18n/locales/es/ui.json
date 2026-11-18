@@ -397,6 +397,7 @@
         "emptyTitle": "Aún no hay acciones",
         "emptyDescription": "Arrastra una acción desde el panel izquierdo para comenzar.",
         "dropHere": "Suelta las acciones aquí",
+        "dropAtEnd": "Suelta para añadir al final",
         "actionDeleted": "Acción eliminada",
         "undo": "Deshacer",
         "summary": {

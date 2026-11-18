@@ -8,7 +8,7 @@ export default {
 import { ref, computed, inject, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useDragAndDrop } from '@formkit/drag-and-drop/vue';
-import { animations } from '@formkit/drag-and-drop';
+import { animations, state as dragState, isDragState } from '@formkit/drag-and-drop';
 import TaskDialogActionEdit from '@/components/task/TaskDialogActionEdit.vue';
 import TaskPipelineAction from '@/components/task/TaskPipelineAction.vue';
 import { generateIdentifier } from '@tipeline/utils';
@@ -245,6 +245,94 @@ function onDocumentDragStart() {
 }
 function onDocumentDragEnd() { isDragging = false; }
 
+// FormKit stops dragend from bubbling, so this listens in the capture phase,
+// which runs before FormKit's own handler. The move waits a macrotask for it
+// (a microtask like nextTick would still run before FormKit's handler).
+function onEndZoneDragEnd() {
+  endZoneActive.value = false;
+  if (!pendingEndDrop) return;
+  const drop = pendingEndDrop;
+  pendingEndDrop = null;
+  setTimeout(() => finishEndDrop(drop));
+}
+
+// The area below the last step (top-level canvas only). A drop there adds the
+// step at the end — a new one from the actions library, or an existing step
+// moved down, from this list or out of a loop or if.
+const END_DROP_MARK = '__dropAtEnd';
+const endZoneActive = ref(false);
+let pendingEndDrop = null;
+
+// The step being dragged, when the drag is one of ours: FormKit drags between
+// the actions library and the canvas lists all share the 'nested' group.
+function draggedStep() {
+  if (!isDragState(dragState)) return null;
+  if (dragState.initialParent?.data?.config?.group !== 'nested') return null;
+  return dragState.draggedNodes?.[0]?.data?.value ?? null;
+}
+
+function onEndZoneDragover(e) {
+  if (!draggedStep()) return;
+  e.preventDefault();
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+  endZoneActive.value = true;
+}
+
+function onEndZoneDragleave(e) {
+  if (e.currentTarget.contains(e.relatedTarget)) return;
+  endZoneActive.value = false;
+}
+
+// FormKit may already have moved the step into a list while the cursor
+// crossed it on the way here, so the step is marked now and looked up in the
+// whole tree after dragend: found, it is moved; not found (straight from the
+// library), the copy is added.
+function onEndZoneDrop(e) {
+  endZoneActive.value = false;
+  const value = draggedStep();
+  if (!value) return;
+  e.preventDefault();
+  value[END_DROP_MARK] = true;
+  pendingEndDrop = { isNew: !value.identifier, copy: JSON.parse(JSON.stringify(value)) };
+}
+
+function takeMarkedStep(list) {
+  for (let i = 0; i < list.length; i++) {
+    if (list[i][END_DROP_MARK]) return list.splice(i, 1)[0];
+    for (const key of ['actions', 'steps']) {
+      const children = list[i].params?.[key];
+      if (Array.isArray(children)) {
+        const found = takeMarkedStep(children);
+        if (found) return found;
+      }
+    }
+  }
+  return null;
+}
+
+function finishEndDrop({ isNew, copy }) {
+  let identifier;
+  applyMutation((list) => {
+    const step = takeMarkedStep(list) ?? copy;
+    delete step[END_DROP_MARK];
+    if (isNew) {
+      delete step.justDropped;
+      delete step.type;
+    }
+    if (!step.identifier) step.identifier = generateIdentifier(11);
+    identifier = step.identifier;
+    list.push(step);
+    return true;
+  });
+  markDirty();
+  // Like a drop on a row: a new step opens its settings straight away.
+  if (isNew) {
+    actionParams.value = localItems.value.find((item) => item.identifier === identifier);
+    isNewAction.value = true;
+    isDialogOpen.value = true;
+  }
+}
+
 // Watch for prop changes (e.g. navigating away and back reloads the task).
 watch(
   () => props.modelValue,
@@ -261,6 +349,7 @@ onMounted(() => {
   // Capture phase, so isDragging is set before FormKit starts moving items.
   document.addEventListener('dragstart', onDocumentDragStart, true);
   document.addEventListener('dragend', onDocumentDragEnd);
+  if (!props.isNested) document.addEventListener('dragend', onEndZoneDragEnd, true);
   tryReopenPendingAction();
 });
 
@@ -275,6 +364,7 @@ watch(
 onUnmounted(() => {
   document.removeEventListener('dragstart', onDocumentDragStart, true);
   document.removeEventListener('dragend', onDocumentDragEnd);
+  document.removeEventListener('dragend', onEndZoneDragEnd, true);
 });
 
 // Minimal escape key handler
@@ -382,7 +472,7 @@ function onOpenSubtaskBuilder(item) {
 
 <!-- Update the template section in TaskPipelineCanvas.vue -->
 <template>
-  <div :class="!isNested ? 'pl-8' : ''">
+  <div :class="!isNested ? 'pl-8 flex-1 flex flex-col' : ''">
     <!-- Dialog component -->
     <TaskDialogActionEdit
       v-model:open="isDialogOpen"
@@ -489,6 +579,24 @@ function onOpenSubtaskBuilder(item) {
         </div>
       </li>
     </ul>
+
+    <!-- The rest of the canvas below the last step: dropping a step here adds
+         it at the end. Deliberately not a FormKit list, which would move the
+         step in as soon as the cursor entered, before anything was dropped. -->
+    <div
+      v-if="!isNested && !isDebug && localItems.length > 0"
+      class="canvas-end-zone flex-1 min-h-[48px] pt-2"
+      @dragover="onEndZoneDragover"
+      @dragleave="onEndZoneDragleave"
+      @drop="onEndZoneDrop"
+    >
+      <div
+        v-if="endZoneActive"
+        class="ml-5 flex items-center justify-center h-[48px] text-xs text-muted-foreground border border-dashed border-primary/60 bg-primary/5 rounded pointer-events-none select-none"
+      >
+        {{ t('tasks.builder.canvas.dropAtEnd') }}
+      </div>
+    </div>
   </div>
 </template>
 
