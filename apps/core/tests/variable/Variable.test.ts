@@ -115,6 +115,44 @@ describe('Variable', () => {
         const variable = new Variable({ type: 'string', name: 'v', value: 42 } as any);
         expect(variable.getValue()).toBe('42');
       });
+
+      it('throws for an object instead of storing "[object Object]"', () => {
+        expect(
+          () => new Variable({ type: 'string', name: 'v', value: { a: 1 } } as any)
+        ).toThrow(/Type coercion failed for variable "v": got an object.*type to object/);
+      });
+
+      it('throws for a list', () => {
+        expect(
+          () => new Variable({ type: 'string', name: 'v', value: [1, 2] } as any)
+        ).toThrow(/got a list.*type to array/);
+      });
+
+      it('throws on setValue with an object (e.g. a For Each item)', () => {
+        const variable = new Variable({ type: 'string', name: 'item', value: '' } as any);
+        expect(() => variable.setValue({ id: 1 })).toThrow(/variable "item": got an object/);
+        expect(variable.getValue()).toBe('');
+      });
+
+      it('still stringifies a Date', () => {
+        const date = new Date('2024-01-01T00:00:00Z');
+        const variable = new Variable({ type: 'string', name: 'v', value: date } as any);
+        expect(variable.getValue()).toBe(String(date));
+      });
+    });
+
+    describe('number / boolean with structured values', () => {
+      it('throws for a list in a number variable instead of storing 0', () => {
+        expect(() => new Variable({ type: 'number', name: 'v', value: [] } as any)).toThrow(
+          /got a list/
+        );
+      });
+
+      it('throws for an object in a boolean variable instead of storing true', () => {
+        expect(() => new Variable({ type: 'boolean', name: 'v', value: {} } as any)).toThrow(
+          /got an object/
+        );
+      });
     });
 
     describe('number', () => {
