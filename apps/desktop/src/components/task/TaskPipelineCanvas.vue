@@ -189,17 +189,17 @@ function onHandleCancel() {
 // isDragging guards the watcher against processing during drag preview.
 // FormKit moves the real sidebar item (justDropped:true, no identifier) into
 // items the moment the cursor enters the canvas — without this guard the watcher
-// would open the dialog or assign identifiers on every hover.
-let isDragging = false;
+// would open the dialog or assign identifiers on every hover. A ref, because
+// the rows also use it to show that preview as a placeholder.
+const isDragging = ref(false);
 
-// For outside-drops the item commits to items.value after dragend, so the
-// watcher fires with isDragging already false. We assign an identifier so
-// getFieldErrorIds can flag the empty action with an error highlight.
-// We do NOT open the dialog — the user can double-click to configure it.
+// A step that is in the list without an identifier once the drag is over (e.g.
+// one dropped on the gap between rows) gets one here, so getFieldErrorIds can
+// flag it. The dialog isn't opened — the user can double-click to configure it.
 watch(
   items,
   (newItems) => {
-    if (!isDragging) {
+    if (!isDragging.value) {
       for (const item of newItems) {
         if (!item.identifier && item.group && item.name) {
           item.identifier = generateIdentifier(11);
@@ -240,20 +240,94 @@ function buildDragImage(data) {
   return image;
 }
 
-function onDocumentDragStart() {
-  isDragging = true;
-}
-function onDocumentDragEnd() { isDragging = false; }
+// The drag listeners are all capture phase: FormKit stops dragend (and drop)
+// from bubbling, so a plain document listener never hears them (dragend is
+// heard on the dragged element itself — see onDocumentDragStart). Capture runs
+// before FormKit's own handlers, so work that needs FormKit to be finished
+// waits a macrotask (a microtask like nextTick would still run before them).
+//
+// The top-level canvas also keeps a copy of the whole tree from dragstart. A
+// drag that ends without a drop on the canvas — released outside it, over the
+// actions library, or cancelled with Escape — restores that copy: FormKit has
+// already moved the step in as a preview, and it would otherwise stay on
+// screen without ever being saved.
+const rootRef = ref(null);
+// Identifier of the canvas step being dragged (null for a library action), so
+// its live row can be shown as the placeholder too.
+const draggedIdentifier = ref(null);
+let dragSnapshot = null;
+let droppedOnCanvas = false;
 
-// FormKit stops dragend from bubbling, so this listens in the capture phase,
-// which runs before FormKit's own handler. The move waits a macrotask for it
-// (a microtask like nextTick would still run before FormKit's handler).
-function onEndZoneDragEnd() {
+function onDocumentDragStart(e) {
+  isDragging.value = true;
+  // dragend is fired at the dragged element, which FormKit often takes out of
+  // the page mid-drag: a library action leaves the library list once it is
+  // moved into the canvas, a step leaves its old list. A removed element's
+  // events never reach document, so the listener goes on the element itself
+  // (capture, so it still runs before FormKit's handler there).
+  e.target?.addEventListener?.('dragend', onDocumentDragEnd, { capture: true, once: true });
+  if (!props.isNested) {
+    dragSnapshot = JSON.stringify(localItems.value);
+    droppedOnCanvas = false;
+  }
+  // FormKit fills its drag state in its own dragstart handler, after this one.
+  setTimeout(() => {
+    draggedIdentifier.value = draggedStep()?.identifier ?? null;
+  });
+}
+
+function onDocumentDrop(e) {
+  if (rootRef.value?.contains(e.target)) droppedOnCanvas = true;
+}
+
+function onDocumentDragEnd() {
+  isDragging.value = false;
+  draggedIdentifier.value = null;
+  if (props.isNested) return;
   endZoneActive.value = false;
-  if (!pendingEndDrop) return;
-  const drop = pendingEndDrop;
+  const snapshot = dragSnapshot;
+  const endDrop = pendingEndDrop;
+  const dropped = droppedOnCanvas;
+  dragSnapshot = null;
   pendingEndDrop = null;
-  setTimeout(() => finishEndDrop(drop));
+  droppedOnCanvas = false;
+  setTimeout(() => {
+    if (endDrop) finishEndDrop(endDrop);
+    else if (!dropped && snapshot !== null) restoreSnapshot(snapshot);
+    else if (dropped) identifyNewSteps();
+  });
+}
+
+function restoreSnapshot(snapshot) {
+  if (JSON.stringify(localItems.value) === snapshot) return;
+  applyMutation((list) => {
+    list.splice(0, list.length, ...JSON.parse(snapshot));
+    return true;
+  });
+}
+
+// A drop on a row gets its identifier from handleNodeDrop; one let go over a
+// list but not on a row (a gap, a nested list's empty space) gets it here.
+function identifyNewSteps() {
+  let changed = false;
+  const visit = (list) => {
+    for (const item of list) {
+      if (!item.identifier && item.group && item.name) {
+        item.identifier = generateIdentifier(11);
+        delete item.justDropped;
+        delete item.type;
+        changed = true;
+      }
+      for (const key of ['actions', 'steps']) {
+        if (Array.isArray(item.params?.[key])) visit(item.params[key]);
+      }
+    }
+  };
+  applyMutation((list) => {
+    visit(list);
+    return changed;
+  });
+  if (changed) markDirty();
 }
 
 // The area below the last step (top-level canvas only). A drop there adds the
@@ -346,10 +420,9 @@ watch(
 
 onMounted(() => {
   parentRef.value = containerRef.value;
-  // Capture phase, so isDragging is set before FormKit starts moving items.
+  // Capture phase: see onDocumentDragStart.
   document.addEventListener('dragstart', onDocumentDragStart, true);
-  document.addEventListener('dragend', onDocumentDragEnd);
-  if (!props.isNested) document.addEventListener('dragend', onEndZoneDragEnd, true);
+  if (!props.isNested) document.addEventListener('drop', onDocumentDrop, true);
   tryReopenPendingAction();
 });
 
@@ -363,8 +436,7 @@ watch(
 
 onUnmounted(() => {
   document.removeEventListener('dragstart', onDocumentDragStart, true);
-  document.removeEventListener('dragend', onDocumentDragEnd);
-  document.removeEventListener('dragend', onEndZoneDragEnd, true);
+  document.removeEventListener('drop', onDocumentDrop, true);
 });
 
 // Minimal escape key handler
@@ -472,7 +544,7 @@ function onOpenSubtaskBuilder(item) {
 
 <!-- Update the template section in TaskPipelineCanvas.vue -->
 <template>
-  <div :class="!isNested ? 'pl-8 flex-1 flex flex-col' : ''">
+  <div ref="rootRef" :class="!isNested ? 'pl-8 flex-1 flex flex-col' : ''">
     <!-- Dialog component -->
     <TaskDialogActionEdit
       v-model:open="isDialogOpen"
@@ -520,6 +592,10 @@ function onOpenSubtaskBuilder(item) {
         :key="item.identifier"
         :data-id="item.identifier"
         class="draggable-item cursor-pointer"
+        :class="{
+          'drop-preview': isDragging
+            && (!item.identifier || item.identifier === draggedIdentifier),
+        }"
       >
         <div class="relative">
           <span
@@ -603,6 +679,16 @@ function onOpenSubtaskBuilder(item) {
 <style scoped>
 .draggable-item.dragging {
   opacity: 0.5;
+}
+
+/* The step being dragged, where it would land: FormKit moves it into the list
+   while the cursor is still moving, so it is shown faded and outlined until
+   it is dropped, not like a step that is already there. */
+.draggable-item.drop-preview > .relative {
+  opacity: 0.5;
+  outline: 1px dashed var(--primary);
+  outline-offset: 2px;
+  border-radius: var(--radius);
 }
 
 .nested-children {
