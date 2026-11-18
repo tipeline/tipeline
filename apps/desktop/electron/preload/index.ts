@@ -40,6 +40,15 @@ function isAllowedListenChannel(channel: string): boolean {
   return LISTEN_CHANNELS.has(channel) || channel.startsWith('stream:') || channel.startsWith('agent:')
 }
 
+// A run's own channel (`stream:<correlationId>`, `agent:<correlationId>`): one listener,
+// never reused once the run is over.
+function isRunChannel(channel: string): boolean {
+  return (channel.startsWith('stream:') && channel !== 'stream:broadcast') || channel.startsWith('agent:')
+}
+
+// on() registers a wrapper, so off() looks it up here to remove the right function.
+const wrappers = new Map<string, Map<Function, (...args: any[]) => void>>()
+
 // --------- Expose some API to the Renderer process ---------
 contextBridge.exposeInMainWorld('ipcRenderer', {
   on(...args: Parameters<typeof ipcRenderer.on>) {
@@ -47,12 +56,27 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     if (!isAllowedListenChannel(channel)) {
       throw new Error(`[preload] Blocked ipcRenderer.on for unknown channel: ${channel}`)
     }
-    return ipcRenderer.on(channel, (event, ...args) => listener(event, ...args))
+    const wrapper = (event: Electron.IpcRendererEvent, ...rest: any[]) => listener(event, ...rest)
+    let byListener = wrappers.get(channel)
+    if (!byListener) wrappers.set(channel, (byListener = new Map()))
+    byListener.set(listener, wrapper)
+    ipcRenderer.on(channel, wrapper)
   },
   off(...args: Parameters<typeof ipcRenderer.off>) {
-    const [channel, ...omit] = args
+    const [channel, listener] = args
     if (!isAllowedListenChannel(channel)) return
-    return ipcRenderer.off(channel, ...omit)
+    const byListener = wrappers.get(channel)
+    const wrapper = byListener?.get(listener)
+    if (wrapper) {
+      ipcRenderer.off(channel, wrapper)
+      byListener!.delete(listener)
+      if (!byListener!.size) wrappers.delete(channel)
+    } else if (isRunChannel(channel)) {
+      // The bridge may hand over a new proxy of the same function: a run's channel has
+      // only its one listener, so clear it.
+      ipcRenderer.removeAllListeners(channel)
+      wrappers.delete(channel)
+    }
   },
   send(...args: Parameters<typeof ipcRenderer.send>) {
     const [channel, ...omit] = args

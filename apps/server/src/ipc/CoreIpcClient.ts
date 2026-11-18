@@ -78,6 +78,10 @@ type CoreEvent = typeof CORE_EVENTS[number];
 export class CoreIpcClient {
   private conn: any = null;
   private isConnected = false;
+  // node-ipc reconnects with the same connection object, which keeps its listeners:
+  // attaching them on every connect would relay each Core event once per reconnect
+  // (a Core restart made every run event reach clients twice).
+  private handlersAttached = false;
   private readonly handlers = new Map<CoreEvent, (data: any) => void>();
   private readonly messageQueue: Array<{ event: string; payload: any }> = [];
   // The gateway's own lookups (see request()): resolved here, never routed to clients.
@@ -120,6 +124,8 @@ export class CoreIpcClient {
   }
 
   private attachHandlers(): void {
+    if (this.handlersAttached) return;
+    this.handlersAttached = true;
     for (const event of CORE_EVENTS) {
       const handler = this.handlers.get(event);
       this.conn.on(event, (data: any) => {
