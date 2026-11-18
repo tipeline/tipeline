@@ -397,6 +397,7 @@
         "emptyTitle": "No actions yet",
         "emptyDescription": "Drag an action from the left panel to get started.",
         "dropHere": "Drop actions here",
+        "dropAtEnd": "Drop to add at the end",
         "actionDeleted": "Action deleted",
         "undo": "Undo",
         "summary": {
@@ -2693,7 +2694,11 @@
     "enablePlugin": "Enable",
     "selectVariable": "Select a variable…",
     "subtaskSelfReferenceError": "A workflow cannot run itself as a sub-workflow.",
-    "openSubtaskBuilder": "Open sub-workflow builder"
+    "openSubtaskBuilder": "Open sub-workflow builder",
+    "unsavedTitle": "Discard unsaved changes?",
+    "unsavedDescription": "You changed this action but didn't save it. If you close it now, those changes are lost.",
+    "keepEditing": "Keep editing",
+    "discardChanges": "Discard changes"
   },
   "actionMenu": {
     "title": "Actions",

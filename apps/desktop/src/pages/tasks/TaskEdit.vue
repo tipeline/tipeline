@@ -939,7 +939,7 @@ function onAddAction(item: any) {
       <DraftBanner :task="task" />
 
       <div v-if="!isDebug && viewMode === 'visual'" class="overflow-y-auto flex-1 min-h-0">
-        <div class="p-2 bg-background min-h-full">
+        <div class="p-2 bg-background min-h-full flex flex-col">
           <TaskPipelineCanvasSkeleton v-if="!parsedSource" />
           <TaskPipelineCanvas
             v-else

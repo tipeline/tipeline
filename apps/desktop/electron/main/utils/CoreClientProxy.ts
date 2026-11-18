@@ -24,6 +24,12 @@ export const CoreClientProxy = {
     active.send(event, payload);
   },
 
+  /** True while the Desktop works against a remote Core or Server (the local IPC
+   *  connection stays open for local-only requests). */
+  isRemote(): boolean {
+    return active !== localClient;
+  },
+
   async switchToLocal(
     listeners: Record<string, (response: any) => void>,
     onDisconnect?: () => void,

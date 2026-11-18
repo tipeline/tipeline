@@ -255,13 +255,14 @@ export class MessageManager {
 
   async init() {
     const handlers = this.buildCoreHandlers();
+    const localHandlers = this.buildLocalHandlers(handlers);
 
     // Register renderer-facing handlers immediately so they are available before Core connects.
     // CoreService.request queues messages; they are flushed once the Core IPC connection is up.
     this.registerRendererHandlers();
 
     // Connect to local Core (blocks until Core process is up and IPC socket connects)
-    await CoreClientProxy.switchToLocal(handlers, () => this.send('core:disconnected', {}), () => this.send('core:reconnected', {}));
+    await CoreClientProxy.switchToLocal(localHandlers, () => this.send('core:disconnected', {}), () => this.send('core:reconnected', {}));
 
     const active = await CoreService.localRequest<{ activeId: string | null; connection: any }>(
       CORE.CONNECTION_GET_ACTIVE,
@@ -283,7 +284,7 @@ export class MessageManager {
     }
 
     this.registerServerHandlers();
-    this.registerConnectionHandlers(handlers);
+    this.registerConnectionHandlers(handlers, localHandlers);
   }
 
   // ---------------------------------------------------------------------------
@@ -318,6 +319,26 @@ export class MessageManager {
     }
 
     return handlers;
+  }
+
+  /**
+   * The handlers for the local IPC connection. It stays open while a Server is the
+   * active workspace (connection settings, Assistant run records), but the Desktop only
+   * shows the runs of the workspace it's on: while remote, the local Core's run events
+   * are dropped. Its runs go on; they just aren't shown here. A Server in front of this
+   * same Core sends them through its own connection too, so they'd otherwise show twice.
+   */
+  private buildLocalHandlers(
+    handlers: Record<string, (response: any) => void>
+  ): Record<string, (response: any) => void> {
+    const local = { ...handlers };
+    for (const { resp } of STREAM_RESPONSES) {
+      const forward = handlers[resp];
+      local[resp] = (response: any) => {
+        if (!CoreClientProxy.isRemote()) forward(response);
+      };
+    }
+    return local;
   }
 
   // ---------------------------------------------------------------------------
@@ -590,7 +611,10 @@ export class MessageManager {
     });
   }
 
-  private registerConnectionHandlers(handlers: Record<string, (response: any) => void>) {
+  private registerConnectionHandlers(
+    handlers: Record<string, (response: any) => void>,
+    localHandlers: Record<string, (response: any) => void>
+  ) {
     ipcMain.handle(SEND.CONNECTION_LIST, () =>
       CoreService.localRequest(CORE.CONNECTION_LIST, { correlationId: generateIdentifier() })
     );
@@ -625,7 +649,7 @@ export class MessageManager {
         { correlationId: generateIdentifier() }
       );
       if (!active.activeId) {
-        await CoreClientProxy.switchToLocal(handlers);
+        await CoreClientProxy.switchToLocal(localHandlers);
         this.send('workspace-changed', { activeId: null, closedWindows: closeDetachedWindows() });
       }
       return result;
@@ -640,7 +664,7 @@ export class MessageManager {
       this.localFallback = false; // user is explicitly switching — trust the DB again
 
       if (id === null) {
-        await CoreClientProxy.switchToLocal(handlers);
+        await CoreClientProxy.switchToLocal(localHandlers);
       } else {
         const active = await CoreService.localRequest<{ activeId: string | null; connection: any }>(
           CORE.CONNECTION_GET_ACTIVE,

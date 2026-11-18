@@ -397,6 +397,7 @@
         "emptyTitle": "Aún no hay acciones",
         "emptyDescription": "Arrastra una acción desde el panel izquierdo para comenzar.",
         "dropHere": "Suelta las acciones aquí",
+        "dropAtEnd": "Suelta para añadir al final",
         "actionDeleted": "Acción eliminada",
         "undo": "Deshacer",
         "summary": {
@@ -2693,7 +2694,11 @@
     "enablePlugin": "Activar",
     "selectVariable": "Selecciona una variable…",
     "subtaskSelfReferenceError": "Un flujo de trabajo no puede ejecutarse a sí mismo como subflujo.",
-    "openSubtaskBuilder": "Abrir el editor del subflujo"
+    "openSubtaskBuilder": "Abrir el editor del subflujo",
+    "unsavedTitle": "¿Descartar los cambios sin guardar?",
+    "unsavedDescription": "Cambiaste esta acción pero no la guardaste. Si la cierras ahora, esos cambios se pierden.",
+    "keepEditing": "Seguir editando",
+    "discardChanges": "Descartar cambios"
   },
   "actionMenu": {
     "title": "Acciones",

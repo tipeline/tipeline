@@ -1,0 +1,85 @@
+version: 1.0.0
+name: Test Variable Type Mismatch
+description: |
+  Checks that an object or list is never squeezed into a text, number or yes/no variable. Before the fix the value turned into `[object Object]`, `0` or `true` without a word. Now the step fails and says which type to use.
+
+  What you should see:
+
+  1. **Right type** — the loop prints each order's id and customer.
+  2. **Loop item left as text** — the For Each step fails with *got an object, which can't be stored in a string variable*, and the run goes on.
+  3. **Script result into a text variable** — the script step fails the same way, and the run goes on.
+  4. The last message prints, and `orderText` is still empty. Nothing printed `[object Object]`.
+author: Jose Daniel Estrada
+tags: [example, test, variables, types, loop]
+
+pipeline:
+  variables:
+    - type: array
+      name: orders
+      value:
+        - { id: 101, customer: Ana }
+        - { id: 102, customer: Luis }
+    # Right type: each item is an object.
+    - type: object
+      name: order
+      value: {}
+    # Wrong type: a loop item left as text.
+    - type: string
+      name: orderText
+      value: ''
+    # Wrong type: a script returns an object, the variable is text.
+    - type: string
+      name: summary
+      value: ''
+
+  actions:
+    - group: system
+      name: message
+      params:
+        text: '1. Right type: the item variable is an object'
+
+    - group: flow
+      name: forEachLoop
+      params:
+        iterable: '{= orders =}'
+        currentItem: order
+        actions:
+          - group: system
+            name: message
+            params:
+              text: 'Order {{ order.id }} for {{ order.customer }}'
+
+    - group: system
+      name: message
+      params:
+        text: '2. Loop item left as text: the next step should fail'
+
+    - group: flow
+      name: forEachLoop
+      onError: continue
+      params:
+        iterable: '{= orders =}'
+        currentItem: orderText
+        actions:
+          - group: system
+            name: message
+            params:
+              text: 'THIS SHOULD NOT PRINT: {{ orderText }}'
+
+    - group: system
+      name: message
+      params:
+        text: '3. Script result into a text variable: the next step should fail'
+
+    - group: script
+      name: runScript
+      onError: continue
+      params:
+        code: |
+          return { total: 2, customers: ['Ana', 'Luis'] };
+      destination: summary
+
+    - group: system
+      name: message
+      params:
+        text: '4. Done. orderText is "{{ orderText }}" and summary is "{{ summary }}" (both should be empty)'

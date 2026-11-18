@@ -15,13 +15,16 @@ export function coerceVariableValue(value: unknown, type: VariableType, name: st
   try {
     switch (type) {
       case 'string':
+        rejectStructured(value, type);
         return String(value);
       case 'number': {
+        rejectStructured(value, type);
         const num = Number(value);
         if (isNaN(num)) throw new Error(`Cannot convert "${value}" to number`);
         return num;
       }
       case 'boolean':
+        rejectStructured(value, type);
         if (typeof value === 'string') {
           const lower = value.toLowerCase();
           if (lower === 'true') return true;
@@ -60,4 +63,19 @@ export function coerceVariableValue(value: unknown, type: VariableType, name: st
   } catch (error: any) {
     throw new Error(`Type coercion failed for variable "${name}": ${error.message}`);
   }
+}
+
+/**
+ * A list or object never fits a string/number/boolean variable. Converting it anyway
+ * loses the data without a word: String({}) is "[object Object]", Number([]) is 0,
+ * Boolean({}) is true (e.g. a For Each "current item" variable left as string while
+ * looping over a list of objects). Dates are left alone: they print and convert fine.
+ */
+function rejectStructured(value: unknown, type: VariableType): void {
+  if (typeof value !== 'object' || value instanceof Date) return;
+  const kind = Array.isArray(value) ? 'a list' : 'an object';
+  const fit = Array.isArray(value) ? 'array' : 'object';
+  throw new Error(
+    `got ${kind}, which can't be stored in a ${type} variable. Change the variable's type to ${fit}.`
+  );
 }
