@@ -397,6 +397,7 @@
         "emptyTitle": "No actions yet",
         "emptyDescription": "Drag an action from the left panel to get started.",
         "dropHere": "Drop actions here",
+        "dropAtEnd": "Drop to add at the end",
         "actionDeleted": "Action deleted",
         "undo": "Undo",
         "summary": {
