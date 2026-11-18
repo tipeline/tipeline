@@ -60,3 +60,55 @@ describe('opening the step editor', () => {
     expect(wrapper.emitted('update:open')).toEqual([[false]]);
   });
 });
+
+describe('closing the step editor with unsaved changes', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
+  const pressEscape = async () => {
+    (document.activeElement ?? document.body).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    );
+    await flushPromises();
+  };
+  const buttonWithText = (text: string) =>
+    [...document.body.querySelectorAll('button')].find((b) => b.textContent?.trim() === text);
+
+  it('asks before throwing away an edited param, and Keep editing keeps the dialog', async () => {
+    const wrapper = await openEditor({ augend: 1, addend: 5 });
+    await settle();
+    const input = field('addend')!;
+    input.value = '42';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await flushPromises();
+
+    input.focus();
+    await pressEscape();
+    expect(wrapper.emitted('update:open')).toBeUndefined();
+    expect(document.body.textContent).toContain('Discard unsaved changes?');
+
+    buttonWithText('Keep editing')!.click();
+    await flushPromises();
+    expect(wrapper.emitted('update:open')).toBeUndefined();
+    expect(field('addend')?.value).toBe('42');
+  });
+
+  it('closes after Discard changes when only the comment was edited', async () => {
+    const wrapper = await openEditor({ augend: 1, addend: 5 });
+    await settle();
+    const comment = document.body.querySelector('textarea')!;
+    comment.value = 'half done';
+    comment.dispatchEvent(new Event('input', { bubbles: true }));
+    await flushPromises();
+
+    comment.focus();
+    await pressEscape();
+    expect(wrapper.emitted('update:open')).toBeUndefined();
+
+    buttonWithText('Discard changes')!.click();
+    await flushPromises();
+    expect(wrapper.emitted('update:open')).toEqual([[false]]);
+  });
+});
