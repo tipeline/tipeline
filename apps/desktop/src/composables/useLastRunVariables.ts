@@ -33,6 +33,42 @@ export function dummyValueForType(type: string): unknown {
 }
 
 /**
+ * The variable values the workflow's most recent run recorded, keyed by bare variable
+ * name (no `_global.` prefix). null when it never ran or Core can't be reached.
+ */
+export async function fetchLastRunValues(
+  taskIdentifier: string
+): Promise<{ values: Record<string, unknown>; asOf: string | null } | null> {
+  try {
+    const rows = await window.ipcRenderer.invoke(SEND.TABLE_DATA_FETCH, {
+      correlationId: generateIdentifier(),
+      payload: {
+        taskIdentifier,
+        sourceType: 'variables',
+        filterMode: 'latest',
+      },
+    });
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+    const values: Record<string, unknown> = {};
+    for (const row of rows) {
+      let value = row.value;
+      if (typeof value === 'string') {
+        try {
+          value = JSON.parse(value);
+        } catch {
+          // plain string value, not JSON — keep as-is
+        }
+      }
+      values[row.name] = value;
+    }
+    return { values, asOf: rows[0]?.pipeline_started_at ?? null };
+  } catch {
+    // No run history yet, or core unreachable.
+    return null;
+  }
+}
+
+/**
  * Variable values for editor previews: what the workflow's most recent run
  * recorded, falling back to a sample value by type for variables that never
  * ran (or are hidden, like secrets). Reads the `taskVariables` and
@@ -53,33 +89,10 @@ export function useLastRunVariables() {
     if (fetched) return;
     fetched = true;
     if (!taskIdentifier) return;
-    try {
-      const rows = await window.ipcRenderer.invoke(SEND.TABLE_DATA_FETCH, {
-        correlationId: generateIdentifier(),
-        payload: {
-          taskIdentifier,
-          sourceType: 'variables',
-          filterMode: 'latest',
-        },
-      });
-      if (!Array.isArray(rows) || rows.length === 0) return;
-      const values: Record<string, unknown> = {};
-      for (const row of rows) {
-        let value = row.value;
-        if (typeof value === 'string') {
-          try {
-            value = JSON.parse(value);
-          } catch {
-            // plain string value, not JSON — keep as-is
-          }
-        }
-        values[row.name] = value;
-      }
-      realValuesByName.value = values;
-      realDataAsOf.value = rows[0]?.pipeline_started_at ?? null;
-    } catch {
-      // No run history yet, or core unreachable — silently fall back to dummy data.
-    }
+    const latest = await fetchLastRunValues(taskIdentifier);
+    if (!latest) return;
+    realValuesByName.value = latest.values;
+    realDataAsOf.value = latest.asOf;
   }
 
   /** Every task variable (names as written, `_global.` included) → its preview value. */

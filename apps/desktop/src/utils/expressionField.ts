@@ -8,6 +8,17 @@ export interface ExpressionSuggestion {
   path: string;
   /** Short hint shown next to the path (what it is). */
   detail?: string;
+  /**
+   * A field inside another suggestion (`customer.address` inside `customer`): offered only
+   * once the query reaches `parent.` / `parent[`, so typing a top-level name isn't flooded
+   * with every nested path. Kept out of the `{}` menu too.
+   */
+  parent?: string;
+  /**
+   * Listed but can't be picked (a text field inside an object, in a field that needs an
+   * object): shown dimmed so the dot still tells what's inside. Its detail says why.
+   */
+  disabled?: boolean;
 }
 
 export interface ExpressionIssue {
@@ -73,18 +84,74 @@ export function insertBinding(
   return { text: next, caret: head.length };
 }
 
-/** Suggestions for the query at the caret: prefix matches first, then substring matches. */
+/** Whether a nested suggestion's parent has been typed out (`customer.` / `items[`). */
+function reachesParent(query: string, parent: string): boolean {
+  const p = parent.toLowerCase();
+  return query.startsWith(p) && (query[p.length] === '.' || query[p.length] === '[');
+}
+
+/**
+ * Suggestions for the query at the caret: prefix matches first, then substring matches.
+ * A nested suggestion (with a `parent`) only shows as a prefix match once the query has
+ * reached its parent — `{= customer.` lists customer's fields, `{= cus` doesn't.
+ */
 export function matchSuggestions(
   suggestions: ExpressionSuggestion[],
   query: string,
   limit = 8
 ): ExpressionSuggestion[] {
   const q = query.toLowerCase();
-  const starts = suggestions.filter((s) => s.path.toLowerCase().startsWith(q));
-  const contains = suggestions.filter(
-    (s) => !s.path.toLowerCase().startsWith(q) && s.path.toLowerCase().includes(q)
+  const offered = suggestions.filter((s) => !s.parent || reachesParent(q, s.parent));
+  const starts = offered.filter((s) => s.path.toLowerCase().startsWith(q));
+  const contains = offered.filter(
+    (s) => !s.parent && !s.path.toLowerCase().startsWith(q) && s.path.toLowerCase().includes(q)
   );
-  return [...starts, ...contains].slice(0, limit);
+  // Pickable ones first, so dimmed fields never crowd them out of the list.
+  const ranked = [...starts, ...contains];
+  return [...ranked.filter((s) => !s.disabled), ...ranked.filter((s) => s.disabled)].slice(0, limit);
+}
+
+/** The type name a value has, in variable-type terms (`array`, `object`, `string`…). */
+export function valueTypeOf(value: unknown): string {
+  if (value === null || value === undefined) return 'empty';
+  if (Array.isArray(value)) return 'array';
+  if (typeof value === 'object') return 'object';
+  return typeof value;
+}
+
+const PATH_KEY = /^[A-Za-z_]\w*$/;
+
+/**
+ * The fields inside a value, as paths under `root`: `root.key` for an object's keys and
+ * `root[0]` for an array's first item, `depth` levels down. Each carries its parent's path
+ * and the type of the value found there. Keys that can't be written after a dot (spaces,
+ * dashes, leading digits) are skipped — the field's autocomplete can't type `root["a b"]`.
+ */
+export function valuePaths(
+  root: string,
+  value: unknown,
+  { depth = 3, maxKeys = 50, maxPaths = 300 }: { depth?: number; maxKeys?: number; maxPaths?: number } = {}
+): { path: string; parent: string; type: string }[] {
+  const out: { path: string; parent: string; type: string }[] = [];
+  const walk = (path: string, v: unknown, level: number) => {
+    if (level >= depth || out.length >= maxPaths || v === null || typeof v !== 'object') return;
+    if (Array.isArray(v)) {
+      if (v.length === 0) return;
+      const item = `${path}[0]`;
+      out.push({ path: item, parent: path, type: valueTypeOf(v[0]) });
+      walk(item, v[0], level + 1);
+      return;
+    }
+    for (const key of Object.keys(v).filter((k) => PATH_KEY.test(k)).slice(0, maxKeys)) {
+      if (out.length >= maxPaths) return;
+      const child = `${path}.${key}`;
+      const childValue = (v as Record<string, unknown>)[key];
+      out.push({ path: child, parent: path, type: valueTypeOf(childValue) });
+      walk(child, childValue, level + 1);
+    }
+  };
+  walk(root, value, 0);
+  return out;
 }
 
 const KNOWN_CLASS = 'font-semibold text-primary';

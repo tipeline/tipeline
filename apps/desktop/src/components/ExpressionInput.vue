@@ -90,6 +90,8 @@ let composing = false;
 let menuSelection: { start: number; end: number } | null = null;
 
 const hasSuggestions = computed(() => props.suggestions !== undefined);
+// Nested fields (`customer.address`) come up only by typing past their parent's dot.
+const menuSuggestions = computed(() => (props.suggestions ?? []).filter((s) => !s.parent));
 const matches = computed(() =>
   query.value === null || !props.suggestions ? [] : matchSuggestions(props.suggestions, query.value)
 );
@@ -168,17 +170,20 @@ function onInput() {
 function onKeydown(e: KeyboardEvent) {
   if (e.isComposing) return;
   if (matches.value.length) {
-    if (e.key === 'ArrowDown') {
+    // Dimmed (disabled) options are shown but skipped: they sort last, so the pickable
+    // ones are 0..pickable-1 and the arrows cycle through those only.
+    const pickable = matches.value.filter((s) => !s.disabled).length;
+    if (pickable && e.key === 'ArrowDown') {
       e.preventDefault();
-      active.value = (active.value + 1) % matches.value.length;
+      active.value = (active.value + 1) % pickable;
       return;
     }
-    if (e.key === 'ArrowUp') {
+    if (pickable && e.key === 'ArrowUp') {
       e.preventDefault();
-      active.value = (active.value - 1 + matches.value.length) % matches.value.length;
+      active.value = (active.value - 1 + pickable) % pickable;
       return;
     }
-    if (e.key === 'Enter' || e.key === 'Tab') {
+    if (pickable && (e.key === 'Enter' || e.key === 'Tab')) {
       e.preventDefault();
       choose(matches.value[active.value]);
       return;
@@ -359,9 +364,9 @@ const fieldStyle = computed(() =>
         <Braces :size="size === 'sm' ? 12 : 14" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" class="max-h-72" @close-auto-focus="onMenuCloseAutoFocus">
-        <template v-if="suggestions && suggestions.length > 0">
+        <template v-if="menuSuggestions.length > 0">
           <DropdownMenuItem
-            v-for="s in suggestions"
+            v-for="s in menuSuggestions"
             :key="s.path"
             class="cursor-pointer gap-3 text-xs"
             @select="pickFromMenu(s.path)"
@@ -382,11 +387,16 @@ const fieldStyle = computed(() =>
         v-for="(s, i) in matches"
         :key="s.path"
         role="option"
-        :aria-selected="i === active"
-        class="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-xs"
-        :class="i === active ? 'bg-accent text-accent-foreground' : ''"
-        @mousedown.prevent="choose(s)"
-        @mouseenter="active = i"
+        :aria-selected="!s.disabled && i === active"
+        :aria-disabled="s.disabled || undefined"
+        class="flex items-center gap-2 rounded px-2 py-1 text-xs"
+        :class="
+          s.disabled
+            ? 'cursor-default text-muted-foreground opacity-60'
+            : ['cursor-pointer', i === active ? 'bg-accent text-accent-foreground' : '']
+        "
+        @mousedown.prevent="!s.disabled && choose(s)"
+        @mouseenter="!s.disabled && (active = i)"
       >
         <span class="flex-1 truncate font-mono">{{ s.path }}</span>
         <span v-if="s.detail" class="shrink-0 text-muted-foreground">{{ s.detail }}</span>
