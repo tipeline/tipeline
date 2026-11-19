@@ -51,6 +51,7 @@ export const validations = {
         token: {
           description:
             'Previously returned token to reuse (e.g. {= _global.googleGmailToken =}). Empty/missing, insufficient scopes, an unrefreshable expiry, or a refresh token the provider no longer accepts (invalid_grant: expired or revoked) all fall back to a fresh consent flow.',
+          variableType: 'oauthToken',
         },
         forceReauth: {
           description: 'Ignore the passed-in token and always request fresh consent.',

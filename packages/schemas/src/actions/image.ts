@@ -46,7 +46,11 @@ export const validations = {
       label: 'Resize', icon: '📐', category: 'transform', description: 'Resize by width/height.',
       returns: 'image',
       fieldConfig: {
-        image: { description: 'The image object to resize.' },
+        image: {
+          description: 'The image object to resize.',
+          valueField: true,
+          variableType: 'image',
+        },
         width: { description: 'Target width in pixels (optional, preserves aspect ratio if only one dimension given).' },
         height: { description: 'Target height in pixels (optional, preserves aspect ratio if only one dimension given).' },
       },
@@ -62,7 +66,11 @@ export const validations = {
       label: 'Rotate', icon: '🌀', category: 'transform', description: 'Rotate by angle (degrees).',
       returns: 'image',
       fieldConfig: {
-        image: { description: 'The image object to rotate.' },
+        image: {
+          description: 'The image object to rotate.',
+          valueField: true,
+          variableType: 'image',
+        },
         angle: { description: 'Rotation angle in degrees (clockwise).' },
       },
     }
@@ -76,7 +84,13 @@ export const validations = {
     {
       label: 'Flip (Vertical)', icon: '↕️', category: 'transform', description: 'Flip vertically.',
       returns: 'image',
-      fieldConfig: { image: { description: 'The image object to flip vertically.' } },
+      fieldConfig: {
+        image: {
+          description: 'The image object to flip vertically.',
+          valueField: true,
+          variableType: 'image',
+        },
+      },
     }
   ),
 
@@ -88,7 +102,13 @@ export const validations = {
     {
       label: 'Flop (Horizontal)', icon: '↔️', category: 'transform', description: 'Flip horizontally.',
       returns: 'image',
-      fieldConfig: { image: { description: 'The image object to flip horizontally.' } },
+      fieldConfig: {
+        image: {
+          description: 'The image object to flip horizontally.',
+          valueField: true,
+          variableType: 'image',
+        },
+      },
     }
   ),
 
@@ -113,7 +133,11 @@ export const validations = {
       label: 'Crop', icon: '✂️', category: 'transform', description: 'Crop to a rectangle.',
       returns: 'image',
       fieldConfig: {
-        image: { description: 'The image object to crop.' },
+        image: {
+          description: 'The image object to crop.',
+          valueField: true,
+          variableType: 'image',
+        },
         left: { description: 'Left offset in pixels from the image origin.' },
         top: { description: 'Top offset in pixels from the image origin.' },
         width: { description: 'Width of the crop area in pixels.' },
@@ -130,7 +154,13 @@ export const validations = {
     {
       label: 'Grayscale', icon: '⚫️', category: 'transform', description: 'Convert to grayscale.',
       returns: 'image',
-      fieldConfig: { image: { description: 'The image object to convert to grayscale.' } },
+      fieldConfig: {
+        image: {
+          description: 'The image object to convert to grayscale.',
+          valueField: true,
+          variableType: 'image',
+        },
+      },
     }
   ),
 
@@ -143,7 +173,11 @@ export const validations = {
       label: 'Blur', icon: '🌫️', category: 'transform', description: 'Gaussian blur with sigma.',
       returns: 'image',
       fieldConfig: {
-        image: { description: 'The image object to blur.' },
+        image: {
+          description: 'The image object to blur.',
+          valueField: true,
+          variableType: 'image',
+        },
         sigma: { description: 'Blur radius (0.3–1000). Higher values produce stronger blur.' },
       },
     }
@@ -157,7 +191,13 @@ export const validations = {
     {
       label: 'Sharpen', icon: '🧊', category: 'transform', description: 'Sharpen the image.',
       returns: 'image',
-      fieldConfig: { image: { description: 'The image object to sharpen.' } },
+      fieldConfig: {
+        image: {
+          description: 'The image object to sharpen.',
+          valueField: true,
+          variableType: 'image',
+        },
+      },
     }
   ),
 
@@ -169,7 +209,13 @@ export const validations = {
     {
       label: 'Invert', icon: '🔁', category: 'transform', description: 'Invert image colors.',
       returns: 'image',
-      fieldConfig: { image: { description: 'The image object to invert colors on.' } },
+      fieldConfig: {
+        image: {
+          description: 'The image object to invert colors on.',
+          valueField: true,
+          variableType: 'image',
+        },
+      },
     }
   ),
 
@@ -192,7 +238,11 @@ export const validations = {
       label: 'Tint', icon: '🎨', category: 'transform', description: 'Apply an RGB tint.',
       returns: 'image',
       fieldConfig: {
-        image: { description: 'The image object to tint.' },
+        image: {
+          description: 'The image object to tint.',
+          valueField: true,
+          variableType: 'image',
+        },
         r: { description: 'Red channel value (0–255).' },
         g: { description: 'Green channel value (0–255).' },
         b: { description: 'Blue channel value (0–255).' },
@@ -219,7 +269,11 @@ export const validations = {
       label: 'Modulate', icon: '🎛️', category: 'transform', description: 'Adjust brightness, saturation, hue.',
       returns: 'image',
       fieldConfig: {
-        image: { description: 'The image object to modulate.' },
+        image: {
+          description: 'The image object to modulate.',
+          valueField: true,
+          variableType: 'image',
+        },
         brightness: { description: 'Brightness multiplier (e.g. 1.5 = 50% brighter).' },
         saturation: { description: 'Saturation multiplier (e.g. 0.5 = half saturation).' },
         hue: { description: 'Hue rotation in degrees (0–360).' },
@@ -249,7 +303,11 @@ export const validations = {
       label: 'Composite', icon: '🧩', category: 'compose', description: 'Overlay another image at a position.',
       returns: 'image',
       fieldConfig: {
-        image: { description: 'The base image object to composite onto.' },
+        image: {
+          description: 'The base image object to composite onto.',
+          valueField: true,
+          variableType: 'image',
+        },
         overlay: { description: 'File path of the image to overlay.' },
         top: { description: 'Vertical offset from the top of the base image (pixels).' },
         left: { description: 'Horizontal offset from the left of the base image (pixels).' },
@@ -280,7 +338,11 @@ export const validations = {
       label: 'Extend Canvas', icon: '🖼️', category: 'compose', description: 'Add borders with a background color.',
       returns: 'image',
       fieldConfig: {
-        image: { description: 'The image object to extend.' },
+        image: {
+          description: 'The image object to extend.',
+          valueField: true,
+          variableType: 'image',
+        },
         top: { description: 'Pixels to add to the top.' },
         bottom: { description: 'Pixels to add to the bottom.' },
         left: { description: 'Pixels to add to the left.' },
@@ -303,7 +365,13 @@ export const validations = {
       description:
         'Read image metadata: format, width, height, etc. Also exif, decoded from the original file, e.g. exif.DateTimeOriginal ("2026-05-14 14:30:12"), exif.Make, exif.Model, exif.GPSInfo. exif is missing when the file has none.',
       returns: 'object',
-      fieldConfig: { image: { description: 'The image object to read metadata from.' } },
+      fieldConfig: {
+        image: {
+          description: 'The image object to read metadata from.',
+          valueField: true,
+          variableType: 'image',
+        },
+      },
     }
   ),
 
@@ -319,7 +387,11 @@ export const validations = {
       label: 'To Format', icon: '🔄', category: 'output', description: 'Convert to a different image format.',
       returns: 'image',
       fieldConfig: {
-        image: { description: 'The image object to convert.' },
+        image: {
+          description: 'The image object to convert.',
+          valueField: true,
+          variableType: 'image',
+        },
         format: { description: 'Target format: jpeg, png, webp, tiff, avif, gif, or heif.' },
       },
     }
@@ -334,7 +406,11 @@ export const validations = {
       label: 'To Buffer', icon: '📦', category: 'output', description: 'Render image into a base64-encoded string.',
       returns: 'string',
       fieldConfig: {
-        image: { description: 'The image object to render.' },
+        image: {
+          description: 'The image object to render.',
+          valueField: true,
+          variableType: 'image',
+        },
         format: { description: 'Optional output format for the buffer (jpeg, png, webp, etc.).' },
       },
     }
@@ -348,7 +424,11 @@ export const validations = {
     {
       label: 'To File', icon: '💾', category: 'output', description: 'Write the image to a file path.',
       fieldConfig: {
-        image: { description: 'The image object to write.' },
+        image: {
+          description: 'The image object to write.',
+          valueField: true,
+          variableType: 'image',
+        },
         output: { description: 'Destination file path (format inferred from extension).' },
       },
     }

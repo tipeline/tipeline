@@ -106,7 +106,11 @@ export const validations = {
     {
       label: 'Download File', icon: '📥', category: 'http', description: 'Download a URL to a local path.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'Browser instance to use for the download.' },
+        browser: {
+          description: 'Browser instance to use for the download.',
+          valueField: true,
+          variableType: 'browser',
+        },
         url: { description: 'URL of the file to download.' },
         path: { description: 'Local file path to save the downloaded file.' },
         allowPrivateNetwork: {

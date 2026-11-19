@@ -22,7 +22,13 @@ export const validations = {
     {
       label: 'Connect', icon: '🔌', category: 'ssh', description: 'Open an SSH connection.',
       returns: 'sshConnection',
-      fieldConfig: { config: { description: 'SSH connection configuration object or reference (host, port, user, private key, etc.).' } },
+      fieldConfig: {
+        config: {
+          description: 'SSH connection configuration object or reference (host, port, user, private key, etc.).',
+          valueField: true,
+          variableType: 'object',
+        },
+      },
     }
   ),
   exec: createValidationPair(
@@ -40,7 +46,11 @@ export const validations = {
       label: 'Exec', icon: '🖥️', category: 'ssh', description: 'Execute a command over SSH.',
       returns: 'object',
       fieldConfig: {
-        connection: { description: 'The active SSH connection object.' },
+        connection: {
+          description: 'The active SSH connection object.',
+          valueField: true,
+          variableType: 'sshConnection',
+        },
         command: { description: 'Shell command to execute on the remote host.' },
       },
     }
@@ -56,7 +66,13 @@ export const validations = {
     },
     {
       label: 'Close', icon: '🔒', category: 'ssh', description: 'Close an SSH connection.',
-      fieldConfig: { connection: { description: 'The active SSH connection to close.' } },
+      fieldConfig: {
+        connection: {
+          description: 'The active SSH connection to close.',
+          valueField: true,
+          variableType: 'sshConnection',
+        },
+      },
     }
   ),
 };

@@ -13,7 +13,7 @@ export type FieldConfig = Record<
     optionLabels?: Record<string, string>;
     /** For `variable-select` fields: restricts the picker to variables of this type. For text fields: what
      * the `{}` menu and `{{`/`{=` autocomplete offer. Omit to allow any type. */
-    variableType?: string;
+    variableType?: string | string[];
     /** For text fields: the param holds a value, not text — a reference picked as the whole value is `{= x =}`. */
     valueField?: boolean;
     /** For `variable-select` fields: base name suggested when creating a new variable inline (e.g. "index"). */
