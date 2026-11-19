@@ -22,13 +22,31 @@ export function parseLenientJsonObject(value: string): Record<string, any> | nul
   return null;
 }
 
-// Parses a JSON array string. Returns null if the string isn't valid JSON or
-// doesn't parse to an array.
+// Parses a JSON array string, tolerating unquoted keys in the objects inside it
+// (e.g. `[{ id: 1 }]`). Returns null if the string isn't valid JSON (even after
+// normalization) or doesn't parse to an array.
 export function parseLenientJsonArray(value: string): any[] | null {
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : null;
-  } catch {
-    return null;
+  for (const candidate of [value, quoteUnquotedKeys(value)]) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      // try the next candidate
+    }
   }
+  return null;
+}
+
+// Reads the text of an array variable's value field. Text that starts with `[`
+// is the code editor's JSON and must parse (null when it doesn't, so the form
+// can refuse it instead of saving it split on commas). Anything else is a
+// plain comma-separated list.
+export function parseArrayVariableText(value: string): any[] | null {
+  const str = value.trim();
+  if (!str) return [];
+  if (str.startsWith('[')) return parseLenientJsonArray(str);
+  return str
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
 }

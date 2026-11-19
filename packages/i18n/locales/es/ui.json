@@ -1227,6 +1227,7 @@
       "name": "Nombre",
       "namePlaceholder": "mi_variable",
       "nameDuplicate": "Ya existe una variable con este nombre",
+      "invalidArray": "Debe ser un array JSON válido, por ejemplo [1, 2] o [\"a\", \"b\"]",
       "label": "Etiqueta",
       "labelPlaceholder": "Nombre mostrado en el formulario de resumen",
       "description": "Descripción",

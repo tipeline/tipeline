@@ -23,7 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { coreValidations } from '@tipeline/schemas';
 import VariableComponent from '@/components/variable/VariableComponent.vue';
 import ScrollFade from '@/components/ui/ScrollFade.vue';
-import { parseLenientJsonObject } from '@/utils/lenientJson';
+import { parseArrayVariableText, parseLenientJsonObject } from '@/utils/lenientJson';
 
 const { typeOptions, createSchema } = coreValidations.varObject;
 type TypeOption = (typeof typeOptions)[number];
@@ -60,7 +60,7 @@ const formSchema = computed(() => {
   );
 });
 
-const { handleSubmit, setFieldValue } = useForm({
+const { handleSubmit, setFieldValue, setFieldError } = useForm({
   validationSchema: formSchema,
   initialValues: {
     type: 'string',
@@ -92,12 +92,14 @@ const onSubmit = handleSubmit((values) => {
   } else if (values.type === 'object') {
     value = trimmedRaw ? (parseLenientJsonObject(rawValue as string) ?? rawValue) : undefined;
   } else if (values.type === 'array') {
-    const str = (rawValue as string).trim();
-    try {
-      value = JSON.parse(str);
-    } catch {
-      value = str.split(',').map((s: string) => s.trim()).filter(Boolean);
+    const parsed = Array.isArray(rawValue)
+      ? rawValue
+      : parseArrayVariableText(String(rawValue ?? ''));
+    if (parsed === null) {
+      setFieldError('value', t('variable.form.invalidArray'));
+      return;
     }
+    value = parsed;
   } else if (values.type === 'date') {
     value = trimmedRaw ? rawValue : undefined;
   } else {
