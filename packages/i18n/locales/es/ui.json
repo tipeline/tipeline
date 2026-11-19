@@ -1893,7 +1893,13 @@
       "rawNotAlone": "Una referencia directa {raw} debe ser el valor completo; dentro de un texto, usa {template}",
       "rawPath": "Una referencia directa {raw} solo puede contener una ruta, como state.value",
       "invalid": "Plantilla no válida: {detail}"
-    }
+    },
+    "containerFields": "{type} · {count} campo dentro | {type} · {count} campos dentro",
+    "unknownFields": "{type} · ejecuta una vez para ver sus campos",
+    "search": "Buscar campos…",
+    "back": "Atrás",
+    "open": "Abrir {name}",
+    "noMatches": "Ningún campo coincide"
   },
   "dataTable": {
     "sortHint": "Clic para ordenar · Mayús+clic para añadir una columna",

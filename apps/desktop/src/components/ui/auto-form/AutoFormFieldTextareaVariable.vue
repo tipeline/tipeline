@@ -21,6 +21,7 @@ const { value, setValue } = useField<any>(props.fieldName)
       multiline
       :disabled="disabled"
       :placeholder="config?.inputProps?.placeholder"
+      :variable-type="config?.variableType"
       @update:model-value="setValue"
     />
     <FormDescription v-if="config?.description">{{ config.description }}</FormDescription>

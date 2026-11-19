@@ -57,7 +57,7 @@ export const validations = {
       returns: 'boolean',
       fieldConfig: {
         host: { description: 'SMTP server hostname or IP address.' },
-        port: { description: 'SMTP server port (e.g. 465, 587).', component: 'string' },
+        port: { description: 'SMTP server port (e.g. 465, 587).', component: 'string', variableType: 'number' },
         secure: { description: 'Use TLS for the connection. True for port 465, false for STARTTLS.' },
         user: { description: 'SMTP authentication username.' },
         pass: { description: 'SMTP authentication password.' },

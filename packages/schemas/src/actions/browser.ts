@@ -1041,7 +1041,7 @@ export const validations = {
           valueField: true,
           variableType: 'browser',
         },
-        recorder: { description: 'The recorder object returned by Start Screencast.' },
+        recorder: { description: 'The recorder object returned by Start Screencast.', variableType: 'object' },
       },
     }
   ),

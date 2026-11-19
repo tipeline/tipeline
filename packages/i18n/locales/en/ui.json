@@ -1893,7 +1893,13 @@
       "rawNotAlone": "A raw reference {raw} must be the whole value — inside text, use {template}",
       "rawPath": "A raw reference {raw} can only hold a path, like state.value",
       "invalid": "Invalid template: {detail}"
-    }
+    },
+    "containerFields": "{type} · {count} field inside | {type} · {count} fields inside",
+    "unknownFields": "{type} · run once to see its fields",
+    "search": "Search fields…",
+    "back": "Back",
+    "open": "Open {name}",
+    "noMatches": "No matching fields"
   },
   "dataTable": {
     "sortHint": "Click to sort · Shift+click to add a column",
