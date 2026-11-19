@@ -5,7 +5,7 @@ export default {
 </script>
 
 <script setup>
-import { ref, computed, inject, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { ref, computed, inject, provide, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useDragAndDrop } from '@formkit/drag-and-drop/vue';
 import { animations, state as dragState, isDragState } from '@formkit/drag-and-drop';
@@ -337,6 +337,23 @@ const END_DROP_MARK = '__dropAtEnd';
 const endZoneActive = ref(false);
 let pendingEndDrop = null;
 
+// Only one marker for where the step will land. FormKit's faded preview row
+// is one; the end zone's dashed box is the other. When the preview is already
+// the last top-level step, it is the marker and the box stays hidden.
+// Anywhere else (between steps, inside a loop or if), hovering the end zone
+// hides the preview and shows the box. Nested canvases read the top-level
+// end zone's state through provide/inject.
+function isPreview(item) {
+  return isDragging.value && (!item.identifier || item.identifier === draggedIdentifier.value);
+}
+const previewIsLast = computed(() => {
+  const last = localItems.value[localItems.value.length - 1];
+  return !!last && isPreview(last);
+});
+const showEndZoneBox = computed(() => endZoneActive.value && !previewIsLast.value);
+if (!props.isNested) provide('canvasEndZoneBox', showEndZoneBox);
+const endZoneBox = props.isNested ? inject('canvasEndZoneBox', ref(false)) : showEndZoneBox;
+
 // The step being dragged, when the drag is one of ours: FormKit drags between
 // the actions library and the canvas lists all share the 'nested' group.
 function draggedStep() {
@@ -561,12 +578,14 @@ function onOpenSubtaskBuilder(item) {
       ref="containerRef"
       class="draggable-container list-none m-0 relative rounded-[var(--radius)] space-y-2"
       :class="localItems.length === 0
-        ? (isNested ? 'min-h-[48px]' : 'min-h-[200px]')
+        ? (isNested ? 'min-h-[48px]' : 'min-h-[200px] flex-1')
         : (isNested ? '' : 'min-h-[62px]')"
       @keydown="handleKeydown"
     >
       <!-- Empty-state sits inside the <ul> so elementFromPoint walks up through
-           the <ul> (the registered drop zone). FormKit ignores it via `draggable`. -->
+           the <ul> (the registered drop zone). FormKit ignores it via `draggable`.
+           With no steps the top-level <ul> fills the canvas (flex-1), since the
+           drop area below the last step only exists once there is a step. -->
       <div
         v-if="localItems.length === 0"
         class="canvas-empty-state select-none pointer-events-none"
@@ -593,8 +612,8 @@ function onOpenSubtaskBuilder(item) {
         :data-id="item.identifier"
         class="draggable-item cursor-pointer"
         :class="{
-          'drop-preview': isDragging
-            && (!item.identifier || item.identifier === draggedIdentifier),
+          'drop-preview': isPreview(item),
+          hidden: endZoneBox && isPreview(item),
         }"
       >
         <div class="relative">
@@ -667,7 +686,7 @@ function onOpenSubtaskBuilder(item) {
       @drop="onEndZoneDrop"
     >
       <div
-        v-if="endZoneActive"
+        v-if="showEndZoneBox"
         class="ml-5 flex items-center justify-center h-[48px] text-xs text-muted-foreground border border-dashed border-primary/60 bg-primary/5 rounded pointer-events-none select-none"
       >
         {{ t('tasks.builder.canvas.dropAtEnd') }}

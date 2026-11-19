@@ -154,7 +154,8 @@
     },
     "continue": {
       "title": "Continuar",
-      "hint": "Primero los destacados, luego los abiertos recientemente",
+      "starred": "Destacados",
+      "recent": "Abiertos recientemente",
       "ran": "Se ejecutó {time}",
       "opened": "Abierto {time}",
       "neverRan": "Nunca ejecutado",
@@ -1226,6 +1227,7 @@
       "name": "Nombre",
       "namePlaceholder": "mi_variable",
       "nameDuplicate": "Ya existe una variable con este nombre",
+      "invalidArray": "Debe ser un array JSON válido, por ejemplo [1, 2] o [\"a\", \"b\"]",
       "label": "Etiqueta",
       "labelPlaceholder": "Nombre mostrado en el formulario de resumen",
       "description": "Descripción",
@@ -1884,6 +1886,7 @@
     "empty": "Aún no hay nada que referenciar",
     "unknownVariable": "Variable desconocida “{name}”: se resolverá en silencio como un valor vacío",
     "valueAsText": "“{name}” es de tipo {type}: aquí se convierte en texto",
+    "wrongType": "{type} · se necesita {wanted}",
     "valueAsTextHint": "Se pasa como texto, no como el {type} en sí.",
     "valueAsTextFix": "Usar {raw}",
     "syntax": {
@@ -1891,7 +1894,15 @@
       "rawNotAlone": "Una referencia directa {raw} debe ser el valor completo; dentro de un texto, usa {template}",
       "rawPath": "Una referencia directa {raw} solo puede contener una ruta, como state.value",
       "invalid": "Plantilla no válida: {detail}"
-    }
+    },
+    "containerFields": "{type} · {count} campo dentro | {type} · {count} campos dentro",
+    "unknownFields": "{type} · ejecuta una vez para ver sus campos",
+    "search": "Buscar campos…",
+    "back": "Atrás",
+    "open": "Abrir {name}",
+    "noMatches": "Ningún campo coincide",
+    "firstItem": "primer elemento · {detail}",
+    "everyItemNote": "Las listas muestran su primer elemento. Para usar todos, recorre la lista con un paso For Each."
   },
   "dataTable": {
     "sortHint": "Clic para ordenar · Mayús+clic para añadir una columna",

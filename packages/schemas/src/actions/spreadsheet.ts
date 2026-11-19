@@ -49,7 +49,11 @@ export const validations = {
       returns: 'boolean',
       fieldConfig: {
         path: { description: 'Destination path to save the workbook.' },
-        workbook: { description: 'The workbook object to save.' },
+        workbook: {
+          description: 'The workbook object to save.',
+          valueField: true,
+          variableType: 'workbook',
+        },
       },
     }
   ),
@@ -77,7 +81,13 @@ export const validations = {
     {
       label: 'Get Sheet Names', icon: '🗂️', category: 'sheet', description: 'List all sheets in the workbook.',
       returns: 'array',
-      fieldConfig: { workbook: { description: 'The workbook object to list sheets from.' } },
+      fieldConfig: {
+        workbook: {
+          description: 'The workbook object to list sheets from.',
+          valueField: true,
+          variableType: 'workbook',
+        },
+      },
     }
   ),
 
@@ -90,7 +100,11 @@ export const validations = {
       label: 'Add Sheet', icon: '➕', category: 'sheet', description: 'Add a new sheet by name.',
       returns: 'workbook',
       fieldConfig: {
-        workbook: { description: 'The workbook object to add a sheet to.' },
+        workbook: {
+          description: 'The workbook object to add a sheet to.',
+          valueField: true,
+          variableType: 'workbook',
+        },
         name: { description: 'Name for the new sheet.' },
       },
     }
@@ -105,7 +119,11 @@ export const validations = {
       label: 'Delete Sheet', icon: '➖', category: 'sheet', description: 'Remove a sheet by name.',
       returns: 'workbook',
       fieldConfig: {
-        workbook: { description: 'The workbook object to remove a sheet from.' },
+        workbook: {
+          description: 'The workbook object to remove a sheet from.',
+          valueField: true,
+          variableType: 'workbook',
+        },
         name: { description: 'Name of the sheet to delete.' },
       },
     }
@@ -120,7 +138,11 @@ export const validations = {
       label: 'Rename Sheet', icon: '✏️', category: 'sheet', description: 'Rename a sheet.',
       returns: 'workbook',
       fieldConfig: {
-        workbook: { description: 'The workbook object containing the sheet.' },
+        workbook: {
+          description: 'The workbook object containing the sheet.',
+          valueField: true,
+          variableType: 'workbook',
+        },
         name: { description: 'Current name of the sheet to rename.' },
         newName: { description: 'New name for the sheet.' },
       },
@@ -136,7 +158,11 @@ export const validations = {
       label: 'To JSON', icon: '{}', category: 'sheet', description: 'Convert sheet to an array of row objects keyed by the first-row headers.',
       returns: 'array',
       fieldConfig: {
-        workbook: { description: 'The workbook object.' },
+        workbook: {
+          description: 'The workbook object.',
+          valueField: true,
+          variableType: 'workbook',
+        },
         sheet: { description: 'Name of the sheet to convert.' },
       },
     }
@@ -151,7 +177,11 @@ export const validations = {
       label: 'To Array', icon: '[]', category: 'sheet', description: 'Convert sheet to a 2D array including the header row.',
       returns: 'array',
       fieldConfig: {
-        workbook: { description: 'The workbook object.' },
+        workbook: {
+          description: 'The workbook object.',
+          valueField: true,
+          variableType: 'workbook',
+        },
         sheet: { description: 'Name of the sheet to convert.' },
       },
     }
@@ -169,7 +199,11 @@ export const validations = {
       label: 'Append Row', icon: '➕', category: 'row', description: 'Append a new row after the last used row.',
       returns: 'workbook',
       fieldConfig: {
-        workbook: { description: 'The workbook object.' },
+        workbook: {
+          description: 'The workbook object.',
+          valueField: true,
+          variableType: 'workbook',
+        },
         sheet: { description: 'Name of the sheet.' },
         values: { description: 'Array of values to append as a new row.' },
       },
@@ -185,7 +219,11 @@ export const validations = {
       label: 'Row Count', icon: '#️⃣', category: 'row', description: 'Return the number of used rows in a sheet.',
       returns: 'number',
       fieldConfig: {
-        workbook: { description: 'The workbook object.' },
+        workbook: {
+          description: 'The workbook object.',
+          valueField: true,
+          variableType: 'workbook',
+        },
         sheet: { description: 'Name of the sheet to count rows in.' },
       },
     }
@@ -203,7 +241,11 @@ export const validations = {
       label: 'Read Cell', icon: '🔍', category: 'cell', description: 'Read a cell value by row and column index.',
       returns: 'any',
       fieldConfig: {
-        workbook: { description: 'The workbook object.' },
+        workbook: {
+          description: 'The workbook object.',
+          valueField: true,
+          variableType: 'workbook',
+        },
         sheet: { description: 'Name of the sheet.' },
         row: { description: 'Zero-based row index.' },
         col: { description: 'Zero-based column index.' },
@@ -220,7 +262,11 @@ export const validations = {
       label: 'Write Cell', icon: '✍️', category: 'cell', description: 'Write a value to a cell by row and column index.',
       returns: 'workbook',
       fieldConfig: {
-        workbook: { description: 'The workbook object.' },
+        workbook: {
+          description: 'The workbook object.',
+          valueField: true,
+          variableType: 'workbook',
+        },
         sheet: { description: 'Name of the sheet.' },
         row: { description: 'Zero-based row index.' },
         col: { description: 'Zero-based column index.' },
@@ -238,7 +284,11 @@ export const validations = {
       label: 'Clear Cell', icon: '🧹', category: 'cell', description: 'Delete the value from a cell by row and column index.',
       returns: 'workbook',
       fieldConfig: {
-        workbook: { description: 'The workbook object.' },
+        workbook: {
+          description: 'The workbook object.',
+          valueField: true,
+          variableType: 'workbook',
+        },
         sheet: { description: 'Name of the sheet.' },
         row: { description: 'Zero-based row index.' },
         col: { description: 'Zero-based column index.' },
@@ -270,7 +320,11 @@ export const validations = {
       label: 'Read Cell by Ref', icon: '🔎', category: 'cell', description: 'Read a cell value by A1-style reference (e.g. "B3").',
       returns: 'any',
       fieldConfig: {
-        workbook: { description: 'The workbook object.' },
+        workbook: {
+          description: 'The workbook object.',
+          valueField: true,
+          variableType: 'workbook',
+        },
         sheet: { description: 'Name of the sheet.' },
         cellRef: { description: 'A1-style cell reference (e.g. "B3").' },
       },
@@ -296,7 +350,11 @@ export const validations = {
       label: 'Set Formula', icon: '🧮', category: 'cell', description: 'Write a formula to a cell by A1-style reference.',
       returns: 'workbook',
       fieldConfig: {
-        workbook: { description: 'The workbook object.' },
+        workbook: {
+          description: 'The workbook object.',
+          valueField: true,
+          variableType: 'workbook',
+        },
         sheet: { description: 'Name of the sheet.' },
         cellRef: { description: 'A1-style cell reference to write the formula to (e.g. "C5").' },
         formula: { description: 'Spreadsheet formula to write (e.g. "=SUM(A1:A10)").' },
@@ -326,7 +384,11 @@ export const validations = {
       label: 'Read Range', icon: '📖', category: 'range', description: 'Read all cell values in a rectangular range as a 2D array.',
       returns: 'array',
       fieldConfig: {
-        workbook: { description: 'The workbook object.' },
+        workbook: {
+          description: 'The workbook object.',
+          valueField: true,
+          variableType: 'workbook',
+        },
         sheet: { description: 'Name of the sheet.' },
         startCell: { description: 'Top-left cell of the range (A1-style, e.g. "A1").' },
         endCell: { description: 'Bottom-right cell of the range (A1-style, e.g. "D10").' },
@@ -353,7 +415,11 @@ export const validations = {
       label: 'Write Range', icon: '✍️', category: 'range', description: 'Write a 2D array of values starting from a cell reference.',
       returns: 'workbook',
       fieldConfig: {
-        workbook: { description: 'The workbook object.' },
+        workbook: {
+          description: 'The workbook object.',
+          valueField: true,
+          variableType: 'workbook',
+        },
         sheet: { description: 'Name of the sheet.' },
         startCell: { description: 'Top-left cell to begin writing from (A1-style).' },
         values: { description: '2D array of values to write (rows × columns).' },
@@ -380,7 +446,11 @@ export const validations = {
       label: 'Clear Range', icon: '🧹', category: 'range', description: 'Delete all cell values in a rectangular range.',
       returns: 'workbook',
       fieldConfig: {
-        workbook: { description: 'The workbook object.' },
+        workbook: {
+          description: 'The workbook object.',
+          valueField: true,
+          variableType: 'workbook',
+        },
         sheet: { description: 'Name of the sheet.' },
         startCell: { description: 'Top-left cell of the range to clear (A1-style).' },
         endCell: { description: 'Bottom-right cell of the range to clear (A1-style).' },
@@ -397,7 +467,11 @@ export const validations = {
       label: 'Used Range', icon: '📐', category: 'range', description: "Return the A1:XN reference string for the sheet's used range.",
       returns: 'string',
       fieldConfig: {
-        workbook: { description: 'The workbook object.' },
+        workbook: {
+          description: 'The workbook object.',
+          valueField: true,
+          variableType: 'workbook',
+        },
         sheet: { description: 'Name of the sheet to get the used range for.' },
       },
     }

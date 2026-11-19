@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useActionT } from '@/composables/useActionT';
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
+import { fetchLastRunValues } from '@/composables/useLastRunVariables';
 import { z } from 'zod';
 import { useFieldValue, useFormValues, useSetFieldValue } from 'vee-validate';
 import { ListTree } from 'lucide-vue-next';
@@ -381,6 +382,43 @@ function handleOpenChange(newOpen: boolean) {
 }
 
 provide('taskVariables', variableOptions);
+
+// What the object and list variables hold, so `{= customer.` can offer customer's fields:
+// the last run's value, else the value the variable was declared with. Fetched each time
+// the dialog opens (a run may have happened since), once for every field in it.
+const lastRunValues = ref<Record<string, unknown> | null>(null);
+watch(
+  () => props.open,
+  async (isOpen) => {
+    if (!isOpen || !props.taskIdentifier) return;
+    lastRunValues.value = (await fetchLastRunValues(props.taskIdentifier))?.values ?? null;
+  },
+  { immediate: true }
+);
+const parseValue = (value: unknown) => {
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+};
+const SHAPED_TYPES = new Set(['object', 'array']);
+const variableValues = computed(() => {
+  const out: Record<string, unknown> = {};
+  for (const v of props.variables as any[]) {
+    if (!SHAPED_TYPES.has(v.type)) continue;
+    const value = lastRunValues.value?.[v.name] ?? parseValue(v.value);
+    if (value !== undefined && value !== null) out[v.name] = value;
+  }
+  for (const v of props.globalVariables as any[]) {
+    if (!SHAPED_TYPES.has(v.type)) continue;
+    const value = parseValue(v.value);
+    if (value !== undefined && value !== null) out[`_global.${v.name}`] = value;
+  }
+  return out;
+});
+provide('taskVariableValues', variableValues);
 provide('taskIdentifier', props.taskIdentifier);
 
 const pluginHasErrors = computed(() => {

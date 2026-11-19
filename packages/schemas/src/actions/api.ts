@@ -51,6 +51,7 @@ export const validations = {
         token: {
           description:
             'Previously returned token to reuse (e.g. {= _global.googleGmailToken =}). Empty/missing, insufficient scopes, an unrefreshable expiry, or a refresh token the provider no longer accepts (invalid_grant: expired or revoked) all fall back to a fresh consent flow.',
+          variableType: 'oauthToken',
         },
         forceReauth: {
           description: 'Ignore the passed-in token and always request fresh consent.',
@@ -180,7 +181,7 @@ export const validations = {
       description: 'Call a method from previously loaded OpenAPI endpoints.',
       returns: 'object',
       fieldConfig: {
-        endpoints: { description: 'Reference to the loaded OpenAPI endpoints object.' },
+        endpoints: { description: 'Reference to the loaded OpenAPI endpoints object.', variableType: 'object' },
         method: { description: 'Name of the endpoint method to invoke.' },
         args: { description: 'Path arguments required by the endpoint.' },
         parameters: { description: 'Query parameters for the endpoint call.' },

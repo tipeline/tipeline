@@ -47,7 +47,11 @@ export const validations = {
       label: 'Query', icon: '🧾', category: 'database', description: 'Run a SQL statement.',
       returns: 'array',
       fieldConfig: {
-        connection: { description: 'The active database connection object.' },
+        connection: {
+          description: 'The active database connection object.',
+          valueField: true,
+          variableType: 'dbConnection',
+        },
         sql: { component: 'codemirror', language: 'sql', description: 'SQL statement to execute (SELECT, INSERT, UPDATE, DELETE, etc.). Use `?` placeholders for any value that comes from a variable, and pass that value through `bindings` instead of substituting it into this string directly — that keeps it safely parameterized instead of interpolated as raw SQL text.' },
         bindings: { description: 'Values to bind to the `?` placeholders in `sql`, in order. Prefer this over embedding {{ }}/{= =} template values directly into `sql`.' },
       },
@@ -66,7 +70,11 @@ export const validations = {
     {
       label: 'Close', icon: '🔒', category: 'database', description: 'Close a database connection.',
       fieldConfig: {
-        connection: { description: 'The active database connection to close.' },
+        connection: {
+          description: 'The active database connection to close.',
+          valueField: true,
+          variableType: 'dbConnection',
+        },
       },
     }
   ),

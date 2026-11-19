@@ -8,6 +8,28 @@ export interface ExpressionSuggestion {
   path: string;
   /** Short hint shown next to the path (what it is). */
   detail?: string;
+  /**
+   * A field inside another suggestion (`customer.address` inside `customer`): offered only
+   * once the query reaches `parent.` / `parent[`, so typing a top-level name isn't flooded
+   * with every nested path. Kept out of the `{}` menu too.
+   */
+  parent?: string;
+  /**
+   * Listed but can't be picked (a text field inside an object, in a field that needs an
+   * object): shown dimmed so the dot still tells what's inside. Its detail says why.
+   */
+  disabled?: boolean;
+  /**
+   * Not a value this field takes, but it holds fields that are (an object in a text field
+   * with text inside): picking it opens it — the `{}` menu shows its fields, autocomplete
+   * types `customer.` — instead of inserting it. Its detail says how many fields fit.
+   */
+  container?: boolean;
+  /**
+   * A line shown with the level this row is in — above it in the `{}` menu, under the
+   * autocomplete list — e.g. that a list's `[0]` is only its first item.
+   */
+  note?: string;
 }
 
 export interface ExpressionIssue {
@@ -73,18 +95,137 @@ export function insertBinding(
   return { text: next, caret: head.length };
 }
 
-/** Suggestions for the query at the caret: prefix matches first, then substring matches. */
+/**
+ * Replaces the query at the caret with `prefix` (`customer.` / `orders[`) and leaves the
+ * binding open, so autocomplete goes on with the container's fields.
+ */
+export function insertPathPrefix(
+  text: string,
+  caret: number,
+  prefix: string
+): { text: string; caret: number } {
+  const q = bindingQueryAt(text, caret);
+  if (!q) return { text, caret };
+  const head = `${text.slice(0, q.start)} ${prefix}`;
+  return { text: `${head}${text.slice(caret)}`, caret: head.length };
+}
+
+/** How a container's fields continue its path: `customer.` or `orders[`. */
+export function containerPrefix(suggestions: ExpressionSuggestion[], path: string): string {
+  const child = suggestions.find((s) => s.parent === path);
+  return child?.path[path.length] === '[' ? `${path}[` : `${path}.`;
+}
+
+/** One row of the `{}` menu: `opens` when choosing the row shows the fields inside. */
+export interface MenuEntry {
+  suggestion: ExpressionSuggestion;
+  /** The row's own pick opens it (a container). */
+  opens: boolean;
+  /** Pickable, and also has fields worth opening (an object in an object field). */
+  canOpen: boolean;
+}
+
+/**
+ * The `{}` menu's rows. With a search, every pickable path containing it — nested ones
+ * too, prefix matches first, at most `limit`. Without one, one level: the top level, or
+ * the fields directly inside `path` (pickable and containers first, dimmed ones last).
+ */
+export function menuEntries(
+  suggestions: ExpressionSuggestion[],
+  { path = null, search = '', limit = 30 }: { path?: string | null; search?: string; limit?: number } = {}
+): MenuEntry[] {
+  const openable = new Set(
+    suggestions.filter((s) => s.parent && !s.disabled).map((s) => s.parent as string)
+  );
+  const entry = (s: ExpressionSuggestion): MenuEntry => ({
+    suggestion: s,
+    opens: !!s.container,
+    canOpen: !s.container && !s.disabled && openable.has(s.path),
+  });
+  const q = search.trim().toLowerCase();
+  if (q) {
+    const found = suggestions.filter(
+      (s) => !s.disabled && !s.container && s.path.toLowerCase().includes(q)
+    );
+    const starts = (s: ExpressionSuggestion) => {
+      const p = s.path.toLowerCase();
+      // A field's own name counts too: `city` starts `customer.address.city`'s last part.
+      return p.startsWith(q) || p.split(/[.[]/).pop()!.startsWith(q);
+    };
+    return [...found.filter(starts), ...found.filter((s) => !starts(s))].slice(0, limit).map(entry);
+  }
+  const level = suggestions.filter((s) => (path === null ? !s.parent : s.parent === path));
+  return [...level.filter((s) => !s.disabled), ...level.filter((s) => s.disabled)].map(entry);
+}
+
+/** Whether a nested suggestion's parent has been typed out (`customer.` / `items[`). */
+function reachesParent(query: string, parent: string): boolean {
+  const p = parent.toLowerCase();
+  return query.startsWith(p) && (query[p.length] === '.' || query[p.length] === '[');
+}
+
+/**
+ * Suggestions for the query at the caret: prefix matches first, then substring matches.
+ * A nested suggestion (with a `parent`) only shows as a prefix match once the query has
+ * reached its parent — `{= customer.` lists customer's fields, `{= cus` doesn't.
+ */
 export function matchSuggestions(
   suggestions: ExpressionSuggestion[],
   query: string,
   limit = 8
 ): ExpressionSuggestion[] {
   const q = query.toLowerCase();
-  const starts = suggestions.filter((s) => s.path.toLowerCase().startsWith(q));
-  const contains = suggestions.filter(
-    (s) => !s.path.toLowerCase().startsWith(q) && s.path.toLowerCase().includes(q)
+  const offered = suggestions.filter((s) => !s.parent || reachesParent(q, s.parent));
+  const starts = offered.filter((s) => s.path.toLowerCase().startsWith(q));
+  const contains = offered.filter(
+    (s) => !s.parent && !s.path.toLowerCase().startsWith(q) && s.path.toLowerCase().includes(q)
   );
-  return [...starts, ...contains].slice(0, limit);
+  // Pickable ones first, so dimmed fields never crowd them out of the list.
+  const ranked = [...starts, ...contains];
+  return [...ranked.filter((s) => !s.disabled), ...ranked.filter((s) => s.disabled)].slice(0, limit);
+}
+
+/** The type name a value has, in variable-type terms (`array`, `object`, `string`…). */
+export function valueTypeOf(value: unknown): string {
+  if (value === null || value === undefined) return 'empty';
+  if (Array.isArray(value)) return 'array';
+  if (typeof value === 'object') return 'object';
+  return typeof value;
+}
+
+const PATH_KEY = /^[A-Za-z_]\w*$/;
+
+/**
+ * The fields inside a value, as paths under `root`: `root.key` for an object's keys and
+ * `root[0]` for an array's first item, `depth` levels down. Each carries its parent's path
+ * and the type of the value found there. Keys that can't be written after a dot (spaces,
+ * dashes, leading digits) are skipped — the field's autocomplete can't type `root["a b"]`.
+ */
+export function valuePaths(
+  root: string,
+  value: unknown,
+  { depth = 3, maxKeys = 50, maxPaths = 300 }: { depth?: number; maxKeys?: number; maxPaths?: number } = {}
+): { path: string; parent: string; type: string }[] {
+  const out: { path: string; parent: string; type: string }[] = [];
+  const walk = (path: string, v: unknown, level: number) => {
+    if (level >= depth || out.length >= maxPaths || v === null || typeof v !== 'object') return;
+    if (Array.isArray(v)) {
+      if (v.length === 0) return;
+      const item = `${path}[0]`;
+      out.push({ path: item, parent: path, type: valueTypeOf(v[0]) });
+      walk(item, v[0], level + 1);
+      return;
+    }
+    for (const key of Object.keys(v).filter((k) => PATH_KEY.test(k)).slice(0, maxKeys)) {
+      if (out.length >= maxPaths) return;
+      const child = `${path}.${key}`;
+      const childValue = (v as Record<string, unknown>)[key];
+      out.push({ path: child, parent: path, type: valueTypeOf(childValue) });
+      walk(child, childValue, level + 1);
+    }
+  };
+  walk(root, value, 0);
+  return out;
 }
 
 const KNOWN_CLASS = 'font-semibold text-primary';

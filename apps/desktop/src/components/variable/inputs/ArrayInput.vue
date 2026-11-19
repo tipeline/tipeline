@@ -7,6 +7,7 @@ import { useColorMode } from '@vueuse/core';
 import { LayoutListIcon, Code2Icon } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import ArrayUIInput from './ArrayUIInput.vue';
+import { parseLenientJsonArray } from '@/utils/lenientJson';
 
 type Mode = 'ui' | 'raw';
 
@@ -38,19 +39,15 @@ const serialized = computed(() =>
 
 const isValidArray = computed(() => {
   if (!serialized.value) return true;
-  try {
-    return Array.isArray(JSON.parse(serialized.value));
-  } catch {
-    return false;
-  }
+  return parseLenientJsonArray(serialized.value) !== null;
 });
 
 const formatManually = () => {
   if (!serialized.value?.trim()) return;
-  try {
-    const formatted = JSON.stringify(JSON.parse(serialized.value), null, 2);
-    if (formatted !== serialized.value) emit('update:modelValue', formatted);
-  } catch {}
+  const parsed = parseLenientJsonArray(serialized.value);
+  if (parsed === null) return;
+  const formatted = JSON.stringify(parsed, null, 2);
+  if (formatted !== serialized.value) emit('update:modelValue', formatted);
 };
 </script>
 
@@ -81,8 +78,20 @@ const formatManually = () => {
       </Button>
     </div>
 
+    <!-- Broken code would show as an empty list, and adding an item would
+         then overwrite it, so ask for a fix instead. -->
+    <p
+      v-if="mode === 'ui' && !isValidArray"
+      class="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground"
+    >
+      The code isn't a valid JSON array, so it can't be shown as items.
+      <button type="button" class="text-blue-500 hover:text-blue-600" @click="mode = 'raw'">
+        Fix it in the code editor
+      </button>
+    </p>
+
     <ArrayUIInput
-      v-if="mode === 'ui'"
+      v-else-if="mode === 'ui'"
       :model-value="modelValue"
       @update:model-value="emit('update:modelValue', $event)"
     />

@@ -55,7 +55,9 @@ const SKIPPED_FIELDS = new Set([
   'compareAs',
 ]);
 
-const SKIPPED_COMPONENTS = new Set(['browser-select']);
+// The browser a step drives is the same on every step of a scraping workflow — it says
+// nothing about what this step does.
+const SKIPPED_VARIABLE_TYPES = new Set(['browser']);
 
 const text = (value: string): SummaryPart => ({ text: value, kind: 'text' });
 const variable = (value: string): SummaryPart => ({ text: value, kind: 'var' });
@@ -136,7 +138,7 @@ function genericParts(action: any): SummaryPart[] {
   const keys = [...order, ...Object.keys(params).filter((k) => !order.includes(k))];
   const picked: SummaryPart[][] = [];
   for (const key of keys) {
-    if (SKIPPED_FIELDS.has(key) || SKIPPED_COMPONENTS.has(fieldConfig[key]?.component)) continue;
+    if (SKIPPED_FIELDS.has(key) || SKIPPED_VARIABLE_TYPES.has(fieldConfig[key]?.variableType)) continue;
     // On/off switches say little next to the step's name.
     if (typeof params[key] === 'boolean') continue;
     const parts = fieldConfig[key]?.component === 'path-select' ? pathParts(params[key]) : valueParts(params[key]);

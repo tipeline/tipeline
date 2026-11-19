@@ -200,7 +200,13 @@ export const validations = {
     },
     {
       label: 'Close', icon: '🛑', category: 'browser', description: 'Close the browser.',
-      fieldConfig: { browser: { component: 'browser-select', description: 'The browser instance to close.' } },
+      fieldConfig: {
+        browser: {
+          description: 'The browser instance to close.',
+          valueField: true,
+          variableType: 'browser',
+        },
+      },
     }
   ),
 
@@ -215,7 +221,11 @@ export const validations = {
       category: 'browser',
       description: 'Emulate a predefined device profile.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance to configure.' },
+        browser: {
+          description: 'The browser instance to configure.',
+          valueField: true,
+          variableType: 'browser',
+        },
         device: { description: 'Device name to emulate (e.g. "iPhone 12", "iPad Pro").' },
       },
     }
@@ -244,7 +254,11 @@ export const validations = {
       category: 'browser',
       description: 'Set geolocation coordinates.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance to configure.' },
+        browser: {
+          description: 'The browser instance to configure.',
+          valueField: true,
+          variableType: 'browser',
+        },
         coordinates: { description: 'Geolocation object with latitude, longitude, and optional accuracy.' },
       },
     }
@@ -261,7 +275,11 @@ export const validations = {
       category: 'browser',
       description: 'Override timezone.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance to configure.' },
+        browser: {
+          description: 'The browser instance to configure.',
+          valueField: true,
+          variableType: 'browser',
+        },
         timezoneId: { description: 'IANA timezone identifier (e.g. "America/New_York", "Europe/London").' },
       },
     }
@@ -278,7 +296,13 @@ export const validations = {
       category: 'browser',
       description: 'Check if JavaScript is enabled.',
       returns: 'boolean',
-      fieldConfig: { browser: { component: 'browser-select', description: 'The browser instance to check.' } },
+      fieldConfig: {
+        browser: {
+          description: 'The browser instance to check.',
+          valueField: true,
+          variableType: 'browser',
+        },
+      },
     }
   ),
 
@@ -293,7 +317,11 @@ export const validations = {
       category: 'browser',
       description: 'Set custom user agent.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance to configure.' },
+        browser: {
+          description: 'The browser instance to configure.',
+          valueField: true,
+          variableType: 'browser',
+        },
         userAgent: { description: 'Custom user agent string to set.' },
       },
     }
@@ -310,7 +338,13 @@ export const validations = {
       category: 'browser',
       description: 'Get current user agent.',
       returns: 'string',
-      fieldConfig: { browser: { component: 'browser-select', description: 'The browser instance to read the user agent from.' } },
+      fieldConfig: {
+        browser: {
+          description: 'The browser instance to read the user agent from.',
+          valueField: true,
+          variableType: 'browser',
+        },
+      },
     }
   ),
 
@@ -325,7 +359,11 @@ export const validations = {
       category: 'browser',
       description: 'Enable or disable the browser\'s own HTTP cache for the current page.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance to configure.' },
+        browser: {
+          description: 'The browser instance to configure.',
+          valueField: true,
+          variableType: 'browser',
+        },
         enabled: { description: 'true to use the browser cache normally, false to force every request to hit the network.' },
       },
     }
@@ -352,7 +390,11 @@ export const validations = {
       description: 'Navigate to a URL and return the response details (status, headers, remote address, timing).',
       returns: 'object',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance to navigate.' },
+        browser: {
+          description: 'The browser instance to navigate.',
+          valueField: true,
+          variableType: 'browser',
+        },
         url: { description: 'URL to navigate to.' },
         waitUntil: { description: 'Navigation wait condition: load, domcontentloaded, networkidle0, or networkidle2.' },
         timeout: { description: 'Navigation timeout in milliseconds.' },
@@ -374,7 +416,11 @@ export const validations = {
     {
       label: 'Reload', icon: '🔄', category: 'navigation', description: 'Reload the current page.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance to reload.' },
+        browser: {
+          description: 'The browser instance to reload.',
+          valueField: true,
+          variableType: 'browser',
+        },
         waitUntil: { description: 'Navigation wait condition: load, domcontentloaded, networkidle0, or networkidle2. Defaults to load.' },
         timeout: { description: 'Navigation timeout in milliseconds.' },
       },
@@ -388,7 +434,13 @@ export const validations = {
     },
     {
       label: 'Back', icon: '⬅️', category: 'navigation', description: 'Go back in history.',
-      fieldConfig: { browser: { component: 'browser-select', description: 'The browser instance to navigate back.' } },
+      fieldConfig: {
+        browser: {
+          description: 'The browser instance to navigate back.',
+          valueField: true,
+          variableType: 'browser',
+        },
+      },
     }
   ),
 
@@ -399,7 +451,13 @@ export const validations = {
     },
     {
       label: 'Forward', icon: '➡️', category: 'navigation', description: 'Go forward in history.',
-      fieldConfig: { browser: { component: 'browser-select', description: 'The browser instance to navigate forward.' } },
+      fieldConfig: {
+        browser: {
+          description: 'The browser instance to navigate forward.',
+          valueField: true,
+          variableType: 'browser',
+        },
+      },
     }
   ),
 
@@ -411,7 +469,13 @@ export const validations = {
     {
       label: 'Get URL', icon: '🔗', category: 'navigation', description: 'Return the current URL.',
       returns: 'string',
-      fieldConfig: { browser: { component: 'browser-select', description: 'The browser instance to get the URL from.' } },
+      fieldConfig: {
+        browser: {
+          description: 'The browser instance to get the URL from.',
+          valueField: true,
+          variableType: 'browser',
+        },
+      },
     }
   ),
 
@@ -426,7 +490,13 @@ export const validations = {
       category: 'navigation',
       description: 'Return the page title.',
       returns: 'string',
-      fieldConfig: { browser: { component: 'browser-select', description: 'The browser instance to get the title from.' } },
+      fieldConfig: {
+        browser: {
+          description: 'The browser instance to get the title from.',
+          valueField: true,
+          variableType: 'browser',
+        },
+      },
     }
   ),
 
@@ -441,7 +511,11 @@ export const validations = {
       category: 'navigation',
       description: 'Set the page HTML content.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance to set content on.' },
+        browser: {
+          description: 'The browser instance to set content on.',
+          valueField: true,
+          variableType: 'browser',
+        },
         content: { description: 'HTML string to set as the page content.' },
       },
     }
@@ -455,7 +529,13 @@ export const validations = {
     {
       label: 'Get Source', icon: '📄', category: 'navigation', description: 'Get the page source.',
       returns: 'string',
-      fieldConfig: { browser: { component: 'browser-select', description: 'The browser instance to get the source from.' } },
+      fieldConfig: {
+        browser: {
+          description: 'The browser instance to get the source from.',
+          valueField: true,
+          variableType: 'browser',
+        },
+      },
     }
   ),
 
@@ -476,7 +556,11 @@ export const validations = {
     {
       label: 'Hover', icon: '🖱️', category: 'element', description: 'Hover over an element.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         selector: { description: 'CSS/XPath selector for the element to hover over.' },
         selectorType: { description: 'Selector strategy: css, xpath, text, or aria.' },
       },
@@ -502,7 +586,11 @@ export const validations = {
       category: 'element',
       description: 'Click an element; optionally wait.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         selector: { description: 'Selector for the element to click.' },
         selectorType: { description: 'Selector strategy: css, xpath, text, or aria.' },
         waitFor: { description: 'Optional wait condition after clicking (timeout, selector, navigation, or networkidle).' },
@@ -518,7 +606,11 @@ export const validations = {
     {
       label: 'Focus', icon: '🎯', category: 'element', description: 'Focus an element.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         selector: { description: 'Selector for the element to focus.' },
         selectorType: { description: 'Selector strategy: css, xpath, text, or aria.' },
       },
@@ -541,7 +633,11 @@ export const validations = {
     {
       label: 'Type', icon: '⌨️', category: 'element', description: 'Type text into an element.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         selector: { description: 'Selector for the input element to type into.' },
         selectorType: { description: 'Selector strategy: css, xpath, text, or aria.' },
         text: { description: 'Text to type into the element.' },
@@ -571,7 +667,11 @@ export const validations = {
       description: 'Read an attribute/text from an element.',
       returns: 'string',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         selector: { description: 'Selector for the element to read.' },
         selectorType: { description: 'Selector strategy: css, xpath, text, or aria.' },
         attribute: { description: 'Attribute or property to read (e.g. text, href, src, id, class).' },
@@ -600,7 +700,11 @@ export const validations = {
       description: 'Read an attribute/text from multiple matching elements.',
       returns: 'array',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         selector: { description: 'Selector to match multiple elements.' },
         selectorType: { description: 'Selector strategy: css, xpath, text, or aria.' },
         attribute: { description: 'Attribute or property to read from each element.' },
@@ -640,7 +744,11 @@ export const validations = {
       description: 'Scrape lists/cards into structured records.',
       returns: 'array',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         itemSelector: { description: 'Selector for each repeating item (e.g. a card or list row).' },
         selectorType: { description: 'Selector strategy for itemSelector.' },
         fieldSelectors: { description: 'Array of field definitions, each with a selector and attribute to extract.' },
@@ -667,7 +775,11 @@ export const validations = {
       category: 'element',
       description: 'Set a checkbox to checked/unchecked.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         selector: { description: 'Selector for the checkbox element.' },
         selectorType: { description: 'Selector strategy: css, xpath, text, or aria.' },
         checked: { description: 'Whether to check (true) or uncheck (false) the checkbox.' },
@@ -687,7 +799,11 @@ export const validations = {
       description: 'Read a checkbox state.',
       returns: 'boolean',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         selector: { description: 'Selector for the checkbox element.' },
         selectorType: { description: 'Selector strategy: css, xpath, text, or aria.' },
       },
@@ -713,10 +829,18 @@ export const validations = {
       category: 'element',
       description: 'Choose option(s) in a dropdown (select) field.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         selector: { description: 'Selector for the dropdown (select) element.' },
         selectorType: { description: 'Selector strategy: css, xpath, text, or aria.' },
-        value: { description: 'Value(s) to select — a single string or array for multi-select.' },
+        value: {
+          description: 'Value(s) to select — a single string or array for multi-select.',
+          valueField: true,
+          variableType: ['string', 'array'],
+        },
       },
     }
   ),
@@ -733,7 +857,11 @@ export const validations = {
       description: 'Read selected option(s).',
       returns: 'array',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         selector: { description: 'Selector for the dropdown (select) element.' },
         selectorType: { description: 'Selector strategy: css, xpath, text, or aria.' },
       },
@@ -770,7 +898,11 @@ export const validations = {
       description: 'Assertions for element/text presence.',
       returns: 'boolean',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         selectorType: { description: 'Selector strategy used for the assertion.' },
         mode: { description: 'Assertion mode: contain-element, not-contain-element, contain-text, or not-contain-text.' },
         value: { description: 'Selector or text to assert the presence or absence of.' },
@@ -796,7 +928,11 @@ export const validations = {
       description: 'Execute JS in the page context.',
       returns: 'any',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         script: { description: 'JavaScript code to execute in the page context.' },
         context: { description: 'Optional variables to expose to the script.' },
       },
@@ -814,7 +950,11 @@ export const validations = {
     {
       label: 'Screenshot', icon: '📸', category: 'content', description: 'Capture a screenshot.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         options: { description: 'Screenshot options: path, fullPage, quality, and type (jpeg/png/webp).' },
       },
     }
@@ -839,7 +979,11 @@ export const validations = {
       category: 'content',
       description: 'Capture an element screenshot.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         selector: { description: 'Selector for the element to screenshot.' },
         selectorType: { description: 'Selector strategy (default css).' },
         options: { description: 'Screenshot options: path, quality, and type (jpeg/png/webp).' },
@@ -871,7 +1015,11 @@ export const validations = {
       description: 'Begin recording a screencast.',
       returns: 'object',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         options: { description: 'Screencast options: path, quality (0–63), and format (gif/webm/mp4).' },
       },
     }
@@ -888,8 +1036,12 @@ export const validations = {
       category: 'content',
       description: 'Stop recording a screencast.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
-        recorder: { description: 'The recorder object returned by Start Screencast.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
+        recorder: { description: 'The recorder object returned by Start Screencast.', variableType: 'object' },
       },
     }
   ),
@@ -905,7 +1057,11 @@ export const validations = {
       category: 'content',
       description: 'Generate a PDF of the page.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         options: { description: 'PDF options: path, format (e.g. A4), landscape, printBackground, margins, headers/footers.' },
       },
     }
@@ -932,7 +1088,11 @@ export const validations = {
       category: 'content',
       description: 'Wait for timeout, selector, or events.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         type: { description: 'What to wait for: timeout, selector, navigation, or networkidle.' },
         timeout: { description: 'Maximum time to wait in milliseconds.' },
         selector: { description: 'CSS/XPath selector to wait for (when type is selector).' },
@@ -953,7 +1113,11 @@ export const validations = {
       description: 'Get named metadata (e.g., description).',
       returns: 'array',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         name: { description: 'Name of the metadata attribute to retrieve (e.g. "description", "keywords").' },
       },
     }
@@ -970,7 +1134,11 @@ export const validations = {
       category: 'content',
       description: 'Inject CSS into the page.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         css: { description: 'CSS string or style object to inject into the page.' },
       },
     }
@@ -984,7 +1152,13 @@ export const validations = {
     {
       label: 'Get Cookies', icon: '🍪', category: 'content', description: 'Read browser cookies.',
       returns: 'array',
-      fieldConfig: { browser: { component: 'browser-select', description: 'The browser instance to read cookies from.' } },
+      fieldConfig: {
+        browser: {
+          description: 'The browser instance to read cookies from.',
+          valueField: true,
+          variableType: 'browser',
+        },
+      },
     }
   ),
 
@@ -999,7 +1173,11 @@ export const validations = {
       category: 'content',
       description: 'Set cookies on the page.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         cookies: { description: 'Array of cookie objects with name, value, and domain.' },
       },
     }
@@ -1016,7 +1194,11 @@ export const validations = {
       category: 'content',
       description: 'Delete cookies from the page.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         cookies: { description: 'Array of cookie objects to delete.' },
       },
     }
@@ -1036,7 +1218,13 @@ export const validations = {
       category: 'interaction',
       description: 'Get current viewport.',
       returns: 'object',
-      fieldConfig: { browser: { component: 'browser-select', description: 'The browser instance to get the viewport from.' } },
+      fieldConfig: {
+        browser: {
+          description: 'The browser instance to get the viewport from.',
+          valueField: true,
+          variableType: 'browser',
+        },
+      },
     }
   ),
 
@@ -1051,7 +1239,11 @@ export const validations = {
       category: 'interaction',
       description: 'Resize the viewport.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         width: { description: 'Viewport width in pixels.' },
         height: { description: 'Viewport height in pixels.' },
       },
@@ -1079,7 +1271,11 @@ export const validations = {
       category: 'interaction',
       description: 'Type keystrokes with optional delay.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         text: { description: 'Text to type.' },
         selector: { description: 'Optional selector to focus before typing.' },
         selectorType: { description: 'Selector strategy for the optional selector.' },
@@ -1096,7 +1292,11 @@ export const validations = {
     {
       label: 'Key Down', icon: '⬇️', category: 'interaction', description: 'Press and hold a key.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         key: { description: 'Key name to press (e.g. "Enter", "ArrowLeft", "Shift").' },
       },
     }
@@ -1110,7 +1310,11 @@ export const validations = {
     {
       label: 'Key Up', icon: '⬆️', category: 'interaction', description: 'Release a key.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         key: { description: 'Key name to release.' },
       },
     }
@@ -1124,7 +1328,11 @@ export const validations = {
     {
       label: 'Key Press', icon: '🔘', category: 'interaction', description: 'Press a key.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         key: { description: 'Key name to press (press and release).' },
       },
     }
@@ -1141,7 +1349,11 @@ export const validations = {
       category: 'interaction',
       description: 'Send a raw character.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         char: { description: 'A single character to dispatch as a keyboard event.' },
       },
     }
@@ -1178,7 +1390,11 @@ export const validations = {
       category: 'interaction',
       description: 'Click at page coordinates.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         x: { description: 'Horizontal page coordinate to click.' },
         y: { description: 'Vertical page coordinate to click.' },
         options: { description: 'Click options: button (left/right/middle), count, and delay.' },
@@ -1198,7 +1414,11 @@ export const validations = {
     {
       label: 'Mouse Down', icon: '🖱️', category: 'interaction', description: 'Mouse button down.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         options: { description: 'Optional button to press down: left, right, or middle.' },
       },
     }
@@ -1216,7 +1436,11 @@ export const validations = {
     {
       label: 'Mouse Up', icon: '🖱️', category: 'interaction', description: 'Mouse button up.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         options: { description: 'Optional button to release: left, right, or middle.' },
       },
     }
@@ -1241,7 +1465,11 @@ export const validations = {
       category: 'interaction',
       description: 'Move mouse to coordinates.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         x: { description: 'Target horizontal page coordinate.' },
         y: { description: 'Target vertical page coordinate.' },
         options: { description: 'Optional steps for smooth movement.' },
@@ -1268,7 +1496,11 @@ export const validations = {
     {
       label: 'Mouse Wheel', icon: '🖱️', category: 'interaction', description: 'Scroll the page.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         options: { description: 'Scroll deltas: deltaX (horizontal) and deltaY (vertical) in pixels.' },
       },
     }
@@ -1293,7 +1525,11 @@ export const validations = {
       category: 'interaction',
       description: 'Drag from XY to XY.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         start: { description: 'Starting coordinates {x, y} for the drag.' },
         target: { description: 'Target coordinates {x, y} to drop at.' },
         steps: { description: 'Number of intermediate steps for smooth dragging.' },
@@ -1322,7 +1558,11 @@ export const validations = {
       category: 'interaction',
       description: 'Drag one element to another.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         sourceSelector: { description: 'Selector for the element to drag.' },
         targetSelector: { description: 'Selector for the element to drop onto.' },
         selectorType: { description: 'Selector strategy: css, xpath, text, or aria.' },
@@ -1354,7 +1594,11 @@ export const validations = {
       category: 'interaction',
       description: 'Upload files via a file input field.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         selector: { description: 'Selector for the file input element.' },
         selectorType: { description: 'Selector strategy: css, xpath, text, or aria.' },
         filePaths: { description: 'Array of local file paths to upload.' },
@@ -1381,7 +1625,11 @@ export const validations = {
       category: 'interaction',
       description: 'Trigger a download to a path.',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         path: { description: 'Local directory path to save the downloaded file.' },
         selector: { description: 'Selector for the element that triggers the download.' },
         selectorType: { description: 'Selector strategy: css, xpath, text, or aria.' },
@@ -1414,7 +1662,11 @@ export const validations = {
       description: 'Run a Lighthouse audit against a URL and return category scores, audit results, and any auto-detected stack-specific advice (e.g. Drupal, WordPress).',
       returns: 'object',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance to audit against (its debugging port is reused).' },
+        browser: {
+          description: 'The browser instance to audit against (its debugging port is reused).',
+          valueField: true,
+          variableType: 'browser',
+        },
         url: { description: 'URL to audit.' },
         categories: {
           description:
@@ -1436,7 +1688,13 @@ export const validations = {
       description:
         'Begin recording a HAR (HTTP Archive) capture of every request/response on the page — headers, timing, cache status, and cookies. Does not capture response bodies.',
       returns: 'string',
-      fieldConfig: { browser: { component: 'browser-select', description: 'The browser instance.' } },
+      fieldConfig: {
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
+      },
     }
   ),
 
@@ -1459,7 +1717,11 @@ export const validations = {
         'Stop a HAR capture and return the HAR object (log.entries[] holds one item per request/response). Optionally also writes it to a .har file.',
       returns: 'object',
       fieldConfig: {
-        browser: { component: 'browser-select', description: 'The browser instance.' },
+        browser: {
+          description: 'The browser instance.',
+          valueField: true,
+          variableType: 'browser',
+        },
         capture: { description: 'The capture id returned by Start HAR Capture.' },
         path: { description: 'Optional local file path to also write the HAR JSON to.' },
       },

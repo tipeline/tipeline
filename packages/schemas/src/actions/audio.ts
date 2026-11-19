@@ -33,7 +33,11 @@ export const validations = {
     {
       label: 'Export Audio', icon: '💾', category: 'io', description: 'Write audio to a file.',
       fieldConfig: {
-        audio: { description: 'The audio object to export.' },
+        audio: {
+          description: 'The audio object to export.',
+          valueField: true,
+          variableType: 'audio',
+        },
         output: { description: 'Destination file path (e.g. /output/final.mp3).' },
       },
     }
@@ -81,7 +85,11 @@ export const validations = {
       label: 'Convert Format', icon: '🔄', category: 'conversion', description: 'Transcode audio to a different format.',
       returns: 'audio',
       fieldConfig: {
-        audio: { description: 'The audio object to transcode.' },
+        audio: {
+          description: 'The audio object to transcode.',
+          valueField: true,
+          variableType: 'audio',
+        },
         format: { description: 'Target output format.' },
       },
     }
@@ -102,7 +110,11 @@ export const validations = {
       label: 'Compress', icon: '🗜️', category: 'conversion', description: 'Reduce size by targeting a bitrate.',
       returns: 'audio',
       fieldConfig: {
-        audio: { description: 'The audio object to compress.' },
+        audio: {
+          description: 'The audio object to compress.',
+          valueField: true,
+          variableType: 'audio',
+        },
         bitrate: { description: 'Target bitrate (e.g. 64k, 128k, 320k).' },
       },
     }
@@ -128,7 +140,11 @@ export const validations = {
       label: 'Trim', icon: '✂️', category: 'editing', description: 'Cut a segment from the audio.',
       returns: 'audio',
       fieldConfig: {
-        audio: { description: 'The audio object to trim.' },
+        audio: {
+          description: 'The audio object to trim.',
+          valueField: true,
+          variableType: 'audio',
+        },
         start: { description: 'Start timestamp of the segment (HH:MM:SS or HH:MM:SS.ms).' },
         duration: { description: 'Length of the segment to keep (HH:MM:SS or HH:MM:SS.ms).' },
       },
@@ -150,7 +166,11 @@ export const validations = {
       label: 'Concatenate', icon: '➕', category: 'editing', description: 'Append multiple sources to an audio base.',
       returns: 'audio',
       fieldConfig: {
-        audio: { description: 'The base audio object to append onto.' },
+        audio: {
+          description: 'The base audio object to append onto.',
+          valueField: true,
+          variableType: 'audio',
+        },
         inputs: { description: 'List of file paths to append in order.' },
       },
     }
@@ -171,7 +191,11 @@ export const validations = {
       label: 'Change Volume', icon: '🔊', category: 'editing', description: 'Scale the audio volume.',
       returns: 'audio',
       fieldConfig: {
-        audio: { description: 'The audio object to adjust.' },
+        audio: {
+          description: 'The audio object to adjust.',
+          valueField: true,
+          variableType: 'audio',
+        },
         volume: { description: 'Volume multiplier (e.g. 0.5 = half, 2.0 = double).' },
       },
     }
@@ -194,7 +218,11 @@ export const validations = {
       label: 'Fade In', icon: '📈', category: 'editing', description: 'Apply a fade-in effect.',
       returns: 'audio',
       fieldConfig: {
-        audio: { description: 'The audio object to apply the fade to.' },
+        audio: {
+          description: 'The audio object to apply the fade to.',
+          valueField: true,
+          variableType: 'audio',
+        },
         duration: { description: 'Length of the fade in seconds.' },
         start: { description: 'Timestamp (seconds) where the fade begins. Defaults to 0.' },
       },
@@ -218,7 +246,11 @@ export const validations = {
       label: 'Fade Out', icon: '📉', category: 'editing', description: 'Apply a fade-out effect.',
       returns: 'audio',
       fieldConfig: {
-        audio: { description: 'The audio object to apply the fade to.' },
+        audio: {
+          description: 'The audio object to apply the fade to.',
+          valueField: true,
+          variableType: 'audio',
+        },
         duration: { description: 'Length of the fade in seconds.' },
         start: { description: 'Timestamp (seconds) in the audio where the fade begins.' },
       },
@@ -240,7 +272,11 @@ export const validations = {
       label: 'Change Speed', icon: '⏩', category: 'editing', description: 'Adjust playback speed without changing pitch.',
       returns: 'audio',
       fieldConfig: {
-        audio: { description: 'The audio object to speed up or slow down.' },
+        audio: {
+          description: 'The audio object to speed up or slow down.',
+          valueField: true,
+          variableType: 'audio',
+        },
         speed: { description: 'Speed multiplier between 0.25 and 4.0 (1.0 = original speed).' },
       },
     }
@@ -263,7 +299,7 @@ export const validations = {
       label: 'Add Silence', icon: '⏸️', category: 'editing', description: 'Pad the audio with silence at the start or end.',
       returns: 'audio',
       fieldConfig: {
-        audio: { description: 'The audio object to pad.' },
+        audio: { description: 'The audio object to pad.', valueField: true, variableType: 'audio' },
         duration: { description: 'Duration of silence to add in seconds.' },
         position: { description: 'Where to insert the silence: at the start or end.' },
       },
@@ -287,7 +323,11 @@ export const validations = {
       label: 'Mix Audio', icon: '🎛️', category: 'editing', description: 'Overlay a second audio track onto the main audio.',
       returns: 'audio',
       fieldConfig: {
-        audio: { description: 'The base audio object to mix onto.' },
+        audio: {
+          description: 'The base audio object to mix onto.',
+          valueField: true,
+          variableType: 'audio',
+        },
         input: { description: 'File path of the audio track to overlay.' },
         volume: { description: 'Volume of the overlaid track (default 1.0). The base track is always at full volume.' },
       },
@@ -306,7 +346,11 @@ export const validations = {
       label: 'Get Info', icon: 'ℹ️', category: 'analysis', description: 'Probe metadata and stream details.',
       returns: 'object',
       fieldConfig: {
-        audio: { description: 'The audio object to probe.' },
+        audio: {
+          description: 'The audio object to probe.',
+          valueField: true,
+          variableType: 'audio',
+        },
       },
     }
   ),
@@ -320,7 +364,11 @@ export const validations = {
       label: 'Normalize', icon: '🎚️', category: 'analysis', description: 'Normalize loudness/peaks.',
       returns: 'audio',
       fieldConfig: {
-        audio: { description: 'The audio object to normalize.' },
+        audio: {
+          description: 'The audio object to normalize.',
+          valueField: true,
+          variableType: 'audio',
+        },
       },
     }
   ),

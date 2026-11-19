@@ -52,7 +52,7 @@ export const validations = {
     {
       label: 'Absolute', icon: '∣x∣', category: 'arithmetic', description: 'Absolute value.',
       returns: 'number',
-      fieldConfig: { number: { description: 'The number to take the absolute value of.' } },
+      fieldConfig: { number: { description: 'The number to take the absolute value of.', variableType: 'number' } },
     }
   ),
 
@@ -68,8 +68,8 @@ export const validations = {
       label: 'Addition', icon: '➕', category: 'arithmetic', description: 'Adds two numbers.',
       returns: 'number',
       fieldConfig: {
-        augend: { description: 'The first number (augend) to add.' },
-        addend: { description: 'The second number (addend) to add.' },
+        augend: { description: 'The first number (augend) to add.', variableType: 'number' },
+        addend: { description: 'The second number (addend) to add.', variableType: 'number' },
       },
     }
   ),
@@ -86,8 +86,8 @@ export const validations = {
       description: 'Difference of two numbers.',
       returns: 'number',
       fieldConfig: {
-        minuend: { description: 'The number to subtract from.' },
-        subtrahend: { description: 'The number to subtract.' },
+        minuend: { description: 'The number to subtract from.', variableType: 'number' },
+        subtrahend: { description: 'The number to subtract.', variableType: 'number' },
       },
     }
   ),
@@ -104,8 +104,8 @@ export const validations = {
       description: 'Product of two numbers.',
       returns: 'number',
       fieldConfig: {
-        multiplier: { description: 'The first number (multiplier).' },
-        multiplicand: { description: 'The second number (multiplicand).' },
+        multiplier: { description: 'The first number (multiplier).', variableType: 'number' },
+        multiplicand: { description: 'The second number (multiplicand).', variableType: 'number' },
       },
     }
   ),
@@ -125,8 +125,8 @@ export const validations = {
       description: 'Divides one number by another.',
       returns: 'number',
       fieldConfig: {
-        dividend: { description: 'The number to divide (dividend).' },
-        divisor: { description: 'The number to divide by (cannot be zero).' },
+        dividend: { description: 'The number to divide (dividend).', variableType: 'number' },
+        divisor: { description: 'The number to divide by (cannot be zero).', variableType: 'number' },
       },
     }
   ),
@@ -143,8 +143,8 @@ export const validations = {
       label: 'Modulo', icon: '%', category: 'arithmetic', description: 'Remainder after division.',
       returns: 'number',
       fieldConfig: {
-        dividend: { description: 'The number to divide (dividend).' },
-        divisor: { description: 'The divisor (cannot be zero).' },
+        dividend: { description: 'The number to divide (dividend).', variableType: 'number' },
+        divisor: { description: 'The divisor (cannot be zero).', variableType: 'number' },
       },
     }
   ),
@@ -161,8 +161,8 @@ export const validations = {
       description: 'Raises a base to an exponent.',
       returns: 'number',
       fieldConfig: {
-        base: { description: 'The base number.' },
-        exponent: { description: 'The exponent to raise the base to.' },
+        base: { description: 'The base number.', variableType: 'number' },
+        exponent: { description: 'The exponent to raise the base to.', variableType: 'number' },
       },
     }
   ),
@@ -182,7 +182,7 @@ export const validations = {
       category: 'rounding',
       description: 'Rounds up to nearest integer.',
       returns: 'number',
-      fieldConfig: { number: { description: 'The number to round up.' } },
+      fieldConfig: { number: { description: 'The number to round up.', variableType: 'number' } },
     }
   ),
 
@@ -197,7 +197,7 @@ export const validations = {
       category: 'rounding',
       description: 'Rounds down to nearest integer.',
       returns: 'number',
-      fieldConfig: { number: { description: 'The number to round down.' } },
+      fieldConfig: { number: { description: 'The number to round down.', variableType: 'number' } },
     }
   ),
 
@@ -209,7 +209,7 @@ export const validations = {
     {
       label: 'Round', icon: '◯', category: 'rounding', description: 'Rounds to nearest integer.',
       returns: 'number',
-      fieldConfig: { number: { description: 'The number to round.' } },
+      fieldConfig: { number: { description: 'The number to round.', variableType: 'number' } },
     }
   ),
 
@@ -224,7 +224,7 @@ export const validations = {
       category: 'rounding',
       description: 'Truncates toward zero, removing the fractional part.',
       returns: 'number',
-      fieldConfig: { number: { description: 'The number to truncate.' } },
+      fieldConfig: { number: { description: 'The number to truncate.', variableType: 'number' } },
     }
   ),
 
@@ -246,8 +246,8 @@ export const validations = {
       description: 'Formats a number to a fixed number of decimal places.',
       returns: 'string',
       fieldConfig: {
-        number: { description: 'The number to format.' },
-        digits: { description: 'Number of decimal places to keep (0–20).' },
+        number: { description: 'The number to format.', variableType: 'number' },
+        digits: { description: 'Number of decimal places to keep (0–20).', variableType: 'number' },
       },
     }
   ),
@@ -274,7 +274,7 @@ export const validations = {
       description: 'Locale-aware number formatting via Intl.NumberFormat.',
       returns: 'string',
       fieldConfig: {
-        number: { description: 'The number to format.' },
+        number: { description: 'The number to format.', variableType: 'number' },
         locale: { description: 'BCP 47 locale string (e.g. "en-US", "de-DE"). Defaults to system locale.' },
         minimumFractionDigits: { description: 'Minimum number of decimal digits to display.' },
         maximumFractionDigits: { description: 'Maximum number of decimal digits to display.' },
@@ -368,9 +368,9 @@ export const validations = {
       description: 'Constrains a number between a minimum and maximum.',
       returns: 'number',
       fieldConfig: {
-        value: { description: 'The number to clamp.' },
-        min: { description: 'Lower bound (inclusive).' },
-        max: { description: 'Upper bound (inclusive).' },
+        value: { description: 'The number to clamp.', variableType: 'number' },
+        min: { description: 'Lower bound (inclusive).', variableType: 'number' },
+        max: { description: 'Upper bound (inclusive).', variableType: 'number' },
       },
     }
   ),
@@ -390,8 +390,8 @@ export const validations = {
       description: 'Calculates what percentage a value is of a total.',
       returns: 'number',
       fieldConfig: {
-        value: { description: 'The partial value.' },
-        total: { description: 'The total value (cannot be zero).' },
+        value: { description: 'The partial value.', variableType: 'number' },
+        total: { description: 'The total value (cannot be zero).', variableType: 'number' },
       },
     }
   ),
@@ -407,7 +407,7 @@ export const validations = {
       category: 'utility',
       description: 'Returns -1, 0, or 1 based on the sign of the number.',
       returns: 'number',
-      fieldConfig: { number: { description: 'The number whose sign to determine.' } },
+      fieldConfig: { number: { description: 'The number whose sign to determine.', variableType: 'number' } },
     }
   ),
 
@@ -423,8 +423,8 @@ export const validations = {
       description: 'Increases a number by a step (default 1).',
       returns: 'number',
       fieldConfig: {
-        number: { description: 'The number to increment.' },
-        step: { description: 'Amount to increment by (default 1).' },
+        number: { description: 'The number to increment.', variableType: 'number' },
+        step: { description: 'Amount to increment by (default 1).', variableType: 'number' },
       },
     }
   ),
@@ -441,8 +441,8 @@ export const validations = {
       description: 'Decreases a number by a step (default 1).',
       returns: 'number',
       fieldConfig: {
-        number: { description: 'The number to decrement.' },
-        step: { description: 'Amount to decrement by (default 1).' },
+        number: { description: 'The number to decrement.', variableType: 'number' },
+        step: { description: 'Amount to decrement by (default 1).', variableType: 'number' },
       },
     }
   ),
@@ -459,9 +459,9 @@ export const validations = {
       description: 'Returns true if value is between min and max (inclusive).',
       returns: 'boolean',
       fieldConfig: {
-        value: { description: 'The number to test.' },
-        min: { description: 'Lower bound (inclusive).' },
-        max: { description: 'Upper bound (inclusive).' },
+        value: { description: 'The number to test.', variableType: 'number' },
+        min: { description: 'Lower bound (inclusive).', variableType: 'number' },
+        max: { description: 'Upper bound (inclusive).', variableType: 'number' },
       },
     }
   ),
@@ -482,8 +482,8 @@ export const validations = {
       description: 'Random number in [min, max) — min and max are optional.',
       returns: 'number',
       fieldConfig: {
-        min: { description: 'Minimum value (inclusive). Defaults to 0.' },
-        max: { description: 'Maximum value (exclusive). Defaults to 1.' },
+        min: { description: 'Minimum value (inclusive). Defaults to 0.', variableType: 'number' },
+        max: { description: 'Maximum value (exclusive). Defaults to 1.', variableType: 'number' },
       },
     }
   ),

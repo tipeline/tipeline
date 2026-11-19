@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import AutoFormLabel from './AutoFormLabel.vue'
-import { beautifyObjectName } from './utils'
+import { beautifyObjectName, matchesVariableType } from './utils'
 
 const NONE = '__none__'
 
@@ -41,10 +41,14 @@ const unregisterPendingVariable = inject<((fieldName: string) => void) | null>(
 )
 
 const matchingVariables = computed(() =>
-  (taskVariables?.value ?? []).filter((v) => !props.config?.variableType || v.type === props.config.variableType)
+  (taskVariables?.value ?? []).filter((v) => matchesVariableType(v.type, props.config?.variableType))
 )
 
-const variableType = computed(() => props.config?.variableType ?? 'string')
+// The type a variable created here gets: the field's (first) type.
+const variableType = computed(() => {
+  const wanted = props.config?.variableType
+  return (Array.isArray(wanted) ? wanted[0] : wanted) ?? 'string'
+})
 const creatingNew = ref(false)
 const newName = ref('')
 

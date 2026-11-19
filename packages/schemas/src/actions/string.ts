@@ -22,7 +22,7 @@ export const validations = {
     {
       label: 'Camel Case', icon: '🐫', category: 'casing', description: 'Convert to camelCase.',
       returns: 'string',
-      fieldConfig: { string: { description: 'The string to convert to camelCase.' } },
+      fieldConfig: { string: { description: 'The string to convert to camelCase.', variableType: 'string' } },
     }
   ),
 
@@ -37,7 +37,7 @@ export const validations = {
       category: 'casing',
       description: 'Uppercase the first character.',
       returns: 'string',
-      fieldConfig: { string: { description: 'The string to capitalize.' } },
+      fieldConfig: { string: { description: 'The string to capitalize.', variableType: 'string' } },
     }
   ),
 
@@ -61,8 +61,8 @@ export const validations = {
       description: 'Check if a string ends with a substring.',
       returns: 'boolean',
       fieldConfig: {
-        string: { description: 'The string to test.' },
-        search: { description: 'The substring to search for at the end.' },
+        string: { description: 'The string to test.', variableType: 'string' },
+        search: { description: 'The substring to search for at the end.', variableType: 'string' },
         position: { description: 'Optional character position to treat as the end of the string.' },
       },
     }
@@ -76,7 +76,7 @@ export const validations = {
     {
       label: 'encodeHTMLEntities', icon: '🔐', category: 'encoding', description: 'Escape special characters.',
       returns: 'string',
-      fieldConfig: { string: { description: 'The string to HTML-encode (e.g. & → &amp;).' } },
+      fieldConfig: { string: { description: 'The string to HTML-encode (e.g. & → &amp;).', variableType: 'string' } },
     }
   ),
 
@@ -88,7 +88,7 @@ export const validations = {
     {
       label: 'decodeHTMLEntities', icon: '🔓', category: 'encoding', description: 'Unescape HTML entities to their original characters.',
       returns: 'string',
-      fieldConfig: { string: { description: 'The HTML-encoded string to decode.' } },
+      fieldConfig: { string: { description: 'The HTML-encoded string to decode.', variableType: 'string' } },
     }
   ),
 
@@ -109,8 +109,8 @@ export const validations = {
       label: 'Includes', icon: '🔎', category: 'search', description: 'Substring presence test.',
       returns: 'boolean',
       fieldConfig: {
-        string: { description: 'The string to search within.' },
-        search: { description: 'The substring to look for.' },
+        string: { description: 'The string to search within.', variableType: 'string' },
+        search: { description: 'The substring to look for.', variableType: 'string' },
         position: { description: 'Optional index to start searching from.' },
       },
     }
@@ -133,8 +133,8 @@ export const validations = {
       label: 'Index Of', icon: '🧭', category: 'search', description: 'Index of first occurrence.',
       returns: 'number',
       fieldConfig: {
-        string: { description: 'The string to search within.' },
-        search: { description: 'The substring to find.' },
+        string: { description: 'The string to search within.', variableType: 'string' },
+        search: { description: 'The substring to find.', variableType: 'string' },
         position: { description: 'Optional index to start searching from.' },
       },
     }
@@ -148,7 +148,7 @@ export const validations = {
     {
       label: 'Kebab Case', icon: '➖', category: 'casing', description: 'Convert to kebab-case.',
       returns: 'string',
-      fieldConfig: { string: { description: 'The string to convert to kebab-case.' } },
+      fieldConfig: { string: { description: 'The string to convert to kebab-case.', variableType: 'string' } },
     }
   ),
 
@@ -190,7 +190,7 @@ export const validations = {
       category: 'casing',
       description: 'Lowercase the first character.',
       returns: 'string',
-      fieldConfig: { string: { description: 'The string to lowercase the first character of.' } },
+      fieldConfig: { string: { description: 'The string to lowercase the first character of.', variableType: 'string' } },
     }
   ),
 
@@ -211,9 +211,9 @@ export const validations = {
       label: 'Match', icon: '🧩', category: 'regex', description: 'Regex match against a string.',
       returns: 'array',
       fieldConfig: {
-        string: { description: 'The string to match against.' },
-        pattern: { description: 'Regex pattern string or RegExp object.' },
-        flag: { description: 'Optional regex flags (e.g. "g" for global, "i" for case-insensitive).' },
+        string: { description: 'The string to match against.', variableType: 'string' },
+        pattern: { description: 'Regex pattern string or RegExp object.', variableType: 'string' },
+        flag: { description: 'Optional regex flags (e.g. "g" for global, "i" for case-insensitive).', variableType: 'string' },
       },
     }
   ),
@@ -235,9 +235,9 @@ export const validations = {
       label: 'Replace', icon: '✏️', category: 'replace', description: 'Replace first match.',
       returns: 'string',
       fieldConfig: {
-        string: { description: 'The string to perform replacement on.' },
-        pattern: { description: 'Exact text to find (not a regex).' },
-        replacement: { description: 'Replacement string (empty string to delete).' },
+        string: { description: 'The string to perform replacement on.', variableType: 'string' },
+        pattern: { description: 'Exact text to find (not a regex).', variableType: 'string' },
+        replacement: { description: 'Replacement string (empty string to delete).', variableType: 'string' },
       },
     }
   ),
@@ -259,9 +259,9 @@ export const validations = {
       label: 'Replace All', icon: '📝', category: 'replace', description: 'Replace all matches.',
       returns: 'string',
       fieldConfig: {
-        string: { description: 'The string to perform replacements on.' },
-        pattern: { description: 'Exact text to find and replace everywhere (not a regex).' },
-        replacement: { description: 'Replacement string.' },
+        string: { description: 'The string to perform replacements on.', variableType: 'string' },
+        pattern: { description: 'Exact text to find and replace everywhere (not a regex).', variableType: 'string' },
+        replacement: { description: 'Replacement string.', variableType: 'string' },
       },
     }
   ),
@@ -281,8 +281,8 @@ export const validations = {
       label: 'Search', icon: '🔎', category: 'regex', description: 'Search using regex/string.',
       returns: 'number',
       fieldConfig: {
-        string: { description: 'The string to search in.' },
-        pattern: { description: 'Regex pattern or string to search for.' },
+        string: { description: 'The string to search in.', variableType: 'string' },
+        pattern: { description: 'Regex pattern or string to search for.', variableType: 'string' },
       },
     }
   ),
@@ -304,7 +304,7 @@ export const validations = {
       label: 'Slice', icon: '✂️', category: 'slice', description: 'Extract a substring by range.',
       returns: 'string',
       fieldConfig: {
-        string: { description: 'The string to slice.' },
+        string: { description: 'The string to slice.', variableType: 'string' },
         start: { description: 'Start index (inclusive).' },
         end: { description: 'End index (exclusive). Omit to slice to the end.' },
       },
@@ -319,7 +319,7 @@ export const validations = {
     {
       label: 'Snake Case', icon: '🐍', category: 'casing', description: 'Convert to snake_case.',
       returns: 'string',
-      fieldConfig: { string: { description: 'The string to convert to snake_case.' } },
+      fieldConfig: { string: { description: 'The string to convert to snake_case.', variableType: 'string' } },
     }
   ),
 
@@ -340,8 +340,8 @@ export const validations = {
       label: 'Split', icon: '🪓', category: 'split', description: 'Split into parts by separator.',
       returns: 'array',
       fieldConfig: {
-        string: { description: 'The string to split.' },
-        separator: { description: 'Separator string to split on.' },
+        string: { description: 'The string to split.', variableType: 'string' },
+        separator: { description: 'Separator string to split on.', variableType: 'string' },
         limit: { description: 'Optional maximum number of parts to return.' },
       },
     }
@@ -358,7 +358,7 @@ export const validations = {
       category: 'casing',
       description: 'Capitalize words with spaces.',
       returns: 'string',
-      fieldConfig: { string: { description: 'The string to convert to Start Case.' } },
+      fieldConfig: { string: { description: 'The string to convert to Start Case.', variableType: 'string' } },
     }
   ),
 
@@ -382,8 +382,8 @@ export const validations = {
       description: 'Check if a string starts with a substring.',
       returns: 'boolean',
       fieldConfig: {
-        string: { description: 'The string to test.' },
-        target: { description: 'The substring to check for at the start.' },
+        string: { description: 'The string to test.', variableType: 'string' },
+        target: { description: 'The substring to check for at the start.', variableType: 'string' },
         position: { description: 'Optional starting index to begin the check.' },
       },
     }
@@ -397,7 +397,7 @@ export const validations = {
     {
       label: 'To Lower Case', icon: '🔡', category: 'casing', description: 'Lowercase the string.',
       returns: 'string',
-      fieldConfig: { string: { description: 'The string to lowercase.' } },
+      fieldConfig: { string: { description: 'The string to lowercase.', variableType: 'string' } },
     }
   ),
 
@@ -409,7 +409,7 @@ export const validations = {
     {
       label: 'To Upper Case', icon: '🔠', category: 'casing', description: 'Uppercase the string.',
       returns: 'string',
-      fieldConfig: { string: { description: 'The string to uppercase.' } },
+      fieldConfig: { string: { description: 'The string to uppercase.', variableType: 'string' } },
     }
   ),
 
@@ -424,7 +424,7 @@ export const validations = {
       category: 'casing',
       description: 'Uppercase the first character.',
       returns: 'string',
-      fieldConfig: { string: { description: 'The string to uppercase the first character of.' } },
+      fieldConfig: { string: { description: 'The string to uppercase the first character of.', variableType: 'string' } },
     }
   ),
 
@@ -439,7 +439,7 @@ export const validations = {
       category: 'whitespace',
       description: 'Trim whitespace from both ends.',
       returns: 'string',
-      fieldConfig: { string: { description: 'The string to trim whitespace from.' } },
+      fieldConfig: { string: { description: 'The string to trim whitespace from.', variableType: 'string' } },
     }
   ),
 
@@ -454,7 +454,7 @@ export const validations = {
       category: 'whitespace',
       description: 'Trim whitespace from the end.',
       returns: 'string',
-      fieldConfig: { string: { description: 'The string to trim trailing whitespace from.' } },
+      fieldConfig: { string: { description: 'The string to trim trailing whitespace from.', variableType: 'string' } },
     }
   ),
 
@@ -469,7 +469,7 @@ export const validations = {
       category: 'whitespace',
       description: 'Trim whitespace from the start.',
       returns: 'string',
-      fieldConfig: { string: { description: 'The string to trim leading whitespace from.' } },
+      fieldConfig: { string: { description: 'The string to trim leading whitespace from.', variableType: 'string' } },
     }
   ),
 
@@ -491,8 +491,8 @@ export const validations = {
       description: 'Split into words (optional regex).',
       returns: 'array',
       fieldConfig: {
-        string: { description: 'The string to split into words.' },
-        pattern: { description: 'Optional regex pattern to use as the word boundary.' },
+        string: { description: 'The string to split into words.', variableType: 'string' },
+        pattern: { description: 'Optional regex pattern to use as the word boundary.', variableType: 'string' },
       },
     }
   ),
@@ -505,7 +505,7 @@ export const validations = {
     {
       label: 'Length', icon: '🔢', category: 'utility', description: 'String length.',
       returns: 'number',
-      fieldConfig: { string: { description: 'The string to measure the length of.' } },
+      fieldConfig: { string: { description: 'The string to measure the length of.', variableType: 'string' } },
     }
   ),
 
@@ -521,7 +521,7 @@ export const validations = {
       description: 'Substring with start and end.',
       returns: 'string',
       fieldConfig: {
-        string: { description: 'The string to extract a substring from.' },
+        string: { description: 'The string to extract a substring from.', variableType: 'string' },
         start: { description: 'Start index (inclusive).' },
         end: { description: 'End index (exclusive).' },
       },
@@ -540,8 +540,8 @@ export const validations = {
       description: 'Test if regex pattern exists.',
       returns: 'boolean',
       fieldConfig: {
-        string: { description: 'The string to test.' },
-        pattern: { description: 'Regex pattern string to test against the string.' },
+        string: { description: 'The string to test.', variableType: 'string' },
+        pattern: { description: 'Regex pattern string to test against the string.', variableType: 'string' },
       },
     }
   ),
@@ -581,7 +581,7 @@ export const validations = {
       category: 'query',
       description: 'Parse query string to object.',
       returns: 'object',
-      fieldConfig: { string: { description: 'URL query string to parse (e.g. "a=1&b=2").' } },
+      fieldConfig: { string: { description: 'URL query string to parse (e.g. "a=1&b=2").', variableType: 'string' } },
     }
   ),
 
@@ -611,7 +611,7 @@ export const validations = {
       category: 'encoding',
       description: 'Percent-encode a URI component.',
       returns: 'string',
-      fieldConfig: { string: { description: 'The string to percent-encode for use in a URI.' } },
+      fieldConfig: { string: { description: 'The string to percent-encode for use in a URI.', variableType: 'string' } },
     }
   ),
 
@@ -626,7 +626,7 @@ export const validations = {
       category: 'encoding',
       description: 'Decode a percent-encoded component.',
       returns: 'string',
-      fieldConfig: { string: { description: 'The percent-encoded URI component to decode.' } },
+      fieldConfig: { string: { description: 'The percent-encoded URI component to decode.', variableType: 'string' } },
     }
   ),
 
@@ -638,7 +638,7 @@ export const validations = {
     {
       label: 'Slugify', icon: '🐌', category: 'casing', description: 'Make a URL-friendly slug.',
       returns: 'string',
-      fieldConfig: { string: { description: 'The string to slugify (e.g. "Hello World" → "hello-world").' } },
+      fieldConfig: { string: { description: 'The string to slugify (e.g. "Hello World" → "hello-world").', variableType: 'string' } },
     }
   ),
 

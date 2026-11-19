@@ -154,7 +154,8 @@
     },
     "continue": {
       "title": "Continue",
-      "hint": "Starred first, then recently opened",
+      "starred": "Starred",
+      "recent": "Recently opened",
       "ran": "Ran {time}",
       "opened": "Opened {time}",
       "neverRan": "Never run",
@@ -1226,6 +1227,7 @@
       "name": "Name",
       "namePlaceholder": "my_variable",
       "nameDuplicate": "A variable with this name already exists",
+      "invalidArray": "Must be a valid JSON array, for example [1, 2] or [\"a\", \"b\"]",
       "label": "Label",
       "labelPlaceholder": "Display name shown in the overview form",
       "description": "Description",
@@ -1884,6 +1886,7 @@
     "empty": "Nothing to reference yet",
     "unknownVariable": "Unknown variable “{name}” — it will silently resolve to an empty value",
     "valueAsText": "“{name}” is a {type} — here it becomes text",
+    "wrongType": "{type} · needs {wanted}",
     "valueAsTextHint": "Passed as text, not as the {type} itself.",
     "valueAsTextFix": "Use {raw}",
     "syntax": {
@@ -1891,7 +1894,15 @@
       "rawNotAlone": "A raw reference {raw} must be the whole value — inside text, use {template}",
       "rawPath": "A raw reference {raw} can only hold a path, like state.value",
       "invalid": "Invalid template: {detail}"
-    }
+    },
+    "containerFields": "{type} · {count} field inside | {type} · {count} fields inside",
+    "unknownFields": "{type} · run once to see its fields",
+    "search": "Search fields…",
+    "back": "Back",
+    "open": "Open {name}",
+    "noMatches": "No matching fields",
+    "firstItem": "first item · {detail}",
+    "everyItemNote": "Lists show their first item. To use every item, loop over the list with a For Each step."
   },
   "dataTable": {
     "sortHint": "Click to sort · Shift+click to add a column",

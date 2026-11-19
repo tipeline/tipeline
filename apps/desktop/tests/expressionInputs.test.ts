@@ -73,6 +73,47 @@ describe('TemplateField (workflow action params)', () => {
       expect(w.find('[role="textbox"]').text()).toBe(shown);
     }
   });
+
+  it('offers only variables of the field type, without flagging references to others', () => {
+    // For Each's `iterable` takes lists only; a typed reference to another variable is
+    // still a known name, not an unknown one.
+    const w = mount(TemplateField, {
+      props: { modelValue: '{{ customer }}', valueField: true, variableType: 'array' },
+      global: {
+        plugins: [i18n],
+        provide: {
+          taskVariables: ref([
+            { name: 'customer', type: 'string' },
+            { name: 'orders', type: 'array' },
+          ]),
+        },
+      },
+    });
+    const input = w.findComponent({ name: 'ExpressionInput' });
+    expect(input.props('suggestions')).toEqual([{ path: 'orders', detail: 'array' }]);
+    expect(input.props('valueField')).toBe(true);
+    expect(spans(w).every((s) => !s.issue)).toBe(true);
+  });
+
+  it('offers every type in a list of field types (an email address or a list of them)', () => {
+    const w = mount(TemplateField, {
+      props: { modelValue: '', valueField: true, variableType: ['string', 'array'] },
+      global: {
+        plugins: [i18n],
+        provide: {
+          taskVariables: ref([
+            { name: 'to', type: 'string' },
+            { name: 'team', type: 'array' },
+            { name: 'db', type: 'dbConnection' },
+          ]),
+        },
+      },
+    });
+    expect(w.findComponent({ name: 'ExpressionInput' }).props('suggestions')).toEqual([
+      { path: 'to', detail: 'string' },
+      { path: 'team', detail: 'array' },
+    ]);
+  });
 });
 
 describe('BindingInput (app builder)', () => {

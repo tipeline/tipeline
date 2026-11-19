@@ -3,7 +3,9 @@ import type { Ref } from 'vue'
 import { computed, inject } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ExpressionInput from '@/components/ExpressionInput.vue'
-import type { ExpressionAnalyzer, ExpressionReference } from '@/utils/expressionField'
+import { matchesVariableType } from './utils'
+import { valuePaths } from '@/utils/expressionField'
+import type { ExpressionAnalyzer, ExpressionReference, ExpressionSuggestion } from '@/utils/expressionField'
 import { bindingSyntaxIssue, bindingSyntaxMessage } from '@/utils/bindingSyntax'
 import {
   findVariableReferenceTokens,
@@ -30,8 +32,10 @@ const props = withDefaults(
     disabled?: boolean
     placeholder?: string
     valueField?: boolean
+    /** Only variables of this type are offered by the `{}` menu and autocomplete. */
+    variableType?: string | string[]
   }>(),
-  { multiline: false, disabled: false, placeholder: '', valueField: false }
+  { multiline: false, disabled: false, placeholder: '', valueField: false, variableType: undefined }
 )
 
 const emit = defineEmits<{
@@ -51,9 +55,75 @@ const text = computed(() => {
 })
 const taskVariables = inject<Ref<{ name: string; type: string }[]> | null>('taskVariables', null)
 
-const suggestions = computed(() =>
-  taskVariables ? taskVariables.value.map((v) => ({ path: v.name, detail: v.type })) : undefined
+// Object and list variables' known values (last run, else declared), by variable name.
+const taskVariableValues = inject<Ref<Record<string, unknown>> | null>('taskVariableValues', null)
+
+// The variables, plus the fields inside object/list ones (`customer.address.city`), each
+// checked against the field's type. Objects and lists work like folders: a nested field
+// sits under its parent and comes up only once the parent is opened (the `{}` menu) or
+// its dot typed (autocomplete), so big objects never flood the top level.
+// - fits the field's type: pickable.
+// - doesn't fit, but has fields inside that do: a container — opening it shows them,
+//   with how many fit as its hint. One with nothing that fits is left out.
+// - an object/list whose contents aren't known yet (no run, no declared value): shown
+//   dimmed with a hint to run once, since what's inside can't be checked.
+// - a field inside an open object that doesn't fit: dimmed, so `{= customer.` still
+//   shows everything that's there.
+const wantedTypes = computed(() =>
+  Array.isArray(props.variableType) ? props.variableType.join(' / ') : (props.variableType ?? '')
 )
+const fits = (type: string) => matchesVariableType(type, props.variableType)
+const suggestions = computed<ExpressionSuggestion[] | undefined>(() => {
+  if (!taskVariables) return undefined
+  const out: ExpressionSuggestion[] = []
+  const containerDetail = (type: string, count: number) =>
+    t('expressionInput.containerFields', { type, count }, count)
+  // A list shows its first item, as the shape every item has — but picking `list[0]…`
+  // means that one item, so it says so, and how to work with every item instead.
+  const everyItem = t('expressionInput.everyItemNote')
+  const asItem = (field: { path: string; parent: string }, detail: string) =>
+    field.path === `${field.parent}[0]`
+      ? { detail: t('expressionInput.firstItem', { detail }), note: everyItem }
+      : { detail }
+  for (const v of taskVariables.value) {
+    const value = taskVariableValues?.value[v.name]
+    const fields = value === undefined ? [] : valuePaths(v.name, value)
+    // How many fitting fields each path holds, anywhere below it.
+    const parents = new Map(fields.map((f) => [f.path, f.parent]))
+    const fitting = new Map<string, number>()
+    for (const f of fields) {
+      if (!fits(f.type)) continue
+      for (let p: string | undefined = f.parent; p !== undefined; p = parents.get(p))
+        fitting.set(p, (fitting.get(p) ?? 0) + 1)
+    }
+    const inside = (path: string) => fitting.get(path) ?? 0
+    if (fits(v.type)) out.push({ path: v.name, detail: v.type })
+    else if (inside(v.name) > 0)
+      out.push({ path: v.name, detail: containerDetail(v.type, inside(v.name)), container: true })
+    else {
+      if (value === undefined && (v.type === 'object' || v.type === 'array'))
+        out.push({ path: v.name, detail: t('expressionInput.unknownFields', { type: v.type }), disabled: true })
+      continue
+    }
+    for (const field of fields) {
+      const nested = { path: field.path, parent: field.parent }
+      if (fits(field.type)) out.push({ ...nested, ...asItem(field, field.type) })
+      else if (inside(field.path) > 0)
+        out.push({
+          ...nested,
+          ...asItem(field, containerDetail(field.type, inside(field.path))),
+          container: true,
+        })
+      else
+        out.push({
+          ...nested,
+          ...asItem(field, t('expressionInput.wrongType', { type: field.type, wanted: wantedTypes.value })),
+          disabled: true,
+        })
+    }
+  }
+  return out
+})
 
 const wrapped = computed(() =>
   props.valueField && taskVariables ? textWrappedValueReference(text.value, taskVariables.value) : null

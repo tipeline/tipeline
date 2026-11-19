@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch, type HTMLAttributes } from 'vue';
+import { computed, nextTick, onMounted, ref, watch, type HTMLAttributes } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Braces } from 'lucide-vue-next';
+import { Braces, ChevronLeft, ChevronRight, Search } from 'lucide-vue-next';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,9 +11,12 @@ import {
 import { cn } from '@/lib/utils';
 import {
   bindingQueryAt,
+  containerPrefix,
   decorateExpression,
   insertBinding,
+  insertPathPrefix,
   matchSuggestions,
+  menuEntries,
   readText,
   selectionOffsets,
   selectOffsets,
@@ -90,6 +93,27 @@ let composing = false;
 let menuSelection: { start: number; end: number } | null = null;
 
 const hasSuggestions = computed(() => props.suggestions !== undefined);
+// The `{}` menu shows one level at a time: objects and lists open like folders
+// (`menuPath` is the open one), and the search box finds nested fields at any depth.
+const menuPath = ref<string | null>(null);
+const menuSearch = ref('');
+const menuListRef = ref<HTMLDivElement | null>(null);
+const searchRef = ref<HTMLInputElement | null>(null);
+const showSearch = computed(() => (props.suggestions?.length ?? 0) > 8);
+const menuRows = computed(() =>
+  menuEntries(props.suggestions ?? [], { path: menuPath.value, search: menuSearch.value })
+);
+// Notes for the rows on show (a list's first item says how to use every item).
+const notesOf = (rows: ExpressionSuggestion[]) => [
+  ...new Set(rows.map((s) => s.note).filter((n): n is string => !!n)),
+];
+const menuNotes = computed(() =>
+  menuSearch.value.trim() ? [] : notesOf(menuRows.value.map((r) => r.suggestion))
+);
+const matchNotes = computed(() => notesOf(matches.value));
+const menuPathParent = computed(
+  () => props.suggestions?.find((s) => s.path === menuPath.value)?.parent ?? null
+);
 const matches = computed(() =>
   query.value === null || !props.suggestions ? [] : matchSuggestions(props.suggestions, query.value)
 );
@@ -134,6 +158,14 @@ function choose(s: ExpressionSuggestion) {
   const el = fieldRef.value;
   const sel = el && selectionOffsets(el);
   if (!el || !sel) return;
+  if (s.container) {
+    // Opens it: types `customer.` and keeps the list going with what's inside.
+    const next = insertPathPrefix(readText(el), sel.start, containerPrefix(props.suggestions ?? [], s.path));
+    applyText(next.text, next.caret);
+    sync();
+    refreshQuery();
+    return;
+  }
   let { text, caret } = insertBinding(readText(el), sel.start, s.path);
   // `{{` typed into an empty value field: the pick is the whole value.
   if (props.valueField && wholeTextReferencePath(text) === s.path) {
@@ -168,17 +200,20 @@ function onInput() {
 function onKeydown(e: KeyboardEvent) {
   if (e.isComposing) return;
   if (matches.value.length) {
-    if (e.key === 'ArrowDown') {
+    // Dimmed (disabled) options are shown but skipped: they sort last, so the pickable
+    // ones are 0..pickable-1 and the arrows cycle through those only.
+    const pickable = matches.value.filter((s) => !s.disabled).length;
+    if (pickable && e.key === 'ArrowDown') {
       e.preventDefault();
-      active.value = (active.value + 1) % matches.value.length;
+      active.value = (active.value + 1) % pickable;
       return;
     }
-    if (e.key === 'ArrowUp') {
+    if (pickable && e.key === 'ArrowUp') {
       e.preventDefault();
-      active.value = (active.value - 1 + matches.value.length) % matches.value.length;
+      active.value = (active.value - 1 + pickable) % pickable;
       return;
     }
-    if (e.key === 'Enter' || e.key === 'Tab') {
+    if (pickable && (e.key === 'Enter' || e.key === 'Tab')) {
       e.preventDefault();
       choose(matches.value[active.value]);
       return;
@@ -253,6 +288,54 @@ function pickFromMenu(path: string) {
   pendingPath = path;
 }
 
+/** Shows the fields inside `path` (null: the top level), keeping the menu open. */
+function openInMenu(path: string | null) {
+  menuPath.value = path;
+  menuSearch.value = '';
+  // The rows are replaced, so the focused one is gone: focus the new first row.
+  nextTick(() =>
+    menuListRef.value?.querySelector<HTMLElement>('[role="menuitem"]:not([data-disabled])')?.focus()
+  );
+}
+
+function onMenuRowSelect(e: Event, path: string, opens: boolean) {
+  if (!opens) return pickFromMenu(path);
+  e.preventDefault();
+  openInMenu(path);
+}
+
+function onOpenSelect(e: Event, path: string) {
+  e.preventDefault();
+  openInMenu(path);
+}
+
+// Typing anywhere in the menu goes to its search box (instead of the menu's
+// jump-to-row typeahead); ↓ from the box moves into the rows, ← goes back a level.
+function onMenuKeydown(e: KeyboardEvent) {
+  const inSearch = e.target === searchRef.value;
+  if (e.key === 'ArrowLeft' && menuPath.value !== null && !inSearch) {
+    e.preventDefault();
+    e.stopPropagation();
+    openInMenu(menuPathParent.value);
+    return;
+  }
+  if (!showSearch.value || inSearch) return;
+  if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    e.stopPropagation();
+    searchRef.value?.focus();
+  }
+}
+
+function onSearchKeydown(e: KeyboardEvent) {
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    menuListRef.value?.querySelector<HTMLElement>('[role="menuitem"]:not([data-disabled])')?.focus();
+    return;
+  }
+  // Escape and Tab still close the menu; everything else is just typing.
+  if (e.key !== 'Escape' && e.key !== 'Tab') e.stopPropagation();
+}
+
 // The menu would hand focus back to its trigger on close — send it to the field
 // instead (inserting the picked reference), unless the user already moved on.
 function onMenuCloseAutoFocus(e: Event) {
@@ -288,6 +371,12 @@ watch(decorated, () => {
   if (!isFocused()) render();
 });
 watch(menuOpen, (open) => {
+  if (open) {
+    menuPath.value = null;
+    menuSearch.value = '';
+    // After the menu's own focus handling has run.
+    if (showSearch.value) requestAnimationFrame(() => searchRef.value?.focus());
+  }
   if (!open && !isFocused()) render();
 });
 
@@ -358,19 +447,68 @@ const fieldStyle = computed(() =>
       >
         <Braces :size="size === 'sm' ? 12 : 14" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" class="max-h-72" @close-auto-focus="onMenuCloseAutoFocus">
-        <template v-if="suggestions && suggestions.length > 0">
+      <DropdownMenuContent
+        align="end"
+        class="flex max-h-80 w-72 flex-col overflow-hidden p-0"
+        @close-auto-focus="onMenuCloseAutoFocus"
+        @keydown="onMenuKeydown"
+      >
+        <div v-if="showSearch" class="flex items-center gap-2 border-b px-2">
+          <Search :size="12" class="shrink-0 text-muted-foreground" />
+          <input
+            ref="searchRef"
+            v-model="menuSearch"
+            type="text"
+            spellcheck="false"
+            :placeholder="t('expressionInput.search')"
+            :aria-label="t('expressionInput.search')"
+            class="h-8 w-full min-w-0 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+            @keydown="onSearchKeydown"
+          />
+        </div>
+        <div ref="menuListRef" class="min-h-0 flex-1 overflow-y-auto p-1">
           <DropdownMenuItem
-            v-for="s in suggestions"
-            :key="s.path"
-            class="cursor-pointer gap-3 text-xs"
-            @select="pickFromMenu(s.path)"
+            v-if="menuPath !== null && !menuSearch.trim()"
+            class="cursor-pointer gap-2 text-xs text-muted-foreground"
+            @select="(e: Event) => onOpenSelect(e, menuPathParent as string)"
           >
-            <span class="flex-1 truncate font-mono">{{ s.path }}</span>
-            <span v-if="s.detail" class="shrink-0 text-muted-foreground">{{ s.detail }}</span>
+            <ChevronLeft :size="12" />
+            <span class="flex-1 truncate font-mono">{{ menuPath }}</span>
+            <span class="shrink-0">{{ t('expressionInput.back') }}</span>
           </DropdownMenuItem>
-        </template>
-        <p v-else class="px-2 py-1.5 text-xs text-muted-foreground">{{ t('expressionInput.empty') }}</p>
+          <p v-for="note in menuNotes" :key="note" class="px-2 py-1 text-[11px] leading-4 text-muted-foreground">
+            {{ note }}
+          </p>
+          <template v-if="menuRows.length > 0">
+            <div v-for="row in menuRows" :key="row.suggestion.path" class="flex items-center">
+              <DropdownMenuItem
+                :disabled="row.suggestion.disabled"
+                class="min-w-0 flex-1 cursor-pointer gap-3 text-xs"
+                @select="(e: Event) => onMenuRowSelect(e, row.suggestion.path, row.opens)"
+              >
+                <span class="flex-1 truncate font-mono">{{
+                  menuPath !== null && !menuSearch.trim()
+                    ? row.suggestion.path.slice(menuPath.length).replace(/^\./, '')
+                    : row.suggestion.path
+                }}</span>
+                <span v-if="row.suggestion.detail" class="shrink-0 text-muted-foreground">{{ row.suggestion.detail }}</span>
+                <ChevronRight v-if="row.opens" :size="12" />
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                v-if="row.canOpen && !menuSearch.trim()"
+                class="h-7 w-7 shrink-0 cursor-pointer justify-center p-0"
+                :title="t('expressionInput.open', { name: row.suggestion.path })"
+                :aria-label="t('expressionInput.open', { name: row.suggestion.path })"
+                @select="(e: Event) => onOpenSelect(e, row.suggestion.path)"
+              >
+                <ChevronRight :size="12" />
+              </DropdownMenuItem>
+            </div>
+          </template>
+          <p v-else class="px-2 py-1.5 text-xs text-muted-foreground">
+            {{ menuSearch.trim() ? t('expressionInput.noMatches') : t('expressionInput.empty') }}
+          </p>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
     <ul
@@ -382,14 +520,28 @@ const fieldStyle = computed(() =>
         v-for="(s, i) in matches"
         :key="s.path"
         role="option"
-        :aria-selected="i === active"
-        class="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-xs"
-        :class="i === active ? 'bg-accent text-accent-foreground' : ''"
-        @mousedown.prevent="choose(s)"
-        @mouseenter="active = i"
+        :aria-selected="!s.disabled && i === active"
+        :aria-disabled="s.disabled || undefined"
+        class="flex items-center gap-2 rounded px-2 py-1 text-xs"
+        :class="
+          s.disabled
+            ? 'cursor-default text-muted-foreground opacity-60'
+            : ['cursor-pointer', i === active ? 'bg-accent text-accent-foreground' : '']
+        "
+        @mousedown.prevent="!s.disabled && choose(s)"
+        @mouseenter="!s.disabled && (active = i)"
       >
         <span class="flex-1 truncate font-mono">{{ s.path }}</span>
         <span v-if="s.detail" class="shrink-0 text-muted-foreground">{{ s.detail }}</span>
+        <ChevronRight v-if="s.container" :size="12" class="shrink-0 text-muted-foreground" />
+      </li>
+      <li
+        v-for="note in matchNotes"
+        :key="note"
+        role="presentation"
+        class="border-t px-2 pt-1.5 pb-1 text-[11px] leading-4 text-muted-foreground"
+      >
+        {{ note }}
       </li>
     </ul>
   </div>
