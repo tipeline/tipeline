@@ -190,3 +190,12 @@ export function booleanishToBoolean(value: Booleanish) {
 export function maybeBooleanishToBoolean(value?: Booleanish) {
   return value ? booleanishToBoolean(value) : undefined
 }
+
+/**
+ * Whether a variable of `type` fits a field's `variableType` setting — one type, a list
+ * of types, or none (any type fits).
+ */
+export function matchesVariableType(type: string, wanted?: string | string[]): boolean {
+  if (!wanted || (Array.isArray(wanted) && wanted.length === 0)) return true
+  return Array.isArray(wanted) ? wanted.includes(type) : type === wanted
+}

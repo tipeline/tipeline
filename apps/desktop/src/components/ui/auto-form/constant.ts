@@ -1,7 +1,6 @@
 import type { InputComponents } from './interface'
 import AutoFormFieldArray from './AutoFormFieldArray.vue'
 import AutoFormFieldBoolean from './AutoFormFieldBoolean.vue'
-import AutoFormFieldBrowserSelect from './AutoFormFieldBrowserSelect.vue'
 import AutoFormFieldCodeMirror from './AutoFormFieldCodeMirror.vue'
 import AutoFormFieldCodeMirrorTemplate from './AutoFormFieldCodeMirrorTemplate.vue'
 import AutoFormFieldDate from './AutoFormFieldDate.vue'
@@ -36,7 +35,6 @@ export const INPUT_COMPONENTS: InputComponents = {
   codemirror: AutoFormFieldCodeMirror,
   'codemirror-template': AutoFormFieldCodeMirrorTemplate,
   'task-select': AutoFormFieldTaskSelect,
-  'browser-select': AutoFormFieldBrowserSelect,
   'path-select': AutoFormFieldPathSelect,
   'textarea-variable': AutoFormFieldTextareaVariable,
   'variable-select': AutoFormFieldVariableSelect,

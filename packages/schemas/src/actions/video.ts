@@ -33,7 +33,11 @@ export const validations = {
     {
       label: 'Export Video', icon: '💾', category: 'video', description: 'Write the video to a file.',
       fieldConfig: {
-        video: { description: 'The video object to export.' },
+        video: {
+          description: 'The video object to export.',
+          valueField: true,
+          variableType: 'video',
+        },
         output: { description: 'Destination file path for the exported video.' },
       },
     }
@@ -59,7 +63,11 @@ export const validations = {
       label: 'Trim', icon: '✂️', category: 'edit', description: 'Cut a segment from the video.',
       returns: 'video',
       fieldConfig: {
-        video: { description: 'The video object to trim.' },
+        video: {
+          description: 'The video object to trim.',
+          valueField: true,
+          variableType: 'video',
+        },
         start: { description: 'Start timestamp of the segment (HH:MM:SS or HH:MM:SS.ms).' },
         duration: { description: 'Duration of the segment to keep (HH:MM:SS or HH:MM:SS.ms).' },
       },
@@ -83,7 +91,11 @@ export const validations = {
       label: 'Change Resolution', icon: '📐', category: 'edit', description: 'Resize video canvas.',
       returns: 'video',
       fieldConfig: {
-        video: { description: 'The video object to resize.' },
+        video: {
+          description: 'The video object to resize.',
+          valueField: true,
+          variableType: 'video',
+        },
         width: { description: 'Target width in pixels.' },
         height: { description: 'Target height in pixels.' },
       },
@@ -111,7 +123,11 @@ export const validations = {
       label: 'Crop', icon: '✂️', category: 'edit', description: 'Crop to a rectangle.',
       returns: 'video',
       fieldConfig: {
-        video: { description: 'The video object to crop.' },
+        video: {
+          description: 'The video object to crop.',
+          valueField: true,
+          variableType: 'video',
+        },
         width: { description: 'Width of the crop area in pixels.' },
         height: { description: 'Height of the crop area in pixels.' },
         x: { description: 'Horizontal offset from the left edge in pixels.' },
@@ -135,7 +151,11 @@ export const validations = {
       label: 'Rotate', icon: '🌀', category: 'edit', description: 'Rotate using transpose filter.',
       returns: 'video',
       fieldConfig: {
-        video: { description: 'The video object to rotate.' },
+        video: {
+          description: 'The video object to rotate.',
+          valueField: true,
+          variableType: 'video',
+        },
         transpose: { description: 'Transpose mode: 0=90°CCW+flip, 1=90°CW, 2=90°CCW, 3=90°CW+flip.' },
       },
     }
@@ -150,7 +170,11 @@ export const validations = {
       label: 'Change Framerate', icon: '🎞️', category: 'edit', description: 'Adjust frames per second.',
       returns: 'video',
       fieldConfig: {
-        video: { description: 'The video object to change the frame rate of.' },
+        video: {
+          description: 'The video object to change the frame rate of.',
+          valueField: true,
+          variableType: 'video',
+        },
         fps: { description: 'Target frames per second.' },
       },
     }
@@ -165,7 +189,11 @@ export const validations = {
       label: 'Change Volume', icon: '🔊', category: 'audio', description: 'Scale the audio volume.',
       returns: 'video',
       fieldConfig: {
-        video: { description: 'The video object to adjust audio volume for.' },
+        video: {
+          description: 'The video object to adjust audio volume for.',
+          valueField: true,
+          variableType: 'video',
+        },
         volume: { description: 'Volume multiplier (e.g. 0.5 = half, 2.0 = double).' },
       },
     }
@@ -179,7 +207,13 @@ export const validations = {
     {
       label: 'Mute', icon: '🔇', category: 'audio', description: 'Remove the audio track.',
       returns: 'video',
-      fieldConfig: { video: { description: 'The video object to mute.' } },
+      fieldConfig: {
+        video: {
+          description: 'The video object to mute.',
+          valueField: true,
+          variableType: 'video',
+        },
+      },
     }
   ),
 
@@ -192,7 +226,11 @@ export const validations = {
       label: 'Replace Audio', icon: '🎙️', category: 'audio', description: 'Replace audio with an external track.',
       returns: 'video',
       fieldConfig: {
-        video: { description: 'The video object to replace the audio of.' },
+        video: {
+          description: 'The video object to replace the audio of.',
+          valueField: true,
+          variableType: 'video',
+        },
         audio: { description: 'File path of the audio track to use as replacement.' },
       },
     }
@@ -215,7 +253,11 @@ export const validations = {
       label: 'Add BGM', icon: '🎵', category: 'audio', description: 'Mix background music into the video.',
       returns: 'video',
       fieldConfig: {
-        video: { description: 'The video object to add background music to.' },
+        video: {
+          description: 'The video object to add background music to.',
+          valueField: true,
+          variableType: 'video',
+        },
         music: { description: 'File path of the background music audio track.' },
         musicVolume: { description: 'Volume of the background music track (default 1.0).' },
       },
@@ -234,7 +276,11 @@ export const validations = {
       label: 'Convert Format', icon: '🔄', category: 'convert', description: 'Transcode video to a new format.',
       returns: 'video',
       fieldConfig: {
-        video: { description: 'The video object to transcode.' },
+        video: {
+          description: 'The video object to transcode.',
+          valueField: true,
+          variableType: 'video',
+        },
         format: { description: 'Target container format (e.g. "mp4", "webm", "mov").' },
       },
     }
@@ -277,7 +323,11 @@ export const validations = {
       label: 'Compress', icon: '🗜️', category: 'convert', description: 'Reduce size via CRF/preset.',
       returns: 'video',
       fieldConfig: {
-        video: { description: 'The video object to compress.' },
+        video: {
+          description: 'The video object to compress.',
+          valueField: true,
+          variableType: 'video',
+        },
         crf: { description: 'Constant Rate Factor (0–51). Lower = better quality, higher = smaller file. Typical: 18–28.' },
         preset: { description: 'Encoding speed preset (ultrafast to veryslow). Slower presets yield better compression.' },
       },
@@ -314,7 +364,11 @@ export const validations = {
       label: 'Concatenate', icon: '➕🎬', category: 'compose', description: 'Append multiple videos in sequence.',
       returns: 'video',
       fieldConfig: {
-        video: { description: 'The base video object to append to.' },
+        video: {
+          description: 'The base video object to append to.',
+          valueField: true,
+          variableType: 'video',
+        },
         inputs: { description: 'List of file paths of videos to append in order.' },
         resolution: { description: 'Optional output resolution to normalize all inputs to (width and height).' },
       },
@@ -344,7 +398,7 @@ export const validations = {
       label: 'Add Overlay', icon: '🧩', category: 'compose', description: 'Overlay an image/video onto the base.',
       returns: 'video',
       fieldConfig: {
-        video: { description: 'The base video object.' },
+        video: { description: 'The base video object.', valueField: true, variableType: 'video' },
         overlay: { description: 'File path of the image or video to overlay.' },
         x: { description: 'Horizontal position of the overlay in pixels (default 0).' },
         y: { description: 'Vertical position of the overlay in pixels (default 0).' },
@@ -377,7 +431,7 @@ export const validations = {
       label: 'Watermark', icon: '💧', category: 'compose', description: 'Add an image watermark.',
       returns: 'video',
       fieldConfig: {
-        video: { description: 'The base video object.' },
+        video: { description: 'The base video object.', valueField: true, variableType: 'video' },
         image: { description: 'File path of the watermark image.' },
         x: { description: 'Horizontal position of the watermark in pixels (default 0).' },
         y: { description: 'Vertical position of the watermark in pixels (default 0).' },
@@ -396,7 +450,11 @@ export const validations = {
       label: 'Add Subtitles', icon: '💬', category: 'compose', description: 'Burn-in or attach subtitles.',
       returns: 'video',
       fieldConfig: {
-        video: { description: 'The video object to add subtitles to.' },
+        video: {
+          description: 'The video object to add subtitles to.',
+          valueField: true,
+          variableType: 'video',
+        },
         subtitle: { description: 'File path to the subtitle file (e.g. .srt or .ass).' },
       },
     }
@@ -413,7 +471,13 @@ export const validations = {
     {
       label: 'Get Info', icon: 'ℹ️', category: 'analysis', description: 'Probe metadata and stream details.',
       returns: 'object',
-      fieldConfig: { video: { description: 'The video object to probe.' } },
+      fieldConfig: {
+        video: {
+          description: 'The video object to probe.',
+          valueField: true,
+          variableType: 'video',
+        },
+      },
     }
   ),
 
@@ -425,7 +489,13 @@ export const validations = {
     {
       label: 'Get Duration', icon: '⏱️', category: 'analysis', description: 'Get total video duration.',
       returns: 'number',
-      fieldConfig: { video: { description: 'The video object to get duration from.' } },
+      fieldConfig: {
+        video: {
+          description: 'The video object to get duration from.',
+          valueField: true,
+          variableType: 'video',
+        },
+      },
     }
   ),
 
@@ -445,7 +515,11 @@ export const validations = {
     {
       label: 'Thumbnail', icon: '🖼️', category: 'analysis', description: 'Extract a frame to an image file.',
       fieldConfig: {
-        video: { description: 'The video object to extract a frame from.' },
+        video: {
+          description: 'The video object to extract a frame from.',
+          valueField: true,
+          variableType: 'video',
+        },
         output: { description: 'Destination file path for the thumbnail image.' },
         timestamp: { description: 'Timestamp of the frame to capture (HH:MM:SS or HH:MM:SS.ms).' },
       },
@@ -477,7 +551,11 @@ export const validations = {
     {
       label: 'Extract Frames', icon: '🧩🎞️', category: 'export', description: 'Export frames to images.',
       fieldConfig: {
-        video: { description: 'The video object to extract frames from.' },
+        video: {
+          description: 'The video object to extract frames from.',
+          valueField: true,
+          variableType: 'video',
+        },
         outputDir: { description: 'Directory where frame images will be saved.' },
         fps: { description: 'Number of frames per second to extract.' },
         format: { description: 'Image format for extracted frames: png, jpg, or bmp.' },
@@ -495,7 +573,11 @@ export const validations = {
     {
       label: 'Extract Audio', icon: '🎧', category: 'export', description: 'Demux or transcode audio to a file.',
       fieldConfig: {
-        video: { description: 'The video object to extract audio from.' },
+        video: {
+          description: 'The video object to extract audio from.',
+          valueField: true,
+          variableType: 'video',
+        },
         output: { description: 'Destination file path for the extracted audio.' },
       },
     }
@@ -523,7 +605,11 @@ export const validations = {
     {
       label: 'Generate GIF', icon: '🖼️', category: 'export', description: 'Create an animated GIF from a segment.',
       fieldConfig: {
-        video: { description: 'The video object to create a GIF from.' },
+        video: {
+          description: 'The video object to create a GIF from.',
+          valueField: true,
+          variableType: 'video',
+        },
         output: { description: 'Destination file path for the GIF.' },
         start: { description: 'Start timestamp of the segment (HH:MM:SS).' },
         duration: { description: 'Duration of the GIF segment (HH:MM:SS).' },
@@ -571,7 +657,11 @@ export const validations = {
       label: 'Blur Region', icon: '🕶️', category: 'privacy', description: 'Blur rectangular regions over time.',
       returns: 'video',
       fieldConfig: {
-        video: { description: 'The video object to apply blur regions to.' },
+        video: {
+          description: 'The video object to apply blur regions to.',
+          valueField: true,
+          variableType: 'video',
+        },
         regions: { description: 'Array of region definitions with x, y, width, height, start/end times, and optional blur strength.' },
       },
     }

@@ -49,7 +49,7 @@ export const validations = {
       description: 'Set a nested property on an object using a dot/bracket path.',
       returns: 'object',
       fieldConfig: {
-        object: { description: 'The object to modify.' },
+        object: { description: 'The object to modify.', valueField: true, variableType: 'object' },
         property: { description: 'Dot or bracket path to the property (e.g. "user.name" or "items[0].id").' },
         value: { description: 'Value to set at the property path.' },
       },
@@ -74,7 +74,7 @@ export const validations = {
       description: 'Check if a property exists in an object (supports nested paths).',
       returns: 'boolean',
       fieldConfig: {
-        object: { description: 'The object to inspect.' },
+        object: { description: 'The object to inspect.', valueField: true, variableType: 'object' },
         property: { description: 'Dot or bracket path to the property to check (e.g. "user.address.city").' },
       },
     }
@@ -100,7 +100,11 @@ export const validations = {
       description: 'Get a property value from an object (supports nested paths and default values).',
       returns: 'any',
       fieldConfig: {
-        object: { description: 'The object to read from.' },
+        object: {
+          description: 'The object to read from.',
+          valueField: true,
+          variableType: 'object',
+        },
         property: { description: 'Dot or bracket path to the property (e.g. "user.name").' },
         defaultValue: { description: 'Value to return if the property does not exist.' },
       },
@@ -122,7 +126,13 @@ export const validations = {
       category: 'object',
       description: 'Get all keys from an object.',
       returns: 'array',
-      fieldConfig: { object: { description: 'The object to extract keys from.' } },
+      fieldConfig: {
+        object: {
+          description: 'The object to extract keys from.',
+          valueField: true,
+          variableType: 'object',
+        },
+      },
     }
   ),
 
@@ -141,7 +151,13 @@ export const validations = {
       category: 'object',
       description: 'Get all values from an object.',
       returns: 'array',
-      fieldConfig: { object: { description: 'The object to extract values from.' } },
+      fieldConfig: {
+        object: {
+          description: 'The object to extract values from.',
+          valueField: true,
+          variableType: 'object',
+        },
+      },
     }
   ),
 
@@ -182,7 +198,11 @@ export const validations = {
       description: 'Pick specific properties from an object.',
       returns: 'object',
       fieldConfig: {
-        object: { description: 'The source object to pick from.' },
+        object: {
+          description: 'The source object to pick from.',
+          valueField: true,
+          variableType: 'object',
+        },
         properties: { description: 'List of property keys to include in the result.' },
       },
     }
@@ -206,7 +226,11 @@ export const validations = {
       description: 'Omit specific properties from an object.',
       returns: 'object',
       fieldConfig: {
-        object: { description: 'The source object to omit from.' },
+        object: {
+          description: 'The source object to omit from.',
+          valueField: true,
+          variableType: 'object',
+        },
         properties: { description: 'List of property keys to exclude from the result.' },
       },
     }
@@ -227,7 +251,13 @@ export const validations = {
       category: 'object',
       description: 'Create a deep copy of an object.',
       returns: 'object',
-      fieldConfig: { object: { description: 'The object to deep-clone.' } },
+      fieldConfig: {
+        object: {
+          description: 'The object to deep-clone.',
+          valueField: true,
+          variableType: 'object',
+        },
+      },
     }
   ),
 
@@ -246,7 +276,13 @@ export const validations = {
       category: 'object',
       description: 'Get all key-value pairs from an object as an array of [key, value] entries.',
       returns: 'array',
-      fieldConfig: { object: { description: 'The object to get entries from.' } },
+      fieldConfig: {
+        object: {
+          description: 'The object to get entries from.',
+          valueField: true,
+          variableType: 'object',
+        },
+      },
     }
   ),
 
@@ -268,7 +304,11 @@ export const validations = {
       description: 'Delete a nested property from an object using a dot or bracket path.',
       returns: 'object',
       fieldConfig: {
-        object: { description: 'The object to delete a property from.' },
+        object: {
+          description: 'The object to delete a property from.',
+          valueField: true,
+          variableType: 'object',
+        },
         property: { description: 'Dot or bracket path of the property to delete (e.g. "user.address").' },
       },
     }

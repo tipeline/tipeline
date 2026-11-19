@@ -94,6 +94,26 @@ describe('TemplateField (workflow action params)', () => {
     expect(input.props('valueField')).toBe(true);
     expect(spans(w).every((s) => !s.issue)).toBe(true);
   });
+
+  it('offers every type in a list of field types (an email address or a list of them)', () => {
+    const w = mount(TemplateField, {
+      props: { modelValue: '', valueField: true, variableType: ['string', 'array'] },
+      global: {
+        plugins: [i18n],
+        provide: {
+          taskVariables: ref([
+            { name: 'to', type: 'string' },
+            { name: 'team', type: 'array' },
+            { name: 'db', type: 'dbConnection' },
+          ]),
+        },
+      },
+    });
+    expect(w.findComponent({ name: 'ExpressionInput' }).props('suggestions')).toEqual([
+      { path: 'to', detail: 'string' },
+      { path: 'team', detail: 'array' },
+    ]);
+  });
 });
 
 describe('BindingInput (app builder)', () => {

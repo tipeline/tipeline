@@ -3,6 +3,7 @@ import type { Ref } from 'vue'
 import { computed, inject } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ExpressionInput from '@/components/ExpressionInput.vue'
+import { matchesVariableType } from './utils'
 import type { ExpressionAnalyzer, ExpressionReference } from '@/utils/expressionField'
 import { bindingSyntaxIssue, bindingSyntaxMessage } from '@/utils/bindingSyntax'
 import {
@@ -31,7 +32,7 @@ const props = withDefaults(
     placeholder?: string
     valueField?: boolean
     /** Only variables of this type are offered by the `{}` menu and autocomplete. */
-    variableType?: string
+    variableType?: string | string[]
   }>(),
   { multiline: false, disabled: false, placeholder: '', valueField: false, variableType: undefined }
 )
@@ -56,7 +57,7 @@ const taskVariables = inject<Ref<{ name: string; type: string }[]> | null>('task
 const suggestions = computed(() =>
   taskVariables
     ? taskVariables.value
-        .filter((v) => !props.variableType || v.type === props.variableType)
+        .filter((v) => matchesVariableType(v.type, props.variableType))
         .map((v) => ({ path: v.name, detail: v.type }))
     : undefined
 )
