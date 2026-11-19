@@ -1899,7 +1899,9 @@
     "search": "Buscar campos…",
     "back": "Atrás",
     "open": "Abrir {name}",
-    "noMatches": "Ningún campo coincide"
+    "noMatches": "Ningún campo coincide",
+    "firstItem": "primer elemento · {detail}",
+    "everyItemNote": "Las listas muestran su primer elemento. Para usar todos, recorre la lista con un paso For Each."
   },
   "dataTable": {
     "sortHint": "Clic para ordenar · Mayús+clic para añadir una columna",

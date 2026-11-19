@@ -25,6 +25,11 @@ export interface ExpressionSuggestion {
    * types `customer.` — instead of inserting it. Its detail says how many fields fit.
    */
   container?: boolean;
+  /**
+   * A line shown with the level this row is in — above it in the `{}` menu, under the
+   * autocomplete list — e.g. that a list's `[0]` is only its first item.
+   */
+  note?: string;
 }
 
 export interface ExpressionIssue {
