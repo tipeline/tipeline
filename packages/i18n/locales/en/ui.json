@@ -1899,7 +1899,9 @@
     "search": "Search fields…",
     "back": "Back",
     "open": "Open {name}",
-    "noMatches": "No matching fields"
+    "noMatches": "No matching fields",
+    "firstItem": "first item · {detail}",
+    "everyItemNote": "Lists show their first item. To use every item, loop over the list with a For Each step."
   },
   "dataTable": {
     "sortHint": "Click to sort · Shift+click to add a column",

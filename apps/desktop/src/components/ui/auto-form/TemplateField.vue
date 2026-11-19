@@ -78,6 +78,13 @@ const suggestions = computed<ExpressionSuggestion[] | undefined>(() => {
   const out: ExpressionSuggestion[] = []
   const containerDetail = (type: string, count: number) =>
     t('expressionInput.containerFields', { type, count }, count)
+  // A list shows its first item, as the shape every item has — but picking `list[0]…`
+  // means that one item, so it says so, and how to work with every item instead.
+  const everyItem = t('expressionInput.everyItemNote')
+  const asItem = (field: { path: string; parent: string }, detail: string) =>
+    field.path === `${field.parent}[0]`
+      ? { detail: t('expressionInput.firstItem', { detail }), note: everyItem }
+      : { detail }
   for (const v of taskVariables.value) {
     const value = taskVariableValues?.value[v.name]
     const fields = value === undefined ? [] : valuePaths(v.name, value)
@@ -100,13 +107,17 @@ const suggestions = computed<ExpressionSuggestion[] | undefined>(() => {
     }
     for (const field of fields) {
       const nested = { path: field.path, parent: field.parent }
-      if (fits(field.type)) out.push({ ...nested, detail: field.type })
+      if (fits(field.type)) out.push({ ...nested, ...asItem(field, field.type) })
       else if (inside(field.path) > 0)
-        out.push({ ...nested, detail: containerDetail(field.type, inside(field.path)), container: true })
+        out.push({
+          ...nested,
+          ...asItem(field, containerDetail(field.type, inside(field.path))),
+          container: true,
+        })
       else
         out.push({
           ...nested,
-          detail: t('expressionInput.wrongType', { type: field.type, wanted: wantedTypes.value }),
+          ...asItem(field, t('expressionInput.wrongType', { type: field.type, wanted: wantedTypes.value })),
           disabled: true,
         })
     }

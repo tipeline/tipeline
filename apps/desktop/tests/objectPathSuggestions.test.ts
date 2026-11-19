@@ -14,6 +14,9 @@ import {
   type ExpressionSuggestion,
 } from '@/utils/expressionField';
 
+const EVERY_ITEM =
+  'Lists show their first item. To use every item, loop over the list with a For Each step.';
+
 const customer = {
   name: 'Ada',
   age: 36,
@@ -129,7 +132,13 @@ describe('TemplateField object fields', () => {
     expect(pickable(s)).toEqual([
       { path: 'customer', detail: 'object · 2 fields inside', container: true },
       { path: 'customer.orders', detail: 'array', parent: 'customer' },
-      { path: 'customer.orders[0]', detail: 'object · 1 field inside', parent: 'customer.orders', container: true },
+      {
+        path: 'customer.orders[0]',
+        detail: 'first item · object · 1 field inside',
+        note: EVERY_ITEM,
+        parent: 'customer.orders',
+        container: true,
+      },
       { path: 'customer.orders[0].tags', detail: 'array', parent: 'customer.orders[0]' },
     ]);
     // Nothing nested sits at the top level, however big the object is.
@@ -182,7 +191,12 @@ describe('TemplateField object fields', () => {
   it('keeps nested fields under the nearest offered parent', () => {
     const s = pickable(suggestionsOf(mountField({ variableType: ['object', 'array'] })));
     expect(s).toContainEqual({ path: 'customer.orders', detail: 'array', parent: 'customer' });
-    expect(s).toContainEqual({ path: 'customer.orders[0]', detail: 'object', parent: 'customer.orders' });
+    expect(s).toContainEqual({
+      path: 'customer.orders[0]',
+      detail: 'first item · object',
+      note: EVERY_ITEM,
+      parent: 'customer.orders',
+    });
     expect(s.some((x) => x.path === 'customer.name')).toBe(false);
   });
 
@@ -319,5 +333,46 @@ describe('the {} menu', () => {
     expect(containerPrefix([{ path: 'rows[0]', parent: 'rows' }], 'rows')).toBe('rows[');
     expect(insertPathPrefix('Hi {{ cus', 9, 'customer.')).toEqual({ text: 'Hi {{ customer.', caret: 15 });
     expect(insertPathPrefix('{{ cus }} x', 6, 'customer.')).toEqual({ text: '{{ customer. }} x', caret: 12 });
+  });
+});
+
+describe("a list's first item", () => {
+  const suggestions: ExpressionSuggestion[] = [
+    { path: 'cosas', detail: 'array' },
+    { path: 'cosas[0]', detail: 'first item · object', parent: 'cosas', note: EVERY_ITEM },
+    { path: 'cosas[0].name', detail: 'string', parent: 'cosas[0]' },
+  ];
+  const mountInput = async () => {
+    const { default: ExpressionInput } = await import('@/components/ExpressionInput.vue');
+    return mount(ExpressionInput, {
+      props: { modelValue: '', suggestions },
+      global: { plugins: [i18n] },
+      attachTo: document.body,
+    });
+  };
+
+  it('says so under the autocomplete list once the list is opened, and not before', async () => {
+    const w = await mountInput();
+    (w.vm as any).query = 'cosas';
+    await w.vm.$nextTick();
+    expect(w.text()).not.toContain('For Each');
+    (w.vm as any).query = 'cosas[';
+    await w.vm.$nextTick();
+    expect(w.find('[role="option"]').text()).toContain('first item · object');
+    expect(w.find('[role="presentation"]').text()).toBe(EVERY_ITEM);
+    w.unmount();
+  });
+
+  it('shows the note on the menu level that holds the first item, and not in a search', async () => {
+    const w = await mountInput();
+    const vm = w.vm as any;
+    expect(vm.menuNotes).toEqual([]);
+    vm.menuPath = 'cosas';
+    await w.vm.$nextTick();
+    expect(vm.menuNotes).toEqual([EVERY_ITEM]);
+    vm.menuSearch = 'name';
+    await w.vm.$nextTick();
+    expect(vm.menuNotes).toEqual([]);
+    w.unmount();
   });
 });

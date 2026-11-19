@@ -103,6 +103,14 @@ const showSearch = computed(() => (props.suggestions?.length ?? 0) > 8);
 const menuRows = computed(() =>
   menuEntries(props.suggestions ?? [], { path: menuPath.value, search: menuSearch.value })
 );
+// Notes for the rows on show (a list's first item says how to use every item).
+const notesOf = (rows: ExpressionSuggestion[]) => [
+  ...new Set(rows.map((s) => s.note).filter((n): n is string => !!n)),
+];
+const menuNotes = computed(() =>
+  menuSearch.value.trim() ? [] : notesOf(menuRows.value.map((r) => r.suggestion))
+);
+const matchNotes = computed(() => notesOf(matches.value));
 const menuPathParent = computed(
   () => props.suggestions?.find((s) => s.path === menuPath.value)?.parent ?? null
 );
@@ -468,6 +476,9 @@ const fieldStyle = computed(() =>
             <span class="flex-1 truncate font-mono">{{ menuPath }}</span>
             <span class="shrink-0">{{ t('expressionInput.back') }}</span>
           </DropdownMenuItem>
+          <p v-for="note in menuNotes" :key="note" class="px-2 py-1 text-[11px] leading-4 text-muted-foreground">
+            {{ note }}
+          </p>
           <template v-if="menuRows.length > 0">
             <div v-for="row in menuRows" :key="row.suggestion.path" class="flex items-center">
               <DropdownMenuItem
@@ -523,6 +534,14 @@ const fieldStyle = computed(() =>
         <span class="flex-1 truncate font-mono">{{ s.path }}</span>
         <span v-if="s.detail" class="shrink-0 text-muted-foreground">{{ s.detail }}</span>
         <ChevronRight v-if="s.container" :size="12" class="shrink-0 text-muted-foreground" />
+      </li>
+      <li
+        v-for="note in matchNotes"
+        :key="note"
+        role="presentation"
+        class="border-t px-2 pt-1.5 pb-1 text-[11px] leading-4 text-muted-foreground"
+      >
+        {{ note }}
       </li>
     </ul>
   </div>
