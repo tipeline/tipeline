@@ -4,7 +4,8 @@ import { computed, inject } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ExpressionInput from '@/components/ExpressionInput.vue'
 import { matchesVariableType } from './utils'
-import type { ExpressionAnalyzer, ExpressionReference } from '@/utils/expressionField'
+import { valuePaths } from '@/utils/expressionField'
+import type { ExpressionAnalyzer, ExpressionReference, ExpressionSuggestion } from '@/utils/expressionField'
 import { bindingSyntaxIssue, bindingSyntaxMessage } from '@/utils/bindingSyntax'
 import {
   findVariableReferenceTokens,
@@ -54,13 +55,49 @@ const text = computed(() => {
 })
 const taskVariables = inject<Ref<{ name: string; type: string }[]> | null>('taskVariables', null)
 
-const suggestions = computed(() =>
-  taskVariables
-    ? taskVariables.value
-        .filter((v) => matchesVariableType(v.type, props.variableType))
-        .map((v) => ({ path: v.name, detail: v.type }))
-    : undefined
+// Object and list variables' known values (last run, else declared), by variable name.
+const taskVariableValues = inject<Ref<Record<string, unknown>> | null>('taskVariableValues', null)
+
+// The variables, plus the fields inside object/list ones (`customer.address.city`), each
+// checked against the field's type. A nested field comes up once its parent's dot is
+// typed — unless the parent itself is filtered out (an object in a list-only field), then
+// the list inside it is offered at the top level so it can still be found. Nested fields
+// of the wrong type still come up after the dot, dimmed and not pickable, so typing
+// `{= myObject.` always shows what's inside.
+const wantedTypes = computed(() =>
+  Array.isArray(props.variableType) ? props.variableType.join(' / ') : (props.variableType ?? '')
 )
+const suggestions = computed<ExpressionSuggestion[] | undefined>(() => {
+  if (!taskVariables) return undefined
+  const out: ExpressionSuggestion[] = []
+  for (const v of taskVariables.value) {
+    const kept = new Set<string>()
+    if (matchesVariableType(v.type, props.variableType)) {
+      out.push({ path: v.name, detail: v.type })
+      kept.add(v.name)
+    }
+    const value = taskVariableValues?.value[v.name]
+    if (value === undefined) continue
+    const parents = new Map<string, string>()
+    for (const field of valuePaths(v.name, value)) {
+      parents.set(field.path, field.parent)
+      if (!matchesVariableType(field.type, props.variableType)) {
+        out.push({
+          path: field.path,
+          detail: t('expressionInput.wrongType', { type: field.type, wanted: wantedTypes.value }),
+          parent: field.parent,
+          disabled: true,
+        })
+        continue
+      }
+      let parent: string | undefined = field.parent
+      while (parent !== undefined && !kept.has(parent)) parent = parents.get(parent)
+      out.push({ path: field.path, detail: field.type, ...(parent ? { parent } : {}) })
+      kept.add(field.path)
+    }
+  }
+  return out
+})
 
 const wrapped = computed(() =>
   props.valueField && taskVariables ? textWrappedValueReference(text.value, taskVariables.value) : null

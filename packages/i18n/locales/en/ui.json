@@ -1885,6 +1885,7 @@
     "empty": "Nothing to reference yet",
     "unknownVariable": "Unknown variable “{name}” — it will silently resolve to an empty value",
     "valueAsText": "“{name}” is a {type} — here it becomes text",
+    "wrongType": "{type} · needs {wanted}",
     "valueAsTextHint": "Passed as text, not as the {type} itself.",
     "valueAsTextFix": "Use {raw}",
     "syntax": {
