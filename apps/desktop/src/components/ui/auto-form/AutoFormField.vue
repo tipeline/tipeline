@@ -4,6 +4,7 @@ import type { Config, ConfigItem, Shape } from './interface'
 import { computed } from 'vue'
 import { DEFAULT_ZOD_HANDLERS, INPUT_COMPONENTS } from './constant'
 import useDependencies from './dependencies'
+import { defaultVariableType } from './utils'
 
 const props = defineProps<{
   fieldName: string
@@ -30,9 +31,16 @@ const delegatedProps = computed(() => {
 
 const { isDisabled, isHidden, isRequired, overrideOptions, overrideLabel } = useDependencies(props.fieldName)
 
-const effectiveConfig = computed(() => (
-  overrideLabel.value ? { ...props.config, label: overrideLabel.value } : props.config
-))
+// A text or number param with no `variableType` of its own offers the variables its type
+// fits (defaultVariableType), so the `{}` menu doesn't list objects, browsers… in a text box.
+const effectiveConfig = computed(() => {
+  const config = overrideLabel.value ? { ...props.config, label: overrideLabel.value } : props.config
+  const own = config as ConfigItem | undefined
+  const variableType = defaultVariableType(props.shape?.type, own)
+  return variableType !== undefined && own?.variableType === undefined
+    ? { ...own, variableType }
+    : config
+})
 </script>
 
 <template>

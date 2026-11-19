@@ -19,6 +19,12 @@ export interface ExpressionSuggestion {
    * object): shown dimmed so the dot still tells what's inside. Its detail says why.
    */
   disabled?: boolean;
+  /**
+   * Not a value this field takes, but it holds fields that are (an object in a text field
+   * with text inside): picking it opens it — the `{}` menu shows its fields, autocomplete
+   * types `customer.` — instead of inserting it. Its detail says how many fields fit.
+   */
+  container?: boolean;
 }
 
 export interface ExpressionIssue {
@@ -82,6 +88,69 @@ export function insertBinding(
   const head = `${text.slice(0, q.start)} ${path}`;
   const next = `${head}${hasCloser && !/^\s/.test(rest) ? ' ' : ''}${rest}`;
   return { text: next, caret: head.length };
+}
+
+/**
+ * Replaces the query at the caret with `prefix` (`customer.` / `orders[`) and leaves the
+ * binding open, so autocomplete goes on with the container's fields.
+ */
+export function insertPathPrefix(
+  text: string,
+  caret: number,
+  prefix: string
+): { text: string; caret: number } {
+  const q = bindingQueryAt(text, caret);
+  if (!q) return { text, caret };
+  const head = `${text.slice(0, q.start)} ${prefix}`;
+  return { text: `${head}${text.slice(caret)}`, caret: head.length };
+}
+
+/** How a container's fields continue its path: `customer.` or `orders[`. */
+export function containerPrefix(suggestions: ExpressionSuggestion[], path: string): string {
+  const child = suggestions.find((s) => s.parent === path);
+  return child?.path[path.length] === '[' ? `${path}[` : `${path}.`;
+}
+
+/** One row of the `{}` menu: `opens` when choosing the row shows the fields inside. */
+export interface MenuEntry {
+  suggestion: ExpressionSuggestion;
+  /** The row's own pick opens it (a container). */
+  opens: boolean;
+  /** Pickable, and also has fields worth opening (an object in an object field). */
+  canOpen: boolean;
+}
+
+/**
+ * The `{}` menu's rows. With a search, every pickable path containing it — nested ones
+ * too, prefix matches first, at most `limit`. Without one, one level: the top level, or
+ * the fields directly inside `path` (pickable and containers first, dimmed ones last).
+ */
+export function menuEntries(
+  suggestions: ExpressionSuggestion[],
+  { path = null, search = '', limit = 30 }: { path?: string | null; search?: string; limit?: number } = {}
+): MenuEntry[] {
+  const openable = new Set(
+    suggestions.filter((s) => s.parent && !s.disabled).map((s) => s.parent as string)
+  );
+  const entry = (s: ExpressionSuggestion): MenuEntry => ({
+    suggestion: s,
+    opens: !!s.container,
+    canOpen: !s.container && !s.disabled && openable.has(s.path),
+  });
+  const q = search.trim().toLowerCase();
+  if (q) {
+    const found = suggestions.filter(
+      (s) => !s.disabled && !s.container && s.path.toLowerCase().includes(q)
+    );
+    const starts = (s: ExpressionSuggestion) => {
+      const p = s.path.toLowerCase();
+      // A field's own name counts too: `city` starts `customer.address.city`'s last part.
+      return p.startsWith(q) || p.split(/[.[]/).pop()!.startsWith(q);
+    };
+    return [...found.filter(starts), ...found.filter((s) => !starts(s))].slice(0, limit).map(entry);
+  }
+  const level = suggestions.filter((s) => (path === null ? !s.parent : s.parent === path));
+  return [...level.filter((s) => !s.disabled), ...level.filter((s) => s.disabled)].map(entry);
 }
 
 /** Whether a nested suggestion's parent has been typed out (`customer.` / `items[`). */

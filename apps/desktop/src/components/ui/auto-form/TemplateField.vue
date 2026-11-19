@@ -59,41 +59,56 @@ const taskVariables = inject<Ref<{ name: string; type: string }[]> | null>('task
 const taskVariableValues = inject<Ref<Record<string, unknown>> | null>('taskVariableValues', null)
 
 // The variables, plus the fields inside object/list ones (`customer.address.city`), each
-// checked against the field's type. A nested field comes up once its parent's dot is
-// typed — unless the parent itself is filtered out (an object in a list-only field), then
-// the list inside it is offered at the top level so it can still be found. Nested fields
-// of the wrong type still come up after the dot, dimmed and not pickable, so typing
-// `{= myObject.` always shows what's inside.
+// checked against the field's type. Objects and lists work like folders: a nested field
+// sits under its parent and comes up only once the parent is opened (the `{}` menu) or
+// its dot typed (autocomplete), so big objects never flood the top level.
+// - fits the field's type: pickable.
+// - doesn't fit, but has fields inside that do: a container — opening it shows them,
+//   with how many fit as its hint. One with nothing that fits is left out.
+// - an object/list whose contents aren't known yet (no run, no declared value): shown
+//   dimmed with a hint to run once, since what's inside can't be checked.
+// - a field inside an open object that doesn't fit: dimmed, so `{= customer.` still
+//   shows everything that's there.
 const wantedTypes = computed(() =>
   Array.isArray(props.variableType) ? props.variableType.join(' / ') : (props.variableType ?? '')
 )
+const fits = (type: string) => matchesVariableType(type, props.variableType)
 const suggestions = computed<ExpressionSuggestion[] | undefined>(() => {
   if (!taskVariables) return undefined
   const out: ExpressionSuggestion[] = []
+  const containerDetail = (type: string, count: number) =>
+    t('expressionInput.containerFields', { type, count }, count)
   for (const v of taskVariables.value) {
-    const kept = new Set<string>()
-    if (matchesVariableType(v.type, props.variableType)) {
-      out.push({ path: v.name, detail: v.type })
-      kept.add(v.name)
-    }
     const value = taskVariableValues?.value[v.name]
-    if (value === undefined) continue
-    const parents = new Map<string, string>()
-    for (const field of valuePaths(v.name, value)) {
-      parents.set(field.path, field.parent)
-      if (!matchesVariableType(field.type, props.variableType)) {
+    const fields = value === undefined ? [] : valuePaths(v.name, value)
+    // How many fitting fields each path holds, anywhere below it.
+    const parents = new Map(fields.map((f) => [f.path, f.parent]))
+    const fitting = new Map<string, number>()
+    for (const f of fields) {
+      if (!fits(f.type)) continue
+      for (let p: string | undefined = f.parent; p !== undefined; p = parents.get(p))
+        fitting.set(p, (fitting.get(p) ?? 0) + 1)
+    }
+    const inside = (path: string) => fitting.get(path) ?? 0
+    if (fits(v.type)) out.push({ path: v.name, detail: v.type })
+    else if (inside(v.name) > 0)
+      out.push({ path: v.name, detail: containerDetail(v.type, inside(v.name)), container: true })
+    else {
+      if (value === undefined && (v.type === 'object' || v.type === 'array'))
+        out.push({ path: v.name, detail: t('expressionInput.unknownFields', { type: v.type }), disabled: true })
+      continue
+    }
+    for (const field of fields) {
+      const nested = { path: field.path, parent: field.parent }
+      if (fits(field.type)) out.push({ ...nested, detail: field.type })
+      else if (inside(field.path) > 0)
+        out.push({ ...nested, detail: containerDetail(field.type, inside(field.path)), container: true })
+      else
         out.push({
-          path: field.path,
+          ...nested,
           detail: t('expressionInput.wrongType', { type: field.type, wanted: wantedTypes.value }),
-          parent: field.parent,
           disabled: true,
         })
-        continue
-      }
-      let parent: string | undefined = field.parent
-      while (parent !== undefined && !kept.has(parent)) parent = parents.get(parent)
-      out.push({ path: field.path, detail: field.type, ...(parent ? { parent } : {}) })
-      kept.add(field.path)
     }
   }
   return out

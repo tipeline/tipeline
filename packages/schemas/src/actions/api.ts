@@ -181,7 +181,7 @@ export const validations = {
       description: 'Call a method from previously loaded OpenAPI endpoints.',
       returns: 'object',
       fieldConfig: {
-        endpoints: { description: 'Reference to the loaded OpenAPI endpoints object.' },
+        endpoints: { description: 'Reference to the loaded OpenAPI endpoints object.', variableType: 'object' },
         method: { description: 'Name of the endpoint method to invoke.' },
         args: { description: 'Path arguments required by the endpoint.' },
         parameters: { description: 'Query parameters for the endpoint call.' },

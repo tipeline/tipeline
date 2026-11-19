@@ -6,7 +6,10 @@ import { i18n } from '@/i18n';
 import TemplateField from '@/components/ui/auto-form/TemplateField.vue';
 import {
   bindingQueryAt,
+  containerPrefix,
+  insertPathPrefix,
   matchSuggestions,
+  menuEntries,
   valuePaths,
   type ExpressionSuggestion,
 } from '@/utils/expressionField';
@@ -121,13 +124,59 @@ describe('TemplateField object fields', () => {
 
   const pickable = (s: ExpressionSuggestion[]) => s.filter((x) => !x.disabled);
 
-  it('offers only fields of the wanted type, surfacing a list inside a filtered-out object', () => {
+  it('turns an object that holds fields of the wanted type into a container, not lifting them', () => {
     const s = suggestionsOf(mountField({ variableType: 'array', valueField: true }));
-    // customer.orders[0] (an object) is filtered out too, so its tags hang off the list.
     expect(pickable(s)).toEqual([
-      { path: 'customer.orders', detail: 'array' },
-      { path: 'customer.orders[0].tags', detail: 'array', parent: 'customer.orders' },
+      { path: 'customer', detail: 'object · 2 fields inside', container: true },
+      { path: 'customer.orders', detail: 'array', parent: 'customer' },
+      { path: 'customer.orders[0]', detail: 'object · 1 field inside', parent: 'customer.orders', container: true },
+      { path: 'customer.orders[0].tags', detail: 'array', parent: 'customer.orders[0]' },
     ]);
+    // Nothing nested sits at the top level, however big the object is.
+    expect(s.filter((x) => !x.parent).map((x) => x.path)).toEqual(['customer']);
+  });
+
+  it('a text field opens objects for their text fields and leaves out ones with none', () => {
+    const w = mountField(
+      { variableType: ['string', 'number', 'boolean', 'date'] },
+      { customer, browserish: undefined, counts: { a: [1], b: [2] } }
+    );
+    variables.value = [
+      { name: 'customer', type: 'object' },
+      { name: 'title', type: 'string' },
+      { name: 'counts', type: 'object' },
+    ];
+    return w.vm.$nextTick().then(() => {
+      const top = suggestionsOf(w).filter((x) => !x.parent);
+      expect(top).toEqual([
+        // name, age, address.city, address.zip, orders[0].id
+        { path: 'customer', detail: 'object · 5 fields inside', container: true },
+        { path: 'title', detail: 'string' },
+        // counts holds lists of numbers: counts.a[0] is a number, so it opens too.
+        { path: 'counts', detail: 'object · 2 fields inside', container: true },
+      ]);
+      variables.value = [
+        { name: 'customer', type: 'object' },
+        { name: 'title', type: 'string' },
+      ];
+    });
+  });
+
+  it('hides an object with nothing that fits, and hints at running one whose fields are unknown', async () => {
+    variables.value = [
+      { name: 'flags', type: 'object' },
+      { name: 'later', type: 'object' },
+      { name: 'title', type: 'string' },
+    ];
+    const s = suggestionsOf(mountField({ variableType: 'string' }, { flags: { on: true } }));
+    expect(s).toEqual([
+      { path: 'later', detail: 'object · run once to see its fields', disabled: true },
+      { path: 'title', detail: 'string' },
+    ]);
+    variables.value = [
+      { name: 'customer', type: 'object' },
+      { name: 'title', type: 'string' },
+    ];
   });
 
   it('keeps nested fields under the nearest offered parent', () => {
@@ -167,11 +216,30 @@ describe('TemplateField object fields', () => {
     ]);
   });
 
-  it('keeps nested fields out of the {} menu list', async () => {
-    const w = mountField();
-    const input = w.findComponent({ name: 'ExpressionInput' });
-    const menu = (input.vm as any).menuSuggestions as ExpressionSuggestion[];
-    expect(menu.map((s) => s.path)).toEqual(['customer', 'title']);
+  it('shows a container in autocomplete with how many fields fit', async () => {
+    const { default: ExpressionInput } = await import('@/components/ExpressionInput.vue');
+    const w = mount(ExpressionInput, {
+      props: {
+        modelValue: '',
+        suggestions: [
+          { path: 'customer', detail: 'object · 1 field inside', container: true },
+          { path: 'customer.name', detail: 'string', parent: 'customer' },
+        ],
+      },
+      global: { plugins: [i18n] },
+      attachTo: document.body,
+    });
+    const field = w.find('[role="textbox"]').element as HTMLElement;
+    field.focus();
+    field.textContent = '{{ cus';
+    const range = document.createRange();
+    range.setStart(field.firstChild!, 6);
+    window.getSelection()!.removeAllRanges();
+    window.getSelection()!.addRange(range);
+    (w.vm as any).query = 'cus';
+    await w.vm.$nextTick();
+    expect(w.find('[role="option"]').text()).toContain('1 field inside');
+    w.unmount();
   });
 });
 
@@ -198,5 +266,58 @@ describe('ExpressionInput dimmed options', () => {
     await w.find('[role="textbox"]').trigger('keydown', { key: 'Enter' });
     expect(w.emitted('update:modelValue')).toBeUndefined();
     w.unmount();
+  });
+});
+
+describe('the {} menu', () => {
+  const suggestions: ExpressionSuggestion[] = [
+    { path: 'title', detail: 'string' },
+    { path: 'customer', detail: 'object · 3 fields inside', container: true },
+    { path: 'customer.name', detail: 'string', parent: 'customer' },
+    { path: 'customer.tags', detail: 'array · needs string', parent: 'customer', disabled: true },
+    { path: 'customer.address', detail: 'object · 2 fields inside', parent: 'customer', container: true },
+    { path: 'customer.address.city', detail: 'string', parent: 'customer.address' },
+    { path: 'customer.address.zip', detail: 'string', parent: 'customer.address' },
+    { path: 'config', detail: 'object' },
+    { path: 'config.mode', detail: 'object', parent: 'config' },
+  ];
+  const rows = (opts?: Parameters<typeof menuEntries>[1]) =>
+    menuEntries(suggestions, opts).map((r) => [r.suggestion.path, r.opens, r.canOpen]);
+
+  it('lists one level: the top, then what is inside an opened object', () => {
+    expect(rows()).toEqual([
+      ['title', false, false],
+      ['customer', true, false],
+      ['config', false, true],
+    ]);
+    expect(rows({ path: 'customer' })).toEqual([
+      ['customer.name', false, false],
+      ['customer.address', true, false],
+      ['customer.tags', false, false],
+    ]);
+    expect(rows({ path: 'customer.address' }).map((r) => r[0])).toEqual([
+      'customer.address.city',
+      'customer.address.zip',
+    ]);
+  });
+
+  it('searches pickable paths at any depth, matches on a field name first, and caps the list', () => {
+    expect(rows({ search: 'zip' }).map((r) => r[0])).toEqual(['customer.address.zip']);
+    // `mode` starts with m, so config.mode leads; the others only contain an m.
+    expect(rows({ search: 'm' }).map((r) => r[0])).toEqual([
+      'config.mode',
+      'customer.name',
+      'customer.address.city',
+      'customer.address.zip',
+    ]);
+    expect(rows({ search: 'tags' })).toEqual([]);
+    expect(menuEntries(suggestions, { search: 'e', limit: 2 })).toHaveLength(2);
+  });
+
+  it('opens a container from autocomplete by typing its dot or bracket', () => {
+    expect(containerPrefix(suggestions, 'customer')).toBe('customer.');
+    expect(containerPrefix([{ path: 'rows[0]', parent: 'rows' }], 'rows')).toBe('rows[');
+    expect(insertPathPrefix('Hi {{ cus', 9, 'customer.')).toEqual({ text: 'Hi {{ customer.', caret: 15 });
+    expect(insertPathPrefix('{{ cus }} x', 6, 'customer.')).toEqual({ text: '{{ customer. }} x', caret: 12 });
   });
 });

@@ -32,6 +32,7 @@ defineProps<FieldProps>()
             :placeholder="config?.inputProps?.placeholder"
             :disabled="maybeBooleanishToBoolean(config?.inputProps?.disabled) ?? disabled"
             value-field
+            :variable-type="config?.variableType ?? 'number'"
             @update:model-value="slotProps.componentField['onUpdate:modelValue']"
           />
           <Input v-else type="number" v-bind="{ ...slotProps.componentField, ...config?.inputProps }" :disabled="config?.inputProps?.disabled ?? disabled" />

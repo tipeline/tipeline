@@ -199,3 +199,24 @@ export function matchesVariableType(type: string, wanted?: string | string[]): b
   if (!wanted || (Array.isArray(wanted) && wanted.length === 0)) return true
   return Array.isArray(wanted) ? wanted.includes(type) : type === wanted
 }
+
+/** What a text param's `{}` menu offers by default: values that read sensibly as text. */
+export const TEXT_VARIABLE_TYPES = ['string', 'number', 'boolean', 'date']
+
+/**
+ * The variable types a param offers when its fieldConfig sets no `variableType`, from its
+ * Zod type: text fields take text-like values, number fields take numbers. A value field
+ * (`valueField`, or an any/unknown param) and the special pickers keep every type.
+ */
+export function defaultVariableType(
+  shapeType: string | undefined,
+  config?: { component?: unknown, variableType?: string | string[], valueField?: boolean },
+): string | string[] | undefined {
+  if (config?.variableType !== undefined || config?.valueField) return config?.variableType
+  const component = config?.component
+  if (shapeType === 'ZodString' && (!component || component === 'string' || component === 'textarea-variable'))
+    return TEXT_VARIABLE_TYPES
+  if (shapeType === 'ZodNumber' && (!component || component === 'number'))
+    return 'number'
+  return undefined
+}

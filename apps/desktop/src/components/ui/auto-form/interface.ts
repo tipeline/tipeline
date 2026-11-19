@@ -58,7 +58,8 @@ export interface ConfigItem {
   /** Friendly label per enum value, e.g. `{ eq: 'Equals' }`. Falls back to `beautifyObjectName` when absent. */
   optionLabels?: Record<string, string>
   /** For `variable-select` fields: restricts the picker to variables of this type. For text fields: what
-   * the `{}` menu and `{{`/`{=` autocomplete offer. Omit to allow any type. */
+   * the `{}` menu and `{{`/`{=` autocomplete offer. Omitted, a text field offers string/number/boolean/date
+   * variables and a number field numbers; value fields and any-typed params offer every type. */
   variableType?: string | string[]
   /** For text fields: the param holds a value, not text — a reference picked as the whole value is `{= x =}`. */
   valueField?: boolean
