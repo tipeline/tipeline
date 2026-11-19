@@ -154,7 +154,8 @@
     },
     "continue": {
       "title": "Continuar",
-      "hint": "Primero los destacados, luego los abiertos recientemente",
+      "starred": "Destacados",
+      "recent": "Abiertos recientemente",
       "ran": "Se ejecutó {time}",
       "opened": "Abierto {time}",
       "neverRan": "Nunca ejecutado",

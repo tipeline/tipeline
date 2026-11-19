@@ -266,25 +266,53 @@ describe('HomeContinue', () => {
 });
 
 describe('HomeContinue rows', () => {
-  it('shows two rows of tiles until Show all, then all of them', async () => {
+  const names = (wrapper: ReturnType<typeof mount>) => wrapper.findAll('button p.font-medium').map((p) => p.text());
+
+  it('shows one row of stars until Show all, then all of them', async () => {
     lists[SEND.TASK_LIST] = Array.from({ length: 18 }, (_, i) => ({ identifier: `t${i}`, name: `W${i}` }));
     const stars = useStarredItemsStore();
     for (let i = 0; i < 18; i++) stars.star('task', `t${i}`, `W${i}`);
 
     const wrapper = mount(HomeContinue, { global: { plugins: [i18n, makeRouter()] } });
     await flushPromises();
-    const names = () => wrapper.findAll('button p.font-medium').map((p) => p.text());
-    // Before the grid is measured it assumes six to a row: two rows are twelve.
-    expect(names()).toHaveLength(12);
+    // Before the grid is measured it assumes six to a row.
+    expect(names(wrapper)).toHaveLength(6);
 
-    const toggle = wrapper.findAll('button').find((b) => b.text() === 'Show all (18)')!;
-    await toggle.trigger('click');
-    expect(names()).toHaveLength(18);
-    expect(names().at(-1)).toBe('W17');
+    await wrapper.findAll('button').find((b) => b.text() === 'Show all (18)')!.trigger('click');
+    expect(names(wrapper)).toHaveLength(18);
+    expect(names(wrapper).at(-1)).toBe('W17');
 
     await wrapper.findAll('button').find((b) => b.text() === 'Show less')!.trigger('click');
     await flushPromises();
-    expect(names()).toHaveLength(12);
+    expect(names(wrapper)).toHaveLength(6);
+  });
+
+  it('keeps recently opened ones in sight however many are starred', async () => {
+    lists[SEND.TASK_LIST] = Array.from({ length: 20 }, (_, i) => ({ identifier: `t${i}`, name: `W${i}` }));
+    const stars = useStarredItemsStore();
+    for (let i = 0; i < 18; i++) stars.star('task', `t${i}`, `W${i}`);
+    const recent = useRecentItemsStore();
+    recent.markOpened('task', 't18', 'W18');
+    recent.markOpened('task', 't19', 'W19');
+
+    const wrapper = mount(HomeContinue, { global: { plugins: [i18n, makeRouter()] } });
+    await flushPromises();
+    const text = wrapper.text();
+    expect(text).toContain('Starred');
+    expect(text).toContain('Recently opened');
+    expect(names(wrapper)).toEqual([...Array.from({ length: 6 }, (_, i) => `W${i}`), 'W19', 'W18']);
+    // Each row has its own toggle: only the starred one overflows.
+    expect(wrapper.findAll('button').filter((b) => b.text().startsWith('Show all'))).toHaveLength(1);
+  });
+
+  it('leaves out a row with nothing in it', async () => {
+    lists[SEND.TASK_LIST] = [{ identifier: 't1', name: 'Only opened' }];
+    useRecentItemsStore().markOpened('task', 't1', 'Only opened');
+    const wrapper = mount(HomeContinue, { global: { plugins: [i18n, makeRouter()] } });
+    await flushPromises();
+    expect(wrapper.text()).toContain('Recently opened');
+    expect(wrapper.find('h3').text()).toBe('Recently opened');
+    expect(wrapper.findAll('h3')).toHaveLength(1);
   });
 
   it('Show less scrolls the page back to where it was before Show all', async () => {
@@ -306,10 +334,11 @@ describe('HomeContinue rows', () => {
     wrapper.unmount();
   });
 
-  it('shows the hint next to the heading', async () => {
+  it('has no untranslated keys', async () => {
+    lists[SEND.TASK_LIST] = [{ identifier: 't1', name: 'Only one' }];
+    useStarredItemsStore().star('task', 't1', 'Only one');
     const wrapper = mount(HomeContinue, { global: { plugins: [i18n, makeRouter()] } });
     await flushPromises();
-    expect(wrapper.text()).toContain('Starred first, then recently opened');
     expect(wrapper.text()).not.toContain('dashboard.');
   });
 

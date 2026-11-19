@@ -154,7 +154,8 @@
     },
     "continue": {
       "title": "Continue",
-      "hint": "Starred first, then recently opened",
+      "starred": "Starred",
+      "recent": "Recently opened",
       "ran": "Ran {time}",
       "opened": "Opened {time}",
       "neverRan": "Never run",
