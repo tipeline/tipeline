@@ -1227,6 +1227,7 @@
       "name": "Name",
       "namePlaceholder": "my_variable",
       "nameDuplicate": "A variable with this name already exists",
+      "invalidArray": "Must be a valid JSON array, for example [1, 2] or [\"a\", \"b\"]",
       "label": "Label",
       "labelPlaceholder": "Display name shown in the overview form",
       "description": "Description",

@@ -5,6 +5,7 @@ import { animations } from '@formkit/drag-and-drop';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { GripVerticalIcon, PlusIcon, XIcon } from 'lucide-vue-next';
+import { parseLenientJsonArray } from '@/utils/lenientJson';
 
 const props = defineProps<{ modelValue: string | any[] }>();
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
@@ -13,12 +14,7 @@ const parseItems = (val: string | any[]): any[] => {
   // A copy: the value can be readonly (VariableForm passes vee-validate's `values`).
   if (Array.isArray(val)) return JSON.parse(JSON.stringify(val));
   if (!val?.trim()) return [];
-  try {
-    const parsed = JSON.parse(val);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  return parseLenientJsonArray(val) ?? [];
 };
 
 const isScalar = (val: any) => val === null || typeof val !== 'object';
