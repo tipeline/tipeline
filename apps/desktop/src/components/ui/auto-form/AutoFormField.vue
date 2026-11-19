@@ -22,6 +22,9 @@ const delegatedProps = computed(() => {
   // so a reference picked into it should keep that value's type.
   if (['ZodAny', 'ZodUnknown'].includes(props.shape?.type) && !isValidConfig(props.config))
     return { valueField: true }
+  // A param typed as a value in its fieldConfig (For Each's `iterable`: a list or a template).
+  if ((props.config as ConfigItem | undefined)?.valueField)
+    return { valueField: true }
   return undefined
 })
 
