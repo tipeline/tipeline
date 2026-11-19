@@ -30,8 +30,10 @@ const props = withDefaults(
     disabled?: boolean
     placeholder?: string
     valueField?: boolean
+    /** Only variables of this type are offered by the `{}` menu and autocomplete. */
+    variableType?: string
   }>(),
-  { multiline: false, disabled: false, placeholder: '', valueField: false }
+  { multiline: false, disabled: false, placeholder: '', valueField: false, variableType: undefined }
 )
 
 const emit = defineEmits<{
@@ -52,7 +54,11 @@ const text = computed(() => {
 const taskVariables = inject<Ref<{ name: string; type: string }[]> | null>('taskVariables', null)
 
 const suggestions = computed(() =>
-  taskVariables ? taskVariables.value.map((v) => ({ path: v.name, detail: v.type })) : undefined
+  taskVariables
+    ? taskVariables.value
+        .filter((v) => !props.variableType || v.type === props.variableType)
+        .map((v) => ({ path: v.name, detail: v.type }))
+    : undefined
 )
 
 const wrapped = computed(() =>

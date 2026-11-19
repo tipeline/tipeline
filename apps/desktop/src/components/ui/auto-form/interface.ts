@@ -58,8 +58,11 @@ export interface ConfigItem {
   dialogMode?: 'open' | 'save'
   /** Friendly label per enum value, e.g. `{ eq: 'Equals' }`. Falls back to `beautifyObjectName` when absent. */
   optionLabels?: Record<string, string>
-  /** For `variable-select` fields: restricts the picker to variables of this type. Omit to allow any type. */
+  /** For `variable-select` fields: restricts the picker to variables of this type. For text fields: what
+   * the `{}` menu and `{{`/`{=` autocomplete offer. Omit to allow any type. */
   variableType?: string
+  /** For text fields: the param holds a value, not text — a reference picked as the whole value is `{= x =}`. */
+  valueField?: boolean
   /** For `variable-select` fields: base name suggested when creating a new variable inline (e.g. "index"). */
   suggestedName?: string
   /** For `codemirror` fields: adds a Run button + Output tab that runs the code as a `script.runScript` step. */

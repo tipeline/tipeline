@@ -32,6 +32,7 @@ const props = defineProps<FieldProps>()
             :placeholder="config?.inputProps?.placeholder"
             :disabled="maybeBooleanishToBoolean(config?.inputProps?.disabled) ?? disabled"
             :value-field="valueField"
+            :variable-type="config?.variableType"
             @update:model-value="slotProps.componentField['onUpdate:modelValue']"
           />
         </slot>

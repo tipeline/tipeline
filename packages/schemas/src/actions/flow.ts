@@ -224,7 +224,11 @@ export const validations = {
       color: 'amber',
       description: 'Iterate over items and run steps per item.',
       fieldConfig: {
-        iterable: { description: 'The array or string variable to iterate over.' },
+        iterable: {
+          description: 'The list variable to iterate over, e.g. {= myList =}.',
+          valueField: true,
+          variableType: 'array',
+        },
         currentItem: {
           description: 'Variable name to bind the current element on each iteration.',
           component: 'variable-select',
