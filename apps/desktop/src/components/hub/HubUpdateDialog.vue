@@ -196,12 +196,12 @@ async function install() {
     </div>
 
     <template #footer>
+      <Button variant="outline" :disabled="installing" @click="emit('update:modelValue', false)">
+        {{ t('common.cancel') }}
+      </Button>
       <Button v-if="preview" :disabled="installing" @click="install">
         <Loader2Icon v-if="installing" class="size-4 animate-spin" />
         {{ installing ? t('hub.updating') : t('hub.review.install', { version: preview.toVersion }) }}
-      </Button>
-      <Button variant="outline" :disabled="installing" @click="emit('update:modelValue', false)">
-        {{ t('common.cancel') }}
       </Button>
     </template>
   </Dialog>

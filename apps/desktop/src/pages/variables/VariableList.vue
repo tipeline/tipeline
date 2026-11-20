@@ -170,14 +170,14 @@ const confirmExportAll = async () => {
 
     <template #footer>
       <div class="flex w-full items-center gap-2">
-        <Button @click="editFormRef?.submit()">{{ t('variable.saveChanges') }}</Button>
         <Button
           variant="outline"
-          class="ml-auto text-destructive hover:text-destructive"
+          class="text-destructive hover:text-destructive"
           @click="handleDeleteFromEdit"
         >
           <Trash2 class="w-4 h-4" /> {{ t('common.delete') }}
         </Button>
+        <Button class="ml-auto" @click="editFormRef?.submit()">{{ t('variable.saveChanges') }}</Button>
       </div>
     </template>
   </Dialog>

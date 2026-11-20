@@ -725,7 +725,7 @@ const formDependencies = computed<Dependency<any>[] | undefined>(() =>
         class="flex flex-col flex-1 min-h-0"
       >
         <template #customAutoForm="{ fields }">
-          <div class="overflow-y-auto overflow-x-hidden flex-1 min-h-0 py-4 pr-2 space-y-6">
+          <div class="overflow-y-auto overflow-x-hidden flex-1 min-h-0 py-4 -mx-1 px-1 space-y-6">
             <SubtaskIdentifierBridge
               v-if="actionParams?.group === 'subtask'"
               @change="onLiveIdentifierChange"
@@ -803,7 +803,8 @@ const formDependencies = computed<Dependency<any>[] | undefined>(() =>
         </template>
 
         <template #default="{ meta }">
-          <DialogFooter class="shrink-0 pt-4 sm:justify-start">
+          <DialogFooter class="shrink-0 pt-4">
+            <Button v-if="isNew" type="button" variant="outline" @click="emit('cancel')">{{ t('actionEdit.remove') }}</Button>
             <Button type="submit" :disabled="!meta.valid">
               {{ t('actionEdit.save') }}
               <kbd
@@ -812,14 +813,13 @@ const formDependencies = computed<Dependency<any>[] | undefined>(() =>
                 <span class="text-xs">⌘</span>S
               </kbd>
             </Button>
-            <Button v-if="isNew" type="button" variant="outline" @click="emit('cancel')">{{ t('actionEdit.remove') }}</Button>
           </DialogFooter>
         </template>
       </AutoForm>
 
       <!-- Plugin action -->
       <div v-else class="flex flex-col flex-1 min-h-0">
-        <div class="overflow-y-auto flex-1 min-h-0 py-4 pr-2 space-y-4">
+        <div class="overflow-y-auto flex-1 min-h-0 py-4 -mx-1 px-1 space-y-4">
           <DialogDescription>{{ dialogDescription }}</DialogDescription>
           <pre
             v-if="pluginActionDocs?.example"
@@ -974,7 +974,8 @@ const formDependencies = computed<Dependency<any>[] | undefined>(() =>
 
         </div>
 
-        <DialogFooter class="shrink-0 pt-4 sm:justify-start">
+        <DialogFooter class="shrink-0 pt-4">
+          <Button v-if="isNew" variant="outline" @click="emit('cancel')">Remove</Button>
           <Button :disabled="pluginHasErrors" @click="handlePluginSubmit">
             Save
             <kbd
@@ -983,7 +984,6 @@ const formDependencies = computed<Dependency<any>[] | undefined>(() =>
               <span class="text-xs">⌘</span>S
             </kbd>
           </Button>
-          <Button v-if="isNew" variant="outline" @click="emit('cancel')">Remove</Button>
         </DialogFooter>
       </div>
 

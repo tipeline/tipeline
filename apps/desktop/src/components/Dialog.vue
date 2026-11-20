@@ -47,7 +47,7 @@ function onClose() {
         <slot />
       </div>
 
-      <DialogFooter v-if="$slots.footer" class="shrink-0 pt-4 sm:justify-start">
+      <DialogFooter v-if="$slots.footer" class="shrink-0 pt-4">
         <slot name="footer" />
       </DialogFooter>
     </DialogContent>
