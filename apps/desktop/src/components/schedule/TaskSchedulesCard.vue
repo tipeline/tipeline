@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { CalendarClockIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-vue-next';
 import Card from '@/components/Card.vue';
+import PlainSection from '@/components/PlainSection.vue';
 import Dialog from '@/components/Dialog.vue';
 import ScheduleForm from '@/components/schedule/ScheduleForm.vue';
 import { Button } from '@/components/ui/button';
@@ -29,7 +30,14 @@ import type { ScheduleItem } from '@/config/tables/SchedulesList';
  * a switch each, and a way to add one without going to the Schedules page.
  * A draft can't be scheduled until it's marked ready.
  */
-const props = defineProps<{ taskIdentifier: string; taskName: string; draft: boolean }>();
+const props = defineProps<{
+  taskIdentifier: string;
+  taskName: string;
+  draft: boolean;
+  /** Without the card frame, for the Overview's schedules dialog (which has the title). */
+  bare?: boolean;
+}>();
+const emit = defineEmits<{ (e: 'changed'): void }>();
 
 const { t } = useI18n();
 const router = useRouter();
@@ -57,6 +65,7 @@ async function reload() {
   } catch {
     schedules.value = [];
   }
+  emit('changed');
 }
 
 watch(() => props.taskIdentifier, reload, { immediate: true });
@@ -115,8 +124,8 @@ defineExpose({ reload });
 
 <template>
   <div class="shrink-0">
-    <Card data-testid="task-schedules-card">
-      <template #title>{{ t('schedules.card.title') }}</template>
+    <component :is="bare ? PlainSection : Card" data-testid="task-schedules-card">
+      <template v-if="!bare" #title>{{ t('schedules.card.title') }}</template>
       <template #actions>
         <Button size="sm" variant="outline" class="h-7" :disabled="draft" @click="openNew = true">
           <PlusIcon class="w-3.5 h-3.5" /> {{ t('schedules.card.add') }}
@@ -174,7 +183,7 @@ defineExpose({ reload });
           {{ t('schedules.card.viewAll') }}
         </button>
       </template>
-    </Card>
+    </component>
 
     <Dialog
       v-model="openNew"

@@ -482,7 +482,19 @@
       "about": "Acerca de",
       "lastRunAt": "Última ejecución {when}",
       "notRunYet": "Aún no se ha ejecutado",
-      "projects": "Proyectos | Proyecto | Proyectos"
+      "projects": "Proyectos | Proyecto | Proyectos",
+      "strip": {
+        "runToStart": "Pulsa Ejecutar para iniciar una",
+        "runCounts": "{completed} completadas · {failed} fallidas",
+        "notScheduled": "Sin programar",
+        "draft": "Los borradores no se pueden programar",
+        "schedules": "{n} programación · {on} activa | {n} programaciones · {on} activas",
+        "addSchedule": "Abre para añadir una programación",
+        "alertsOpen": "{n} abiertas",
+        "noAlerts": "Ninguna",
+        "acknowledged": "{n} vistas",
+        "allClear": "Nada requiere atención"
+      }
     },
     "columns": {
       "task": "Flujo de trabajo",

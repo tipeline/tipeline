@@ -33,9 +33,7 @@ import { renderMarkdown } from '@/utils/appMarkdown';
 import { descriptionSummary } from '@tipeline/utils';
 import { useWorkflowUsage } from '@/composables/useWorkflowUsage';
 import DraftBanner from '@/components/task/DraftBanner.vue';
-import TaskSchedulesCard from '@/components/schedule/TaskSchedulesCard.vue';
-import TaskAlertsCard from '@/components/task/TaskAlertsCard.vue';
-import { formatStepDuration } from '@/utils/runSteps';
+import TaskStatusStrip from '@/components/task/TaskStatusStrip.vue';
 import CapabilityChips from '@/components/task/CapabilityChips.vue';
 import type { CapabilityReport } from '@/utils/capabilities';
 
@@ -108,10 +106,10 @@ const isDraft = computed(() => {
     return false;
   }
 });
-const schedulesCardRef = ref<InstanceType<typeof TaskSchedulesCard> | null>(null);
+const statusStripRef = ref<InstanceType<typeof TaskStatusStrip> | null>(null);
 function onDraftReady() {
   markedReady.value = true;
-  schedulesCardRef.value?.reload();
+  statusStripRef.value?.reload();
 }
 const actionCount = computed(() => parsedSource.value?.pipeline?.actions?.length ?? 0);
 
@@ -159,43 +157,6 @@ function handleRunTask(cache?: 'bypass' | 'refresh') {
   }
 }
 
-// The newest run, shown beside Run so the result is visible without opening Runs.
-const lastRun = ref<any | null>(null);
-watch(
-  () => props.task?.identifier,
-  async (identifier) => {
-    lastRun.value = null;
-    if (!identifier) return;
-    try {
-      const runs = await invokeCore<any[]>(SEND.PIPELINE_LIST, { taskIdentifier: identifier, limit: 1, offset: 0 });
-      lastRun.value = runs?.[0] ?? null;
-    } catch {
-      lastRun.value = null;
-    }
-  },
-  { immediate: true }
-);
-const LAST_RUN_DOT: Record<string, string> = {
-  completed: 'bg-emerald-500',
-  failed: 'bg-red-500',
-  running: 'bg-blue-500',
-  paused: 'bg-amber-500',
-};
-const lastRunStatus = computed(() => {
-  const status = lastRun.value?.status ?? 'pending';
-  const key = `taskHistory.${status}`;
-  return t(key) !== key ? t(key) : status;
-});
-const lastRunDuration = computed(() => {
-  const start = Date.parse(lastRun.value?.started_at ?? '');
-  const end = Date.parse(lastRun.value?.finished_at ?? '');
-  return Number.isFinite(start) && Number.isFinite(end) ? formatStepDuration(Math.max(0, end - start)) : null;
-});
-
-function openLastRun() {
-  router.push(`/tasks/${props.task.identifier}/pipelines/${lastRun.value.identifier}`);
-}
-
 function goToHistory() {
   router.push(`/tasks/${props.task.identifier}/pipelines`);
 }
@@ -239,7 +200,15 @@ const updateAvailable = computed(
 <template>
   <div class="flex flex-col h-full w-full">
     <DraftBanner :task="task" class="mb-4 rounded-md border" @ready="onDraftReady" />
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-12 h-full overflow-hidden">
+    <TaskStatusStrip
+      v-if="task?.identifier"
+      ref="statusStripRef"
+      class="mb-4"
+      :task-identifier="task.identifier"
+      :task-name="task.name"
+      :draft="isDraft"
+    />
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-12 flex-1 min-h-0 overflow-hidden">
       <!-- Left: Run Task -->
       <div class="space-y-4 col-span-1 lg:col-span-7 flex flex-col h-full overflow-hidden">
         <Card class="flex-1 min-h-0 flex flex-col">
@@ -294,20 +263,7 @@ const updateAvailable = computed(
                   {{ t('tasks.overview.viewRunning') }}
                 </Button>
               </div>
-              <div class="flex items-center gap-2 min-w-0 text-[12.5px] text-muted-foreground" data-testid="overview-last-run">
-                <button
-                  v-if="lastRun"
-                  class="inline-flex items-center gap-1.5 min-w-0 hover:text-foreground"
-                  :title="lastRunStatus"
-                  @click="openLastRun"
-                >
-                  <span class="size-2 rounded-full shrink-0" :class="LAST_RUN_DOT[lastRun.status] ?? 'bg-gray-400'" />
-                  <span class="truncate">
-                    {{ t('tasks.overview.lastRunAt', { when: formatDate(lastRun.started_at) }) }}
-                    <span v-if="lastRunDuration" class="tabular-nums">· {{ lastRunDuration }}</span>
-                  </span>
-                </button>
-                <span v-else>{{ t('tasks.overview.notRunYet') }}</span>
+              <div class="flex items-center gap-2 min-w-0 text-[12.5px] text-muted-foreground">
                 <button
                   class="inline-flex items-center gap-1 underline underline-offset-2 decoration-border hover:decoration-current hover:text-foreground"
                   @click="goToHistory"
@@ -503,17 +459,6 @@ const updateAvailable = computed(
             </div>
           </template>
         </Card>
-
-        <TaskAlertsCard v-if="task?.identifier" class="mt-4" :task-identifier="task.identifier" />
-
-        <TaskSchedulesCard
-          v-if="task?.identifier"
-          ref="schedulesCardRef"
-          class="mt-4"
-          :task-identifier="task.identifier"
-          :task-name="task.name"
-          :draft="isDraft"
-        />
       </div>
     </div>
   </div>

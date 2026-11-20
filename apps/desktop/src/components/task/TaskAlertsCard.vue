@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import { formatDistanceToNow } from 'date-fns';
 import { BellRing } from 'lucide-vue-next';
 import Card from '@/components/Card.vue';
+import PlainSection from '@/components/PlainSection.vue';
 import { Button } from '@/components/ui/button';
 import { invokeCore } from '@/utils/invoke';
 import { SEND } from '@/ipc-channels';
@@ -14,7 +15,11 @@ import { useAlertsStore, type AlertItem } from '@/store/alertsStore';
 // A workflow's alerts on its Overview: open ones, and acknowledged ones (dismissed, still
 // raised quietly until the workflow resolves them), which can be put back in Needs you.
 // Hidden when the workflow has none.
-const props = defineProps<{ taskIdentifier: string }>();
+const props = defineProps<{
+  taskIdentifier: string;
+  /** Without the card frame, for the Overview's alerts dialog (which has the title). */
+  bare?: boolean;
+}>();
 
 const { t } = useI18n();
 const router = useRouter();
@@ -68,8 +73,8 @@ async function act(alert: AlertItem) {
 </script>
 
 <template>
-  <Card v-if="shown.length" class="shrink-0 flex flex-col">
-    <template #title>
+  <component :is="bare ? PlainSection : Card" v-if="shown.length" class="shrink-0 flex flex-col">
+    <template v-if="!bare" #title>
       <span class="inline-flex items-center gap-2">
         <BellRing class="size-4 text-orange-500" aria-hidden="true" />
         {{ t('alerts.overviewTitle') }}
@@ -138,5 +143,5 @@ async function act(alert: AlertItem) {
         </li>
       </ul>
     </template>
-  </Card>
+  </component>
 </template>
