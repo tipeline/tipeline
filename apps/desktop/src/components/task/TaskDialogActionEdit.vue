@@ -45,7 +45,8 @@ import {
 import { Label } from '@/components/ui/label';
 import AutoForm from '@/components/ui/auto-form/AutoForm.vue';
 import TemplateField from '@/components/ui/auto-form/TemplateField.vue';
-import { TEXT_VARIABLE_TYPES } from '@/components/ui/auto-form/utils';
+import { TEXT_VARIABLE_TYPES, beautifyObjectName } from '@/components/ui/auto-form/utils';
+import { bindingSyntaxMessage, paramSyntaxProblems } from '@/utils/bindingSyntax';
 import AutoFormField from '@/components/ui/auto-form/AutoFormField.vue';
 import DateStringInput from '@/components/ui/auto-form/DateStringInput.vue';
 import AutoFormCodeMirrorEditor from '@/components/ui/auto-form/AutoFormCodeMirrorEditor.vue';
@@ -286,19 +287,6 @@ watch(
   }
 );
 
-// True when the action's params satisfy its creation schema.
-// Used to prevent closing when a freshly dropped action hasn't been configured yet.
-const isParamsValid = computed(() => {
-  if (!props.actionParams) return true;
-  if (props.actionParams.source === 'plugin') return true; // plugin — no core schema to validate against
-  try {
-    const validator = getValidation(props.actionParams.group, props.actionParams.name, 'creation');
-    return validator.schema.safeParse(preprocessParams(props.actionParams.params ?? {})).success;
-  } catch {
-    return true; // plugin or unknown action — no schema to validate against
-  }
-});
-
 // The dialog's own autofocus skips the text fields (they're contenteditable, see
 // ExpressionInput) and lands on the first field's `{}` button: put focus in the first
 // field instead, so typing and Escape work right away.
@@ -352,6 +340,30 @@ const FormDirtyBridge = defineComponent({
   },
 });
 
+// Malformed bindings (unclosed, an unfinished path, anything Liquid can't parse) in the
+// params: core fails the step on each when it runs, so Save waits until they're fixed.
+// Unknown variable names don't count — they're only warnings (they may come from a
+// For Each item or a step that hasn't run yet).
+const syntaxProblems = computed(() => {
+  if (!props.actionParams) return [];
+  let params: unknown;
+  if (isPluginAction.value) params = pluginParamValues.value;
+  else {
+    try {
+      params = formLive.value ? JSON.parse(formLive.value) : null;
+    } catch {
+      return [];
+    }
+  }
+  return paramSyntaxProblems(params, props.actionParams.group).map(({ field, issue }) => {
+    const label = isPluginAction.value
+      ? (pluginParamDefs.value.find((d) => d.name === field)?.label ?? field)
+      : ((translatedFieldConfig.value as Record<string, any> | undefined)?.[field]?.label ??
+        beautifyObjectName(field));
+    return { field, label, message: bindingSyntaxMessage(t, issue) };
+  });
+});
+
 const hasUnsavedChanges = computed(() => {
   if (extraFieldsBaseline.value !== null && extraFieldsJson() !== extraFieldsBaseline.value) {
     return true;
@@ -363,12 +375,18 @@ const confirmDiscardOpen = ref(false);
 
 function closeWithoutSaving() {
   confirmDiscardOpen.value = false;
-  if (props.isNew && !isParamsValid.value) {
-    // Closing an unconfigured new action = cancel → remove the item
+  if (props.isNew) {
+    // A step that was just added and never saved: closing means "don't add it" — the
+    // same for Cancel, X, Escape and a click outside.
     emit('cancel');
     return;
   }
   emit('update:open', false);
+}
+
+/** The Cancel button: closes like X, asking first about unsaved changes. */
+function cancel() {
+  handleOpenChange(false);
 }
 
 function handleOpenChange(newOpen: boolean) {
@@ -430,7 +448,7 @@ const pluginHasErrors = computed(() => {
 });
 
 const handlePluginSubmit = () => {
-  if (pluginHasErrors.value) return;
+  if (pluginHasErrors.value || syntaxProblems.value.length) return;
   const coerced: Record<string, any> = {};
   for (const def of pluginParamDefs.value) {
     const val = pluginParamValues.value[def.name];
@@ -452,6 +470,8 @@ const handlePluginSubmit = () => {
 };
 
 const handleSubmit = (data: any) => {
+  // ⌘S submits too: same rule as the disabled Save button.
+  if (syntaxProblems.value.length) return;
   if (!isPluginAction.value && props.actionParams) {
     try {
       const validator = getValidation(props.actionParams.group, props.actionParams.name, 'creation');
@@ -792,9 +812,13 @@ const formDependencies = computed<Dependency<any>[] | undefined>(() =>
         </template>
 
         <template #default="{ meta }">
+          <div v-if="syntaxProblems.length" class="shrink-0 pt-3 text-xs text-destructive" role="alert">
+            <p class="font-medium">{{ t('actionEdit.syntaxBlocked') }}</p>
+            <p v-for="p in syntaxProblems" :key="p.field">{{ p.label }}: {{ p.message }}</p>
+          </div>
           <DialogFooter class="shrink-0 pt-4">
-            <Button v-if="isNew" type="button" variant="outline" @click="emit('cancel')">{{ t('actionEdit.remove') }}</Button>
-            <Button type="submit" :disabled="!meta.valid">
+            <Button type="button" variant="outline" @click="cancel">{{ t('common.cancel') }}</Button>
+            <Button type="submit" :disabled="!meta.valid || syntaxProblems.length > 0">
               {{ t('actionEdit.save') }}
               <kbd
                 class="pointer-events-none ml-1 inline-flex h-5 select-none items-center gap-1 rounded border border-primary-foreground/30 bg-primary-foreground/15 px-1.5 font-mono text-[10px] font-medium text-primary-foreground opacity-100"
@@ -962,10 +986,14 @@ const formDependencies = computed<Dependency<any>[] | undefined>(() =>
 
         </div>
 
+        <div v-if="syntaxProblems.length" class="shrink-0 pt-3 text-xs text-destructive" role="alert">
+          <p class="font-medium">{{ t('actionEdit.syntaxBlocked') }}</p>
+          <p v-for="p in syntaxProblems" :key="p.field">{{ p.label }}: {{ p.message }}</p>
+        </div>
         <DialogFooter class="shrink-0 pt-4">
-          <Button v-if="isNew" variant="outline" @click="emit('cancel')">Remove</Button>
-          <Button :disabled="pluginHasErrors" @click="handlePluginSubmit">
-            Save
+          <Button variant="outline" @click="cancel">{{ t('common.cancel') }}</Button>
+          <Button :disabled="pluginHasErrors || syntaxProblems.length > 0" @click="handlePluginSubmit">
+            {{ t('actionEdit.save') }}
             <kbd
               class="pointer-events-none ml-1 inline-flex h-5 select-none items-center gap-1 rounded border border-primary-foreground/30 bg-primary-foreground/15 px-1.5 font-mono text-[10px] font-medium text-primary-foreground opacity-100"
             >
