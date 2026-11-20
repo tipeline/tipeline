@@ -1,10 +1,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { generateIdentifier } from '@tipeline/utils';
+import { expandHomePath } from '@utils/expandHome';
 import { Hub } from '@database/models/Hub';
 import { TaskHubLink } from '@database/models/TaskHubLink';
 import { AppHubLink } from '@database/models/AppHubLink';
 import { PluginHubLink } from '@database/models/PluginHubLink';
+
+/** A local folder may be typed as "~/…"; it is saved as the full path so every reader sees the same folder. */
+function normalizeHubTarget(type: string, target: string): string {
+  const trimmed = (target ?? '').trim();
+  return type === 'local_folder' ? expandHomePath(trimmed) : trimmed;
+}
 
 /** A wrong hub otherwise only shows up later, as an hourly line in a log. */
 function assertValidHubTarget(type: string, target: string) {
@@ -45,12 +52,13 @@ export class HubService {
     target: string;
     token?: string | null;
   }): Promise<Hub> {
-    assertValidHubTarget(data.type, data.target);
+    const target = normalizeHubTarget(data.type, data.target);
+    assertValidHubTarget(data.type, target);
     return Hub.query().insertAndFetch({
       id: generateIdentifier(),
       name: data.name,
       type: data.type,
-      target: data.target,
+      target,
       token: data.token?.trim() || null,
       enabled: true,
     });
@@ -61,12 +69,15 @@ export class HubService {
     id: string,
     data: Partial<{ name: string; type: 'remote' | 'local_folder'; target: string; token: string | null }>
   ): Promise<Hub> {
+    const patch = { ...data };
     if (data.type !== undefined || data.target !== undefined) {
       const current = await Hub.query().findById(id);
       if (!current) throw new Error(`Hub "${id}" not found`);
-      assertValidHubTarget(data.type ?? current.type, data.target ?? current.target);
+      const type = data.type ?? current.type;
+      const target = normalizeHubTarget(type, data.target ?? current.target);
+      assertValidHubTarget(type, target);
+      if (data.target !== undefined) patch.target = target;
     }
-    const patch = { ...data };
     if ('token' in patch) patch.token = patch.token?.trim() || null;
     const record = await Hub.query().patchAndFetchById(id, patch);
     if (!record) throw new Error(`Hub "${id}" not found`);

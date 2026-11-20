@@ -1600,7 +1600,8 @@
       "edit": "Editar hub",
       "editTitle": "Editar hub",
       "editDescription": "Cambia el nombre, la dirección o el token de acceso. Lo instalado sigue vinculado a este hub.",
-      "saveFailed": "Error al guardar el hub"
+      "saveFailed": "Error al guardar el hub",
+      "addFailed": "No se pudo añadir el hub"
     },
     "majorAvailableDetail": "La versión mayor {version} puede cambiar cómo funciona esto. Espera tu aprobación.",
     "olderListedDetail": "El hub ofrece la versión {version}, anterior a la que tienes. No se instalará.",

@@ -1600,7 +1600,8 @@
       "edit": "Edit hub",
       "editTitle": "Edit hub",
       "editDescription": "Change the name, address, or access token. Installed items keep their link to this hub.",
-      "saveFailed": "Failed to save hub"
+      "saveFailed": "Failed to save hub",
+      "addFailed": "Couldn't add the hub"
     },
     "majorAvailableDetail": "Major version {version} may change how this works. It waits for your approval.",
     "olderListedDetail": "The hub lists {version}, older than what you have. It won't be installed.",
