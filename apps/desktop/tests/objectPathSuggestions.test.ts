@@ -364,7 +364,13 @@ describe("a list's first item", () => {
   });
 
   it('shows the note on the menu level that holds the first item, and not in a search', async () => {
-    const w = await mountInput();
+    // The `{}` menu is its own component, shared with the CodeMirror template editors.
+    const { default: VariableInsertMenu } = await import('@/components/VariableInsertMenu.vue');
+    const w = mount(VariableInsertMenu, {
+      props: { suggestions },
+      global: { plugins: [i18n] },
+      attachTo: document.body,
+    });
     const vm = w.vm as any;
     expect(vm.menuNotes).toEqual([]);
     vm.menuPath = 'cosas';

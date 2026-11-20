@@ -1,4 +1,5 @@
 import { Liquid } from 'liquidjs';
+import { findUnfinishedPath } from '@tipeline/utils';
 
 // Whether a `{{ }}` / `{% %}` / `{= =}` value is well-formed, by the same rules core
 // (parseParams.ts) and the app runtime (appBindings.ts) apply: `{= path =}` must be the
@@ -8,18 +9,27 @@ import { Liquid } from 'liquidjs';
 
 const liquid = new Liquid({ strictVariables: false });
 
-export type BindingSyntaxCode = 'unclosed' | 'rawNotAlone' | 'rawPath' | 'invalid';
+export type BindingSyntaxCode = 'unclosed' | 'rawNotAlone' | 'rawPath' | 'unfinishedPath' | 'invalid';
 
 export interface BindingSyntaxIssue {
   /** The broken part, as plain-string offsets. */
   from: number;
   to: number;
   code: BindingSyntaxCode;
-  /** Message parameters: `closer` for unclosed, `detail` (LiquidJS's own) for invalid. */
+  /**
+   * Message parameters: `closer` for unclosed, `path` (as typed) for unfinishedPath,
+   * `detail` (LiquidJS's own) for invalid.
+   */
   params: Record<string, string>;
 }
 
 const RAW = /^\{=\s*[\w.[\]]+\s*=\}$/;
+
+// LiquidJS and core both run `{{ a.b. }}` / `{= a.b. =}` as `a.b`, without a word.
+function unfinishedPathIssue(text: string): BindingSyntaxIssue | null {
+  const found = findUnfinishedPath(text);
+  return found && { from: found.from, to: found.to, code: 'unfinishedPath', params: { path: found.path } };
+}
 
 /** The first syntax problem in `text`, or null when it's fine (or has no bindings). */
 export function bindingSyntaxIssue(text: string): BindingSyntaxIssue | null {
@@ -36,10 +46,10 @@ export function bindingSyntaxIssue(text: string): BindingSyntaxIssue | null {
       params: {},
     };
   }
-  if (!text.includes('{{') && !text.includes('{%')) return null;
+  if (!text.includes('{{') && !text.includes('{%')) return unfinishedPathIssue(text);
   try {
     liquid.parse(text);
-    return null;
+    return unfinishedPathIssue(text);
   } catch (e: any) {
     const message = String(e?.message ?? '').split('\n')[0].replace(/, line:\d+, col:\d+$/, '');
     let from = Math.max(0, Math.min(Number(e?.token?.begin ?? 0), text.length));
@@ -72,4 +82,36 @@ export function bindingSyntaxMessage(
   issue: BindingSyntaxIssue
 ): string {
   return t(`expressionInput.syntax.${issue.code}`, { ...SYNTAX_PARAMS, ...issue.params });
+}
+
+export interface ParamSyntaxProblem {
+  /** The step param it's in (top-level key: `content`, `body`…). */
+  field: string;
+  issue: BindingSyntaxIssue;
+}
+
+/**
+ * The syntax problems in a step's params, one per param, walking every string the way
+ * core's parseStepParams does (nested objects and lists too, but not a flow step's inner
+ * steps, which are checked in their own dialogs). Core fails the step on each of these
+ * when it runs, so the step dialog won't save them.
+ */
+export function paramSyntaxProblems(params: unknown, group?: string): ParamSyntaxProblem[] {
+  if (!params || typeof params !== 'object') return [];
+  const first = (value: unknown): BindingSyntaxIssue | null => {
+    if (typeof value === 'string') return bindingSyntaxIssue(value);
+    if (value && typeof value === 'object')
+      for (const item of Object.values(value)) {
+        const issue = first(item);
+        if (issue) return issue;
+      }
+    return null;
+  };
+  const problems: ParamSyntaxProblem[] = [];
+  for (const [field, value] of Object.entries(params)) {
+    if (group === 'flow' && field === 'actions') continue;
+    const issue = first(value);
+    if (issue) problems.push({ field, issue });
+  }
+  return problems;
 }

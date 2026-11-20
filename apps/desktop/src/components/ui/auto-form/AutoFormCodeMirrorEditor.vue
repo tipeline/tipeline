@@ -1,19 +1,15 @@
 <script setup lang="ts">
 import type { Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
-import type { Ref } from 'vue';
-import { inject, ref } from 'vue';
-import { Braces, Maximize2 } from '@lucide/vue';
+import { computed, ref } from 'vue';
+import { Maximize2 } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
 import ExpandedEditorDialog from '@/components/ExpandedEditorDialog.vue';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import VariableInsertMenu from '@/components/VariableInsertMenu.vue';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
+import { useVariableSuggestions } from '@/composables/useVariableSuggestions';
+import { expressionCompletion } from '@/utils/codemirrorCompletion';
 
 const props = withDefaults(
   defineProps<{
@@ -25,7 +21,8 @@ const props = withDefaults(
     // Off by default: a bare `{{ name }}` only makes sense in a template body
     // (HTML/Markdown/CSS). The script action's JS body isn't template text —
     // variables reach it through `context`, so inserting a token there would
-    // just be invalid JS. Only AutoFormFieldCodeMirrorTemplate opts in.
+    // just be invalid JS. Only AutoFormFieldCodeMirrorTemplate opts in. Also turns on
+    // `{{` autocomplete, with the same suggestions as the other step fields.
     allowVariableInsert?: boolean;
     // Shows a Code/Preview tab switcher (both here and in the expand dialog)
     // rendering `previewHtml` in a sandboxed iframe. Only meaningful for HTML
@@ -62,8 +59,17 @@ const emit = defineEmits<{
 const isExpanded = ref(false);
 const activeTab = defineModel<'code' | 'preview'>('tab', { default: 'code' });
 
-const taskVariables = inject<Ref<{ name: string; type: string }[]> | null>('taskVariables', null);
-const showVariableMenu = props.allowVariableInsert && taskVariables !== null;
+// Every variable type: a template prints text but also loops over lists and reads
+// objects in `{% %}` tags. Undefined outside the action editor (nothing to offer).
+const suggestions = useVariableSuggestions();
+const showVariableMenu = computed(() => props.allowVariableInsert && suggestions.value !== undefined);
+
+// One extension for the editor's lifetime, reading the current suggestions each time:
+// a new one would make vue-codemirror reconfigure the editor on every variable change.
+const completion = expressionCompletion(() => suggestions.value);
+const editorExtensions = computed(() =>
+  showVariableMenu.value ? [...props.extensions, completion] : props.extensions
+);
 
 let mainView: EditorView | null = null;
 let expandedView: EditorView | null = null;
@@ -76,9 +82,16 @@ function onExpandedReady(payload: { view: EditorView }) {
   expandedView = payload.view;
 }
 
-function insertAtCursor(name: string) {
+// The `{}` menu closed: insert the pick (focus back in the editor either way, unless
+// the user already clicked somewhere else).
+function onMenuClosed(name: string | null) {
   const view = isExpanded.value ? expandedView : mainView;
   if (!view) return;
+  if (name === null) {
+    const active = document.activeElement;
+    if (!active || active === document.body || active.closest('[role="menu"]')) view.focus();
+    return;
+  }
   const { from, to } = view.state.selection.main;
   const text = `{{ ${name} }}`;
   view.dispatch({
@@ -120,33 +133,14 @@ useKeyboardShortcuts([
         </TabsList>
         <div class="flex items-center gap-0.5">
           <slot name="actions" />
-          <DropdownMenu v-if="showVariableMenu && activeTab === 'code'">
-            <DropdownMenuTrigger as-child>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                title="Insert variable"
-                :disabled="props.disabled"
-              >
-                <Braces class="h-4 w-4" />
-                <span class="sr-only">Insert variable</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <template v-if="taskVariables && taskVariables.length > 0">
-                <DropdownMenuItem
-                  v-for="v in taskVariables"
-                  :key="v.name"
-                  class="cursor-pointer font-mono text-xs"
-                  @click="insertAtCursor(v.name)"
-                >
-                  {{ v.name }}
-                </DropdownMenuItem>
-              </template>
-              <p v-else class="px-2 py-1.5 text-xs text-muted-foreground">No variables available</p>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <VariableInsertMenu
+            v-if="showVariableMenu && activeTab === 'code'"
+            :suggestions="suggestions ?? []"
+            :disabled="props.disabled"
+            trigger-class="h-8 w-8"
+            :icon-size="16"
+            @closed="onMenuClosed"
+          />
           <Button
             type="button"
             variant="ghost"
@@ -167,7 +161,7 @@ useKeyboardShortcuts([
           :autofocus="false"
           :indent-with-tab="true"
           :tab-size="2"
-          :extensions="props.extensions"
+          :extensions="editorExtensions"
           :disabled="props.disabled"
           @update:model-value="emit('update:modelValue', $event)"
           @ready="onMainReady"
@@ -196,39 +190,19 @@ useKeyboardShortcuts([
         :autofocus="false"
         :indent-with-tab="true"
         :tab-size="2"
-        :extensions="props.extensions"
+        :extensions="editorExtensions"
         :disabled="props.disabled"
         @update:model-value="emit('update:modelValue', $event)"
         @ready="onMainReady"
       />
-      <DropdownMenu v-if="showVariableMenu">
-        <DropdownMenuTrigger as-child>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            class="absolute top-1.5 right-10"
-            title="Insert variable"
-            :disabled="props.disabled"
-          >
-            <Braces class="h-4 w-4" />
-            <span class="sr-only">Insert variable</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <template v-if="taskVariables && taskVariables.length > 0">
-            <DropdownMenuItem
-              v-for="v in taskVariables"
-              :key="v.name"
-              class="cursor-pointer font-mono text-xs"
-              @click="insertAtCursor(v.name)"
-            >
-              {{ v.name }}
-            </DropdownMenuItem>
-          </template>
-          <p v-else class="px-2 py-1.5 text-xs text-muted-foreground">No variables available</p>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <VariableInsertMenu
+        v-if="showVariableMenu"
+        :suggestions="suggestions ?? []"
+        :disabled="props.disabled"
+        trigger-class="absolute top-1.5 right-10 h-8 w-8"
+        :icon-size="16"
+        @closed="onMenuClosed"
+      />
       <Button
         type="button"
         variant="ghost"
@@ -251,27 +225,14 @@ useKeyboardShortcuts([
       :preview-label="props.previewLabel"
     >
       <template #actions>
-        <DropdownMenu v-if="showVariableMenu">
-          <DropdownMenuTrigger as-child>
-            <Button type="button" variant="ghost" size="icon-sm" title="Insert variable" :disabled="props.disabled">
-              <Braces class="h-4 w-4" />
-              <span class="sr-only">Insert variable</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <template v-if="taskVariables && taskVariables.length > 0">
-              <DropdownMenuItem
-                v-for="v in taskVariables"
-                :key="v.name"
-                class="cursor-pointer font-mono text-xs"
-                @click="insertAtCursor(v.name)"
-              >
-                {{ v.name }}
-              </DropdownMenuItem>
-            </template>
-            <p v-else class="px-2 py-1.5 text-xs text-muted-foreground">No variables available</p>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <VariableInsertMenu
+          v-if="showVariableMenu"
+          :suggestions="suggestions ?? []"
+          :disabled="props.disabled"
+          trigger-class="h-8 w-8"
+          :icon-size="16"
+          @closed="onMenuClosed"
+        />
       </template>
       <template #editor>
         <codemirror
@@ -280,7 +241,7 @@ useKeyboardShortcuts([
           :autofocus="true"
           :indent-with-tab="true"
           :tab-size="2"
-          :extensions="props.extensions"
+          :extensions="editorExtensions"
           :disabled="props.disabled"
           @update:model-value="emit('update:modelValue', $event)"
           @ready="onExpandedReady"

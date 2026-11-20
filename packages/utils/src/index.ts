@@ -39,3 +39,4 @@ export * from './projectDelete';
 export * from './version';
 export * from './projectMap';
 export * from './appScaffold';
+export * from './bindingPaths';

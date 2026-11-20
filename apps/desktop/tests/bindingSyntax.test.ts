@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bindingSyntaxIssue } from '@/utils/bindingSyntax';
+import { bindingSyntaxIssue, paramSyntaxProblems } from '@/utils/bindingSyntax';
 
 const at = (text: string) => {
   const issue = bindingSyntaxIssue(text);
@@ -40,5 +40,48 @@ describe('bindingSyntaxIssue', () => {
   it('reports other template errors with LiquidJS’s own message', () => {
     expect(at('{% iff x %}')).toEqual({ code: 'invalid', part: '{% iff x %}', detail: 'tag "iff" not found' });
     expect(at('x {{ }} y')).toMatchObject({ code: 'invalid', part: '{{ }}' });
+  });
+
+  it('flags a path left unfinished, which Liquid and core would run as the path before it', () => {
+    expect(at('{{ fetchedNode.attributes. }}')).toEqual({
+      code: 'unfinishedPath',
+      part: 'fetchedNode.attributes.',
+      path: 'fetchedNode.attributes.',
+    });
+    expect(at('{= rows[] =}')).toMatchObject({ code: 'unfinishedPath', part: 'rows[]' });
+    expect(at('{% if a. %}y{% endif %}')).toMatchObject({ code: 'unfinishedPath', part: 'a.' });
+  });
+
+  it('reports a parse error before an unfinished path', () => {
+    expect(at('{{ a. }} {{ b')).toMatchObject({ code: 'unclosed' });
+  });
+});
+
+describe('paramSyntaxProblems', () => {
+  const fields = (params: unknown, group?: string) =>
+    paramSyntaxProblems(params, group).map((p) => [p.field, p.issue.code]);
+
+  it('reports one problem per param, nested values included', () => {
+    expect(
+      fields({
+        content: '{{ node.attributes. }}',
+        title: 'Hi {{ name }}',
+        body: { data: { x: ['ok', '{{ a'] } },
+        count: 3,
+      })
+    ).toEqual([
+      ['content', 'unfinishedPath'],
+      ['body', 'unclosed'],
+    ]);
+  });
+
+  it('leaves unknown variables alone (only syntax counts)', () => {
+    expect(fields({ content: '{{ notAVariable }}' })).toEqual([]);
+  });
+
+  it("skips a flow step's inner steps, like core does", () => {
+    const inner = [{ group: 'string', name: 'template', params: { content: '{{ a' } }];
+    expect(fields({ actions: inner }, 'flow')).toEqual([]);
+    expect(fields({ actions: inner }, 'other')).toEqual([['actions', 'unclosed']]);
   });
 });

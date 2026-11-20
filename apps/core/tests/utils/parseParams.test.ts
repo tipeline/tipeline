@@ -64,6 +64,29 @@ describe('parseParams', () => {
       );
     });
 
+    it('throws on an unfinished {= =} path instead of using the path before it', () => {
+      const params: any = { x: '{= node.attributes. =}' };
+      expect(() => parseParams(params, [makeVar('node', { attributes: { a: 1 } })])).toThrow(
+        /The path "node.attributes." in \{= node.attributes. =\} isn't finished/
+      );
+      expect(() => parseParams({ x: '{= rows[] =}' } as any, [makeVar('rows', [1])])).toThrow(
+        /The path "rows\[\]"/
+      );
+    });
+
+    it('throws on an unfinished {{ }} path instead of printing the object before it', () => {
+      const params: any = { x: 'Hi {{ node.attributes. }}' };
+      expect(() => parseParams(params, [makeVar('node', { attributes: { a: 1 } })])).toThrow(
+        /isn't finished/
+      );
+    });
+
+    it('still renders ranges and quoted dots', () => {
+      const params: any = { x: '{% for i in (1..n) %}{{ i }}{% endfor %} {{ "end." }}' };
+      parseParams(params, [makeVar('n', 3)]);
+      expect(params.x).toBe('123 end.');
+    });
+
     describe('{= _env.KEY =}', () => {
       it('injects the raw env variable', () => {
         process.env.TEST_RAW_ENV = 'env-value';
