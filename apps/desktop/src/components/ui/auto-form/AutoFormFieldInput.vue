@@ -4,9 +4,12 @@ import { FormControl, FormDescription, FormField, FormItem, FormMessage } from '
 import { Textarea } from '@/components/ui/textarea'
 import TemplateField from './TemplateField.vue'
 import AutoFormLabel from './AutoFormLabel.vue'
-import { beautifyObjectName, maybeBooleanishToBoolean } from './utils'
+import { beautifyObjectName, maybeBooleanishToBoolean, TEXT_VARIABLE_TYPES } from './utils'
+import { inject } from 'vue'
 
-const props = defineProps<FieldProps>()
+defineProps<FieldProps>()
+
+const taskVariables = inject('taskVariables', null)
 </script>
 
 <template>
@@ -17,8 +20,20 @@ const props = defineProps<FieldProps>()
       </AutoFormLabel>
       <FormControl>
         <slot v-bind="slotProps">
+          <!-- A multi-line step param (an AI prompt) can carry variables too; a plain
+               textarea is left for forms outside a workflow (a description). -->
+          <TemplateField
+            v-if="config?.component === 'textarea' && taskVariables"
+            multiline
+            :model-value="slotProps.componentField.modelValue ?? ''"
+            :placeholder="config?.inputProps?.placeholder"
+            :disabled="maybeBooleanishToBoolean(config?.inputProps?.disabled) ?? disabled"
+            :value-field="valueField"
+            :variable-type="config?.variableType ?? TEXT_VARIABLE_TYPES"
+            @update:model-value="slotProps.componentField['onUpdate:modelValue']"
+          />
           <Textarea
-            v-if="config?.component === 'textarea'"
+            v-else-if="config?.component === 'textarea'"
             type="text"
             v-bind="{ ...slotProps.componentField, ...config?.inputProps }"
             :disabled="config?.inputProps?.disabled ?? disabled"

@@ -53,6 +53,13 @@ const text = computed(() => {
   if (typeof value === 'object') return JSON.stringify(value)
   return String(value)
 })
+// The field also reports its text when it loses focus; only an edit is written, so
+// clicking through a field never turns a number, list or object into text (or a list a
+// parent shows as an empty field into '').
+function onInput(v: string) {
+  if (v !== text.value) emit('update:modelValue', v)
+}
+
 const taskVariables = inject<Ref<{ name: string; type: string }[]> | null>('taskVariables', null)
 
 // Object and list variables' known values (last run, else declared), by variable name.
@@ -177,7 +184,7 @@ const analyze = computed<ExpressionAnalyzer>(() => {
       :placeholder="placeholder"
       :value-field="valueField"
       field-class="font-mono"
-      @update:model-value="(v) => emit('update:modelValue', v)"
+      @update:model-value="onInput"
     />
     <p v-if="wrapped && !disabled" class="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-amber-600 dark:text-amber-400">
       <span>{{ t('expressionInput.valueAsTextHint', { type: wrapped.type }) }}</span>

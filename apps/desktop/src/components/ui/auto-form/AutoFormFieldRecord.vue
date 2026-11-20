@@ -12,13 +12,6 @@ import { Button } from '@/components/ui/button'
 import { FormDescription, FormItem, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import TemplateField from './TemplateField.vue'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { LayoutListIcon, Code2Icon, Link2Icon, PlusIcon, TrashIcon } from 'lucide-vue-next'
 import { javascript } from '@codemirror/lang-javascript'
 import { EditorView } from '@codemirror/view'
@@ -130,12 +123,28 @@ const initPairs = (): Pair[] => {
 const pairs = ref<Pair[]>(initPairs())
 
 watch(pairs, (newPairs) => {
-  if (mode.value === 'ui') setValue(pairsToRecord(newPairs))
+  if (mode.value !== 'ui') return
+  // An empty list over a binding is just the list being looked at (see listBinding).
+  if (typeof value.value === 'string' && newPairs.length === 0) return
+  setValue(pairsToRecord(newPairs))
 }, { deep: true })
 
-const filteredVariables = computed(() =>
-  (taskVariables?.value ?? []).filter(v => anyJson.value || v.type === 'object')
+// The binding the field holds while the property list is open: kept until a property is
+// added, so looking at the list (and going back) doesn't lose it.
+const listBinding = computed(() =>
+  mode.value === 'ui' && typeof value.value === 'string' && value.value.trim() ? value.value : ''
 )
+
+// What the field holds while Assign variable is open over written data, so the empty
+// field doesn't read as "nothing".
+const heldValue = computed(() => {
+  const v = value.value
+  if (mode.value !== 'variable' || v === undefined || v === null || typeof v === 'string') return ''
+  if (Array.isArray(v)) return v.length === 1 ? 'a list of 1 item' : `a list of ${v.length} items`
+  const n = typeof v === 'object' ? Object.keys(v).length : 0
+  if (typeof v !== 'object') return 'a value'
+  return n === 1 ? 'an object with 1 property' : `an object with ${n} properties`
+})
 
 // Separate text buffer for the code editor — decoupled from the form value so
 // the Zod schema never sees a raw string (which would fail z.record validation).
@@ -174,6 +183,12 @@ const onRawChange = (val: string) => {
     jsonError.value = ''
     return
   }
+  // A binding typed or kept in the editor (`{= customer =}`) stays a binding.
+  if (isVariableRef(val)) {
+    setValue(val.trim())
+    jsonError.value = ''
+    return
+  }
   const parsed = parseLenientJsonObject(val)
   if (parsed !== null) {
     setValue(parsed)
@@ -182,12 +197,6 @@ const onRawChange = (val: string) => {
     jsonError.value = 'Must be a valid JSON object (e.g., {"key": "value"})'
   }
 }
-
-const selectedVariable = computed(() => {
-  if (!isVariableRef(value.value)) return ''
-  const match = (value.value as string).match(/^\{=\s*(.+?)\s*=\}$/)
-  return match ? match[1].trim() : ''
-})
 
 const colorMode = useColorMode()
 // Property list only holds a flat object; switching to it from an array or plain text
@@ -214,17 +223,13 @@ const setMode = async (newMode: Mode) => {
     if (current && typeof current === 'object' && !Array.isArray(current)) {
       pairs.value = Object.entries(current).map(([k, v]) => ({ key: k, value: valToString(v) }))
     } else if (typeof current === 'string') {
-      try {
-        const parsed = JSON.parse(current)
-        if (typeof parsed === 'object' && !Array.isArray(parsed)) {
-          setValue(parsed)
-          pairs.value = Object.entries(parsed).map(([k, v]) => ({ key: k, value: valToString(v) }))
-        } else {
-          setValue({})
-          pairs.value = []
-        }
-      } catch {
-        setValue({})
+      // JSON text that is an object becomes its properties. Anything else (a binding)
+      // stays as it is until a property is added — the pairs watcher writes it then.
+      const parsed = parseLenientJsonObject(current)
+      if (parsed !== null) {
+        setValue(parsed)
+        pairs.value = Object.entries(parsed).map(([k, v]) => ({ key: k, value: valToString(v) }))
+      } else {
         pairs.value = []
       }
     }
@@ -298,6 +303,9 @@ const removePair = (i: number) => pairs.value.splice(i, 1)
 
           <!-- UI mode: key-value pairs -->
           <template v-if="mode === 'ui'">
+            <p v-if="listBinding" class="text-xs text-muted-foreground">
+              Uses <code class="font-mono">{{ listBinding }}</code>. Adding a property replaces it.
+            </p>
             <div v-for="(pair, index) in pairs" :key="index" class="flex items-center gap-2">
               <Input v-model="pair.key" placeholder="Key" :disabled="disabled" class="flex-1 min-w-0" />
               <Input v-if="valueInputType === 'number'" v-model="pair.value" type="number" placeholder="Value" :disabled="disabled" class="flex-1 min-w-0" />
@@ -328,25 +336,20 @@ const removePair = (i: number) => pairs.value.splice(i, 1)
             </p>
           </div>
 
-          <!-- Variable mode: picker -->
-          <div v-else class="space-y-1">
-            <Select :model-value="selectedVariable" @update:model-value="setValue(`{= ${$event} =}`)">
-              <SelectTrigger class="w-full">
-                <SelectValue placeholder="Select a variable…" />
-              </SelectTrigger>
-              <SelectContent>
-                <template v-if="filteredVariables.length > 0">
-                  <SelectItem v-for="v in filteredVariables" :key="v.name" :value="v.name">
-                    {{ v.name }}
-                    <span class="ml-1 text-xs text-muted-foreground">({{ v.type }})</span>
-                  </SelectItem>
-                </template>
-                <p v-else class="px-2 py-1.5 text-xs text-muted-foreground">
-                  No object variables available
-                </p>
-              </SelectContent>
-            </Select>
-          </div>
+          <!-- Variable mode: the same expression field as other params (autocomplete,
+               `{}` menu, fields inside objects). A request body takes any value. -->
+          <TemplateField
+            v-else
+            :model-value="typeof value === 'string' ? value : ''"
+            value-field
+            :variable-type="config?.variableType ?? (anyJson ? undefined : 'object')"
+            :disabled="disabled"
+            placeholder="{= myObject =}"
+            @update:model-value="setValue"
+          />
+              <p v-if="heldValue" class="mt-1 text-xs text-muted-foreground">
+                Holds {{ heldValue }}. Picking a variable replaces it.
+              </p>
 
           <FormDescription v-if="config?.description">
             {{ config.description }}

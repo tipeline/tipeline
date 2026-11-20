@@ -3,10 +3,10 @@ import { useField } from 'vee-validate'
 import type { FieldProps } from './interface'
 import { FolderOpen } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { FormDescription, FormItem, FormMessage } from '@/components/ui/form'
 import AutoFormLabel from './AutoFormLabel.vue'
-import { beautifyObjectName } from './utils'
+import TemplateField from './TemplateField.vue'
+import { beautifyObjectName, TEXT_VARIABLE_TYPES } from './utils'
 
 const props = defineProps<FieldProps>()
 
@@ -36,13 +36,15 @@ async function browse() {
       {{ config?.label || beautifyObjectName(label ?? fieldName) }}
     </AutoFormLabel>
     <div class="flex gap-1.5">
-      <Input
-        type="text"
+      <!-- Paths are often built from variables (`{{ folder }}/report.pdf`): the same
+           expression field as other text params, plus Browse. -->
+      <TemplateField
         class="flex-1"
         :model-value="typeof value === 'string' ? value : ''"
         :disabled="disabled"
-        :placeholder="config?.inputProps?.placeholder ?? '/path/to/file'"
-        @update:model-value="setValue($event)"
+        :placeholder="String(config?.inputProps?.placeholder ?? '/path/to/file')"
+        :variable-type="config?.variableType ?? TEXT_VARIABLE_TYPES"
+        @update:model-value="setValue"
       />
       <Button
         type="button"
