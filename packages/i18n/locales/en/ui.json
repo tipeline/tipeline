@@ -482,7 +482,19 @@
       "about": "About",
       "lastRunAt": "Last run {when}",
       "notRunYet": "Not run yet",
-      "projects": "Projects | Project | Projects"
+      "projects": "Projects | Project | Projects",
+      "strip": {
+        "runToStart": "Press Run to start one",
+        "runCounts": "{completed} completed · {failed} failed",
+        "notScheduled": "Not scheduled",
+        "draft": "Drafts can't be scheduled",
+        "schedules": "{n} schedule · {on} on | {n} schedules · {on} on",
+        "addSchedule": "Open to add a schedule",
+        "alertsOpen": "{n} open",
+        "noAlerts": "None",
+        "acknowledged": "{n} acknowledged",
+        "allClear": "Nothing needs attention"
+      }
     },
     "columns": {
       "task": "Workflow",
