@@ -44,6 +44,8 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import AutoForm from '@/components/ui/auto-form/AutoForm.vue';
+import TemplateField from '@/components/ui/auto-form/TemplateField.vue';
+import { TEXT_VARIABLE_TYPES } from '@/components/ui/auto-form/utils';
 import AutoFormField from '@/components/ui/auto-form/AutoFormField.vue';
 import DateStringInput from '@/components/ui/auto-form/DateStringInput.vue';
 import AutoFormCodeMirrorEditor from '@/components/ui/auto-form/AutoFormCodeMirrorEditor.vue';
@@ -667,19 +669,6 @@ const dialogDescription = computed(() => {
   );
 });
 
-// Extracts the variable name back out of a stored `{= name =}` reference so
-// the picker can show the current selection; anything else (empty, a literal
-// the user typed before this field existed) falls back to "none selected".
-function variableRefName(value: any): string {
-  if (typeof value !== 'string') return '__none__';
-  const match = value.match(/^\{=\s*([\w.[\]]+)\s*=\}$/);
-  return match ? match[1] : '__none__';
-}
-
-function setPluginVariableValue(def: PluginParamDef, name: string) {
-  pluginParamValues.value[def.name] = name === '__none__' ? '' : `{= ${name} =}`;
-}
-
 const translatedFieldConfig = computed(() => {
   if (!props.actionParams || !fieldConfig.value) return fieldConfig.value;
   return tFieldConfig(props.actionParams.group, props.actionParams.name, fieldConfig.value);
@@ -864,22 +853,14 @@ const formDependencies = computed<Dependency<any>[] | undefined>(() =>
                   @update:model-value="(v: string) => (pluginParamValues[def.name] = v)"
                 />
               </div>
-              <Select
+              <!-- A variable param holds one `{= binding =}`, any type. -->
+              <TemplateField
                 v-else-if="def.type === 'variable'"
-                :model-value="variableRefName(pluginParamValues[def.name])"
-                @update:model-value="(v) => setPluginVariableValue(def, v as string)"
-              >
-                <SelectTrigger class="w-full">
-                  <SelectValue :placeholder="t('actionEdit.selectVariable')" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">{{ t('actionEdit.selectVariable') }}</SelectItem>
-                  <SelectItem v-for="v in variableOptions" :key="v.name" :value="v.name">
-                    {{ v.name }}
-                    <span class="ml-1 text-xs text-muted-foreground">({{ v.type }})</span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+                :model-value="pluginParamValues[def.name] ?? ''"
+                value-field
+                placeholder="{= myVariable =}"
+                @update:model-value="(v: string) => (pluginParamValues[def.name] = v)"
+              />
               <Select
                 v-else-if="def.enum && def.enum.length > 0"
                 :model-value="pluginParamValues[def.name]"
@@ -893,9 +874,16 @@ const formDependencies = computed<Dependency<any>[] | undefined>(() =>
                 </SelectContent>
               </Select>
               <Input
-                v-else
-                :type="def.type === 'number' ? 'number' : 'text'"
+                v-else-if="def.type === 'number'"
+                type="number"
                 v-model="pluginParamValues[def.name]"
+              />
+              <!-- Text params take variables like a built-in action's text fields. -->
+              <TemplateField
+                v-else
+                :model-value="pluginParamValues[def.name] ?? ''"
+                :variable-type="TEXT_VARIABLE_TYPES"
+                @update:model-value="(v: string) => (pluginParamValues[def.name] = v)"
               />
             </div>
           </template>
