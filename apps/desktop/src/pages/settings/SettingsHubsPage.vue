@@ -75,6 +75,8 @@ async function submitAdd(data: any) {
   try {
     await store.add({ ...data, token: data.type === 'remote' ? data.token : undefined });
     showAddDialog.value = false;
+  } catch (e: any) {
+    toast.error(t('hub.manage.addFailed'), { description: translateError(e?.message ?? String(e)) });
   } finally {
     isSubmitting.value = false;
   }
@@ -220,9 +222,14 @@ async function confirmRemove() {
         @submit="submitAdd"
         class="space-y-4"
       >
-        <Button type="submit" class="w-full" :disabled="isSubmitting">
-          {{ t('hub.manage.add') }}
-        </Button>
+        <DialogFooter>
+          <Button type="button" variant="outline" :disabled="isSubmitting" @click="showAddDialog = false">
+            {{ t('common.cancel') }}
+          </Button>
+          <Button type="submit" :disabled="isSubmitting">
+            {{ t('hub.manage.add') }}
+          </Button>
+        </DialogFooter>
       </AutoForm>
     </DialogContent>
   </Dialog>

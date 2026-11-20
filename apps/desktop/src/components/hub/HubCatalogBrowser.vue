@@ -293,7 +293,7 @@ const placeholderIcon = computed(() => PLACEHOLDER_ICON[props.itemType]);
                   v-if="imageSrc(item)"
                   :src="imageSrc(item)!"
                   :alt="item.name"
-                  class="w-full h-full object-cover"
+                  class="w-full h-full object-contain p-4"
                   @error="brokenImages.add(item.identifier)"
                 />
                 <component :is="placeholderIcon" v-else class="size-10 text-muted-foreground/40" />
