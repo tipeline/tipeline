@@ -1600,7 +1600,8 @@
       "edit": "Edit hub",
       "editTitle": "Edit hub",
       "editDescription": "Change the name, address, or access token. Installed items keep their link to this hub.",
-      "saveFailed": "Failed to save hub"
+      "saveFailed": "Failed to save hub",
+      "addFailed": "Couldn't add the hub"
     },
     "majorAvailableDetail": "Major version {version} may change how this works. It waits for your approval.",
     "olderListedDetail": "The hub lists {version}, older than what you have. It won't be installed.",
@@ -1893,6 +1894,7 @@
       "unclosed": "Not closed — add {closer}",
       "rawNotAlone": "A raw reference {raw} must be the whole value — inside text, use {template}",
       "rawPath": "A raw reference {raw} can only hold a path, like state.value",
+      "unfinishedPath": "“{path}” isn't a finished path — add the field it should end in, or remove the last . or []",
       "invalid": "Invalid template: {detail}"
     },
     "containerFields": "{type} · {count} field inside | {type} · {count} fields inside",
@@ -2509,6 +2511,7 @@
         "bindingUnclosed": "“{snippet}” isn’t closed — add {closer}. It shows as empty until fixed.",
         "bindingRawNotAlone": "“{snippet}”: a raw reference {raw} must be the whole value — inside text, use {template}.",
         "bindingRawPath": "“{snippet}”: a raw reference {raw} can only hold a path, like state.value.",
+        "bindingUnfinishedPath": "“{snippet}”: this path isn't finished — add the field it should end in, or remove the last . or [].",
         "bindingInvalid": "“{snippet}”: invalid template ({detail}). It shows as empty until fixed.",
         "workflowMissing": "Workflow “{alias}” is not installed.",
         "inputUnknown": "Runnable “{runnable}” sets “{variable}”, which {workflow} doesn’t have.",
@@ -2698,7 +2701,6 @@
     "onErrorThrow": "Throw — stop pipeline on error",
     "onErrorContinue": "Continue — skip error and keep going",
     "save": "Save",
-    "remove": "Remove",
     "noParamDefs": "This plugin action has no param definitions. Set parameters directly in the workflow source YAML.",
     "pluginUnavailable": "The \"{group}\" plugin is currently disabled or missing, so this action can't be configured here. Re-enable it to continue editing.",
     "goToPlugins": "Go to Plugins",
@@ -2709,6 +2711,7 @@
     "unsavedTitle": "Discard unsaved changes?",
     "unsavedDescription": "You changed this action but didn't save it. If you close it now, those changes are lost.",
     "keepEditing": "Keep editing",
+    "syntaxBlocked": "Fix this to save — the step would fail when it runs:",
     "discardChanges": "Discard changes"
   },
   "actionMenu": {

@@ -14,11 +14,21 @@ import { useLastRunVariables } from '@/composables/useLastRunVariables';
 import AutoFormLabel from './AutoFormLabel.vue';
 import AutoFormCodeMirrorEditor from './AutoFormCodeMirrorEditor.vue';
 import { beautifyObjectName } from './utils';
-import { unknownVariableHighlighter, unknownVariableTheme } from '@/utils/codemirrorVariableHighlight';
+import {
+  syntaxIssueHighlighter,
+  unknownVariableHighlighter,
+  unknownVariableTheme,
+} from '@/utils/codemirrorVariableHighlight';
+import { bindingSyntaxMessage } from '@/utils/bindingSyntax';
+import { useI18n } from 'vue-i18n';
 
 const props = defineProps<FieldProps>();
 
+const { t } = useI18n();
 const colorMode = useColorMode();
+// Unclosed bindings, unfinished paths (`{{ node.attributes. }}`) and other Liquid errors,
+// marked like the other step fields mark them.
+const syntaxHighlighter = syntaxIssueHighlighter((issue) => bindingSyntaxMessage(t, issue));
 const formValues = useFormValues();
 const lastRun = useLastRunVariables();
 const taskVariables = lastRun.taskVariables;
@@ -26,7 +36,7 @@ const taskVariables = lastRun.taskVariables;
 const format = computed(() => (formValues.value as any)?.format ?? 'plain');
 
 const extensions = computed(() => {
-  const exts: any[] = [EditorView.lineWrapping, unknownVariableTheme];
+  const exts: any[] = [EditorView.lineWrapping, unknownVariableTheme, syntaxHighlighter];
   if (format.value === 'html') exts.push(html());
   else if (format.value === 'markdown') exts.push(markdown());
   else if (format.value === 'css') exts.push(css());

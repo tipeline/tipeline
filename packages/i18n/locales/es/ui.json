@@ -1600,7 +1600,8 @@
       "edit": "Editar hub",
       "editTitle": "Editar hub",
       "editDescription": "Cambia el nombre, la dirección o el token de acceso. Lo instalado sigue vinculado a este hub.",
-      "saveFailed": "Error al guardar el hub"
+      "saveFailed": "Error al guardar el hub",
+      "addFailed": "No se pudo añadir el hub"
     },
     "majorAvailableDetail": "La versión mayor {version} puede cambiar cómo funciona esto. Espera tu aprobación.",
     "olderListedDetail": "El hub ofrece la versión {version}, anterior a la que tienes. No se instalará.",
@@ -1893,6 +1894,7 @@
       "unclosed": "Sin cerrar: añade {closer}",
       "rawNotAlone": "Una referencia directa {raw} debe ser el valor completo; dentro de un texto, usa {template}",
       "rawPath": "Una referencia directa {raw} solo puede contener una ruta, como state.value",
+      "unfinishedPath": "“{path}” no es una ruta completa: añade el campo en el que debe terminar o quita el último . o []",
       "invalid": "Plantilla no válida: {detail}"
     },
     "containerFields": "{type} · {count} campo dentro | {type} · {count} campos dentro",
@@ -2509,6 +2511,7 @@
         "bindingUnclosed": "“{snippet}” no está cerrado: añade {closer}. Se muestra vacío hasta corregirlo.",
         "bindingRawNotAlone": "“{snippet}”: una referencia directa {raw} debe ser el valor completo; dentro de un texto, usa {template}.",
         "bindingRawPath": "“{snippet}”: una referencia directa {raw} solo puede contener una ruta, como state.value.",
+        "bindingUnfinishedPath": "“{snippet}”: esta ruta no está completa; añade el campo en el que debe terminar o quita el último . o [].",
         "bindingInvalid": "“{snippet}”: plantilla no válida ({detail}). Se muestra vacía hasta corregirla.",
         "workflowMissing": "El flujo de trabajo “{alias}” no está instalado.",
         "inputUnknown": "El ejecutable “{runnable}” establece “{variable}”, que {workflow} no tiene.",
@@ -2698,7 +2701,6 @@
     "onErrorThrow": "Lanzar — detener el pipeline",
     "onErrorContinue": "Continuar — omitir el error y seguir",
     "save": "Guardar",
-    "remove": "Eliminar",
     "noParamDefs": "Esta acción de plugin no tiene definiciones de parámetros. Define los parámetros directamente en el YAML fuente del flujo de trabajo.",
     "pluginUnavailable": "El plugin \"{group}\" está actualmente deshabilitado o no se encuentra, por lo que esta acción no se puede configurar aquí. Vuelve a activarlo para continuar editando.",
     "goToPlugins": "Ir a Plugins",
@@ -2709,6 +2711,7 @@
     "unsavedTitle": "¿Descartar los cambios sin guardar?",
     "unsavedDescription": "Cambiaste esta acción pero no la guardaste. Si la cierras ahora, esos cambios se pierden.",
     "keepEditing": "Seguir editando",
+    "syntaxBlocked": "Corrige esto para guardar; el paso fallaría al ejecutarse:",
     "discardChanges": "Descartar cambios"
   },
   "actionMenu": {

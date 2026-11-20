@@ -363,16 +363,16 @@ function onClose() {
 
     <template #footer>
       <div class="flex w-full items-center gap-2">
-        <Button @click="editVariableFormRef?.submit()">{{ t('variable.saveChanges') }}</Button>
         <Button
           v-if="!isSelectedVariableGlobal"
           variant="outline"
-          class="ml-auto text-destructive hover:text-destructive"
+          class="text-destructive hover:text-destructive"
           @click="onDeleteFromEdit"
         >
           <component :is="getIconComponent('Trash')" class="size-4" />
           {{ t('tasks.builder.variablesPanel.delete') }}
         </Button>
+        <Button class="ml-auto" @click="editVariableFormRef?.submit()">{{ t('variable.saveChanges') }}</Button>
       </div>
     </template>
   </Dialog>

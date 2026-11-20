@@ -1,4 +1,5 @@
 import { Liquid } from 'liquidjs';
+import { findUnfinishedPath } from '@tipeline/utils';
 
 const liquid = new Liquid({ strictVariables: false });
 
@@ -20,7 +21,21 @@ for (const tag of disabledTags) {
  * params rendering leaves alone.
  */
 export function renderLiquid(template: string, data: Record<string, unknown>): string {
+  assertFinishedPaths(template);
   return liquid.parseAndRenderSync(template, data);
+}
+
+/**
+ * Fails on a path left unfinished (`{{ node.attributes. }}`, `{= rows[] =}`): LiquidJS
+ * and the `{= =}` lookup would both drop the trailing `.` / `[]` and hand over the whole
+ * object before it, without a word. Desktop marks the same paths (findUnfinishedPath).
+ */
+function assertFinishedPaths(value: string): void {
+  const found = findUnfinishedPath(value);
+  if (!found) return;
+  throw new Error(
+    `[Error: Workflow] The path "${found.path}" in ${found.binding} isn't finished — add the field it should end in, or remove the last . or []`
+  );
 }
 
 // Walks a leading sequence of `.prop` / `[index]` segments against `root`.
@@ -50,6 +65,7 @@ function resolveString(
   getGlobalVar?: (name: string) => any,
   previousResult?: unknown
 ): any {
+  assertFinishedPaths(value);
   // Raw injection: {= varName =} / {= _env.KEY =} / {= _global.varName =}
   // Must be the entire string value — preserves original type
   // Supports dot notation and array index notation: {= obj.list[0].prop =}

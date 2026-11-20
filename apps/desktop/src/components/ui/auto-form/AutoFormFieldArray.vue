@@ -2,18 +2,11 @@
 import type { Config, ConfigItem } from './interface'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
-import { FormItem, FormMessage } from '@/components/ui/form'
+import { FormDescription, FormItem, FormMessage } from '@/components/ui/form'
 import { Separator } from '@/components/ui/separator'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { PlusIcon, TrashIcon, LayoutListIcon, Code2Icon, Link2Icon } from 'lucide-vue-next'
-import { FieldArray, FieldContextKey, useField } from 'vee-validate'
-import { computed, inject, nextTick, provide, ref } from 'vue'
+import { FieldArray, FieldContextKey, FormContextKey, useField } from 'vee-validate'
+import { computed, inject, nextTick, provide, ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import * as z from 'zod'
 import { javascript } from '@codemirror/lang-javascript'
@@ -22,6 +15,7 @@ import { oneDark } from '@codemirror/theme-one-dark'
 import { useColorMode } from '@vueuse/core'
 import AutoFormField from './AutoFormField.vue'
 import AutoFormLabel from './AutoFormLabel.vue'
+import TemplateField from './TemplateField.vue'
 import { beautifyObjectName, getBaseSchema, getBaseType } from './utils'
 import { parseLenientJsonArray } from '@/utils/lenientJson'
 import { useOpenWhenFilled } from './useOpenWhenFilled'
@@ -63,6 +57,10 @@ const taskVariables = inject<Ref<{ name: string; type: string }[]> | null>('task
 const showModeToggle = computed(() => taskVariables !== null)
 
 const fieldContext = useField<any>(props.fieldName)
+// The form's private context, to keep its initial value a list (see the watch below).
+const form = inject(FormContextKey, undefined) as
+  | { setFieldInitialValue?: (path: string, value: unknown, updateOriginal?: boolean) => void }
+  | undefined
 const { value, setValue } = fieldContext
 const { open, setOpen } = useOpenWhenFilled(value)
 // @ts-expect-error ignore missing `id`
@@ -80,10 +78,6 @@ const initMode = (): Mode => {
 
 const mode = ref<Mode>(initMode())
 
-const filteredVariables = computed(() =>
-  (taskVariables?.value ?? []).filter(v => v.type === 'array')
-)
-
 // Separate text buffer for the code editor — decoupled from the form value so
 // the Zod schema never sees a raw string (which would fail z.array validation).
 const rawText = ref(
@@ -97,6 +91,12 @@ const onRawChange = (val: string) => {
     jsonError.value = ''
     return
   }
+  // A binding typed or kept in the editor (`{= tags =}`) stays a binding.
+  if (isVariableRef(val)) {
+    setValue(val.trim())
+    jsonError.value = ''
+    return
+  }
   const parsed = parseLenientJsonArray(val)
   if (parsed !== null) {
     setValue(parsed)
@@ -106,11 +106,50 @@ const onRawChange = (val: string) => {
   }
 }
 
-const selectedVariable = computed(() => {
-  if (!isVariableRef(value.value)) return ''
-  const match = (value.value as string).match(/^\{=\s*(.+?)\s*=\}$/)
-  return match ? match[1].trim() : ''
+// The binding the field holds while Item list is open: kept until an item is added, so
+// looking at the list (and going back to Raw JSON or Assign variable) doesn't lose it.
+const listBinding = computed(() =>
+  mode.value === 'ui' && typeof value.value === 'string' && value.value.trim() ? value.value : ''
+)
+
+// The form's initial value must be a list whenever this field holds one. Item rows
+// (`<field>[n]`) and FieldArray's Add write into the initial values, which throws
+// ("Cannot assign to read only property '0' of string") while they still hold the string
+// the step was saved with (`{= tags =}`) — and a row that throws while rendering leaves
+// the dialog broken. The original initial values too: a form whose initial values come
+// from its schema (the step dialog's withDefaults) writes rows there as well. Sync, so it's
+// in place before the rows render.
+watch(
+  value,
+  (v) => {
+    if (Array.isArray(v) && !Array.isArray(fieldContext.meta.initialValue))
+      form?.setFieldInitialValue?.(props.fieldName, JSON.parse(JSON.stringify(v)), true)
+  },
+  { flush: 'sync', immediate: true }
+)
+
+const toList = (list: unknown[]) => setValue(list)
+
+// Each item's field: the list's settings without its label and description — those
+// describe the whole list ("The array to convert…"), not one item.
+const itemConfig = computed<ConfigItem>(() => ({
+  ...(props.config as ConfigItem | undefined),
+  hideLabel: true,
+  description: undefined,
+}))
+
+// What the field holds while Assign variable is open over a list, so the empty field
+// doesn't read as "nothing".
+const heldValue = computed(() => {
+  const v = value.value
+  if (mode.value !== 'variable' || !Array.isArray(v) || v.length === 0) return ''
+  return v.length === 1 ? 'a list of 1 item' : `a list of ${v.length} items`
 })
+
+const addItem = (push: (item: unknown) => void) => {
+  if (!Array.isArray(value.value)) toList([])
+  push(null)
+}
 
 const colorMode = useColorMode()
 const extensions = computed(() => [
@@ -123,15 +162,11 @@ const setMode = async (newMode: Mode) => {
   if (mode.value === newMode) return
 
   if (newMode === 'ui') {
-    // Parse the current string value into an array BEFORE mounting FieldArray,
-    // so it initialises from the correct value.
+    // JSON text that is a list becomes that list BEFORE FieldArray mounts, so it starts
+    // with its items. A binding stays as it is until an item is added (addItem).
     if (typeof value.value === 'string') {
-      try {
-        const parsed = JSON.parse(value.value)
-        setValue(Array.isArray(parsed) ? parsed : [])
-      } catch {
-        setValue([])
-      }
+      const parsed = parseLenientJsonArray(value.value)
+      if (parsed !== null) toList(parsed)
     }
     jsonError.value = ''
     mode.value = 'ui'
@@ -206,15 +241,19 @@ const setMode = async (newMode: Mode) => {
 
               <!-- UI mode: existing accordion items -->
               <FieldArray v-if="mode === 'ui'" v-slot="{ fields, remove, push }" as="div" :name="fieldName">
+                <p v-if="listBinding" class="text-xs text-muted-foreground mb-2">
+                  Uses <code class="font-mono">{{ listBinding }}</code>. Adding an item replaces it with a list.
+                </p>
                 <template v-for="(field, index) of fields" :key="field.key">
                   <div class="mb-4 p-1">
-                    <div class="flex items-center gap-2">
+                    <!-- items-start: an item's error shows under its input, not beside it -->
+                    <div class="flex items-start gap-2">
                       <div class="flex-1 min-w-0">
                         <AutoFormField
                           :field-name="`${fieldName}[${index}]`"
                           :label="fieldName"
                           :shape="itemShape!"
-                          :config="{ ...(config as ConfigItem), hideLabel: true }"
+                          :config="itemConfig"
                         />
                       </div>
                       <Button
@@ -229,7 +268,7 @@ const setMode = async (newMode: Mode) => {
                 </template>
                 <Button
                   type="button" variant="secondary" class="mt-4 flex items-center"
-                  @click="push(null)"
+                  @click="addItem(push)"
                 >
                   <PlusIcon class="mr-2" :size="16" />
                   Add
@@ -249,25 +288,24 @@ const setMode = async (newMode: Mode) => {
                 <p v-if="jsonError" class="text-xs text-red-500">{{ jsonError }}</p>
               </div>
 
-              <!-- Variable mode: picker -->
-              <div v-else class="space-y-1">
-                <Select :model-value="selectedVariable" @update:model-value="setValue(`{= ${$event} =}`)">
-                  <SelectTrigger class="w-full">
-                    <SelectValue placeholder="Select a variable…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <template v-if="filteredVariables.length > 0">
-                      <SelectItem v-for="v in filteredVariables" :key="v.name" :value="v.name">
-                        {{ v.name }}
-                        <span class="ml-1 text-xs text-muted-foreground">({{ v.type }})</span>
-                      </SelectItem>
-                    </template>
-                    <p v-else class="px-2 py-1.5 text-xs text-muted-foreground">
-                      No array variables available
-                    </p>
-                  </SelectContent>
-                </Select>
-              </div>
+              <!-- Variable mode: the same expression field as other params (autocomplete,
+                   `{}` menu, fields inside objects), offering lists. -->
+              <TemplateField
+                v-else
+                :model-value="typeof value === 'string' ? value : ''"
+                value-field
+                :variable-type="(config as ConfigItem | undefined)?.variableType ?? 'array'"
+                :disabled="disabled"
+                placeholder="{= myList =}"
+                @update:model-value="setValue"
+              />
+              <p v-if="heldValue" class="mt-1 text-xs text-muted-foreground">
+                Holds {{ heldValue }}. Picking a variable replaces it.
+              </p>
+              <!-- Once, for the whole list (the item rows leave it out). -->
+              <FormDescription v-if="(config as ConfigItem | undefined)?.description" class="mt-3">
+                {{ (config as ConfigItem).description }}
+              </FormDescription>
             </AccordionContent>
 
             <FormMessage />
