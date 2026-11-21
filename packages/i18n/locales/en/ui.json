@@ -1058,6 +1058,7 @@
     },
     "columns": {
       "plugin": "Plugin",
+      "source": "Source",
       "group": "Group",
       "author": "Author",
       "version": "Version",
@@ -1613,7 +1614,16 @@
       "editTitle": "Edit hub",
       "editDescription": "Change the name, address, or access token. Installed items keep their link to this hub.",
       "saveFailed": "Failed to save hub",
-      "addFailed": "Couldn't add the hub"
+      "addFailed": "Couldn't add the hub",
+      "intervalLabel": "Check for updates",
+      "intervalHint": "How often Tipeline asks each hub for newer versions. Items with Auto-update on install them then. Opening the Plugins page or Check now always asks right away.",
+      "interval": {
+        "15m": "Every 15 minutes",
+        "1h": "Every hour",
+        "6h": "Every 6 hours",
+        "24h": "Once a day",
+        "manual": "Only when I check"
+      }
     },
     "majorAvailableDetail": "Major version {version} may change how this works. It waits for your approval.",
     "olderListedDetail": "The hub lists {version}, older than what you have. It won't be installed.",
@@ -1670,7 +1680,12 @@
       "appNoUndo": "Your own edits to this app will be replaced, and there's no way to go back.",
       "pluginNote": "A plugin's changes can't be shown before it's installed, because reading its package runs its code. Only continue if you trust this hub.",
       "install": "Install {version}"
-    }
+    },
+    "checkForUpdates": "Check for updates",
+    "checkingForUpdates": "Checking for updates…",
+    "versionAvailable": "{version} available",
+    "update": "Update",
+    "reviewShort": "Review"
   },
   "search": {
     "placeholder": "Search workflows, apps, projects and tags...",

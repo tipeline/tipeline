@@ -1,6 +1,7 @@
 import os from 'os';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { pathToFileURL } from 'url';
 import type { ZodTypeAny } from 'zod';
 import { buildPluginSchema } from '@tipeline/schemas';
@@ -57,21 +58,32 @@ export class PluginLoader {
   }
 
   static async reloadSingle(pluginPath: string): Promise<string | null> {
-    return await this.loadPlugin(pluginPath, true);
+    return await this.loadPlugin(pluginPath);
   }
 
   /** Reads a package's group and version without registering anything. Its code does run. */
   static async inspect(pluginPath: string): Promise<{ group: string; version?: string } | null> {
     const entryFile = this.resolveEntry(pluginPath);
     if (!entryFile) return null;
-    const mod = await import(pathToFileURL(entryFile).href);
+    const mod = await this.importEntry(entryFile);
     const definition = mod.default ?? mod;
     if (!definition.group || typeof definition.actions !== 'object') return null;
     return { group: definition.group, version: definition.version };
   }
 
-  /** `fresh` skips Node's module cache: an updated plugin keeps its path but has new code. */
-  private static async loadPlugin(pluginPath: string, fresh = false): Promise<string | null> {
+  /**
+   * Imports a plugin's entry file as it is on disk now. Node caches a module by its URL for
+   * the life of the process, and an updated plugin keeps its path, so the URL carries a hash
+   * of the file: new code is a new module, while unchanged code (every routine rescan) reuses
+   * the one already loaded. A plain URL here once handed rescans the code Core started with,
+   * which put the old version and actions back after every hub update.
+   */
+  private static async importEntry(entryFile: string) {
+    const hash = crypto.createHash('sha256').update(fs.readFileSync(entryFile)).digest('hex').slice(0, 16);
+    return await import(`${pathToFileURL(entryFile).href}?v=${hash}`);
+  }
+
+  private static async loadPlugin(pluginPath: string): Promise<string | null> {
     const entryFile = this.resolveEntry(pluginPath);
     if (!entryFile) {
       console.warn(`[PluginLoader] No index.js/index.mjs found in ${pluginPath}, skipping`);
@@ -79,8 +91,7 @@ export class PluginLoader {
     }
 
     try {
-      const url = pathToFileURL(entryFile).href;
-      const mod = await import(fresh ? `${url}?v=${Date.now()}` : url);
+      const mod = await this.importEntry(entryFile);
       const definition = mod.default ?? mod;
 
       if (!definition.group || typeof definition.actions !== 'object') {

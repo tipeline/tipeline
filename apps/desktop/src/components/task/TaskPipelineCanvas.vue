@@ -464,8 +464,20 @@ function handleKeydown(event) {
   }
 }
 
+// One click on a step opens its editor, like variables and table rows. A press
+// that moved more than a few pixels was a drag (or a text selection), not a click.
+let cardPointerDown = null;
+function onCardPointerDown(event) {
+  cardPointerDown = { x: event.clientX, y: event.clientY };
+}
+function onCardClick(item, event) {
+  const start = cardPointerDown;
+  cardPointerDown = null;
+  if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 4) return;
+  onEditAction(item);
+}
+
 function onEditAction(item) {
-  console.log('Double clicked!', item);
   if (!props.isDebug) {
     actionParams.value = item;
     isDialogOpen.value = true;
@@ -630,7 +642,8 @@ function onOpenSubtaskBuilder(item) {
             :hasOrderingError="orderingErrorIds.includes(item.identifier)"
             :hasFieldError="fieldErrorIds.includes(item.identifier)"
             :isAncestorDisabled="ancestorDisabled"
-            @dblclick="onEditAction(item)"
+            @pointerdown="onCardPointerDown"
+            @click="onCardClick(item, $event)"
             @edit="onEditAction"
             @delete="onDeleteAction"
             @duplicate="onDuplicateAction"

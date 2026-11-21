@@ -274,9 +274,17 @@ provide('unregisterPendingVariable', unregisterPendingVariable);
 // Cleared whenever the dialog closes — on Save, pending creations were already
 // pushed into props.variables earlier in handleSubmit; on Cancel, they were
 // never pushed at all, so there's nothing to discard but the bookkeeping.
+// A step opens with one click, so the second click of a habitual double-click lands
+// on the overlay just after the dialog appears: don't treat that as "click outside".
+let openedAt = 0;
+function onPointerDownOutside(event: Event) {
+  if (Date.now() - openedAt < 500) event.preventDefault();
+}
+
 watch(
   () => props.open,
   (isOpen) => {
+    if (isOpen) openedAt = Date.now();
     if (!isOpen) {
       pendingVariableCreations.value.clear();
       extraFieldsBaseline.value = null;
@@ -707,7 +715,11 @@ const formDependencies = computed<Dependency<any>[] | undefined>(() =>
 
 <template>
   <Dialog :open="props.open" @update:open="handleOpenChange">
-    <DialogContent class="sm:max-w-175 max-h-[90vh] flex flex-col" @open-auto-focus="focusFirstField">
+    <DialogContent
+      class="sm:max-w-175 max-h-[90vh] flex flex-col"
+      @open-auto-focus="focusFirstField"
+      @pointer-down-outside="onPointerDownOutside"
+    >
       <DialogHeader class="shrink-0 flex-row items-center justify-between gap-4 space-y-0 pr-8">
         <DialogTitle>{{ dialogTitle }}</DialogTitle>
         <Button

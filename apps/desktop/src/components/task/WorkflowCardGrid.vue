@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import TaskListActions from '@/components/task/TaskListActions.vue';
 import { descriptionSummary } from '@tipeline/utils';
+import { sourceLabel, sourceTitle } from '@/utils/hubSource';
 import {
   lastRunLabel,
   sourceClasses,
@@ -57,7 +58,9 @@ function toggle(identifier: string, on: boolean) {
             />
           </div>
           <div class="flex items-center gap-1.5 flex-wrap">
-            <Badge :class="sourceClasses[task.source_type] ?? ''">{{ task.source_type }}</Badge>
+            <Badge :class="sourceClasses[task.source_type] ?? ''" class="max-w-[160px]" :title="sourceTitle(task, t)">
+              <span class="truncate">{{ sourceLabel(task, t) }}</span>
+            </Badge>
             <component :is="badge" v-for="(badge, i) in workflowBadges(task, t)" :key="i" />
             <span v-if="task.version" class="font-mono text-[11px] text-muted-foreground">{{ task.version }}</span>
           </div>

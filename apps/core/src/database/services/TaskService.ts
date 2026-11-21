@@ -122,6 +122,7 @@ export class TaskService {
     const knex = TaskModel.knex();
     const rows = await knex('task')
       .leftJoin('task_hub_link as thl', 'thl.task_id', 'task.id')
+      .leftJoin('hub', 'hub.id', 'thl.hub_id')
       .select(
         'task.identifier',
         'task.name',
@@ -138,6 +139,7 @@ export class TaskService {
         'thl.hub_id',
         'thl.hub_task_identifier',
         'thl.hub_version',
+        'hub.name as hub_name',
         'task.created_at',
         knex.raw(`${TASK_TAGS_SUBQUERY}`),
         knex.raw(projectsSubquery('task')),

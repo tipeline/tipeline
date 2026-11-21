@@ -13,7 +13,8 @@ vi.mock('os', async (original) => {
 });
 
 import { HubSyncService } from '@/hub/HubSyncService';
-import { PLUGINS_DIR } from '@/plugin/PluginLoader';
+import { PLUGINS_DIR, PluginLoader } from '@/plugin/PluginLoader';
+import { PluginActionRegistry } from '@/plugin/PluginActionRegistry';
 import { HubService } from '@database/services/HubService';
 import { HubUpdateEventService } from '@database/services/HubUpdateEventService';
 import { PluginService } from '@database/services/PluginService';
@@ -255,5 +256,68 @@ describe('hub updates end to end', () => {
     expect(task.version).toBe('1.1.0');
     expect(task.hub_status).toBe('ok');
     expect(await kinds()).toEqual([['updated', '1.1.0']]);
+  });
+
+  it('checks asked for at the same time share one run, so a plugin installs once', async () => {
+    publishPlugin('1.0.0', plugin('1.0.0'));
+    const { identifier } = await HubSyncService.installPlugin(hubId, 'greeting');
+
+    publishPlugin('1.0.1', plugin('1.0.1'));
+    // The background check, Check now and an opened plugin page, all at once.
+    const first = HubSyncService.checkHub(hubId);
+    const second = HubSyncService.checkHub(hubId);
+    expect(second).toBe(first);
+    await Promise.all([first, second, HubSyncService.checkHub(hubId)]);
+
+    expect((await PluginService.getByIdentifier(identifier) as any).version).toBe('1.0.1');
+    expect(await kinds()).toEqual([['updated', '1.0.1']]);
+    // Done means done: the next request checks again.
+    expect(HubSyncService.checkHub(hubId)).not.toBe(first);
+  });
+
+  it('the plugin list says what the hub offers, like the detail page', async () => {
+    publishPlugin('1.0.0', plugin('1.0.0'));
+    const { identifier } = await HubSyncService.installPlugin(hubId, 'greeting');
+    await PluginService.setAutoUpdate(identifier, false);
+
+    publishPlugin('1.0.1', plugin('1.0.1'));
+    await HubSyncService.checkHub(hubId);
+
+    const listed: any = (await PluginService.getAll()).find((p: any) => p.identifier === identifier);
+    expect(listed).toMatchObject({
+      version: '1.0.0',
+      source_type: 'hub',
+      hub_id: hubId,
+      hub_version: '1.0.1',
+      hub_status: 'ok',
+      hub_name: 'Team Hub',
+      hub_update_state: 'available',
+    });
+    expect(!!listed.auto_update).toBe(false);
+  });
+
+  it('a rescan after an update keeps the new version and actions, not the code Core started with', async () => {
+    const withAction = (version: string, action: string) =>
+      `export default { group: 'greeting', name: 'Greeting', version: '${version}', actions: { ${action}: class {} } };\n`;
+    publishPlugin('1.0.0', withAction('1.0.0', 'hello'));
+    const { identifier } = await HubSyncService.installPlugin(hubId, 'greeting');
+    await PluginService.setEnabled(identifier, true);
+    // Opening the Plugins page rescans the folder, loading 1.0.0 by its plain path.
+    await PluginLoader.load();
+    expect(Object.keys(PluginActionRegistry.greeting)).toEqual(['hello']);
+
+    publishPlugin('1.0.1', withAction('1.0.1', 'helloAgain'));
+    await HubSyncService.checkHub(hubId);
+    await PluginLoader.load();
+    await PluginLoader.load();
+
+    const after: any = await PluginService.getByIdentifier(identifier);
+    expect(after.version).toBe('1.0.1');
+    expect(after.hub_update_state).toBe('current');
+    expect(Object.keys(PluginActionRegistry.greeting)).toEqual(['helloAgain']);
+
+    // And so the next check has nothing to install again.
+    await HubSyncService.checkHub(hubId);
+    expect(await kinds()).toEqual([['updated', '1.0.1']]);
   });
 });

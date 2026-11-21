@@ -162,8 +162,9 @@ For a plugin, keep `version` in `package.json` the same as the one `index.mjs` e
 reads `package.json` first, so it can refuse an older or major version before any of the
 package's code runs. A plugin without a `package.json` is checked once it has been loaded.
 
-To see an update without waiting for the hourly check, click **Check now** in
-**Settings → Hubs**, or run `tipeline hub check <hubId>`.
+To see an update without waiting for the next check, open the **Plugins** page (or click
+**Check for updates** there), click **Check now** in **Settings → Hubs**, or run
+`tipeline hub check <hubId>`.
 
 ## Example: a hub on GitHub
 

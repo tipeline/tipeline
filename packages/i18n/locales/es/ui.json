@@ -1058,6 +1058,7 @@
     },
     "columns": {
       "plugin": "Plugin",
+      "source": "Origen",
       "group": "Grupo",
       "author": "Autor",
       "version": "Versión",
@@ -1613,7 +1614,16 @@
       "editTitle": "Editar hub",
       "editDescription": "Cambia el nombre, la dirección o el token de acceso. Lo instalado sigue vinculado a este hub.",
       "saveFailed": "Error al guardar el hub",
-      "addFailed": "No se pudo añadir el hub"
+      "addFailed": "No se pudo añadir el hub",
+      "intervalLabel": "Buscar actualizaciones",
+      "intervalHint": "Cada cuánto Tipeline pregunta a cada hub por versiones nuevas. Los elementos con actualización automática se instalan entonces. Abrir la página de Plugins o Comprobar ahora siempre pregunta en el momento.",
+      "interval": {
+        "15m": "Cada 15 minutos",
+        "1h": "Cada hora",
+        "6h": "Cada 6 horas",
+        "24h": "Una vez al día",
+        "manual": "Solo cuando yo lo pida"
+      }
     },
     "majorAvailableDetail": "La versión mayor {version} puede cambiar cómo funciona esto. Espera tu aprobación.",
     "olderListedDetail": "El hub ofrece la versión {version}, anterior a la que tienes. No se instalará.",
@@ -1670,7 +1680,12 @@
       "appNoUndo": "Tus propios cambios en esta aplicación se reemplazarán, y no se puede volver atrás.",
       "pluginNote": "Los cambios de un plugin no se pueden mostrar antes de instalarlo, porque leer su paquete ejecuta su código. Continúa solo si confías en este hub.",
       "install": "Instalar {version}"
-    }
+    },
+    "checkForUpdates": "Buscar actualizaciones",
+    "checkingForUpdates": "Buscando actualizaciones…",
+    "versionAvailable": "{version} disponible",
+    "update": "Actualizar",
+    "reviewShort": "Revisar"
   },
   "search": {
     "placeholder": "Buscar flujos, aplicaciones, proyectos y etiquetas...",

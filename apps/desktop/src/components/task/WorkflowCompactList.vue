@@ -6,6 +6,7 @@ import { Lock } from 'lucide-vue-next';
 import { Checkbox } from '@/components/ui/checkbox';
 import TaskListActions from '@/components/task/TaskListActions.vue';
 import { statusDot, thumbnail, workflowBadges, type TaskItem } from '@/config/tables/TasksList';
+import { sourceLabel, sourceTitle } from '@/utils/hubSource';
 
 // The Workflows page's Compact view: one short line per workflow, to scan a long list.
 // Actions show on hover; ticking works like the table's checkbox column.
@@ -54,8 +55,12 @@ function when(task: TaskItem): string {
       <span class="text-sm font-medium truncate min-w-0" :title="task.name">{{ task.name }}</span>
       <Lock v-if="task.is_owned_by_me === false" class="h-3 w-3 shrink-0 text-muted-foreground/60" />
       <component :is="badge" v-for="(badge, i) in workflowBadges(task, t)" :key="i" />
-      <span v-if="task.source_type === 'hub'" class="text-[10px] font-medium text-indigo-600 dark:text-indigo-400 shrink-0">
-        {{ t('tasks.hub') }}
+      <span
+        v-if="task.source_type === 'hub'"
+        class="text-[10px] font-medium text-indigo-600 dark:text-indigo-400 shrink-0 max-w-[140px] truncate"
+        :title="sourceTitle(task, t)"
+      >
+        {{ sourceLabel(task, t) }}
       </span>
       <span class="flex-1 min-w-0 truncate text-xs text-muted-foreground/70">
         {{ task.tags.join(' · ') }}
