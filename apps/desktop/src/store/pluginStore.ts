@@ -25,6 +25,10 @@ export const usePluginStore = defineStore('pluginStore', {
     // keyed by "group.action", rebuilt only when register()/registerRules()
     // touch that group.
     schemaCache: {} as Record<string, ZodTypeAny>,
+    // What Core reported in the last loadDefinitions(): the builder's plugin actions come
+    // from here. `revision` goes up each time, so pages showing plugins know to reload.
+    plugins: [] as any[],
+    revision: 0,
   }),
   actions: {
     register(group: string, params: Record<string, PluginParamDef[]>) {
@@ -83,6 +87,25 @@ export const usePluginStore = defineStore('pluginStore', {
     },
     setCurrentPlugin(plugin: { name: string }) {
       this.currentPlugin = plugin;
+    },
+    /**
+     * Reads every plugin's actions, fields and docs from Core. Called when the builder opens
+     * and again after a hub update, since an updated plugin keeps its group but not its actions.
+     */
+    async loadDefinitions() {
+      const plugins = (await invokeCore<any[]>(SEND.PLUGIN_LIST)) ?? [];
+      plugins.forEach((p) => {
+        if (p.params && typeof p.params === 'object') this.register(p.group, p.params);
+        if (p.docs && typeof p.docs === 'object') this.registerDocs(p.group, p.docs);
+        if (p.rules && typeof p.rules === 'object') this.registerRules(p.group, p.rules);
+        if (p.returns && typeof p.returns === 'object') this.registerReturns(p.group, p.returns);
+        this.registerCacheable(p.group, p.cacheable);
+      });
+      this.setEnabledGroups(plugins.filter((p) => !!p.enabled).map((p) => p.group));
+      this.attentionCount = plugins.filter((p) => p.status !== 'ok').length;
+      this.plugins = plugins;
+      this.revision++;
+      return plugins;
     },
     async refreshAttentionCount() {
       try {

@@ -18,7 +18,28 @@ export type PluginItem = {
   status: string;
   path: string;
   image?: string | null;
+  source_type?: 'hub' | 'local';
+  hub_id?: string | null;
+  hub_version?: string | null;
+  hub_status?: 'ok' | 'missing' | 'error' | null;
+  hub_update_state?: 'current' | 'available' | 'major' | 'older';
+  auto_update?: boolean | number;
 };
+
+/** What the list can do about a newer hub version: install it, or open the review. */
+export type PluginUpdateHandlers = {
+  updating: (row: PluginItem) => boolean;
+  onUpdate: (row: PluginItem) => void;
+  onReview: (row: PluginItem) => void;
+};
+
+/** The hub version worth mentioning: newer, and from a hub that's answering normally. */
+export function pluginUpdateFor(row: PluginItem): { version: string; major: boolean } | null {
+  if (row.source_type !== 'hub' || row.hub_status !== 'ok' || !row.hub_version) return null;
+  if (row.hub_update_state === 'available') return { version: row.hub_version, major: false };
+  if (row.hub_update_state === 'major') return { version: row.hub_version, major: true };
+  return null;
+}
 
 function thumbnail(image: string | null | undefined) {
   const src = toAssetUrl(image);
@@ -32,10 +53,11 @@ function thumbnail(image: string | null | undefined) {
 }
 
 export function createColumns(
-  t: (key: string) => string,
+  t: (key: string, params?: Record<string, unknown>) => string,
   router: Router,
   onRequestToggle: (row: PluginItem, value: boolean) => void,
-  onRemove: (row: PluginItem) => void
+  onRemove: (row: PluginItem) => void,
+  updates: PluginUpdateHandlers
 ): ColumnDef<PluginItem>[] {
   return [
     {
@@ -96,10 +118,35 @@ export function createColumns(
       header: () => t('plugins.columns.version'),
       meta: { class: 'whitespace-nowrap' },
       cell: (info) => {
+        const row = info.row.original as PluginItem;
         const value = info.getValue() as string | null;
-        return value
+        const current = value
           ? h('span', { class: 'font-mono text-xs' }, value)
           : h('span', { class: 'text-muted-foreground' }, '—');
+        const update = pluginUpdateFor(row);
+        if (!update) return current;
+        const busy = updates.updating(row);
+        return h('div', { class: 'flex flex-col items-start gap-1' }, [
+          current,
+          h('div', { class: 'flex items-center gap-2' }, [
+            h(
+              'span',
+              { class: 'font-mono text-xs text-amber-700 dark:text-amber-400' },
+              t('hub.versionAvailable', { version: update.version })
+            ),
+            h(
+              Button,
+              {
+                variant: 'outline',
+                size: 'sm',
+                class: 'h-6 px-2 text-xs',
+                disabled: busy,
+                onClick: () => (update.major ? updates.onReview(row) : updates.onUpdate(row)),
+              },
+              () => (busy ? t('hub.updating') : update.major ? t('hub.reviewShort') : t('hub.update'))
+            ),
+          ]),
+        ]);
       },
     },
     {

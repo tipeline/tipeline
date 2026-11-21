@@ -24,6 +24,7 @@ import { usePluginStore } from '@/store/pluginStore';
 import { toAssetUrl } from '@/utils/assetUrl';
 import { Boxes } from 'lucide-vue-next';
 import HubSourceBlock from '@/components/hub/HubSourceBlock.vue';
+import { useHubChecks } from '@/composables/useHubChecks';
 
 const route = useRoute();
 const router = useRouter();
@@ -43,6 +44,25 @@ const pluginImageUrl = computed(() => toAssetUrl(plugin.value?.image));
 watch(plugin, (p) => {
   if (p?.name) pluginStore.setCurrentPlugin({ name: p.name });
 }, { immediate: true });
+
+// Opening the page asks the plugin's hub for news (at most once a minute), so an update shows
+// up — and installs, with Auto-update on — now rather than at the next background check.
+const hubChecks = useHubChecks();
+const reload = () => refetch({ identifier: route.params.pid });
+let checkedOnOpen = false;
+watch(plugin, async (p) => {
+  if (!p || checkedOnOpen) return;
+  checkedOnOpen = true;
+  if (p.source_type === 'hub' && (await hubChecks.checkHubs([p.hub_id]))) await reload();
+});
+// A plugin updated anywhere (background check, Updates page): show what's installed now.
+watch(() => pluginStore.revision, () => void reload());
+
+const availableVersion = computed(() => {
+  const p = plugin.value;
+  if (!p || p.source_type !== 'hub' || p.hub_status !== 'ok') return null;
+  return p.hub_update_state === 'available' || p.hub_update_state === 'major' ? p.hub_version : null;
+});
 
 async function requestToggle() {
   if (!plugin.value) return;
@@ -177,14 +197,21 @@ async function removePlugin() {
               </div>
               <div class="flex flex-col gap-1">
                 <span class="text-xs text-muted-foreground uppercase tracking-wide">{{ t('plugins.detail.version') }}</span>
-                <span class="font-mono text-xs">{{ plugin.version ?? '—' }}</span>
+                <span class="font-mono text-xs">
+                  {{ plugin.version ?? '—' }}
+                  <span v-if="availableVersion" class="text-amber-700 dark:text-amber-400">
+                    → {{ t('hub.versionAvailable', { version: availableVersion }) }}
+                  </span>
+                </span>
               </div>
               <HubSourceBlock
                 v-if="plugin.source_type === 'hub'"
                 class="col-span-2"
                 :item="plugin"
                 type="plugin"
-                @changed="refetch()"
+                can-check
+                @changed="reload()"
+                @checked="reload()"
               />
               <div class="col-span-2 flex flex-col gap-1">
                 <span class="text-xs text-muted-foreground uppercase tracking-wide">{{ t('plugins.detail.description') }}</span>

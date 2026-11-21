@@ -1,3 +1,4 @@
+import { HUB_CHECK_INTERVAL_SETTING, HUB_CHECK_INTERVALS, HubPoller, isHubCheckInterval } from '@engine/HubPoller';
 import { RUN_KEEP_DAYS_SETTING, RunHistoryPurger } from '@engine/RunHistoryPurger';
 import { assertNoLocalFiles } from '@utils/localFileReferences';
 import { redactSecretValues } from '@utils/secretBox';
@@ -1897,11 +1898,15 @@ export default class Core {
     if (key === RUN_KEEP_DAYS_SETTING && !(Number.isInteger(Number(value)) && Number(value) >= 0)) {
       throw new Error('Keep runs for a whole number of days, or 0 to keep them forever.');
     }
+    if (key === HUB_CHECK_INTERVAL_SETTING && !isHubCheckInterval(value)) {
+      throw new Error(`Check hubs every ${Object.keys(HUB_CHECK_INTERVALS).join(', ')}.`);
+    }
     await SettingsService.set(key, value);
     if (key === 'timezone') AppSettings.timezone = value;
     // A lower limit applies now, not at the next sweep.
     if (key === CACHE_MAX_SIZE_SETTING) await CacheService.sweep();
     if (key === RUN_KEEP_DAYS_SETTING) void RunHistoryPurger.purge();
+    if (key === HUB_CHECK_INTERVAL_SETTING) await HubPoller.reschedule();
     return { key, value };
   }
 
