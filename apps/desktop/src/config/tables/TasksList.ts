@@ -8,6 +8,7 @@ import { Lock, Workflow } from 'lucide-vue-next';
 import { toAssetUrl } from '@/utils/assetUrl';
 import { descriptionSummary } from '@tipeline/utils';
 import type { ProjectTag } from '@/utils/projectAssign';
+import { sourceLabel, sourceTitle } from '@/utils/hubSource';
 
 export type TaskItem = {
   identifier: string;
@@ -17,6 +18,8 @@ export type TaskItem = {
   version: string | null;
   tags: string[];
   source_type: 'local' | 'hub';
+  /** The hub it was installed from (null when local, or when that hub was removed). */
+  hub_name?: string | null;
   /** Every project it's in (none, one or several). */
   projects: ProjectTag[];
   last_run_status: 'pending' | 'running' | 'failed' | 'completed' | 'canceled' | 'paused' | null;
@@ -218,8 +221,12 @@ export function createColumns(
       header: () => t('tasks.columns.source'),
       meta: { class: 'whitespace-nowrap' },
       cell: (info) => {
-        const value = info.getValue() as string;
-        return h(Badge, { class: sourceClasses[value] || '' }, () => value);
+        const row = info.row.original as TaskItem;
+        return h(
+          Badge,
+          { class: `${sourceClasses[row.source_type] || ''} max-w-[160px]`, title: sourceTitle(row, t) },
+          () => h('span', { class: 'truncate' }, sourceLabel(row, t))
+        );
       },
     },
     ...(showOwner
