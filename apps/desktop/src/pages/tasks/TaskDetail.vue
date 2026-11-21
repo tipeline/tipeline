@@ -6,6 +6,9 @@ interface Task {
   status?: string;
   /** Every project it's in. */
   projects?: { identifier: string; name: string; color: string | null }[];
+  source_type?: 'local' | 'hub';
+  /** The hub it was installed from. */
+  hub_name?: string | null;
   [key: string]: any;
 }
 import { ref, computed, watch } from 'vue';
@@ -32,6 +35,7 @@ import { uncacheableSteps } from '@tipeline/schemas';
 import { usePluginStore } from '@/store/pluginStore';
 import { Edit, DownloadIcon, Settings2, Trash2, EllipsisVertical, Workflow, Copy } from 'lucide-vue-next';
 import { toAssetUrl } from '@/utils/assetUrl';
+import { sourceLabel, sourceTitle } from '@/utils/hubSource';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -492,6 +496,13 @@ useKeyboardShortcuts([
           <Workflow v-else class="size-3.5 text-muted-foreground/50" />
         </div>
         <span>{{ task.name }}</span>
+        <span
+          v-if="task.source_type === 'hub'"
+          class="text-xs font-medium text-indigo-600 dark:text-indigo-400 truncate max-w-[200px]"
+          :title="sourceTitle(task, t)"
+        >
+          {{ sourceLabel(task, t) }}
+        </span>
       </div>
     </template>
 

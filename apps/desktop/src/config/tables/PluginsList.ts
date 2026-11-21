@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Boxes } from 'lucide-vue-next';
 import { toAssetUrl } from '@/utils/assetUrl';
+import { sourceLabel, sourceTitle } from '@/utils/hubSource';
+import { sourceClasses } from '@/config/tables/TasksList';
 
 export type PluginItem = {
   identifier: string;
@@ -20,6 +22,8 @@ export type PluginItem = {
   image?: string | null;
   source_type?: 'hub' | 'local';
   hub_id?: string | null;
+  /** The hub it was installed from (null when local, or when that hub was removed). */
+  hub_name?: string | null;
   hub_version?: string | null;
   hub_status?: 'ok' | 'missing' | 'error' | null;
   hub_update_state?: 'current' | 'available' | 'major' | 'older';
@@ -101,6 +105,19 @@ export function createColumns(
       cell: (info) => {
         const value = info.getValue() as string;
         return h('span', { class: 'font-mono text-xs bg-muted px-1.5 py-0.5 rounded' }, value);
+      },
+    },
+    {
+      accessorKey: 'source_type',
+      header: () => t('plugins.columns.source'),
+      meta: { class: 'whitespace-nowrap' },
+      cell: (info) => {
+        const row = info.row.original as PluginItem;
+        return h(
+          Badge,
+          { class: `${sourceClasses[row.source_type ?? 'local'] || ''} max-w-[160px]`, title: sourceTitle(row, t) },
+          () => h('span', { class: 'truncate' }, sourceLabel(row, t))
+        );
       },
     },
     {

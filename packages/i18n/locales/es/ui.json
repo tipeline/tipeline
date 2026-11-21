@@ -1058,6 +1058,7 @@
     },
     "columns": {
       "plugin": "Plugin",
+      "source": "Origen",
       "group": "Grupo",
       "author": "Autor",
       "version": "Versión",
