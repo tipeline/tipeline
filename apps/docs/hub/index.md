@@ -88,8 +88,19 @@ request.
 
 ## Updates
 
-Tipeline checks every enabled hub **once an hour**. To check now, click **Check now** on the
-hub's card in **Settings → Hubs**, or run `tipeline hub check [hubId]`.
+Tipeline checks every enabled hub **once an hour**. To change how often, pick a choice under
+**Check for updates** in **Settings → Hubs**: every 15 minutes, every hour, every 6 hours, once a
+day, or only when you check.
+
+To check now:
+
+- Open **Plugins**, or a plugin's page. Tipeline checks the hubs your plugins came from (at most
+  once a minute), and the header's **Check for updates** button checks again whenever you click it.
+- Click **Check now** on the hub's card in **Settings → Hubs**.
+- Run `tipeline hub check [hubId]`.
+
+When a plugin updates, Tipeline reloads its actions in the open window: the workflow builder
+shows the new fields and descriptions without restarting the app.
 
 Each check compares your installed version with the one the hub lists:
 

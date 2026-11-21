@@ -21,7 +21,6 @@ import { useTaskStore } from '@/store/task';
 import { useRecentItemsStore } from '@/store/recentItems';
 import { usePluginStore } from '@/store/pluginStore';
 import { SEND } from '@/ipc-channels';
-import { invokeCore } from '@/utils/invoke';
 import TaskActionsLibrary from '@/components/task/TaskActionsLibrary.vue';
 import TaskPipelineCanvas from '@/components/task/TaskPipelineCanvas.vue';
 import TaskPipelineCanvasSkeleton from '@/components/task/TaskPipelineCanvasSkeleton.vue';
@@ -693,7 +692,27 @@ function handleExitDebug() {
 }
 
 const showNewVariable = ref(false);
-const extraPluginItems = ref<any[]>([]);
+const extraPluginItems = computed(() =>
+  pluginStore.plugins
+    .filter((p) => p.enabled && p.actions?.length)
+    .map((p) => ({
+      id: p.group,
+      name: p.name,
+      label: p.name,
+      icon: 'Boxes',
+      isPlugin: true,
+      children: p.actions.map((action: string) => ({
+        type: 'action',
+        params: {},
+        group: p.group,
+        name: action,
+        label: action,
+        description: p.docs?.[action]?.description ?? p.description ?? undefined,
+        justDropped: true,
+        source: 'plugin',
+      })),
+    }))
+);
 
 const menuItems = computed(() => {
   const allValidations = getAllValidations();
@@ -718,46 +737,8 @@ const menuItems = computed(() => {
   return [...builtIn, ...extraPluginItems.value];
 });
 
-invokeCore(SEND.PLUGIN_LIST).then((plugins: any[]) => {
-  if (!plugins?.length) return;
-  plugins.forEach((p) => {
-    if (p.params && typeof p.params === 'object') {
-      pluginStore.register(p.group, p.params);
-    }
-    if (p.docs && typeof p.docs === 'object') {
-      pluginStore.registerDocs(p.group, p.docs);
-    }
-    if (p.rules && typeof p.rules === 'object') {
-      pluginStore.registerRules(p.group, p.rules);
-    }
-    if (p.returns && typeof p.returns === 'object') {
-      pluginStore.registerReturns(p.group, p.returns);
-    }
-    pluginStore.registerCacheable(p.group, p.cacheable);
-  });
-  pluginStore.setEnabledGroups(
-    plugins.filter((p) => !!p.enabled).map((p) => p.group)
-  );
-  extraPluginItems.value = plugins
-    .filter((p) => p.enabled && p.actions?.length)
-    .map((p) => ({
-      id: p.group,
-      name: p.name,
-      label: p.name,
-      icon: 'Boxes',
-      isPlugin: true,
-      children: p.actions.map((action: string) => ({
-        type: 'action',
-        params: {},
-        group: p.group,
-        name: action,
-        label: action,
-        description: p.docs?.[action]?.description ?? p.description ?? undefined,
-        justDropped: true,
-        source: 'plugin',
-      })),
-    }));
-}).catch((err) => {
+// Read fresh on every open; a hub update reloads the store, and the list below follows it.
+pluginStore.loadDefinitions().catch((err) => {
   console.error('[TaskEdit] Failed to load plugins:', err);
 });
 

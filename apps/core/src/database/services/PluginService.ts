@@ -11,8 +11,9 @@ const SOURCE_TYPE_CASE = `CASE WHEN phl.id IS NOT NULL THEN 'hub' ELSE 'local' E
 export class PluginService {
   static async getAll() {
     const knex = PluginModel.knex();
-    return await knex('plugin')
+    const rows = await knex('plugin')
       .leftJoin('plugin_hub_link as phl', 'phl.plugin_id', 'plugin.id')
+      .leftJoin('hub', 'hub.id', 'phl.hub_id')
       .select(
         'plugin.identifier',
         'plugin.group',
@@ -27,8 +28,15 @@ export class PluginService {
         knex.raw(`${SOURCE_TYPE_CASE} as source_type`),
         'phl.hub_id',
         'phl.hub_plugin_identifier',
-        'phl.hub_version'
+        'phl.hub_version',
+        'phl.hub_status',
+        'phl.auto_update',
+        'hub.name as hub_name'
       );
+    // Same shape as getByIdentifier, so the list can offer the update the detail page offers.
+    return rows.map((row: any) =>
+      row.source_type === 'hub' ? { ...row, hub_update_state: hubUpdateState(row.version, row.hub_version) } : row
+    );
   }
 
   static async getByIdentifier(identifier: string) {

@@ -528,8 +528,23 @@ export class HubSyncService {
     return { ...summary, toVersion, state: hubUpdateState(record.version, toVersion) };
   }
 
-  /** Says what happened; an unreachable hub is an answer, not an exception (the poller keeps going). */
-  static async checkHub(hubId: string): Promise<HubCheckResult> {
+  /** Checks in progress, by hub: a second request joins the first instead of installing twice. */
+  private static checking = new Map<string, Promise<HubCheckResult>>();
+
+  /**
+   * Says what happened; an unreachable hub is an answer, not an exception (the poller keeps
+   * going). The poller, Check now and opening a plugin page can all ask at once, so a check
+   * already running for the hub is shared rather than started again.
+   */
+  static checkHub(hubId: string): Promise<HubCheckResult> {
+    const running = this.checking.get(hubId);
+    if (running) return running;
+    const check = this.runHubCheck(hubId).finally(() => this.checking.delete(hubId));
+    this.checking.set(hubId, check);
+    return check;
+  }
+
+  private static async runHubCheck(hubId: string): Promise<HubCheckResult> {
     const hub = await HubService.getById(hubId);
     if (!hub) throw new Error(`Hub "${hubId}" not found`);
 

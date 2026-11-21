@@ -8,17 +8,38 @@ import HubUpdateDialog from '@/components/hub/HubUpdateDialog.vue';
 import { SEND } from '@/ipc-channels';
 import { invokeCore } from '@/utils/invoke';
 import { useHubUpdatesStore, type HubItemType } from '@/store/hubUpdatesStore';
+import { useHubChecks } from '@/composables/useHubChecks';
 
 /**
  * Where an item installed from a hub stands: the hub's name and status, the way to take
  * an update, and the Auto-update switch. Shared by workflows, apps and plugins.
  */
-const props = defineProps<{ item: any; type: HubItemType }>();
-const emit = defineEmits<{ (e: 'changed', fields: Record<string, unknown>): void }>();
+const props = defineProps<{
+  item: any;
+  type: HubItemType;
+  /** Shows "Check for updates"; the page reloads the item on `checked`. */
+  canCheck?: boolean;
+}>();
+const emit = defineEmits<{
+  (e: 'changed', fields: Record<string, unknown>): void;
+  (e: 'checked'): void;
+}>();
 
 const { t } = useI18n();
 const router = useRouter();
 const hubUpdates = useHubUpdatesStore();
+const hubChecks = useHubChecks();
+
+async function checkNow() {
+  await hubChecks.checkHubs([props.item.hub_id], { force: true });
+  emit('checked');
+}
+
+/** An updated plugin's actions changed too: the builder and lists read them again. */
+function afterUpdate(updated: Record<string, unknown>) {
+  emit('changed', updated);
+  if (props.type === 'plugin') void hubChecks.afterPluginChange();
+}
 
 const UPDATE_CHANNEL = {
   task: SEND.HUB_UPDATE_TASK,
@@ -59,7 +80,7 @@ async function updateNow() {
   isUpdating.value = true;
   try {
     const updated = await invokeCore<any>(UPDATE_CHANNEL[props.type], { identifier: props.item.identifier });
-    emit('changed', updated);
+    afterUpdate(updated);
   } catch (e: any) {
     emit('changed', { hub_status: 'error' });
     toast.error(t('hub.updateFailed'), { description: e?.message ?? String(e) });
@@ -110,6 +131,14 @@ async function toggleAutoUpdate(value: boolean) {
       >
         {{ t('hub.seeWhy') }}
       </button>
+      <button
+        v-if="canCheck && status !== 'missing'"
+        class="text-xs text-muted-foreground hover:text-foreground hover:underline disabled:opacity-50"
+        :disabled="hubChecks.checking.value"
+        @click="checkNow"
+      >
+        {{ hubChecks.checking.value ? t('hub.checkingForUpdates') : t('hub.checkForUpdates') }}
+      </button>
       <label class="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
         <Switch class="scale-75" :model-value="!!item.auto_update" @update:model-value="toggleAutoUpdate" />
         {{ t('hub.autoUpdate') }}
@@ -119,7 +148,7 @@ async function toggleAutoUpdate(value: boolean) {
       v-model="reviewOpen"
       :type="type"
       :identifier="item.identifier"
-      @updated="(updated) => emit('changed', updated)"
+      @updated="afterUpdate"
     />
   </div>
 </template>

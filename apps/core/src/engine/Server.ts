@@ -114,7 +114,7 @@ process.on('uncaughtException', (err: Error, origin: string) => {
     const sleepWatchdog = new SleepWatchdog(runner);
     sleepWatchdog.start();
 
-    HubPoller.start();
+    HubPoller.start().catch((err) => console.error('[HubPoller] Failed to start:', err));
     ApprovalTimeoutService.start();
     CacheSweeper.start();
     TrashPurger.start();

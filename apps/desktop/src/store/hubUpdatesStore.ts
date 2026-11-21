@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { SEND } from '@/ipc-channels';
 import { invokeCore } from '@/utils/invoke';
 import { useConnectionStore } from '@/store/connectionStore';
+import { usePluginStore } from '@/store/pluginStore';
 
 const POLL_MS = 60_000;
 
@@ -48,6 +49,11 @@ export const useHubUpdatesStore = defineStore('hubUpdates', () => {
       const added = known ? fresh.filter((e) => !known!.has(e.id) && !e.read_at) : [];
       known = new Set(fresh.map((e) => e.id));
       events.value = fresh;
+      // Core already runs an updated plugin's new code; the open window still has the old
+      // actions and fields until it reads them again.
+      if (added.some((e) => e.item_type === 'plugin' && e.kind === 'updated')) {
+        void usePluginStore().loadDefinitions().catch(() => {});
+      }
       if (added.length) notifier?.(added);
     } catch {
       // Keep the last known list on a transient IPC failure.

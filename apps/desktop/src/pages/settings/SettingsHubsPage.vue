@@ -34,6 +34,8 @@ import { useErrorT } from '@/composables/useErrorT';
 import { useHubStore, type Hub } from '@/store/hubStore';
 import { useAutoSave } from '@/composables/useAutoSave';
 import SaveStatus from '@/components/SaveStatus.vue';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useSettingsStore } from '@/store/settingsStore';
 
 const { t } = useI18n();
 const { translateError } = useErrorT();
@@ -68,7 +70,25 @@ const checkingId = ref<string | null>(null);
 const removeTarget = ref<Hub | null>(null);
 const removing = ref(false);
 
-onMounted(() => store.load());
+// Mirrors HUB_CHECK_INTERVAL_SETTING / HUB_CHECK_INTERVALS in core's HubPoller.
+const INTERVAL_SETTING = 'hubs.checkInterval';
+const INTERVALS = ['15m', '1h', '6h', '24h', 'manual'] as const;
+const DEFAULT_INTERVAL = '1h';
+
+const settingsStore = useSettingsStore();
+const interval = ref<string>(DEFAULT_INTERVAL);
+
+function chooseInterval(value: string) {
+  interval.value = value;
+  void autoSave.save('interval', () => settingsStore.set(INTERVAL_SETTING, value));
+}
+
+onMounted(async () => {
+  void store.load();
+  await settingsStore.load();
+  const saved = settingsStore.get(INTERVAL_SETTING, DEFAULT_INTERVAL);
+  interval.value = (INTERVALS as readonly string[]).includes(saved) ? saved : DEFAULT_INTERVAL;
+});
 
 async function submitAdd(data: any) {
   isSubmitting.value = true;
@@ -158,6 +178,26 @@ async function confirmRemove() {
 <template>
   <section class="space-y-6">
     <p class="text-sm text-muted-foreground">{{ t('hub.manage.description') }}</p>
+
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <div class="text-sm font-medium">{{ t('hub.manage.intervalLabel') }}</div>
+        <div class="text-xs text-muted-foreground mt-0.5">{{ t('hub.manage.intervalHint') }}</div>
+      </div>
+      <div class="flex items-center gap-3 shrink-0">
+        <SaveStatus v-bind="autoSave.status('interval')" />
+        <Select :model-value="interval" @update:model-value="chooseInterval($event as string)">
+          <SelectTrigger class="w-44 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="option in INTERVALS" :key="option" :value="option">
+              {{ t(`hub.manage.interval.${option}`) }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
 
     <div class="space-y-2">
       <div
