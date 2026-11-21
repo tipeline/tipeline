@@ -197,7 +197,7 @@ const cardClass = computed(() => {
           v-if="hasFieldError"
           :is="getIconComponent('CircleAlert')"
           class="size-4 text-red-500 shrink-0"
-          title="Required fields are missing — double-click to configure"
+          title="Required fields are missing — click to configure"
         />
 
         <span class="item-title flex-1 min-w-0 font-medium text-foreground transition-colors duration-200 ease-in-out">
@@ -228,7 +228,7 @@ const cardClass = computed(() => {
           <component :is="getIconComponent('ListTree')" class="size-5" />
         </button>
         <DropdownMenu v-if="!isDebug">
-          <DropdownMenuTrigger>
+          <DropdownMenuTrigger @click.stop>
             <component :is="getIconComponent('EllipsisVertical')" class="size-5" />
           </DropdownMenuTrigger>
           <DropdownMenuContent>
