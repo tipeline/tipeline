@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { createValidationPair } from './../createValidation';
 import { sshSchema } from '@tipeline/types';
+import { orTemplateString } from '../templateValidation';
 
 const connId = () => z.string().min(1);
 
@@ -16,7 +17,8 @@ export const validations = {
         config: z.object({}).passthrough(),
       }),
       creation: z.object({
-        config: z.union([z.string(), z.object({}).passthrough()]),
+        // A record (not string-first) so the builder shows Fields / Raw JSON / Variable.
+        config: orTemplateString(z.record(z.any())),
       }),
     },
     {
@@ -24,7 +26,7 @@ export const validations = {
       returns: 'sshConnection',
       fieldConfig: {
         config: {
-          description: 'SSH connection configuration object or reference (host, port, user, private key, etc.).',
+          description: 'SSH connection settings (host, port, username, password or privateKeyPath, passphrase) as fields, JSON, or an object variable.',
           valueField: true,
           variableType: 'object',
         },

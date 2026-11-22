@@ -487,7 +487,7 @@ const sectionTitle = 'text-[11px] font-semibold uppercase tracking-wide text-mut
         <span class="truncate">{{ t('tray.next', { name: next.taskName, when: nextWhen(next.nextRunAt!) }) }}</span>
       </div>
       <div class="flex gap-2 px-3.5 py-2.5 border-t border-border">
-        <Button class="flex-1 h-8" @click="open('/')">{{ t('tray.open') }}</Button>
+        <Button class="flex-1 h-8" @click="open()">{{ t('tray.open') }}</Button>
         <!-- No Assistant for a viewer on a Server, so no button either. -->
         <Button
           v-if="connection.assistantAvailable"
