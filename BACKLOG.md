@@ -65,6 +65,29 @@ extractPages, watermark, encrypt/decrypt) since `unpdf` and
 
 ---
 
+## Script sandbox: investigate isolated-vm
+
+`script.runScript` runs code with `vm2`
+(`apps/core/src/action/actions/script/actions.ts`). vm2 shares the Node process
+and guards it with proxies. It has a long history of sandbox escapes, and its README
+warns that more will be found. That's acceptable while scripts come from the user or
+the Assistant, but not once scripts from hub workflows or other untrusted sources run.
+
+Investigate moving to `isolated-vm` (separate V8 isolate, real memory limit,
+per-call timeouts), ideally in its own worker process:
+- **Packaging.** It's a native addon: Node-version-specific builds (6.x/5.x for
+  Node 24), `--no-node-snapshot` on Node 20+, Electron rebuilds for Desktop.
+- **Bridges.** Nothing is available inside: `console`, helpers and the variables
+  passed in have to be copied across explicitly. Never hand `Reference`/`ExternalCopy`
+  to untrusted code.
+- **Behaviour parity.** The existing script tests and script preview should keep
+  passing, including the async-timeout handling in `preview.ts`.
+- **Cost.** Isolate startup time per run vs. vm2.
+- **Status.** isolated-vm is in maintenance mode (a rewrite is on its `experimental`
+  branch); vm2 is patched again after its 2023 discontinuation.
+
+---
+
 ## App components
 
 ### Camera / barcode scanner (roadmap #35)
