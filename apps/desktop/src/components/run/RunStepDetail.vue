@@ -23,6 +23,9 @@ const props = defineProps<{
   ended?: boolean;
   // An object or list output as a collapsible tree (the debugger), not as text.
   tree?: boolean;
+  // The output grows with the panel around it (the debugger's resizable bottom panel)
+  // instead of stopping at a fixed height. The panel must be a size container.
+  fill?: boolean;
 }>();
 
 const { t } = useI18n();
@@ -53,7 +56,11 @@ const paramText = (v: unknown) => {
   return !paramsOpen.value && s.length > 120 ? s.slice(0, 120) + '…' : s;
 };
 const resultText = computed(() => formatValue(props.action?.result, 2));
-const longResult = computed(() => !showTree.value && exceedsDisplayThreshold(resultText.value, 300, 3));
+const longResult = computed(
+  () => !props.fill && !showTree.value && exceedsDisplayThreshold(resultText.value, 300, 3)
+);
+// As tall as the panel, less the Output label and the panel's bottom padding.
+const fillStyle = { maxHeight: 'max(8rem, calc(100cqh - 2.5rem))' };
 const showTree = computed(() => !!props.tree && typeof props.action?.result === 'object' && props.action?.result !== null);
 
 const copied = ref(false);
@@ -190,8 +197,16 @@ const runDotClass = (status: string) =>
         </span>
       </p>
       <div class="relative rounded bg-muted">
-        <div v-if="showTree" class="max-h-64 overflow-auto px-1.5 py-1.5 pr-8">
+        <div
+          v-if="showTree"
+          class="overflow-auto px-1.5 py-1.5 pr-8"
+          :class="{ 'max-h-64': !fill }"
+          :style="fill ? fillStyle : undefined"
+        >
           <JsonTree :value="action.result" />
+        </div>
+        <div v-else-if="fill" class="overflow-auto px-2.5 py-2 pr-8" :style="fillStyle">
+          <span class="block font-mono whitespace-pre text-foreground/90">{{ resultText }}</span>
         </div>
         <div v-else class="overflow-x-auto px-2.5 py-2 pr-8">
           <span
