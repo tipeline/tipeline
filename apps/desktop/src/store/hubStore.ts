@@ -17,6 +17,9 @@ export interface Hub {
 export const useHubStore = defineStore('hub', () => {
   const hubs = ref<Hub[]>([]);
   const loading = ref(false);
+  // The hub picked in the Hub page's browser. Kept here so it survives
+  // switching between the Workflows / Apps / Plugins tabs.
+  const selectedHubId = ref<string | null>(null);
 
   const enabledHubs = computed(() => hubs.value.filter((h) => h.enabled));
 
@@ -67,5 +70,5 @@ export const useHubStore = defineStore('hub', () => {
     await load();
   }
 
-  return { hubs, loading, enabledHubs, load, add, update, remove, setEnabled, checkOne };
+  return { hubs, loading, selectedHubId, enabledHubs, load, add, update, remove, setEnabled, checkOne };
 });
