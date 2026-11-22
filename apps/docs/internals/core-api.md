@@ -217,7 +217,8 @@ Core.hubList() / Core.hubAdd(data) / Core.hubUpdate(id, data) / Core.hubRemove(i
 Core.hubCatalog(hubId)
 Core.hubPreviewTask(hubId, itemIdentifier)
 Core.hubInstallTask(hubId, itemIdentifier) / Core.hubInstallApp(...) / Core.hubInstallPlugin(...)
-Core.hubUpdateTask(identifier) / Core.hubUpdateApp(identifier) / Core.hubUpdatePlugin(identifier)
+Core.hubUpdateTask(identifier) / Core.hubUpdateApp(identifier)
+Core.hubUpdatePlugin(identifier, { acceptBreaking? }) // held back if saved steps would break, unless accepted
 Core.hubCheckAll() / Core.hubCheckOne(hubId)
 Core.hubSetTaskAutoUpdate(identifier, autoUpdate) // also App / Plugin
 ```

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { RouterLink } from 'vue-router';
 import Dialog from '@/components/Dialog.vue';
 import { Button } from '@/components/ui/button';
 import { Loader2Icon, TriangleAlert } from 'lucide-vue-next';
@@ -36,29 +37,37 @@ const loading = ref(false);
 const installing = ref(false);
 const error = ref('');
 
+async function loadPreview() {
+  preview.value = null;
+  error.value = '';
+  loading.value = true;
+  try {
+    preview.value = await invokeCore(SEND.HUB_PREVIEW_UPDATE, {
+      type: props.type,
+      identifier: props.identifier,
+    });
+  } catch (e: any) {
+    error.value = e?.message ?? String(e);
+  } finally {
+    loading.value = false;
+  }
+}
+
 watch(
   () => props.modelValue,
-  async (open) => {
-    if (!open) return;
-    preview.value = null;
-    error.value = '';
-    loading.value = true;
-    try {
-      preview.value = await invokeCore(SEND.HUB_PREVIEW_UPDATE, {
-        type: props.type,
-        identifier: props.identifier,
-      });
-    } catch (e: any) {
-      error.value = e?.message ?? String(e);
-    } finally {
-      loading.value = false;
-    }
+  (open) => {
+    if (open) void loadPreview();
   },
   { immediate: true }
 );
 
 const isMajor = computed(() => preview.value?.state === 'major');
 const workflow = computed(() => preview.value?.workflow);
+const plugin = computed(() => preview.value?.plugin);
+
+// Known once an install of this version was tried and held back (Core checks the staged
+// package; the preview doesn't run plugin code).
+const breaks = computed<any[]>(() => plugin.value?.problems ?? []);
 
 // One line per kind of change, leaving out the kinds with nothing in them.
 const contract = computed(() => {
@@ -93,13 +102,20 @@ const hasDependents = computed(() => {
 async function install() {
   installing.value = true;
   try {
-    const updated = await invokeCore<any>(UPDATE_CHANNEL[props.type], { identifier: props.identifier });
+    const payload: Record<string, unknown> = { identifier: props.identifier };
+    if (breaks.value.length) payload.acceptBreaking = true;
+    const updated = await invokeCore<any>(UPDATE_CHANNEL[props.type], payload);
     emit('updated', updated);
     emit('update:modelValue', false);
     void hubUpdates.refresh();
   } catch (e: any) {
-    toast.error(t('hub.updateFailed'), { description: e?.message ?? String(e) });
     void hubUpdates.refresh();
+    // A plugin held back for breaking steps: show them here rather than in a toast.
+    if (props.type === 'plugin' && !breaks.value.length) {
+      await loadPreview();
+      if (breaks.value.length) return;
+    }
+    toast.error(t('hub.updateFailed'), { description: e?.message ?? String(e) });
   } finally {
     installing.value = false;
   }
@@ -192,6 +208,60 @@ async function install() {
         <p class="text-xs text-muted-foreground m-0">{{ t('hub.review.appNoUndo') }}</p>
       </template>
 
+      <template v-else-if="plugin">
+        <section v-if="breaks.length" class="space-y-1">
+          <h4 class="text-xs font-medium text-destructive uppercase tracking-wide m-0">
+            {{ t('hub.review.breaks') }}
+          </h4>
+          <ul class="m-0 pl-4 list-disc space-y-0.5 max-h-48 overflow-y-auto scroll-fade">
+            <li v-for="(problem, index) in breaks" :key="index">
+              <RouterLink
+                :to="`/tasks/${problem.workflow.identifier}`"
+                class="font-medium hover:underline"
+                @click="emit('update:modelValue', false)"
+              >
+                {{ t('hub.review.breakStep', { workflow: problem.workflow.name, position: problem.position }) }}
+              </RouterLink>
+              <span class="font-mono text-xs"> · {{ problem.action }}</span>:
+              {{ t(`hub.review.breakKind.${problem.kind}`) }}
+              <span v-if="problem.detail" class="text-xs text-muted-foreground break-words">({{ problem.detail }})</span>
+            </li>
+          </ul>
+          <p class="text-xs text-muted-foreground m-0">
+            {{ t('hub.review.breaksNote', { version: preview.toVersion }) }}
+          </p>
+        </section>
+
+        <section class="space-y-1">
+          <h4 class="text-xs font-medium text-muted-foreground uppercase tracking-wide m-0">
+            {{ t('hub.review.usedBy') }}
+          </h4>
+          <p v-if="!plugin.usage.workflows.length" class="m-0">{{ t('hub.review.usedByNothing') }}</p>
+          <template v-else>
+            <p class="m-0">
+              {{
+                t('hub.review.usedByWorkflows', {
+                  names: plugin.usage.workflows
+                    .map((w: any) => t('hub.review.usedByWorkflowSteps', { name: w.name, n: w.steps }, w.steps))
+                    .join(', '),
+                })
+              }}
+            </p>
+            <p v-if="plugin.usage.apps.length" class="m-0">
+              {{ t('hub.review.usedByApps', { names: plugin.usage.apps.join(', ') }) }}
+            </p>
+            <p v-if="plugin.usage.schedules" class="m-0">
+              {{ t('hub.review.usedBySchedules', plugin.usage.schedules) }}
+            </p>
+          </template>
+        </section>
+
+        <p v-if="!breaks.length && plugin.usage.workflows.length" class="text-xs text-muted-foreground m-0">
+          {{ t('hub.review.pluginChecked') }}
+        </p>
+        <p class="text-xs text-muted-foreground m-0">{{ t('hub.review.pluginNote') }}</p>
+      </template>
+
       <p v-else class="m-0">{{ t('hub.review.pluginNote') }}</p>
     </div>
 
@@ -199,9 +269,18 @@ async function install() {
       <Button variant="outline" :disabled="installing" @click="emit('update:modelValue', false)">
         {{ t('common.cancel') }}
       </Button>
-      <Button v-if="preview" :disabled="installing" @click="install">
+      <Button
+        v-if="preview"
+        :variant="breaks.length ? 'destructive' : 'default'"
+        :disabled="installing"
+        @click="install"
+      >
         <Loader2Icon v-if="installing" class="size-4 animate-spin" />
-        {{ installing ? t('hub.updating') : t('hub.review.install', { version: preview.toVersion }) }}
+        {{
+          installing
+            ? t('hub.updating')
+            : t(breaks.length ? 'hub.review.installAnyway' : 'hub.review.install', { version: preview.toVersion })
+        }}
       </Button>
     </template>
   </Dialog>

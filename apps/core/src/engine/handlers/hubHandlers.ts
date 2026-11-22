@@ -163,7 +163,8 @@ export const registerHubHandlers = (transport: ITransport) => {
   transport.on('hubUpdatePlugin', async (message: any, client: any) => {
     if (!client) return;
     try {
-      const result = await Core.hubUpdatePlugin(message.payload.identifier);
+      const { identifier, acceptBreaking } = message.payload;
+      const result = await Core.hubUpdatePlugin(identifier, { acceptBreaking });
       transport.emit(client, 'onHubUpdatePlugin', IPCMessage.success(result, message.correlationId));
     } catch (error: any) {
       transport.emit(client, 'onHubUpdatePlugin', IPCMessage.failure(error.message, message.correlationId));

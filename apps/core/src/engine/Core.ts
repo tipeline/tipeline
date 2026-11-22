@@ -2145,8 +2145,8 @@ export default class Core {
     return await HubSyncService.updateApp(appIdentifier);
   }
 
-  static async hubUpdatePlugin(pluginIdentifier: string) {
-    return await HubSyncService.updatePlugin(pluginIdentifier);
+  static async hubUpdatePlugin(pluginIdentifier: string, options: { acceptBreaking?: boolean } = {}) {
+    return await HubSyncService.updatePlugin(pluginIdentifier, { acceptBreaking: !!options.acceptBreaking });
   }
 
   static async hubPreviewUpdate(type: 'task' | 'app' | 'plugin', identifier: string) {

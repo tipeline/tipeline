@@ -400,7 +400,7 @@ Install and update workflows, apps and plugins from [hubs](/hub).
 | `tipeline hub install <type> <hubId> <itemIdentifier>` | Install an item. `type` is `workflow` (or `task`), `app` or `plugin`. A plugin is installed turned off (`tipeline plugin enable <identifier>`). A workflow whose plugins aren't installed or are off isn't installed: the command names each one with the commands that fix it |
 | `tipeline hub check [id]` | Check one hub, or all enabled hubs, for updates now instead of waiting for the hourly check. Says what each one returned, and exits with `1` if any couldn't be reached |
 | `tipeline hub updates` | List what needs you, such as a major version waiting for approval, and what was installed recently |
-| `tipeline hub update <type> <identifier>` | Install the version a hub offers, including a waiting major version. `type` is `workflow` (or `task`), `app` or `plugin` |
+| `tipeline hub update <type> <identifier>` | Install the version a hub offers, including a waiting major version. `type` is `workflow` (or `task`), `app` or `plugin`. For a plugin version held back because it would break workflow steps, add `--accept-breaking` |
 
 ```bash
 tipeline hub add team local_folder /Volumes/shared/tipeline-hub

@@ -7,6 +7,7 @@ export type HubAttentionKind =
   | 'older_listed'
   | 'blocked'
   | 'not_bumped'
+  | 'breaks_workflows'
   | 'failed';
 export type HubUpdateEventKind = 'updated' | HubAttentionKind;
 

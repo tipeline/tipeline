@@ -19,6 +19,13 @@ import { splitAppDocument } from '@utils/appDocument';
 import { HubUpdateEventService, type HubAttention, type HubEventItem } from '@database/services/HubUpdateEventService';
 import { checkHubFileVersion, hubUpdateState, HubUpdateHeldError, type HubUpdateState } from '@/hub/HubUpdatePolicy';
 import { appUpdateChanges, workflowUpdateChanges } from '@/hub/HubUpdatePreview';
+import {
+  describeProblems,
+  pluginUpdateProblems,
+  pluginUsage,
+  type PluginDefinition,
+  type PluginStepProblem,
+} from '@/hub/PluginUpdateCheck';
 
 async function getHubAndItem(hubId: string, itemIdentifier: string, type: HubCatalogItemType) {
   const hub = await HubService.getById(hubId);
@@ -301,12 +308,14 @@ export class HubSyncService {
   /**
    * Builds the new package in a staging folder and only swaps it in once it loads, so a
    * bad download, a failed npm install or a broken package leaves the installed plugin
-   * as it was. `checkVersion` runs on the staged package and can refuse it by throwing.
+   * as it was. `checkVersion` and then `checkStaged` run on the staged package and can
+   * refuse it by throwing.
    */
   private static async applyPluginPackage(
     hub: Hub,
     item: HubCatalogItem,
-    checkVersion?: (version: string | undefined) => void
+    checkVersion?: (version: string | undefined) => void,
+    checkStaged?: (staged: PluginDefinition) => Promise<void>
   ): Promise<string> {
     console.log(`[HubSyncService] Installing plugin "${item.identifier}" from hub "${hub.name}"...`);
     const archivePath = await HubProviderFactory.getProvider(hub).fetchFile(hub, item);
@@ -329,6 +338,7 @@ export class HubSyncService {
         throw new Error(`Plugin at "${item.identifier}" did not export a valid { group, actions }`);
       }
       checkVersion?.(staged.version);
+      await checkStaged?.(staged);
 
       if (fs.existsSync(destDir)) fs.renameSync(destDir, previousDir);
       fs.renameSync(stagedDir, destDir);
@@ -374,7 +384,14 @@ export class HubSyncService {
     return installed;
   }
 
-  static async updatePlugin(pluginIdentifier: string, { automatic = false }: HubUpdateOptions = {}) {
+  /**
+   * Saved workflow steps that the new version would break hold the update back, whoever
+   * started it, until the user installs it anyway (`acceptBreaking`).
+   */
+  static async updatePlugin(
+    pluginIdentifier: string,
+    { automatic = false, acceptBreaking = false }: HubUpdateOptions & { acceptBreaking?: boolean } = {}
+  ) {
     const record = await PluginService.getByIdentifier(pluginIdentifier);
     if (!record || record.source_type !== 'hub' || !record.hub_id || !record.hub_plugin_identifier) {
       throw new Error(`Plugin "${pluginIdentifier}" is not installed from a hub`);
@@ -383,8 +400,23 @@ export class HubSyncService {
     try {
       const { hub, item } = await getHubAndItem(record.hub_id, record.hub_plugin_identifier, 'plugin');
       if (hubUpdateState(record.version, item.version) === 'current') return record;
-      await this.applyPluginPackage(hub, item, (version) =>
-        checkHubFileVersion(record.name ?? pluginIdentifier, record.version, version, automatic)
+      await this.applyPluginPackage(
+        hub,
+        item,
+        (version) => checkHubFileVersion(record.name ?? pluginIdentifier, record.version, version, automatic),
+        async (staged) => {
+          if (acceptBreaking) return;
+          const problems = await pluginUpdateProblems(record.group, staged);
+          if (!problems.length) return;
+          const version = staged.version ?? item.version;
+          const workflows = new Set(problems.map((p) => p.workflow.identifier)).size;
+          throw new HubUpdateHeldError(
+            'breaks',
+            version,
+            `Version ${version} of "${record.name ?? pluginIdentifier}" would break ${problems.length} step(s) in ${workflows} workflow(s), so it wasn't installed:\n${describeProblems(problems)}`,
+            problems
+          );
+        }
       );
       const updated = await PluginService.markSynced(pluginIdentifier, item.version);
       await HubUpdateEventService.recordUpdated(eventItem('plugin', record), updated?.version, !automatic);
@@ -414,6 +446,17 @@ export class HubSyncService {
       // The file's version, not the catalog's: this is what the review offers and installs.
       await service.setHubVersion(item.identifier, err.fileVersion);
       await HubUpdateEventService.setAttention(item, { kind: 'major_waiting', toVersion: err.fileVersion });
+      return;
+    }
+    if (err instanceof HubUpdateHeldError && err.kind === 'breaks') {
+      // Like a major: the installed copy is fine, and the user decides.
+      await service.setHubStatus(item.identifier, 'ok');
+      await service.setHubVersion(item.identifier, err.fileVersion);
+      await HubUpdateEventService.setAttention(item, {
+        kind: 'breaks_workflows',
+        toVersion: err.fileVersion,
+        message: JSON.stringify(err.problems),
+      });
       return;
     }
     await service.setHubStatus(item.identifier, 'error');
@@ -525,7 +568,23 @@ export class HubSyncService {
     }
     // A package held back as major records its own version, which can differ from the catalog's.
     const toVersion = record.hub_version ?? item.version;
-    return { ...summary, toVersion, state: hubUpdateState(record.version, toVersion) };
+    // The package isn't opened here (that runs its code), so broken steps are only known
+    // once an install of this version has been tried and held back.
+    const held = await HubUpdateEventService.attentionFor('plugin', identifier);
+    let problems: PluginStepProblem[] = [];
+    if (held?.kind === 'breaks_workflows' && held.to_version === toVersion && held.message) {
+      try {
+        problems = JSON.parse(held.message);
+      } catch {
+        problems = [];
+      }
+    }
+    return {
+      ...summary,
+      toVersion,
+      state: hubUpdateState(record.version, toVersion),
+      plugin: { usage: await pluginUsage(record.group), problems },
+    };
   }
 
   /** Checks in progress, by hub: a second request joins the first instead of installing twice. */

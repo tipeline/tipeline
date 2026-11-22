@@ -1648,7 +1648,8 @@
         "older_listed": "The hub lists {to}, older than your {from}. It won't be installed.",
         "blocked": "The hub's file is version {to}, older than your {from}, so it wasn't installed.",
         "failed": "The update didn't go through. Your copy is unchanged.",
-        "not_bumped": "The hub lists a newer version, but its file is still {to}, so it wasn't installed. The publisher needs to fix it."
+        "not_bumped": "The hub lists a newer version, but its file is still {to}, so it wasn't installed. The publisher needs to fix it.",
+        "breaks_workflows": "Version {to} would break steps in your workflows, so it wasn't installed. You have {from}."
       }
     },
     "review": {
@@ -1679,6 +1680,19 @@
       "pagesAdded": "Added",
       "appNoUndo": "Your own edits to this app will be replaced, and there's no way to go back.",
       "pluginNote": "A plugin's changes can't be shown before it's installed, because reading its package runs its code. Only continue if you trust this hub.",
+      "pluginChecked": "Before it's swapped in, every step that uses this plugin is checked against the new version. If any would break, the update stops and lists them.",
+      "usedByWorkflowSteps": "{name} ({n} step) | {name} ({n} steps)",
+      "usedByNothing": "No saved workflow uses this plugin.",
+      "breaks": "Steps that would break",
+      "breaksNote": "These steps won't work with {version}. Fix them after installing, or keep your current version until the workflows are updated.",
+      "breakStep": "{workflow}, step {position}",
+      "breakKind": {
+        "action_removed": "the action no longer exists",
+        "invalid_settings": "its settings are no longer valid",
+        "setting_removed": "these settings no longer exist",
+        "result_changed": "its result is a different type"
+      },
+      "installAnyway": "Install {version} anyway",
       "install": "Install {version}"
     },
     "checkForUpdates": "Check for updates",
