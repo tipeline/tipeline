@@ -28,9 +28,11 @@ Both take dot and bracket paths: `{{ order.items[0].sku }}`, `{= response.data.u
 | `_env.KEY` | An environment value — see [Environment files](#environment-files) |
 | `_global.name` | A [global variable](/desktop/variables) |
 | `_previous` | The result of the step right before this one |
+| `_run.field` | This run — see [`_run` and `_core`](#run-and-core) |
+| `_core.field` | The Core running it — see [`_run` and `_core`](#run-and-core) |
 
 Names starting with `_` are reserved for Tipeline, so a workflow variable can't be called
-`_env`, `_global` or `_previous` (variable names must start with a letter or digit).
+`_env`, `_global`, `_previous`, `_run` or `_core` (variable names must start with a letter or digit).
 
 ## Storing results
 
@@ -75,6 +77,34 @@ It only reaches back one step, inside the same block: it's empty at the start of
 iteration and every If/Else branch. After an If, Switch or Else If step, it holds that
 step's own bookkeeping, not the last data. Use a named variable for anything you need
 further on.
+
+## `_run` and `_core` {#run-and-core}
+
+Read-only facts about the run and the Core running it. Every field is text.
+
+| Reference | Value |
+|-----------|-------|
+| `_run.id` | The run's identifier (empty for a run that isn't saved, like an app lookup) |
+| `_run.workflow` / `_run.workflowName` | The workflow's identifier and name |
+| `_run.trigger` | What started it: `manual`, `schedule`, `app`, `workflow` (a sub-workflow), `webhook` or `mcp` |
+| `_run.user` | The email of the signed-in Server user who started it; empty otherwise |
+| `_run.parentId` | The run that started this one, for a sub-workflow |
+| `_run.startedAt` | When it started (ISO time) |
+| `_core.id` | The Core's name: `TIPELINE_CORE_NAME`, or the hostname when that isn't set |
+| `_core.host` | The hostname |
+| `_core.platform` | `mac`, `linux` or `windows` |
+| `_core.version` | The Tipeline version |
+
+```yaml
+- group: system
+  name: message
+  params:
+    text: "{{ _run.workflowName }} ({{ _run.trigger }}) on {{ _core.id }}"
+```
+
+When workers share a queue, `_core` is the worker that runs the step, not the Core that
+queued it. Set `TIPELINE_CORE_NAME` on each worker so the names stay the same when a
+machine is replaced.
 
 ## Environment files
 

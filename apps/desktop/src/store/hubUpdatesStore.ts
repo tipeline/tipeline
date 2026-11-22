@@ -15,7 +15,16 @@ export interface HubUpdateEvent {
   item_identifier: string;
   item_name: string | null;
   hub_name: string | null;
-  kind: 'updated' | 'major_waiting' | 'update_available' | 'older_listed' | 'blocked' | 'not_bumped' | 'failed';
+  kind:
+    | 'updated'
+    | 'major_waiting'
+    | 'update_available'
+    | 'older_listed'
+    | 'blocked'
+    | 'not_bumped'
+    | 'breaks_workflows'
+    | 'failed';
+  /** Readable text, except for `breaks_workflows`: the broken steps as JSON. */
   from_version: string | null;
   to_version: string | null;
   message: string | null;

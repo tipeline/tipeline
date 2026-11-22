@@ -210,6 +210,7 @@ export class BreeRunner implements IJobRunner {
           identifier: taskIdentifier,
           correlationId: `cron-${schedule.identifier}-${Date.now()}`,
           variables: parseScheduleVariables(schedule.variables),
+          startedBy: { trigger: 'schedule' },
         } satisfies JobPayload,
       },
     });

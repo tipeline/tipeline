@@ -1,5 +1,6 @@
 import { Liquid } from 'liquidjs';
 import { findUnfinishedPath } from '@tipeline/utils';
+import type { RunContext } from '@utils/runInfo';
 
 const liquid = new Liquid({ strictVariables: false });
 
@@ -57,13 +58,15 @@ function resolvePath(root: any, path: string): any {
  *   - {= _env.KEY =}     → raw env variable injection
  *   - {= _global.name =} → raw global variable injection
  *   - {= _previous =}    → raw injection of the previous action's result in this block
- *   - LiquidJS           → {{ var }}, {{ _env.KEY }}, {{ _global.name }}, {{ _previous.field }}, {% if %}, filters, etc.
+ *   - {= _run.id =} / {= _core =} → this run and the Core running it (read-only, see runInfo)
+ *   - LiquidJS           → {{ var }}, {{ _env.KEY }}, {{ _global.name }}, {{ _previous.field }}, {{ _run.trigger }}, {% if %}, filters, etc.
  */
 function resolveString(
   value: string,
   variables: any[],
   getGlobalVar?: (name: string) => any,
-  previousResult?: unknown
+  previousResult?: unknown,
+  runContext?: RunContext
 ): any {
   assertFinishedPaths(value);
   // Raw injection: {= varName =} / {= _env.KEY =} / {= _global.varName =}
@@ -81,6 +84,13 @@ function resolveString(
     if (ref === '_previous' || ref.startsWith('_previous.') || ref.startsWith('_previous[')) {
       const path = ref.slice('_previous'.length);
       return (path ? resolvePath(previousResult, path) : previousResult) ?? value;
+    }
+    if (runContext) {
+      const root = builtInRoot(ref, runContext);
+      if (root) {
+        const path = ref.slice(root.name.length);
+        return (path ? resolvePath(root.value, path) : root.value) ?? value;
+      }
     }
     // Variable name ends at the first '.' or '['
     const dotIdx = ref.indexOf('.');
@@ -132,14 +142,33 @@ function resolveString(
     context['_previous'] = previousResult;
   }
 
+  if (runContext) {
+    if (/\b_run\b/.test(value)) context['_run'] = runContext.run;
+    if (/\b_core\b/.test(value)) context['_core'] = runContext.core;
+  }
+
   return liquid.parseAndRenderSync(value, context);
+}
+
+// `_run` / `_core` (and their fields) in a `{= =}` reference.
+function builtInRoot(ref: string, runContext: RunContext): { name: string; value: unknown } | null {
+  for (const [name, value] of [
+    ['_run', runContext.run],
+    ['_core', runContext.core],
+  ] as const) {
+    if (ref === name || ref.startsWith(`${name}.`) || ref.startsWith(`${name}[`)) {
+      return { name, value };
+    }
+  }
+  return null;
 }
 
 export function parseParams(
   params: any,
   variables: any[],
   getGlobalVar?: (name: string) => any,
-  previousResult?: unknown
+  previousResult?: unknown,
+  runContext?: RunContext
 ) {
   if (!params) return;
 
@@ -148,9 +177,9 @@ export function parseParams(
   // including objects/arrays nested inside an array, not just top-level ones.
   for (const [key, value] of Object.entries(params)) {
     if (typeof value === 'string') {
-      params[key] = resolveString(value, variables, getGlobalVar, previousResult);
+      params[key] = resolveString(value, variables, getGlobalVar, previousResult, runContext);
     } else if (value && typeof value === 'object') {
-      parseParams(value, variables, getGlobalVar, previousResult);
+      parseParams(value, variables, getGlobalVar, previousResult, runContext);
     }
   }
 }
@@ -168,11 +197,12 @@ export function parseStepParams(
   params: any,
   variables: any[],
   getGlobalVar?: (name: string) => any,
-  previousResult?: unknown
+  previousResult?: unknown,
+  runContext?: RunContext
 ) {
   const body = flowBody(group, params);
   if (body) params.actions = undefined;
-  parseParams(params, variables, getGlobalVar, previousResult);
+  parseParams(params, variables, getGlobalVar, previousResult, runContext);
   if (body) params.actions = body;
 }
 

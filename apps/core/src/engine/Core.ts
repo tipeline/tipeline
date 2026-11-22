@@ -65,6 +65,7 @@ import { BackupService, type RestoreMode, type RestoreResult } from '@/backup/Ba
 import { splitAppDocument } from '@utils/appDocument';
 import { runScriptPreview, type ScriptPreviewParams } from '@action/actions/script/preview';
 import { CORE_VERSION } from '@utils/coreVersion';
+import { toStartedBy, type StartedBy } from '@utils/runInfo';
 import { AlertService, type AlertListQuery } from '@database/services/AlertService';
 
 export default class Core {
@@ -131,6 +132,8 @@ export default class Core {
       allowDraft?: boolean;
       /** Debugger runs: the steps to pause before. */
       breakpoints?: string[];
+      /** What started it, for `_run.trigger` / `_run.user` (see utils/runInfo). */
+      startedBy?: StartedBy;
     } = {}
   ) {
     const task = await TaskService.getByIdentifier(identifier);
@@ -188,6 +191,7 @@ export default class Core {
         ...(options.ephemeral ? { ephemeral: true } : {}),
         ...(options.outputs ? { outputs: options.outputs } : {}),
         ...(options.trigger ? { trigger: options.trigger } : {}),
+        ...(options.startedBy ? { startedBy: options.startedBy } : {}),
         ...(options.cacheMode && options.cacheMode !== 'use' ? { cacheMode: options.cacheMode } : {}),
         ...(options.allowDraft ? { allowDraft: true } : {}),
         ...(debugMode && options.breakpoints?.length ? { breakpoints: options.breakpoints } : {}),
@@ -1417,6 +1421,8 @@ export default class Core {
       inputs?: Record<string, unknown>;
       // 'refresh' runs the workflow even when its outputs are cached (an app's refresh button).
       cache?: unknown;
+      /** Set by the Server: its signed-in user. */
+      startedBy?: unknown;
     },
     correlationId: string
   ) {
@@ -1466,6 +1472,8 @@ export default class Core {
       outputs: runnable.outputs,
       // Recorded on the pipeline so run history shows which app, page and runnable ran it.
       trigger: { type: 'app', appIdentifier: params.appIdentifier, appName, pageId: params.pageId, runnable: params.runnable },
+      // The signed-in Server user, when the Server sent it (the trigger stays 'app').
+      startedBy: toStartedBy(params.startedBy),
       cacheMode: toCacheMode(params.cache),
     });
     return { taskIdentifier };
@@ -2145,8 +2153,8 @@ export default class Core {
     return await HubSyncService.updateApp(appIdentifier);
   }
 
-  static async hubUpdatePlugin(pluginIdentifier: string) {
-    return await HubSyncService.updatePlugin(pluginIdentifier);
+  static async hubUpdatePlugin(pluginIdentifier: string, options: { acceptBreaking?: boolean } = {}) {
+    return await HubSyncService.updatePlugin(pluginIdentifier, { acceptBreaking: !!options.acceptBreaking });
   }
 
   static async hubPreviewUpdate(type: 'task' | 'app' | 'plugin', identifier: string) {

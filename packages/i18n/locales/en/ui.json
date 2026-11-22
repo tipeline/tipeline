@@ -1648,7 +1648,8 @@
         "older_listed": "The hub lists {to}, older than your {from}. It won't be installed.",
         "blocked": "The hub's file is version {to}, older than your {from}, so it wasn't installed.",
         "failed": "The update didn't go through. Your copy is unchanged.",
-        "not_bumped": "The hub lists a newer version, but its file is still {to}, so it wasn't installed. The publisher needs to fix it."
+        "not_bumped": "The hub lists a newer version, but its file is still {to}, so it wasn't installed. The publisher needs to fix it.",
+        "breaks_workflows": "Version {to} would break steps in your workflows, so it wasn't installed. You have {from}."
       }
     },
     "review": {
@@ -1679,6 +1680,19 @@
       "pagesAdded": "Added",
       "appNoUndo": "Your own edits to this app will be replaced, and there's no way to go back.",
       "pluginNote": "A plugin's changes can't be shown before it's installed, because reading its package runs its code. Only continue if you trust this hub.",
+      "pluginChecked": "Before it's swapped in, every step that uses this plugin is checked against the new version. If any would break, the update stops and lists them.",
+      "usedByWorkflowSteps": "{name} ({n} step) | {name} ({n} steps)",
+      "usedByNothing": "No saved workflow uses this plugin.",
+      "breaks": "Steps that would break",
+      "breaksNote": "These steps won't work with {version}. Fix them after installing, or keep your current version until the workflows are updated.",
+      "breakStep": "{workflow}, step {position}",
+      "breakKind": {
+        "action_removed": "the action no longer exists",
+        "invalid_settings": "its settings are no longer valid",
+        "setting_removed": "these settings no longer exist",
+        "result_changed": "its result is a different type"
+      },
+      "installAnyway": "Install {version} anyway",
       "install": "Install {version}"
     },
     "checkForUpdates": "Check for updates",
@@ -1913,6 +1927,25 @@
     "insert": "Insert reference",
     "empty": "Nothing to reference yet",
     "unknownVariable": "Unknown variable “{name}” — it will silently resolve to an empty value",
+    "builtIn_run": "This run",
+    "builtIn_core": "The Core running it",
+    "builtInField": {
+      "_run": {
+        "id": "run identifier",
+        "workflow": "workflow identifier",
+        "workflowName": "workflow name",
+        "trigger": "manual, schedule, app, workflow, webhook or mcp",
+        "user": "Server user who started it",
+        "parentId": "run that started this one",
+        "startedAt": "start time (ISO)"
+      },
+      "_core": {
+        "id": "Core name (TIPELINE_CORE_NAME or hostname)",
+        "host": "hostname",
+        "platform": "mac, linux or windows",
+        "version": "Tipeline version"
+      }
+    },
     "valueAsText": "“{name}” is a {type} — here it becomes text",
     "wrongType": "{type} · needs {wanted}",
     "valueAsTextHint": "Passed as text, not as the {type} itself.",
@@ -2937,6 +2970,15 @@
     "subWorkflowShown": "The steps listed under this one are from run {index}.",
     "calledBy": "Called by",
     "calledByStep": "Show the step",
+    "origin": {
+      "manual": "hand",
+      "schedule": "a schedule",
+      "webhook": "a webhook",
+      "mcp": "MCP",
+      "by": "By",
+      "on": "On",
+      "coreDetails": "{host} · {platform} · Tipeline {version}"
+    },
     "notRunNote": "Not run: the run ended before this step.",
     "waitingNote": "Waiting to run.",
     "notRun": "not run",

@@ -13,6 +13,7 @@ import { PluginRulesRegistry } from '@/plugin/PluginRulesRegistry';
 import { PluginSchemaRegistry } from '@/plugin/PluginSchemaRegistry';
 import { PluginReturnsRegistry } from '@/plugin/PluginReturnsRegistry';
 import { PluginCacheableRegistry } from '@/plugin/PluginCacheableRegistry';
+import type { PluginDefinition } from '@/hub/PluginUpdateCheck';
 
 export const PLUGINS_DIR = path.join(os.homedir(), '.tipeline', 'plugins');
 /** Where hub packages are built before they replace an installed plugin. Never scanned. */
@@ -61,14 +62,25 @@ export class PluginLoader {
     return await this.loadPlugin(pluginPath);
   }
 
-  /** Reads a package's group and version without registering anything. Its code does run. */
-  static async inspect(pluginPath: string): Promise<{ group: string; version?: string } | null> {
+  /**
+   * Reads a package's exports without registering anything — group, version, and what
+   * checking saved workflows against it needs. Its code does run.
+   */
+  static async inspect(pluginPath: string): Promise<PluginDefinition | null> {
     const entryFile = this.resolveEntry(pluginPath);
     if (!entryFile) return null;
     const mod = await this.importEntry(entryFile);
     const definition = mod.default ?? mod;
-    if (!definition.group || typeof definition.actions !== 'object') return null;
-    return { group: definition.group, version: definition.version };
+    if (!definition.group || typeof definition.actions !== 'object' || !definition.actions) return null;
+    const asObject = (value: unknown) => (value && typeof value === 'object' ? (value as any) : undefined);
+    return {
+      group: definition.group,
+      version: definition.version,
+      actions: definition.actions,
+      params: asObject(definition.params),
+      rules: asObject(definition.rules),
+      returns: asObject(definition.returns),
+    };
   }
 
   /**

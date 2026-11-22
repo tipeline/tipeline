@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { AppWindow, Workflow, Boxes, Loader2, Puzzle } from 'lucide-vue-next';
+import { storeToRefs } from 'pinia';
 import { useHubStore } from '@/store/hubStore';
 import { invokeCore } from '@/utils/invoke';
 import { toAssetUrl } from '@/utils/assetUrl';
@@ -60,7 +61,8 @@ const hubStore = useHubStore();
 const PLACEHOLDER_ICON = { task: Workflow, app: AppWindow, plugin: Boxes } as const;
 const brokenImages = ref<Set<string>>(new Set());
 
-const selectedHubId = ref<string | null>(null);
+// Shared through the store so the choice stays when switching tabs.
+const { selectedHubId } = storeToRefs(hubStore);
 const catalogItems = ref<HubCatalogItem[]>([]);
 const catalogLoading = ref(false);
 const installedIdentifiers = ref<Set<string>>(new Set());
@@ -95,8 +97,15 @@ const selectedHubName = computed(() => hubStore.enabledHubs.find((h) => h.id ===
 
 onMounted(async () => {
   await hubStore.load();
-  if (!selectedHubId.value && hubStore.enabledHubs.length > 0) {
-    selectedHubId.value = hubStore.enabledHubs[0].id;
+  // Keep the hub picked on another tab, unless it was removed or turned off.
+  const current = hubStore.enabledHubs.find((h) => h.id === selectedHubId.value);
+  const next = current?.id ?? hubStore.enabledHubs[0]?.id ?? null;
+  if (next === selectedHubId.value) {
+    // Same hub as before: the watch won't fire, so load this tab's list here.
+    loadCatalog();
+    loadInstalled();
+  } else {
+    selectedHubId.value = next;
   }
 });
 

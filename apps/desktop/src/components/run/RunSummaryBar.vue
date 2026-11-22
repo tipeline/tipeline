@@ -1,10 +1,11 @@
 <script setup lang="ts">
 // One line about the run above its steps: status (and where it failed), when it started,
-// how long it took, what started it, and how many steps ended which way.
+// how long it took, what started it (and who), the Core it ran on, and how many steps
+// ended which way.
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { AppWindow } from 'lucide-vue-next';
+import { AppWindow, Server } from 'lucide-vue-next';
 import { countSteps, firstFailed, formatStepDuration, stepLabel } from '@/utils/runSteps';
 
 const props = defineProps<{
@@ -54,6 +55,21 @@ const trigger = computed(() => {
   const tr = props.pipeline?.metadata?.trigger;
   return tr?.type === 'app' ? tr : null;
 });
+// What else started it (a sub-workflow's "Called by" line says so already), who, and the
+// Core (worker) it ran on: what its steps read as `_run.trigger`, `_run.user` and `_core`.
+// Runs from before these were recorded have none.
+const startedBy = computed(() => {
+  const metadata = props.pipeline?.metadata ?? {};
+  if (trigger.value || metadata.parent || !metadata.startedBy && !metadata.core) return null;
+  const kind = metadata.startedBy?.trigger ?? 'manual';
+  const key = `runDetail.origin.${kind}`;
+  return t(key) !== key ? t(key) : kind;
+});
+const startedByUser = computed<string | null>(() => props.pipeline?.metadata?.startedBy?.user || null);
+const core = computed<{ id: string; host: string; platform: string; version: string } | null>(() => {
+  const c = props.pipeline?.metadata?.core;
+  return c?.id ? c : null;
+});
 </script>
 
 <template>
@@ -72,6 +88,18 @@ const trigger = computed(() => {
       <AppWindow class="size-3.5" />
       <b class="font-medium text-foreground">{{ trigger.appName }}</b>
     </button>
+    <span v-if="startedBy">{{ t('taskHistory.startedBy') }} <b class="font-medium text-foreground">{{ startedBy }}</b></span>
+    <span v-if="startedByUser">{{ t('runDetail.origin.by') }} <b class="font-medium text-foreground">{{ startedByUser }}</b></span>
+    <span
+      v-if="core"
+      class="inline-flex items-center gap-1"
+      :title="t('runDetail.origin.coreDetails', { host: core.host, platform: core.platform, version: core.version })"
+      data-testid="run-core"
+    >
+      {{ t('runDetail.origin.on') }}
+      <Server class="size-3.5" aria-hidden="true" />
+      <b class="font-medium text-foreground">{{ core.id }}</b>
+    </span>
     <span class="ml-auto flex flex-wrap gap-3">
       <span v-if="counts.completed" class="inline-flex items-center gap-1.5"><i class="inline-block size-2 rounded-[2px] bg-emerald-500" />{{ t('runDetail.counts.completed', { count: counts.completed }, counts.completed) }}</span>
       <span v-if="counts.cached" class="inline-flex items-center gap-1.5"><i class="inline-block size-2 rounded-[2px] bg-violet-500" />{{ t('runDetail.counts.cached', { count: counts.cached }, counts.cached) }}</span>

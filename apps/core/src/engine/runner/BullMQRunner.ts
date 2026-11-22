@@ -104,6 +104,7 @@ export class BullMQRunner implements IJobRunner {
       identifier: taskIdentifier,
       correlationId: '',
       variables: parseScheduleVariables(schedule.variables),
+      startedBy: { trigger: 'schedule' },
     } satisfies JobPayload;
     const jobId = `cron-${schedule.identifier}`;
     if (schedule.run_at) {

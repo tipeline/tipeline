@@ -406,6 +406,10 @@ export class WsGateway {
                 requestedBy: { id: currentUser.id, email: currentUser.email },
               });
             }
+            // Core's `_run.user`: always the signed-in user, whatever the client sent.
+            if (event === 'appRun') {
+              payload.payload = { ...(payload.payload ?? {}), startedBy: { user: currentUser.email } };
+            }
           }
 
           if (event === 'approvalDecide' || event === 'appApprovalDecide') {
@@ -542,6 +546,11 @@ export class WsGateway {
                 requestedBy: { id: currentUser.id, email: currentUser.email },
               });
             }
+            // Core's `_run.trigger` / `_run.user`: always the signed-in user, whatever the client sent.
+            payload.payload = {
+              ...(payload.payload ?? {}),
+              startedBy: { trigger: 'manual', user: currentUser.email },
+            };
           }
 
           this.coreClient.send(event, payload);

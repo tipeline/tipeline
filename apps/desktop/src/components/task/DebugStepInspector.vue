@@ -155,7 +155,8 @@ async function copyStep() {
           </Button>
         </div>
       </div>
-      <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-3 scroll-fade">
+      <!-- A size container, so the step's output can grow with the panel's height. -->
+      <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-3 scroll-fade" style="container-type: size">
         <template v-if="waitingNext">
           <p class="mb-2 text-xs text-muted-foreground">{{ t('debugInspector.willRunWith') }}</p>
           <div
@@ -176,7 +177,7 @@ async function copyStep() {
           </div>
         </template>
         <p v-else-if="waitingFailed" class="mb-3 text-xs text-muted-foreground">{{ t('debugInspector.failedNote') }}</p>
-        <RunStepDetail :action="shown" :ended="ended" tree />
+        <RunStepDetail :action="shown" :ended="ended" tree fill />
       </div>
     </template>
   </div>

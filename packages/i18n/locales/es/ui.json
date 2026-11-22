@@ -1648,7 +1648,8 @@
         "older_listed": "El hub ofrece la {to}, anterior a tu {from}. No se instalará.",
         "blocked": "El archivo del hub es la versión {to}, anterior a tu {from}, así que no se instaló.",
         "failed": "La actualización no se completó. Tu copia no cambió.",
-        "not_bumped": "El hub ofrece una versión más reciente, pero su archivo sigue siendo la {to}, así que no se instaló. Quien lo publica debe corregirlo."
+        "not_bumped": "El hub ofrece una versión más reciente, pero su archivo sigue siendo la {to}, así que no se instaló. Quien lo publica debe corregirlo.",
+        "breaks_workflows": "La versión {to} rompería pasos de tus flujos de trabajo, así que no se instaló. Tienes la {from}."
       }
     },
     "review": {
@@ -1679,6 +1680,19 @@
       "pagesAdded": "Añadidas",
       "appNoUndo": "Tus propios cambios en esta aplicación se reemplazarán, y no se puede volver atrás.",
       "pluginNote": "Los cambios de un plugin no se pueden mostrar antes de instalarlo, porque leer su paquete ejecuta su código. Continúa solo si confías en este hub.",
+      "pluginChecked": "Antes de reemplazarlo, cada paso que usa este plugin se comprueba con la nueva versión. Si alguno se rompería, la actualización se detiene y los muestra.",
+      "usedByWorkflowSteps": "{name} ({n} paso) | {name} ({n} pasos)",
+      "usedByNothing": "Ningún flujo de trabajo guardado usa este plugin.",
+      "breaks": "Pasos que se romperían",
+      "breaksNote": "Estos pasos no funcionarán con la {version}. Corrígelos después de instalarla, o quédate con tu versión actual hasta actualizar los flujos de trabajo.",
+      "breakStep": "{workflow}, paso {position}",
+      "breakKind": {
+        "action_removed": "la acción ya no existe",
+        "invalid_settings": "sus ajustes ya no son válidos",
+        "setting_removed": "estos ajustes ya no existen",
+        "result_changed": "su resultado es de otro tipo"
+      },
+      "installAnyway": "Instalar la {version} de todos modos",
       "install": "Instalar {version}"
     },
     "checkForUpdates": "Buscar actualizaciones",
@@ -1913,6 +1927,25 @@
     "insert": "Insertar referencia",
     "empty": "Aún no hay nada que referenciar",
     "unknownVariable": "Variable desconocida “{name}”: se resolverá en silencio como un valor vacío",
+    "builtIn_run": "Esta ejecución",
+    "builtIn_core": "El Core que la ejecuta",
+    "builtInField": {
+      "_run": {
+        "id": "identificador de la ejecución",
+        "workflow": "identificador del flujo",
+        "workflowName": "nombre del flujo",
+        "trigger": "manual, schedule, app, workflow, webhook o mcp",
+        "user": "usuario del Server que la inició",
+        "parentId": "ejecución que inició esta",
+        "startedAt": "hora de inicio (ISO)"
+      },
+      "_core": {
+        "id": "nombre del Core (TIPELINE_CORE_NAME o nombre del equipo)",
+        "host": "nombre del equipo",
+        "platform": "mac, linux o windows",
+        "version": "versión de Tipeline"
+      }
+    },
     "valueAsText": "“{name}” es de tipo {type}: aquí se convierte en texto",
     "wrongType": "{type} · se necesita {wanted}",
     "valueAsTextHint": "Se pasa como texto, no como el {type} en sí.",
@@ -2937,6 +2970,15 @@
     "subWorkflowShown": "Los pasos listados debajo son de la ejecución {index}.",
     "calledBy": "Llamado por",
     "calledByStep": "Ver el paso",
+    "origin": {
+      "manual": "a mano",
+      "schedule": "una programación",
+      "webhook": "un webhook",
+      "mcp": "MCP",
+      "by": "Por",
+      "on": "En",
+      "coreDetails": "{host} · {platform} · Tipeline {version}"
+    },
     "notRunNote": "No se ejecutó: la ejecución terminó antes de este paso.",
     "waitingNote": "Esperando para ejecutarse.",
     "notRun": "no se ejecutó",

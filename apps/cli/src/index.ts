@@ -346,7 +346,13 @@ hub
   .description('Install the version a hub offers, such as a major version waiting for approval')
   .argument('<type>', '"workflow", "app", or "plugin" ("task" also accepted)')
   .argument('<identifier>', 'Identifier of the installed item')
-  .action((type, identifier) => CommandService.hubUpdate(type, identifier));
+  .option(
+    '--accept-breaking',
+    'Plugins: install even though saved workflow steps would stop working with the new version'
+  )
+  .action((type, identifier, options) =>
+    CommandService.hubUpdate(type, identifier, { acceptBreaking: !!options.acceptBreaking })
+  );
 
 // Plugin Commands
 const plugin = program
