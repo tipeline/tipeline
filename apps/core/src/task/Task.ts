@@ -5,6 +5,7 @@ import { GlobalVariableService } from '@database/services/GlobalVariableService'
 import { assertPropsVisibility } from '@utils/assertPropsVisibility';
 import type { CacheMode } from '@tipeline/schemas';
 import type { ParentRun } from '@engine/runner/IJobRunner';
+import { coreInfo, runInfo, type RunContext, type StartedBy } from '@utils/runInfo';
 import dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -133,6 +134,32 @@ export class Task {
 
   setTrigger(trigger: Record<string, unknown> | null) {
     this.trigger = trigger;
+  }
+
+  // Who or what started the run when it isn't a person in Desktop/CLI or an app (a schedule,
+  // a webhook, a Server user); read by `{{ _run.trigger }}` / `{{ _run.user }}`.
+  private startedBy: StartedBy | null = null;
+  private startedAt: string = new Date().toISOString();
+
+  getStartedBy() {
+    return this.startedBy;
+  }
+
+  setStartedBy(startedBy: StartedBy | null | undefined) {
+    this.startedBy = startedBy ?? null;
+  }
+
+  getStartedAt() {
+    return this.startedAt;
+  }
+
+  setStartedAt(startedAt: string) {
+    this.startedAt = startedAt;
+  }
+
+  /** `_run` and `_core` for this run's steps. */
+  getRunContext(): RunContext {
+    return { run: runInfo(this), core: coreInfo() };
   }
 
   // A sub-workflow's caller (subtask.exec): stored on the pipeline record and sent on

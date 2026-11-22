@@ -136,7 +136,7 @@ export class GroupSubtask {
       const source = JSON.parse(record.source ?? '{}');
 
       if (props && Object.keys(props).length !== 0) {
-        parseParams(props, variables);
+        parseParams(props, variables, undefined, undefined, task.getRunContext());
       }
 
       if (runAsync) {
@@ -156,6 +156,7 @@ export class GroupSubtask {
           callStack: [...parentCallStack, identifier],
           shouldSave: task.getShouldSave(),
           ...(parent ? { parent } : {}),
+          ...(task.getStartedBy() ? { startedBy: task.getStartedBy()! } : {}),
         });
 
         return { taskIdentifier: identifier, started: true };
@@ -194,6 +195,7 @@ export class GroupSubtask {
       newTask.setAwaitedByParent(true);
       newTask.setCacheMode(task.getCacheMode());
       newTask.setParentRun(parent ?? null);
+      newTask.setStartedBy(task.getStartedBy());
 
       if (props && Object.keys(props).length !== 0) {
         await newTask.updateVariablesFromProps(props as any);
@@ -228,7 +230,7 @@ export class GroupSubtask {
       }
 
       if (props && Object.keys(props).length !== 0) {
-        parseParams(props, variables);
+        parseParams(props, variables, undefined, undefined, task.getRunContext());
       }
 
       if (runAsync) {
@@ -245,6 +247,7 @@ export class GroupSubtask {
           correlationId: generateIdentifier(),
           payload: { source: resolvedPath, variables: props ?? {} },
           callStack: [...parentCallStack, resolvedPath],
+          startedBy: { ...task.getStartedBy(), trigger: 'workflow' },
         });
 
         return true;
@@ -254,6 +257,8 @@ export class GroupSubtask {
       newTask.setCallStack([...parentCallStack, resolvedPath]);
       newTask.setAwaitedByParent(true);
       newTask.setCacheMode(task.getCacheMode());
+      // A file has no saved run to link to, but it's still started by a workflow.
+      newTask.setStartedBy({ ...task.getStartedBy(), trigger: 'workflow' });
 
       if (props && Object.keys(props).length !== 0) {
         await newTask.updateVariablesFromProps(props as any);

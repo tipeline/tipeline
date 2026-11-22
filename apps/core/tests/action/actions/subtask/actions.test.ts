@@ -41,6 +41,7 @@ function createFakeChildTask(options: { variables?: Variable[] } = {}) {
     setAwaitedByParent: vi.fn(),
     setCacheMode: vi.fn(),
     setParentRun: vi.fn(),
+    setStartedBy: vi.fn(),
     updateVariablesFromProps: vi.fn(async () => {}),
     run: vi.fn(async () => {}),
     runClean: vi.fn(async () => {}),
@@ -118,6 +119,21 @@ describe('GroupSubtask', () => {
         taskName: 'Nightly sync',
         stepIdentifier: 'step-3',
       });
+    });
+
+    it('passes on who started the parent run (_run.user)', async () => {
+      const childTask = createFakeChildTask();
+      vi.mocked(TaskService.getByIdentifier).mockResolvedValue({
+        id: 7,
+        source: JSON.stringify({ name: 'child', pipeline: { actions: [] } }),
+      } as any);
+      vi.mocked(TaskFactory.fromSource).mockResolvedValue(childTask as any);
+
+      const parent = createParentTask();
+      parent.setStartedBy({ trigger: 'manual', user: 'a@b.c' });
+      await GroupSubtask.exec({ identifier: 'generate-report' } as any, parent);
+
+      expect(childTask.setStartedBy).toHaveBeenCalledWith({ trigger: 'manual', user: 'a@b.c' });
     });
 
     it('sets no parent link when the parent run is not saved', async () => {
@@ -283,6 +299,8 @@ describe('GroupSubtask', () => {
       expect(result).toBe(true);
       expect(childTask.runClean).toHaveBeenCalledTimes(1);
       expect(childTask.run).not.toHaveBeenCalled();
+      // No saved run to link to, but a workflow still started it.
+      expect(childTask.setStartedBy).toHaveBeenCalledWith({ trigger: 'workflow' });
       expect(TaskFactory.fromFile).toHaveBeenCalledWith(
         '/workdir/helpers/normalize.yml',
         expect.any(String),

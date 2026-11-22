@@ -400,7 +400,7 @@ export class GroupFlow {
 
     const resolveAndValidate = async () => {
       const cloned = safeClone(raw);
-      parseStepParams('flow', cloned, variables);
+      parseStepParams('flow', cloned, variables, undefined, undefined, task.getRunContext());
       return validations.flow.conditionalLoop.runtime.validate(cloned);
     };
 

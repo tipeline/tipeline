@@ -6,6 +6,7 @@ import { generateIdentifier } from '@tipeline/utils';
 import { coerceVariableValue } from '@utils/coerceVariableValue.js';
 import type { JobPayload } from '@engine/runner/IJobRunner.js';
 import { assertNotDraft } from '@task/Draft.js';
+import { toStartedBy } from '@utils/runInfo.js';
 
 export async function executeJob(job: JobPayload): Promise<void> {
   console.log('== executeJob ==', job);
@@ -36,6 +37,7 @@ export async function executeJob(job: JobPayload): Promise<void> {
     task.setRequestedOutputs(job.outputs ?? null);
     task.setTrigger((job.trigger as unknown as Record<string, unknown>) ?? null);
     task.setParentRun(job.parent ?? null);
+    task.setStartedBy(job.startedBy);
     task.setCacheMode(job.cacheMode);
     if (job.ephemeral) await task.runClean();
     else await task.run();
@@ -55,6 +57,7 @@ export async function executeJob(job: JobPayload): Promise<void> {
         );
     task.setShouldSave(false);
     task.setCallStack(job.callStack ?? []);
+    task.setStartedBy(job.startedBy);
     task.setCacheMode(job.cacheMode);
     await task.runClean();
   } else if (type === 'resume') {
@@ -76,6 +79,12 @@ export async function executeJob(job: JobPayload): Promise<void> {
     task.setId(taskRecord.id);
     task.setShouldSave(true);
     task.setCacheMode(job.cacheMode);
+    // _run reads the same as before the run paused (who started it, when, which app or parent).
+    const metadata = parseMetadata(pipelineRecord.metadata);
+    task.setTrigger((metadata.trigger as Record<string, unknown>) ?? null);
+    task.setParentRun((metadata.parent as any) ?? null);
+    task.setStartedBy(toStartedBy(metadata.startedBy));
+    if (pipelineRecord.started_at) task.setStartedAt(new Date(pipelineRecord.started_at).toISOString());
 
     for (const [name, value] of Object.entries(job.variables ?? {})) {
       await PipelineVariableService.updateValue(pipelineRecord.id, name, value);
@@ -88,6 +97,17 @@ export async function executeJob(job: JobPayload): Promise<void> {
   } else {
     throw new Error(`Unknown job type: ${type}`);
   }
+}
+
+function parseMetadata(value: unknown): Record<string, unknown> {
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) ?? {};
+    } catch {
+      return {};
+    }
+  }
+  return (value as Record<string, unknown>) ?? {};
 }
 
 function applyVariableOverrides(variables: Array<any>, overrides: Record<string, any>): Array<any> {

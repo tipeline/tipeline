@@ -17,6 +17,7 @@ function fakeTask() {
     setRequestedOutputs: vi.fn(),
     setTrigger: vi.fn(),
     setParentRun: vi.fn(),
+    setStartedBy: vi.fn(),
     setCacheMode: vi.fn(),
     run: vi.fn(),
     runClean: vi.fn(),
@@ -81,6 +82,12 @@ describe('executeJob — exec', () => {
     };
     await executeJob({ type: 'exec', correlationId: 'c', identifier: 't', parent });
     expect(task.setParentRun).toHaveBeenCalledWith(parent);
+  });
+
+  it('passes what started it on to the task (a schedule, a Server user)', async () => {
+    const startedBy = { trigger: 'schedule' as const };
+    await executeJob({ type: 'exec', correlationId: 'c', identifier: 't', startedBy });
+    expect(task.setStartedBy).toHaveBeenCalledWith(startedBy);
   });
 
   it('shouldSave: false alone keeps the existing run() path', async () => {

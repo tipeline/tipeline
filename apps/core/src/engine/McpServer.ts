@@ -344,7 +344,10 @@ export class TipelineMcpServer {
 
     const startedAt = Date.now();
     try {
-      await Core.exec(identifier, correlationId, variables, false, false, { outputs: reportedOutputNames(source) });
+      await Core.exec(identifier, correlationId, variables, false, false, {
+        outputs: reportedOutputNames(source),
+        startedBy: { trigger: 'mcp' },
+      });
       this.broadcast('onTaskEndAll', IPCMessage.success('Workflow finished successfully', correlationId));
       // 'paused' means the run is waiting on an approval step; a rejected approval ends as 'canceled'.
       const status = endStatus === 'canceled' || endStatus === 'paused' ? endStatus : 'completed';

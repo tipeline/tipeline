@@ -248,6 +248,9 @@ variable: '{= _global.SERVICE_API_KEY =}' (or '{{ _global.NAME }}' inside text),
 check_workflow warns about a global that doesn't exist yet: with that to-do it's fine, the
 warning stays until someone creates it. A run stops at the first step that reads a missing one.
 Environment values are '{{ _env.NAME }}'.
+About the run itself (read-only text): '{{ _run.id }}', '{{ _run.trigger }}' (manual, schedule,
+app, workflow, webhook or mcp), '{{ _run.user }}' (the Server user who started it, else empty),
+'{{ _run.startedAt }}', and the Core running it: '{{ _core.id }}', '{{ _core.host }}'.
 
 ## Units
 http.request's timeout is in milliseconds: 5 seconds is 5000. Name a variable

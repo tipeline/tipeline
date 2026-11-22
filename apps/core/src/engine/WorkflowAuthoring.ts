@@ -307,8 +307,9 @@ const ORDERING_RULES: Record<string, string[]> = {
 };
 
 const TEMPLATE_TOKENS = /\{\{\s*([\w.]+)[^}]*\}\}|\{=\s*([\w.]+)\s*=\}/g;
-// Names a template may use without a variable of that name: globals and environment.
-const BUILT_IN_ROOTS = new Set(['_global', '_env', 'lastResult']);
+// Names a template may use without a variable of that name: globals, environment, and
+// this run and the Core running it (utils/runInfo).
+const BUILT_IN_ROOTS = new Set(['_global', '_env', '_run', '_core', 'lastResult']);
 
 // What scripts written for Node.js reach for that the runScript sandbox doesn't have.
 const SANDBOX_MISSES: [RegExp, string][] = [

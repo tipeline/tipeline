@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { coreInfo } from '@utils/runInfo';
 
 vi.mock('@database/services/PipelineRunnerService', () => ({
   PipelineRunnerService: {
@@ -203,7 +204,9 @@ describe('Pipeline', () => {
 
       await pipeline.run();
 
-      expect(PipelineRunnerService.startPipeline).toHaveBeenCalledWith('task-id', pipeline.getVariables(), undefined);
+      expect(PipelineRunnerService.startPipeline).toHaveBeenCalledWith('task-id', pipeline.getVariables(), {
+        core: coreInfo(),
+      });
       expect(PipelineBlockService.startBlock).toHaveBeenCalledWith(10, ['a1'], null, null);
       expect(PipelineService.updateStatus).toHaveBeenCalledWith(10, 'completed', {
         finishedAt: expect.any(Date),
@@ -384,7 +387,7 @@ describe('Pipeline', () => {
 
     await task.getPipeline().run();
 
-    expect(PipelineRunnerService.startPipeline).toHaveBeenCalledWith('task-id', [], { trigger });
+    expect(PipelineRunnerService.startPipeline).toHaveBeenCalledWith('task-id', [], { trigger, core: coreInfo() });
   });
 
   describe('requested outputs on taskEnd', () => {
