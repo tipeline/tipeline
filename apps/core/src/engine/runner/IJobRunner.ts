@@ -1,4 +1,5 @@
 import type { CacheMode } from '@tipeline/schemas';
+import type { StartedBy } from '@utils/runInfo';
 // Both BullMQRunner (local sandboxed worker) and WorkerServer (standalone/remote worker)
 // point at this same BullMQ queue name — kept here so a third consumer (SubmitDetachedJob)
 // can't introduce yet another copy for these to drift against.
@@ -46,6 +47,12 @@ export interface JobPayload {
   trigger?: RunTrigger;
   /** The run and step that started this one: an async subtask.exec — stored on the pipeline. */
   parent?: ParentRun;
+  /**
+   * What started the run when it isn't a person in Desktop/CLI or an app: a schedule, a
+   * webhook, MCP — and the signed-in Server user, if any. `{{ _run.trigger }}` / `_run.user`;
+   * stored on the pipeline so a resumed run still knows.
+   */
+  startedBy?: StartedBy;
   /**
    * How the run uses the result cache (packages/schemas/src/cache.ts): omitted = 'use';
    * 'bypass' runs every step without reading or writing it; 'refresh' runs every step

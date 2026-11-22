@@ -7,6 +7,7 @@ import { PipelineBlockService } from '@database/services/PipelineBlockService';
 import { PipelineService } from '@database/services/PipelineService';
 import { coreEvents } from '@engine/CoreEvents';
 import { DebugController } from '@engine/DebugController';
+import { coreInfo } from '@utils/runInfo';
 import { isNonSerializableVariableType } from '@utils/nonSerializableTypes';
 import { ApprovalPendingSignal, ApprovalRejectedSignal, RunCanceledSignal } from '@utils/errors';
 
@@ -298,12 +299,17 @@ export class Pipeline {
   async run() {
     const trigger = this.task.getTrigger();
     const parent = this.task.getParentRun();
+    const startedBy = this.task.getStartedBy();
     const pipelineRecord = await PipelineRunnerService.startPipeline(
       this.task.getIdentifier(),
       this.variables,
-      trigger || parent
-        ? { ...(trigger ? { trigger } : {}), ...(parent ? { parent } : {}) }
-        : undefined
+      {
+        ...(trigger ? { trigger } : {}),
+        ...(parent ? { parent } : {}),
+        ...(startedBy ? { startedBy } : {}),
+        // The Core (worker) that ran it, for Run details — the same as `_core`.
+        core: coreInfo(),
+      }
     );
 
     this.id = pipelineRecord.id;

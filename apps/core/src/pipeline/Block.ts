@@ -493,7 +493,7 @@ export class Block {
     // against the current variable values.
     const fresh = safeClone(action.getRawParams());
     const getGlobalVar = await this.buildGlobalVarLookup(fresh, action);
-    parseStepParams(action.group, fresh, this.variables, getGlobalVar, this.lastResult);
+    parseStepParams(action.group, fresh, this.variables, getGlobalVar, this.lastResult, this.task.getRunContext());
     action.setParams(fresh);
   }
 
@@ -516,7 +516,7 @@ export class Block {
           : variable
     );
     const getGlobalVar = await this.buildGlobalVarLookup(fresh);
-    parseStepParams(action.group, fresh, displayVariables, getGlobalVar, this.lastResult);
+    parseStepParams(action.group, fresh, displayVariables, getGlobalVar, this.lastResult, this.task.getRunContext());
     return fresh;
   }
 

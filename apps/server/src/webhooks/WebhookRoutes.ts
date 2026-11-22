@@ -211,6 +211,8 @@ export class WebhookRoutes {
       payload: {
         identifier: webhook.task_identifier,
         variables,
+        // Core's `{{ _run.trigger }}`.
+        startedBy: { trigger: 'webhook' },
       },
     });
 

@@ -27,7 +27,17 @@ export function baseVariableName(path: string): string {
 export function isKnownVariableName(name: string, knownNames: Set<string> | null): boolean {
   if (!knownNames) return true
   if (name === '_env' || name === '_global' || name === '_previous') return true
+  if (name in RUN_BUILT_INS) return true
   return knownNames.has(name)
+}
+
+/**
+ * `_run` (this run) and `_core` (the Core running it): read-only, filled in by core while
+ * a step's params are rendered (apps/core/src/utils/runInfo.ts). Every field is text.
+ */
+export const RUN_BUILT_INS: Record<'_run' | '_core', string[]> = {
+  _run: ['id', 'workflow', 'workflowName', 'trigger', 'user', 'parentId', 'startedAt'],
+  _core: ['id', 'host', 'platform', 'version'],
 }
 
 export interface TemplateTokenMatch {

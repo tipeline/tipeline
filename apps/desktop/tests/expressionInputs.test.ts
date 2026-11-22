@@ -109,10 +109,35 @@ describe('TemplateField (workflow action params)', () => {
         },
       },
     });
-    expect(w.findComponent({ name: 'ExpressionInput' }).props('suggestions')).toEqual([
+    const suggestions = w.findComponent({ name: 'ExpressionInput' }).props('suggestions') as any[];
+    expect(suggestions.filter((s) => !s.path.startsWith('_'))).toEqual([
       { path: 'to', detail: 'string' },
       { path: 'team', detail: 'array' },
     ]);
+  });
+
+  const mountText = (variableType: string, modelValue = '') =>
+    mount(TemplateField, {
+      props: { modelValue, variableType },
+      global: { plugins: [i18n], provide: { taskVariables: ref([{ name: 'to', type: 'string' }]) } },
+    });
+
+  it('offers this run and the Core running it in a text field, after the variables', () => {
+    const suggestions = mountText('string').findComponent({ name: 'ExpressionInput' }).props('suggestions') as any[];
+    expect(suggestions[0]).toEqual({ path: 'to', detail: 'string' });
+    expect(suggestions).toContainEqual({ path: '_run', detail: 'This run', container: true });
+    expect(suggestions).toContainEqual(expect.objectContaining({ path: '_run.trigger', parent: '_run' }));
+    expect(suggestions).toContainEqual(expect.objectContaining({ path: '_core.id', parent: '_core' }));
+  });
+
+  it('leaves them out of a field that takes no text', () => {
+    const suggestions = mountText('array').findComponent({ name: 'ExpressionInput' }).props('suggestions') as any[];
+    expect(suggestions.some((s) => s.path.startsWith('_run') || s.path.startsWith('_core'))).toBe(false);
+  });
+
+  it('knows _run and _core are not unknown variables', () => {
+    const w = mountText('string', '{{ _run.id }} on {{ _core.host }}');
+    expect(spans(w).every((s) => !s.issue)).toBe(true);
   });
 });
 

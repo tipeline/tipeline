@@ -161,6 +161,9 @@ function buildTextLog(): string {
   const lines: string[] = [`Run ${pipelineId}`];
   if (pipeline?.status) lines.push(`Status: ${pipeline.status}`);
   if (pipeline?.started_at) lines.push(`Started: ${pipeline.started_at}`);
+  const { startedBy, core } = pipeline?.metadata ?? {};
+  if (startedBy) lines.push(`Started by: ${startedBy.trigger ?? 'manual'}${startedBy.user ? ` (${startedBy.user})` : ''}`);
+  if (core?.id) lines.push(`Core: ${core.id} (${core.host}, ${core.platform}, ${core.version})`);
   if (pipeline?.finished_at) lines.push(`Finished: ${pipeline.finished_at}`);
   lines.push('');
 

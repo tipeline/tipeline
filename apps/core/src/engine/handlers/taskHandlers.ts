@@ -6,6 +6,7 @@ import { coreEvents } from '@engine/CoreEvents';
 import { ActionError } from '@utils/ActionError';
 import type { ITransport } from '@engine/ITransport';
 import { toCacheMode } from '@/cache/cacheMode';
+import { toStartedBy } from '@utils/runInfo';
 
 type BroadcastFn = (event: string, data: any) => void;
 
@@ -277,6 +278,8 @@ export const registerTaskHandlers = (transport: ITransport, broadcast: Broadcast
         {
           cacheMode: toCacheMode(message.payload?.cache),
           allowDraft: true,
+          // Set by the Server (its signed-in user, or a webhook); Desktop and the CLI leave it out.
+          startedBy: toStartedBy(message.payload?.startedBy),
           breakpoints: Array.isArray(message.payload?.breakpoints)
             ? message.payload.breakpoints.filter((b: unknown) => typeof b === 'string')
             : undefined,

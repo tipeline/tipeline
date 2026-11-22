@@ -3,6 +3,7 @@ import { computed, inject, toValue, type MaybeRefOrGetter } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { matchesVariableType } from '@/components/ui/auto-form/utils';
 import { valuePaths, type ExpressionSuggestion } from '@/utils/expressionField';
+import { RUN_BUILT_INS } from '@/utils/templateReferences';
 
 /**
  * What a workflow action field can reference, for its `{}` menu and `{{` autocomplete:
@@ -83,6 +84,14 @@ export function useVariableSuggestions(
             ...asItem(field, t('expressionInput.wrongType', { type: field.type, wanted: wantedTypes })),
             disabled: true,
           });
+      }
+    }
+    // This run and the Core running it: folders of text fields, after the workflow's own.
+    if (fits('string')) {
+      for (const [root, fields] of Object.entries(RUN_BUILT_INS)) {
+        out.push({ path: root, detail: t(`expressionInput.builtIn${root}`), container: true });
+        for (const field of fields)
+          out.push({ path: `${root}.${field}`, parent: root, detail: t(`expressionInput.builtInField.${root}.${field}`) });
       }
     }
     return out;

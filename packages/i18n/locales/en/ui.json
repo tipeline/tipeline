@@ -1927,6 +1927,25 @@
     "insert": "Insert reference",
     "empty": "Nothing to reference yet",
     "unknownVariable": "Unknown variable “{name}” — it will silently resolve to an empty value",
+    "builtIn_run": "This run",
+    "builtIn_core": "The Core running it",
+    "builtInField": {
+      "_run": {
+        "id": "run identifier",
+        "workflow": "workflow identifier",
+        "workflowName": "workflow name",
+        "trigger": "manual, schedule, app, workflow, webhook or mcp",
+        "user": "Server user who started it",
+        "parentId": "run that started this one",
+        "startedAt": "start time (ISO)"
+      },
+      "_core": {
+        "id": "Core name (TIPELINE_CORE_NAME or hostname)",
+        "host": "hostname",
+        "platform": "mac, linux or windows",
+        "version": "Tipeline version"
+      }
+    },
     "valueAsText": "“{name}” is a {type} — here it becomes text",
     "wrongType": "{type} · needs {wanted}",
     "valueAsTextHint": "Passed as text, not as the {type} itself.",
@@ -2951,6 +2970,15 @@
     "subWorkflowShown": "The steps listed under this one are from run {index}.",
     "calledBy": "Called by",
     "calledByStep": "Show the step",
+    "origin": {
+      "manual": "hand",
+      "schedule": "a schedule",
+      "webhook": "a webhook",
+      "mcp": "MCP",
+      "by": "By",
+      "on": "On",
+      "coreDetails": "{host} · {platform} · Tipeline {version}"
+    },
     "notRunNote": "Not run: the run ended before this step.",
     "waitingNote": "Waiting to run.",
     "notRun": "not run",
