@@ -51,7 +51,7 @@ describe('PluginLoader', () => {
   it('reads a package without registering it', async () => {
     const dir = path.join(PLUGINS_DIR, PLUGIN_STAGING_DIR, 'greeting-1');
     write(dir, '2.0.0');
-    expect(await PluginLoader.inspect(dir)).toEqual({ group: 'greeting', version: '2.0.0' });
+    expect(await PluginLoader.inspect(dir)).toMatchObject({ group: 'greeting', version: '2.0.0', actions: {} });
     expect(PluginService.registerOrUpdate).not.toHaveBeenCalled();
   });
 

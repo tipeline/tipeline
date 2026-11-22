@@ -136,6 +136,12 @@ enforced.
 A major bump is never installed automatically: each user reviews it first. Minor and patch
 bumps install on their own, so don't use them for a change that breaks something.
 
+For a plugin, removing an action, renaming its group, adding a required setting, removing a
+setting, changing a setting's type or changing an action's declared `returns` type is a major
+change. Tipeline checks each user's saved workflows against a new plugin version before
+installing it and holds it back if steps would break, whatever its version, but that only
+stops the damage: the users still have to fix their workflows.
+
 Versions only go forward. To undo a bad release, publish the old content under a **higher**
 version. Listing a lower version installs nothing, and a file older than the user's copy is
 refused, so people who already updated would stay on the bad release.

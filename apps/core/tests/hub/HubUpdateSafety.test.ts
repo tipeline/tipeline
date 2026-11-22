@@ -8,6 +8,7 @@ const { pluginsDir, service } = vi.hoisted(() => ({
   pluginsDir: `${process.env.TMPDIR ?? '/tmp'}/tipeline-update-plugins-${process.pid}`,
   service: () => ({
     getInstalledForHub: vi.fn(async () => []),
+    getAllWithSource: vi.fn(async () => []),
     getByIdentifier: vi.fn(),
     markSynced: vi.fn(),
     setHubStatus: vi.fn(),
@@ -290,6 +291,7 @@ describe('plugin updates', () => {
     );
     const record = {
       identifier: 'greeting',
+      group: 'greeting',
       name: 'Greeting',
       version: '1.0.0',
       hub_plugin_identifier: 'greeting',
@@ -308,9 +310,41 @@ describe('plugin updates', () => {
       setImmediate(() => child.emit('exit', 0));
       return child;
     });
-    vi.mocked(PluginLoader.inspect).mockResolvedValue({ group: 'greeting', version: '1.1.0' });
+    vi.mocked(PluginLoader.inspect).mockResolvedValue(greetingPlugin('1.1.0'));
     vi.mocked(PluginLoader.reloadSingle).mockResolvedValue('greeting');
   });
+
+  // A plugin with one action, `greeting.say`, taking a required `text`.
+  function greetingPlugin(version: string, over: Record<string, unknown> = {}) {
+    return {
+      group: 'greeting',
+      version,
+      actions: { say: {} },
+      params: { say: [{ name: 'text', type: 'string', required: true }] },
+      ...over,
+    } as any;
+  }
+
+  // A saved workflow with a `greeting.say` step inside a loop.
+  function workflowUsesGreeting(params: Record<string, unknown>) {
+    const source = {
+      name: 'Morning',
+      pipeline: {
+        variables: [],
+        actions: [
+          { group: 'system', name: 'message', params: { text: 'start' } },
+          {
+            group: 'loop',
+            name: 'forEach',
+            params: { actions: [{ group: 'greeting', name: 'say', source: 'plugin', params }] },
+          },
+        ],
+      },
+    };
+    vi.mocked(TaskService.getAllWithSource).mockResolvedValue([
+      { identifier: 'morning', name: 'Morning', source: JSON.stringify(source) },
+    ]);
+  }
 
   const stagingLeft = () => {
     const staging = path.join(pluginsDir, '.staging');
@@ -351,7 +385,7 @@ describe('plugin updates', () => {
   });
 
   it('refuse a package older than the installed one', async () => {
-    vi.mocked(PluginLoader.inspect).mockResolvedValue({ group: 'greeting', version: '0.9.0' });
+    vi.mocked(PluginLoader.inspect).mockResolvedValue(greetingPlugin('0.9.0'));
     await HubSyncService.checkHub('hub-1');
     expect(fs.readFileSync(entry, 'utf8')).toBe('old code');
     expect(PluginService.setHubStatus).toHaveBeenCalledWith('greeting', 'error');
@@ -370,9 +404,66 @@ describe('plugin updates', () => {
   });
 
   it('hold a package whose code says it is a major version', async () => {
-    vi.mocked(PluginLoader.inspect).mockResolvedValue({ group: 'greeting', version: '2.0.0' });
+    vi.mocked(PluginLoader.inspect).mockResolvedValue(greetingPlugin('2.0.0'));
     await HubSyncService.checkHub('hub-1');
     expect(fs.readFileSync(entry, 'utf8')).toBe('old code');
+    expect(HubUpdateEventService.setAttention).toHaveBeenCalledWith(
+      expect.objectContaining({ identifier: 'greeting' }),
+      { kind: 'major_waiting', toVersion: '2.0.0' }
+    );
+  });
+  it('install a version the saved workflows still pass', async () => {
+    workflowUsesGreeting({ text: 'hello' });
+    await HubSyncService.updatePlugin('greeting');
+    expect(fs.readFileSync(entry, 'utf8')).toBe('new code');
+  });
+
+  it('hold back a minor version that would break a saved step, even with auto-update on', async () => {
+    workflowUsesGreeting({ text: 'hello' });
+    vi.mocked(PluginLoader.inspect).mockResolvedValue(
+      greetingPlugin('1.1.0', {
+        params: { say: [{ name: 'message', type: 'string', required: true }] },
+      })
+    );
+    await HubSyncService.checkHub('hub-1');
+
+    expect(fs.readFileSync(entry, 'utf8')).toBe('old code');
+    expect(PluginLoader.reloadSingle).not.toHaveBeenCalled();
+    expect(stagingLeft()).toEqual([]);
+    expect(PluginService.setHubStatus).toHaveBeenCalledWith('greeting', 'ok');
+    const [, attention] = vi.mocked(HubUpdateEventService.setAttention).mock.calls.at(-1)!;
+    expect(attention).toMatchObject({ kind: 'breaks_workflows', toVersion: '1.1.0' });
+    const problems = JSON.parse(attention!.message!);
+    expect(problems.map((p: any) => [p.workflow.name, p.position, p.action, p.kind])).toEqual([
+      ['Morning', '2.1', 'greeting.say', 'invalid_settings'],
+      ['Morning', '2.1', 'greeting.say', 'setting_removed'],
+    ]);
+  });
+
+  it('say which steps break when the user updates, and install only when they accept', async () => {
+    workflowUsesGreeting({ text: 'hello' });
+    vi.mocked(PluginLoader.inspect).mockResolvedValue(greetingPlugin('1.1.0', { actions: { greet: {} } }));
+
+    await expect(HubSyncService.updatePlugin('greeting')).rejects.toThrow(
+      /would break 1 step\(s\) in 1 workflow\(s\)[\s\S]*Morning, step 2.1 \(greeting.say\): action no longer exists/
+    );
+    expect(fs.readFileSync(entry, 'utf8')).toBe('old code');
+
+    await HubSyncService.updatePlugin('greeting', { acceptBreaking: true });
+    expect(fs.readFileSync(entry, 'utf8')).toBe('new code');
+  });
+
+  it('treat a renamed group as every step losing its action', async () => {
+    workflowUsesGreeting({ text: 'hello' });
+    vi.mocked(PluginLoader.inspect).mockResolvedValue(greetingPlugin('1.1.0', { group: 'greetings' }));
+    await expect(HubSyncService.updatePlugin('greeting')).rejects.toThrow(/action no longer exists/);
+    expect(fs.readFileSync(entry, 'utf8')).toBe('old code');
+  });
+
+  it('still hold a major for approval before checking workflows', async () => {
+    workflowUsesGreeting({ other: 1 });
+    vi.mocked(PluginLoader.inspect).mockResolvedValue(greetingPlugin('2.0.0'));
+    await HubSyncService.checkHub('hub-1');
     expect(HubUpdateEventService.setAttention).toHaveBeenCalledWith(
       expect.objectContaining({ identifier: 'greeting' }),
       { kind: 'major_waiting', toVersion: '2.0.0' }

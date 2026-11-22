@@ -24,7 +24,21 @@ const reviewOpen = computed({
 const ITEM_ROUTE = { task: '/tasks', app: '/apps', plugin: '/plugins' };
 const itemLink = (event: HubUpdateEvent) => `${ITEM_ROUTE[event.item_type]}/${event.item_identifier}`;
 const typeLabel = (event: HubUpdateEvent) => t(`hub.updates.type.${event.item_type}`);
-const canInstall = (event: HubUpdateEvent) => event.kind === 'major_waiting' || event.kind === 'update_available';
+const canInstall = (event: HubUpdateEvent) =>
+  event.kind === 'major_waiting' || event.kind === 'update_available' || event.kind === 'breaks_workflows';
+
+// The steps a held-back plugin version would break, stored with the event as JSON.
+const brokenSteps = (event: HubUpdateEvent): any[] => {
+  if (event.kind !== 'breaks_workflows' || !event.message) return [];
+  try {
+    return JSON.parse(event.message);
+  } catch {
+    return [];
+  }
+};
+const brokenWorkflows = (event: HubUpdateEvent) => [
+  ...new Set(brokenSteps(event).map((p) => p.workflow?.name).filter(Boolean)),
+];
 const ago = (value: string) => {
   const date = new Date(value.includes('T') ? value : `${value.replace(' ', 'T')}Z`);
   return formatDistanceToNow(date, { addSuffix: true });
@@ -56,7 +70,7 @@ onMounted(async () => {
           v-for="event in needsYou"
           :key="event.id"
           class="flex items-center gap-3 rounded-md border p-3"
-          :class="['failed', 'blocked', 'not_bumped'].includes(event.kind) ? 'border-destructive/40' : ''"
+          :class="['failed', 'blocked', 'not_bumped', 'breaks_workflows'].includes(event.kind) ? 'border-destructive/40' : ''"
         >
           <div class="min-w-0 flex-1 space-y-0.5">
             <p class="text-sm m-0 truncate">
@@ -68,6 +82,9 @@ onMounted(async () => {
             <p class="text-sm text-muted-foreground m-0">{{ describe(event) }}</p>
             <p v-if="event.kind === 'failed' && event.message" class="text-xs text-destructive m-0 break-words">
               {{ event.message }}
+            </p>
+            <p v-if="brokenWorkflows(event).length" class="text-xs text-destructive m-0 break-words">
+              {{ t('hub.review.usedByWorkflows', { names: brokenWorkflows(event).join(', ') }) }}
             </p>
           </div>
           <Button v-if="canInstall(event)" variant="outline" size="sm" @click="reviewing = event">

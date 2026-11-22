@@ -326,10 +326,12 @@ export async function up(knex) {
       table.string('item_identifier').notNullable();
       table.string('item_name').nullable();
       table.string('hub_name').nullable();
-      // 'updated' | 'major_waiting' | 'update_available' | 'older_listed' | 'blocked' | 'not_bumped' | 'failed'
+      // 'updated' | 'major_waiting' | 'update_available' | 'older_listed' | 'blocked' | 'not_bumped'
+      // | 'breaks_workflows' | 'failed'
       table.string('kind').notNullable();
       table.string('from_version').nullable();
       table.string('to_version').nullable();
+      // Readable text, except for 'breaks_workflows': the broken steps as JSON.
       table.text('message').nullable();
       table.timestamp('read_at').nullable();
       table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());

@@ -1358,8 +1358,24 @@ export default class CommandService {
           events.forEach((e) => {
             const type = e.item_type === 'task' ? 'workflow' : e.item_type;
             const versions = [e.from_version, e.to_version].filter(Boolean).join(' -> ');
-            const detail = e.message ? `  ${e.message}` : '';
+            const detail = e.message && e.kind !== 'breaks_workflows' ? `  ${e.message}` : '';
             Printer.printMessage(`  ${e.kind}  [${type}]  ${e.item_identifier}  ${e.item_name ?? ''}  ${versions}${detail}`);
+            if (e.kind === 'breaks_workflows') {
+              let problems: any[] = [];
+              try {
+                problems = JSON.parse(e.message ?? '[]');
+              } catch {
+                problems = [];
+              }
+              problems.forEach((p) =>
+                Printer.printMessage(
+                  `      ${p.workflow?.name}, step ${p.position} (${p.action}): ${p.kind}${p.detail ? ` — ${p.detail}` : ''}`
+                )
+              );
+              Printer.printMessage(
+                `      Fix those steps, or install anyway: tipeline hub update plugin ${e.item_identifier} --accept-breaking`
+              );
+            }
           });
         } else {
           Printer.printError(response.error ?? 'Unknown error');
@@ -1369,7 +1385,11 @@ export default class CommandService {
     });
   }
 
-  static async hubUpdate(rawType: 'workflow' | 'task' | 'app' | 'plugin', identifier: string) {
+  static async hubUpdate(
+    rawType: 'workflow' | 'task' | 'app' | 'plugin',
+    identifier: string,
+    { acceptBreaking = false }: { acceptBreaking?: boolean } = {}
+  ) {
     // "workflow" is the user-facing name; IPC channels still use "task".
     const type = rawType === 'workflow' ? 'task' : rawType;
     const channel = { task: 'hubUpdateTask', app: 'hubUpdateApp', plugin: 'hubUpdatePlugin' }[type];
@@ -1379,7 +1399,10 @@ export default class CommandService {
       process.exit(1);
     }
     const correlationId = generateIdentifier();
-    const payload = await IpcMessageService.generatePayload(correlationId, { identifier });
+    const payload = await IpcMessageService.generatePayload(
+      correlationId,
+      type === 'plugin' && acceptBreaking ? { identifier, acceptBreaking } : { identifier }
+    );
     CommandService.connectAndHandle(channel, payload, {
       [responseEvent]: (response: IpcResponse) => {
         if (response?.success) {

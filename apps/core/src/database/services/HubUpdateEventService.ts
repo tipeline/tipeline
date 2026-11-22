@@ -57,6 +57,14 @@ export class HubUpdateEventService {
     } as any);
   }
 
+  /** What an item needs from the user right now, if anything. */
+  static async attentionFor(type: HubItemType, identifier: string) {
+    return await HubUpdateEvent.query()
+      .where({ item_type: type, item_identifier: identifier })
+      .whereNot('kind', 'updated')
+      .first();
+  }
+
   /** An update went in. `seen` is for one the user started, which needs no announcing. */
   static async recordUpdated(item: HubEventItem, toVersion: string | null | undefined, seen = false) {
     await this.setAttention(item, null);

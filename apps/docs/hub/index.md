@@ -114,6 +114,28 @@ Tipeline also reads the version inside the downloaded file, because a hub can li
 and serve another. A file older than your copy, or with the same version as your copy, isn't
 installed. A file that turns out to be a major version waits for you, whatever the catalog said.
 
+### Plugin updates that would break workflows
+
+Before a new plugin version replaces the installed one, Tipeline checks every saved workflow
+step that uses the plugin against it. This happens on every update, automatic or not, and for
+any version, because a publisher can ship a breaking change as a minor version by mistake.
+A step breaks when:
+
+- its action no longer exists, or the plugin's group was renamed;
+- its settings no longer pass, such as a new required setting or a different type;
+- it uses a setting the action no longer has;
+- it keeps its result in a variable, and the action now returns a different type.
+
+If any step would break, the update isn't installed and your current version keeps working.
+**Hub → Updates** lists the affected workflows, and **Review update** lists each broken step.
+From there you can keep your version until the workflows are fixed, or choose
+**Install … anyway**. From the CLI, `tipeline hub updates` lists the steps, and
+`tipeline hub update plugin <identifier> --accept-breaking` installs anyway.
+
+The check reads each action's declared settings and result type. It can't see a change in the
+shape of a result, such as a field an object no longer has, so read the publisher's notes for
+a major version.
+
 Workflows, apps and plugins all have an **Auto-update** switch and the same rules. A workflow's
 is on its Overview, a plugin's is on its page, and an app's is in its **Edit** dialog.
 
@@ -128,7 +150,10 @@ of what you haven't seen, and a new entry shows a notification. From the CLI, ru
 - **Workflows:** inputs and outputs removed, changed or added, the steps that changed, any new
   access, and which apps, workflows and schedules use it.
 - **Apps:** pages added and removed.
-- **Plugins:** only the version numbers, because reading a plugin's package runs its code.
+- **Plugins:** which workflows use the plugin (and the apps and schedules that run them), and
+  the steps that would break if an install of this version was already held back. The new
+  version's changes aren't shown before installing, because reading a plugin's package runs
+  its code.
 
 An update replaces your own edits to the item. You can go back to an earlier workflow from its
 [Versions](/desktop/builder#versions) tab, but apps and plugins have no earlier versions to return to. If

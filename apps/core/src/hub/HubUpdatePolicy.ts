@@ -1,4 +1,5 @@
 import semver from 'semver';
+import type { PluginStepProblem } from '@/hub/PluginUpdateCheck';
 
 /**
  * How an installed item's version relates to what its hub lists:
@@ -18,12 +19,16 @@ export function hubUpdateState(installed: string | null | undefined, listed: str
   return semver.major(listed) > semver.major(installed) ? 'major' : 'available';
 }
 
-/** Why a downloaded file wasn't installed. */
+/**
+ * Why a downloaded file wasn't installed. `breaks`: a plugin version that saved workflow
+ * steps would stop passing (`problems` says which); only the user can install it anyway.
+ */
 export class HubUpdateHeldError extends Error {
   constructor(
-    public kind: 'downgrade' | 'major' | 'unchanged',
+    public kind: 'downgrade' | 'major' | 'unchanged' | 'breaks',
     public fileVersion: string,
-    message: string
+    message: string,
+    public problems: PluginStepProblem[] = []
   ) {
     super(message);
     this.name = 'HubUpdateHeldError';
