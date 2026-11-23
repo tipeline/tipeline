@@ -51,6 +51,7 @@ import WorkflowCardGrid from '@/components/task/WorkflowCardGrid.vue';
 import WorkflowCompactList from '@/components/task/WorkflowCompactList.vue';
 import RecentItemsRow from '@/components/RecentItemsRow.vue';
 import SegmentedSwitch from '@/components/SegmentedSwitch.vue';
+import ScopeSelect from '@/components/ScopeSelect.vue';
 import { useRememberedChoice } from '@/composables/useRememberedChoice';
 import { useRecentItemsStore } from '@/store/recentItems';
 import { useStarredItemsStore } from '@/store/starredItems';
@@ -240,9 +241,10 @@ const shownResult = computed<TaskItem[]>(() => {
   return list.sort((a, b) => opened(b) - opened(a) || byName(a, b));
 });
 
-// The row above the list: only on the plain list, so it doesn't push filtered results down.
+// The row above the list stays whatever the scope; it hides while searching or filtering so it
+// doesn't push the matches down.
 const showRecentRow = computed(
-  () => scope.value === 'all' && !filtersActive.value && recentWorkflows.value.length > 0
+  () => !filtersActive.value && recentWorkflows.value.length > 0
 );
 
 // Ticked workflows that are filtered out drop out (the table does this itself), so a bulk
@@ -347,9 +349,9 @@ async function onExportAll() {
       />
       <Card classContent="p-0 flex flex-col min-h-0" class="flex-1 min-h-0">
         <template #content>
-          <!-- One row: scope, search and filters on the left; selection, sort and view on the right. -->
+          <!-- One row: scope (a dropdown), search and filters on the left; selection, sort and view on the right. -->
           <div class="flex flex-wrap items-center gap-2 pt-3 pb-3 mb-2 shrink-0">
-            <SegmentedSwitch v-model="scope" :options="scopeOptions" :label="t('listViews.scope.label')" />
+            <ScopeSelect v-model="scope" :options="scopeOptions" :label="t('listViews.scope.label')" />
             <Input v-model="search" class="w-56 bg-card" :placeholder="t('tasks.searchPlaceholder')" />
             <Select v-model="source">
               <SelectTrigger class="bg-card">
