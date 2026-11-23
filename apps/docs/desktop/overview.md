@@ -119,8 +119,8 @@ Both lists work the same way:
 - **Recently opened**: the workflows (or apps) you opened last, from their page or the
   builder, as one row of tiles above the list. **See all** switches the list to them;
   **Clear** empties the row (Recently opened on Home keeps the other kinds). The row
-  hides while you search or filter.
-- **All / Starred / Recently opened** narrows the list, with a count for each. Recently
+  stays whichever scope you pick, and hides while you search or filter.
+- **The scope dropdown** (All / Starred / Recently opened) narrows the list, with a count for each. Recently
   opened lists the newest first. Workflows also have **Failing** (the latest run failed)
   and **Scheduled** (a schedule is turned on).
 - **Sort** by name, last run or recently opened for workflows; by name, newest or recently

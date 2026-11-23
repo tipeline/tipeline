@@ -250,8 +250,21 @@ async function exportLog(format: 'json' | 'text') {
   <div class="overflow-y-hidden flex flex-col h-full w-full">
     <Card class="flex-1 flex flex-col overflow-y-hidden">
       <template #title>
-        Run details
-        <span v-if="isLive" class="ml-2 text-xs text-muted-foreground">(Live)</span>
+        <div class="flex items-center gap-1">
+          <Button
+            v-if="!inWindow"
+            variant="ghost"
+            size="icon"
+            class="-ml-2 size-7 shrink-0"
+            :aria-label="t('nav.back')"
+            :title="t('nav.back')"
+            @click="router.back()"
+          >
+            <ArrowLeft class="size-4" />
+          </Button>
+          Run details
+          <span v-if="isLive" class="ml-2 text-xs text-muted-foreground">(Live)</span>
+        </div>
       </template>
       <template #description>
         <div class="flex items-center gap-1.5">
@@ -298,10 +311,6 @@ async function exportLog(format: 'json' | 'text') {
         <Button v-if="!inWindow" variant="outline" size="sm" :title="t('runWindow.openHint')" @click="openRunWindow">
           <ExternalLink class="w-4 h-4 mr-1" />
           {{ t('common.openInWindow') }}
-        </Button>
-        <Button v-if="!inWindow" variant="ghost" size="sm" @click="router.back()">
-          <ArrowLeft class="w-4 h-4 mr-1" />
-          Back
         </Button>
       </template>
       <template #content>

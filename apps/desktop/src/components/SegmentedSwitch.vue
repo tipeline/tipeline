@@ -1,8 +1,8 @@
 <script setup lang="ts" generic="T extends string">
 import type { Component } from 'vue';
 
-// A list page's segmented switch at control height (h-9): the All / Starred / Recently opened
-// scope with counts, or the view picker as icons (the label becomes the tooltip).
+// A list page's segmented switch at control height (h-9), such as the view picker as icons
+// (the label becomes the tooltip). The scope filter is a dropdown (ScopeSelect).
 defineProps<{
   options: { value: T; label: string; count?: number; icon?: Component }[];
   label?: string;
