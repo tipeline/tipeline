@@ -5,6 +5,7 @@
 //    owned by someone else is hidden (admins see everything).
 //  - Dismissing and reopening: anyone who can see the alert. Dismiss is shared — it
 //    acknowledges the alert for everyone — and is audit-logged as alert.dismiss.
+//  - Resolving by hand: the same rule; shared too, audit-logged as alert.resolve.
 //
 // Dismissing "all" means all the alerts this user can see, never other people's.
 

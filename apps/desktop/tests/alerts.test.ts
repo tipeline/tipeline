@@ -125,6 +125,18 @@ describe('alertsStore', () => {
     expect(announce).not.toHaveBeenCalled();
   });
 
+  it("a deleted workflow's alerts leave the list at once, not at the next check", async () => {
+    const store = useAlertsStore();
+    vi.mocked(invokeCore).mockResolvedValueOnce([
+      alert('a'),
+      alert('z', { taskIdentifier: 'other' }),
+    ]);
+    await store.refresh();
+    vi.mocked(invokeCore).mockReturnValue(new Promise(() => {})); // the check is slow
+    store.forgetTask('traffic');
+    expect(store.items.map((a) => a.id)).toEqual(['z']);
+  });
+
   it('dismiss removes it at once and tells Core', async () => {
     const store = useAlertsStore();
     vi.mocked(invokeCore).mockResolvedValueOnce([alert('a'), alert('b')]);

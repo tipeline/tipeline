@@ -170,6 +170,9 @@ function nextLabel(iso: string): string {
           {{ count }}
         </span>
       </h2>
+      <button v-if="alerts.length" type="button" :class="HOME_LINK" data-testid="needs-all-alerts" @click="router.push('/alerts')">
+        {{ t('dashboard.needs.allAlerts') }}
+      </button>
       <button v-if="failing.length" type="button" :class="HOME_LINK" @click="router.push({ path: '/tasks', query: { scope: 'failing' } })">
         {{ t('dashboard.needs.allFailing') }}
       </button>

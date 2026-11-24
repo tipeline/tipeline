@@ -288,6 +288,32 @@ describe('dismiss (acknowledge)', () => {
   });
 });
 
+describe('resolve by hand', () => {
+  it('closes open and dismissed alerts by id, recording who', async () => {
+    const a = await GroupAlert.raise({ title: 'A' }, run());
+    const b = await GroupAlert.raise({ title: 'B' }, run());
+    await AlertService.dismiss({ id: b.id! });
+    expect(await AlertService.resolveByIds([a.id!, b.id!, 'missing'], 'desktop')).toBe(2);
+    const all = await AlertService.list({ includeClosed: true });
+    expect(all.map((x) => [x.status, x.closedBy])).toEqual([
+      ['resolved', 'desktop'],
+      ['resolved', 'desktop'],
+    ]);
+    // Already resolved: nothing to do.
+    expect(await AlertService.resolveByIds([a.id!])).toBe(0);
+  });
+
+  it('after a resolve by hand the same key raises a new, open alert', async () => {
+    const first = await GroupAlert.raise({ title: 'Spike', key: 'k' }, run());
+    await AlertService.dismiss({ id: first.id! });
+    await AlertService.resolveByIds([first.id!], 'desktop');
+    const next = await GroupAlert.raise({ title: 'Spike', key: 'k' }, run());
+    expect(next.isNew).toBe(true);
+    expect(next.id).not.toBe(first.id);
+    expect((await AlertService.list())[0]).toMatchObject({ id: next.id, status: 'open' });
+  });
+});
+
 describe('keeping alerts tidy', () => {
   it('prunes resolved alerts after 30 days and acknowledged ones nobody raised for 30 days', async () => {
     const old = new Date(Date.now() - (ALERT_KEEP_DAYS + 1) * 86_400_000).toISOString();

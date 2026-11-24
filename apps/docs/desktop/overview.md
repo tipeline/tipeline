@@ -21,6 +21,7 @@ The sidebar groups every part of the app:
 | | **Assistant** | Past requests, drafts and remembered picks ([Assistant](/assistant)) |
 | **Operate** | **Runs** | Every run of every workflow, live ([Runs](/desktop/pipelines)) |
 | | **Approvals** | Runs waiting for someone to approve or reject them ([Approvals](/workflows/approvals)) |
+| | **Alerts** | Every alert workflows raised: open, dismissed and resolved ([Alerts](/workflows/alerts#the-alerts-page)) |
 | | **Schedules** | When workflows run on their own ([Schedules](/desktop/schedules)) |
 | **Resources** | **Global Variables** | Values every workflow can read ([Global Variables](/desktop/variables)) |
 | | **Tags** | Create, rename and delete the tags used on workflows |
@@ -121,8 +122,11 @@ Both lists work the same way:
   **Clear** empties the row (Recently opened on Home keeps the other kinds). The row
   stays whichever scope you pick, and hides while you search or filter.
 - **The scope dropdown** (All / Starred / Recently opened) narrows the list, with a count for each. Recently
-  opened lists the newest first. Workflows also have **Failing** (the latest run failed)
-  and **Scheduled** (a schedule is turned on).
+  opened lists the newest first. Workflows also have **Failing** (the latest run failed),
+  **With alerts** (it has an open alert) and **Scheduled** (a schedule is turned on).
+- A workflow with open [alerts](/workflows/alerts) has a bell next to its name, with the
+  number of alerts when there's more than one, coloured by the loudest (red critical,
+  orange warning, blue info).
 - **Sort** by name, last run or recently opened for workflows; by name, newest or recently
   opened for apps.
 - Three views: **Table**, **Cards** (picture, description and more on each tile) and
@@ -152,8 +156,9 @@ From the **Workflows** list, click any workflow to open its detail view. From th
 - **View history** — see all past pipeline runs for this workflow
 
 When the workflow has [alerts](/workflows/alerts) that are open or dismissed, its Overview
-lists them in an **Alerts** card, with **See run**, **Dismiss** and, for dismissed ones,
-**Reopen** to put them back in Needs you.
+lists them in an **Alerts** card, with **Open run**, **Dismiss** and, for dismissed ones,
+**Reopen** to put them back in Needs you. **See all alerts** opens the Alerts page on that
+workflow.
 
 <div class="screenshot-placeholder" style="height: 320px;">
   <span class="placeholder-icon">▶️</span>

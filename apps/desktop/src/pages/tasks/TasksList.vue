@@ -34,6 +34,7 @@ import {
   CommandList,
 } from '@/components/ui/command';
 
+import { useAlertsStore } from '@/store/alertsStore';
 import { createColumns, type TaskItem } from '@/config/tables/TasksList';
 import type { ScheduleItem } from '@/config/tables/SchedulesList';
 import WorkflowStats from '@/components/task/WorkflowStats.vue';
@@ -76,12 +77,29 @@ const nextRuns = computed(() => {
   return next;
 });
 
+// Each workflow's open alerts: how many and the loudest level (for its badge and the scope).
+const alertsStore = useAlertsStore();
+const LEVEL_RANK = { info: 0, warning: 1, critical: 2 } as const;
+const openAlerts = computed(() => {
+  const byTask = new Map<string, NonNullable<TaskItem['open_alerts']>>();
+  for (const alert of alertsStore.items) {
+    const current = byTask.get(alert.taskIdentifier);
+    byTask.set(alert.taskIdentifier, {
+      count: (current?.count ?? 0) + 1,
+      level:
+        current && LEVEL_RANK[current.level] >= LEVEL_RANK[alert.level] ? current.level : alert.level,
+    });
+  }
+  return byTask;
+});
+
 const result = computed<TaskItem[]>(() => {
   if (!rawResult.value) return [];
   return rawResult.value.map((task) => {
     const base: TaskItem = {
       ...task,
       tags: typeof task.tags === 'string' ? JSON.parse(task.tags) : (task.tags ?? []),
+      open_alerts: openAlerts.value.get(task.identifier) ?? null,
     };
     if (connectionStore.isRemote) {
       const ownership = connectionStore.taskOwnerships.get(task.identifier);
@@ -143,12 +161,12 @@ const VIEWS = ['table', 'cards', 'compact'] as const;
 type View = (typeof VIEWS)[number];
 const SORTS = ['name', 'lastRun', 'opened'] as const;
 type Sort = (typeof SORTS)[number];
-const SCOPES = ['all', 'failing', 'scheduled', 'starred', 'recent'] as const;
+const SCOPES = ['all', 'failing', 'alerts', 'scheduled', 'starred', 'recent'] as const;
 type Scope = (typeof SCOPES)[number];
 
 const view = useRememberedChoice<View>('view', VIEWS, 'table', 'workflows');
 const sort = useRememberedChoice<Sort>('sort', SORTS, 'name', 'workflows');
-// Home's "All failing" link opens the list on Failing (?scope=failing).
+// Home's "All failing" link opens the list on Failing (?scope=failing); ?scope=alerts works too.
 const scopeFromQuery = (): Scope =>
   (SCOPES as readonly string[]).includes(String(route.query.scope)) ? (route.query.scope as Scope) : 'all';
 const scope = ref<Scope>(scopeFromQuery());
@@ -182,11 +200,13 @@ const starredCount = computed(
 );
 
 const failingCount = computed(() => result.value.filter((task) => task.last_run_status === 'failed').length);
+const alertsCount = computed(() => result.value.filter((task) => task.open_alerts).length);
 const scheduledCount = computed(() => result.value.filter((task) => nextRuns.value.has(task.identifier)).length);
 
 const scopeOptions = computed(() => [
   { value: 'all' as const, label: t('listViews.scope.all'), count: result.value.length },
   { value: 'failing' as const, label: t('listViews.scope.failing'), count: failingCount.value },
+  { value: 'alerts' as const, label: t('listViews.scope.alerts'), count: alertsCount.value },
   { value: 'scheduled' as const, label: t('listViews.scope.scheduled'), count: scheduledCount.value },
   { value: 'starred' as const, label: t('listViews.scope.starred'), count: starredCount.value },
   { value: 'recent' as const, label: t('listViews.scope.recent'), count: recentWorkflows.value.length },
@@ -209,6 +229,8 @@ const filteredResult = computed<TaskItem[]>(() => {
         ? result.value.filter((task) => openedAt.value.has(task.identifier))
         : scope.value === 'failing'
           ? result.value.filter((task) => task.last_run_status === 'failed')
+          : scope.value === 'alerts'
+            ? result.value.filter((task) => task.open_alerts)
           : scope.value === 'scheduled'
             ? result.value.filter((task) => nextRuns.value.has(task.identifier))
             : result.value;
@@ -262,6 +284,7 @@ const emptyText = computed(() => {
   if (scope.value === 'starred') return t('tasks.empty.starred');
   if (scope.value === 'recent') return t('tasks.empty.recent');
   if (scope.value === 'failing') return t('tasks.empty.failing');
+  if (scope.value === 'alerts') return t('tasks.empty.alerts');
   if (scope.value === 'scheduled') return t('tasks.empty.scheduled');
   return t('tasks.empty.noMatch');
 });

@@ -76,6 +76,7 @@ Every operation has a **send channel** and a matching **receive channel** prefix
 | `alertList` | `onAlertList` | Alerts raised by workflows, newest raise first: open ones, or all with `includeClosed` (`{ includeClosed?, taskIdentifier?, ids? }`) |
 | `alertDismiss` | `onAlertDismiss` | Acknowledge alerts (`{ id }`, `{ ids }` or `{ all: true }`, plus `dismissedBy?`); returns `{ dismissed }` |
 | `alertReopen` | `onAlertReopen` | Put a dismissed alert back in Needs you (`{ id }`) |
+| `alertResolve` | `onAlertResolve` | Close open or dismissed alerts by hand (`{ id }` or `{ ids }`, `resolvedBy`) |
 | `scheduleList` | `onScheduleList` | List schedules; each entry carries `timezone`, the zone its cron runs in (Core's) |
 | `scheduleSet` | `onScheduleSet` | Create a schedule: `{ identifier, when \| cron \| everySeconds \| runAt, variables }` |
 | `scheduleRemove` | `onScheduleRemove` | Delete schedule |

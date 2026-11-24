@@ -153,10 +153,19 @@ async function act(alert: AlertItem) {
                     : t('alerts.reopen')
                 }}
               </Button>
+
             </div>
           </div>
         </li>
       </ul>
+      <button
+        type="button"
+        class="mt-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2"
+        data-testid="alerts-see-all"
+        @click="router.push({ path: '/alerts', query: { workflow: taskIdentifier } })"
+      >
+        {{ t('alerts.seeAll') }}
+      </button>
     </template>
   </component>
 </template>
