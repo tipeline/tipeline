@@ -489,9 +489,11 @@
         "draft": "Drafts can't be scheduled",
         "schedules": "{n} schedule · {on} on | {n} schedules · {on} on",
         "addSchedule": "Open to add a schedule",
-        "alertsOpen": "{n} open",
+        "alertsOpen": "{n} needs you | {n} need you",
         "noAlerts": "None",
-        "acknowledged": "{n} acknowledged",
+        "acknowledged": "{n} dismissed",
+        "raisedAgain": "Still happening: raised again {when}",
+        "dismissedQuiet": "Quiet until it's raised at a higher level",
         "allClear": "Nothing needs attention"
       }
     },
@@ -3015,7 +3017,9 @@
     },
     "resultColumn": "Result",
     "savedTo": "→ saved to {name}",
-    "raisedAlert": "This run raised an alert: | This run raised {n} alerts:"
+    "raisedAlert": "This run raised an alert: | This run raised {n} alerts:",
+    "alertQuiet": "(dismissed earlier, so it stayed quiet)",
+    "alertResolved": "(resolved since)"
   },
   "agentInstructions": {
     "length": "{count} / {max} characters. They go with every request: shorter is better."
@@ -3625,7 +3629,13 @@
     "notifyManyBody": "Open Needs you on the dashboard to see them.",
     "open": "Open",
     "overviewTitle": "Alerts",
-    "acknowledged": "Dismissed: stays quiet until the workflow resolves it",
+    "acknowledged": "Dismissed: stays quiet until it's raised at a higher level or the workflow resolves it",
+    "raisedAgainQuietly": "Dismissed, raised again since: kept quiet",
+    "reopened": "Alert reopened",
+    "dismissed": "Alert dismissed",
+    "dismissedHint": "It stays quiet unless it gets worse or the workflow resolves it.",
+    "undo": "Undo",
+    "reopenedHint": "It's back on the dashboard, under Needs you.",
     "reopen": "Reopen",
     "level": {
       "info": "Info",

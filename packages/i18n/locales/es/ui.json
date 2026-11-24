@@ -489,9 +489,11 @@
         "draft": "Los borradores no se pueden programar",
         "schedules": "{n} programación · {on} activa | {n} programaciones · {on} activas",
         "addSchedule": "Abre para añadir una programación",
-        "alertsOpen": "{n} abiertas",
+        "alertsOpen": "{n} te necesita | {n} te necesitan",
         "noAlerts": "Ninguna",
-        "acknowledged": "{n} vistas",
+        "acknowledged": "{n} descartada | {n} descartadas",
+        "raisedAgain": "Sigue pasando: generada otra vez {when}",
+        "dismissedQuiet": "En silencio hasta que se genere con un nivel más alto",
         "allClear": "Nada requiere atención"
       }
     },
@@ -3015,7 +3017,9 @@
     },
     "resultColumn": "Resultado",
     "savedTo": "→ guardado en {name}",
-    "raisedAlert": "Esta ejecución generó una alerta: | Esta ejecución generó {n} alertas:"
+    "raisedAlert": "Esta ejecución generó una alerta: | Esta ejecución generó {n} alertas:",
+    "alertQuiet": "(descartada antes, así que quedó en silencio)",
+    "alertResolved": "(resuelta después)"
   },
   "agentInstructions": {
     "length": "{count} / {max} caracteres. Se envían con cada petición: mejor cortas."
@@ -3625,7 +3629,13 @@
     "notifyManyBody": "Abre Te necesita en el panel para verlas.",
     "open": "Abrir",
     "overviewTitle": "Alertas",
-    "acknowledged": "Descartada: queda en silencio hasta que el flujo la resuelva",
+    "acknowledged": "Descartada: queda en silencio hasta que se genere con un nivel más alto o el flujo la resuelva",
+    "raisedAgainQuietly": "Descartada, generada otra vez después: en silencio",
+    "reopened": "Alerta reabierta",
+    "dismissed": "Alerta descartada",
+    "dismissedHint": "Queda en silencio salvo que empeore o el flujo la resuelva.",
+    "undo": "Deshacer",
+    "reopenedHint": "Vuelve a estar en el panel, en Te necesita.",
     "reopen": "Reabrir",
     "level": {
       "info": "Información",

@@ -72,9 +72,18 @@ raised again as critical), not every time it's raised.
 ## Dismissing
 
 **Dismiss** in Needs you means "I've seen it". The alert leaves the list and stays quiet
-while the workflow keeps raising the same key; it closes for good when the workflow resolves
-it. The workflow's **Overview** lists its open and dismissed alerts, and **Reopen** puts a
-dismissed one back in Needs you. Alerts nobody has raised for 30 days, and resolved ones
+while the workflow keeps raising the same key at the same level (or lower); it closes for good
+when the workflow resolves it. If it's raised at a higher level than before (a dismissed warning
+raised as critical), it's back in Needs you and notifies you, since that isn't what you saw.
+
+| Dismissed alert raised again as… | What happens                                  |
+| -------------------------------- | --------------------------------------------- |
+| the same level, or lower         | stays dismissed; the count goes up quietly    |
+| a higher level                   | back in Needs you, with a notification        |
+
+The workflow's **Overview** lists its open and dismissed alerts and says when a dismissed one
+was raised again. **Reopen** puts a dismissed one back in Needs you. The page of a run that
+raised a dismissed alert says it stayed quiet, with a Reopen link. Alerts nobody has raised for 30 days, and resolved ones
 after 30 days, are removed.
 
 The run page says when a run raised an alert. Deleting a workflow deletes its alerts.

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useAlertActions } from '@/composables/useAlertActions';
 import { computed, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
@@ -23,11 +24,12 @@ const props = defineProps<{
 
 const { t } = useI18n();
 const router = useRouter();
-const { approvals, alerts, failing, missed, count, dismiss, dismissMissed, dismissAlert } = useInbox(
+const { approvals, alerts, failing, missed, count, dismiss, dismissMissed } = useInbox(
   toRef(props, 'tasks'),
   toRef(props, 'schedules')
 );
 const { executeTask } = useTaskExecution();
+const alertActions = useAlertActions();
 
 type Kind = 'approval' | 'alert' | 'failed' | 'missed';
 type Row = {
@@ -104,7 +106,7 @@ const rows = computed<Row[]>(() => {
         label: alert.pipelineIdentifier ? t('dashboard.needs.openRun') : t('dashboard.needs.openWorkflow'),
         run: () => openAlert(alert),
       },
-      secondary: { label: t('dashboard.needs.dismiss'), run: () => void dismissAlert(alert) },
+      secondary: { label: t('dashboard.needs.dismiss'), run: () => void alertActions.dismiss(alert) },
     })),
     ...failing.value.map((task) => {
       const times = failedInARow(task);
