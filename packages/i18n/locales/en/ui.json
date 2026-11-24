@@ -149,7 +149,6 @@
       "comingUp": "Coming up",
       "tomorrowAt": "Tomorrow {time}",
       "alertRepeated": "×{n} since {time}",
-      "seeRun": "See run",
       "openWorkflow": "Open workflow"
     },
     "continue": {

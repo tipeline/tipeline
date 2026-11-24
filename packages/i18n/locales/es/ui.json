@@ -149,7 +149,6 @@
       "comingUp": "Próximamente",
       "tomorrowAt": "Mañana {time}",
       "alertRepeated": "×{n} desde las {time}",
-      "seeRun": "Ver ejecución",
       "openWorkflow": "Abrir flujo"
     },
     "continue": {
