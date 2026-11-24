@@ -47,6 +47,7 @@ const booleanValue = ref<boolean>(
 );
 const isSecret = ref<boolean>(!!props.selectedVariable?.secret);
 const isReadonly = ref<boolean>(!!props.selectedVariable?.readonly);
+const isRequired = ref<boolean>(!!props.selectedVariable?.required);
 const isOutput = ref<boolean>(!!props.selectedVariable?.output);
 const visibility = ref<string>(props.selectedVariable?.visibility ?? 'private');
 
@@ -101,6 +102,8 @@ const onSubmit = handleSubmit((values) => {
     readonly: isReadonly.value,
     visibility: visibility.value,
     // undefined drops the key when the parent merges, so unticking clears it.
+    // An output is filled by the workflow itself, so it's never a required input.
+    required: (isRequired.value && !isOutput.value) || undefined,
     output: isOutput.value || undefined,
   };
 
@@ -265,6 +268,19 @@ defineExpose({ submit: triggerSubmit });
           :checked="isSecret"
           class="h-4 w-4 cursor-pointer"
           @change="(e) => { isSecret = (e.target as HTMLInputElement).checked; }"
+        />
+      </div>
+
+      <div v-if="!isOutput" class="flex items-center justify-between rounded-lg border p-3">
+        <div>
+          <label class="text-sm font-medium">{{ t('variable.form.required') }}</label>
+          <p class="text-xs text-muted-foreground">{{ t('variable.form.requiredDescription') }}</p>
+        </div>
+        <input
+          type="checkbox"
+          :checked="isRequired"
+          class="h-4 w-4 cursor-pointer"
+          @change="(e) => { isRequired = (e.target as HTMLInputElement).checked; }"
         />
       </div>
 

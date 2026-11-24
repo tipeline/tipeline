@@ -3,6 +3,7 @@ import { SEND } from '@/ipc-channels';
 import { useStreamStore } from '@/store/stream';
 import { useRecentItemsStore } from '@/store/recentItems';
 import { useStarredItemsStore } from '@/store/starredItems';
+import { useAlertsStore } from '@/store/alertsStore';
 import type { WorkflowUsage } from '@/composables/useWorkflowUsage';
 import type { AlsoIn } from '@tipeline/utils';
 
@@ -29,6 +30,7 @@ export async function deleteProject(identifier: string, contents?: { workflows: 
     useStreamStore().removeEventsForTask(id);
     recent.forget('task', id);
     starred.unstar('task', id);
+    useAlertsStore().forgetTask(id);
   }
   for (const id of contents?.apps ?? []) {
     recent.forget('app', id);

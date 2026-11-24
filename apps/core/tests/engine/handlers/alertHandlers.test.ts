@@ -5,6 +5,7 @@ vi.mock('@engine/Core', () => ({
     alertList: vi.fn(),
     alertDismiss: vi.fn(),
     alertReopen: vi.fn(),
+    alertResolve: vi.fn(),
   },
 }));
 
@@ -31,6 +32,7 @@ describe('alert handlers', () => {
     vi.mocked(Core.alertList).mockReset();
     vi.mocked(Core.alertDismiss).mockReset();
     vi.mocked(Core.alertReopen).mockReset();
+    vi.mocked(Core.alertResolve).mockReset();
     transport = createFakeTransport();
     registerAppHandlers(transport as any, vi.fn());
   });
@@ -69,6 +71,20 @@ describe('alert handlers', () => {
       client,
       'onAlertDismiss',
       IPCMessage.success({ dismissed: 1 }, 'c2')
+    );
+  });
+
+  it('alertResolve answers with how many were resolved', async () => {
+    vi.mocked(Core.alertResolve).mockResolvedValue({ resolved: 2 });
+    await transport.handlers.get('alertResolve')!(
+      { payload: { ids: ['a1', 'a2'], resolvedBy: 'desktop' }, correlationId: 'c4' },
+      client
+    );
+    expect(Core.alertResolve).toHaveBeenCalledWith({ ids: ['a1', 'a2'], resolvedBy: 'desktop' });
+    expect(transport.emit).toHaveBeenCalledWith(
+      client,
+      'onAlertResolve',
+      IPCMessage.success({ resolved: 2 }, 'c4')
     );
   });
 

@@ -108,6 +108,35 @@ describe('alertsStore', () => {
     });
   });
 
+  it('a reopened alert is not announced as new (the person put it back)', async () => {
+    vi.mocked(invokeCore)
+      .mockResolvedValueOnce([]) // first load: a's dismissed, so not listed
+      .mockResolvedValueOnce({ reopened: true }) // alertReopen
+      .mockResolvedValue([alert('a', { level: 'critical' })]);
+    const announce = vi.fn();
+    const store = useAlertsStore();
+    store.start(announce);
+    await flush();
+
+    await store.reopen({ id: 'a', level: 'critical' });
+    await flush();
+    expect(invokeCore).toHaveBeenCalledWith(SEND.ALERT_REOPEN, { id: 'a' });
+    expect(store.items.map((a) => a.id)).toEqual(['a']);
+    expect(announce).not.toHaveBeenCalled();
+  });
+
+  it("a deleted workflow's alerts leave the list at once, not at the next check", async () => {
+    const store = useAlertsStore();
+    vi.mocked(invokeCore).mockResolvedValueOnce([
+      alert('a'),
+      alert('z', { taskIdentifier: 'other' }),
+    ]);
+    await store.refresh();
+    vi.mocked(invokeCore).mockReturnValue(new Promise(() => {})); // the check is slow
+    store.forgetTask('traffic');
+    expect(store.items.map((a) => a.id)).toEqual(['z']);
+  });
+
   it('dismiss removes it at once and tells Core', async () => {
     const store = useAlertsStore();
     vi.mocked(invokeCore).mockResolvedValueOnce([alert('a'), alert('b')]);
@@ -158,11 +187,11 @@ describe('HomeNeedsYou alert rows', () => {
     expect(card.find('h2').text()).toContain('1');
   });
 
-  it('See run opens the latest run that raised it', async () => {
+  it('Open run opens the latest run that raised it', async () => {
     const { card, router } = await mountWith([alert('acme')]);
     await card
       .findAll('button')
-      .find((b) => b.text() === 'See run')!
+      .find((b) => b.text() === 'Open run')!
       .trigger('click');
     await flushPromises();
     expect(router.currentRoute.value.fullPath).toBe(

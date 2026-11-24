@@ -24,7 +24,8 @@
     "back": "Atrás",
     "forward": "Adelante",
     "backTo": "Volver a {page}",
-    "forwardTo": "Ir a {page}"
+    "forwardTo": "Ir a {page}",
+    "alerts": "Alertas"
   },
   "common": {
     "save": "Guardar",
@@ -149,8 +150,8 @@
       "comingUp": "Próximamente",
       "tomorrowAt": "Mañana {time}",
       "alertRepeated": "×{n} desde las {time}",
-      "seeRun": "Ver ejecución",
-      "openWorkflow": "Abrir flujo"
+      "openWorkflow": "Abrir flujo",
+      "allAlerts": "Todas las alertas"
     },
     "continue": {
       "title": "Continuar",
@@ -490,9 +491,11 @@
         "draft": "Los borradores no se pueden programar",
         "schedules": "{n} programación · {on} activa | {n} programaciones · {on} activas",
         "addSchedule": "Abre para añadir una programación",
-        "alertsOpen": "{n} abiertas",
+        "alertsOpen": "{n} te necesita | {n} te necesitan",
         "noAlerts": "Ninguna",
-        "acknowledged": "{n} vistas",
+        "acknowledged": "{n} descartada | {n} descartadas",
+        "raisedAgain": "Sigue pasando: generada otra vez {when}",
+        "dismissedQuiet": "En silencio hasta que se genere con un nivel más alto",
         "allClear": "Nada requiere atención"
       }
     },
@@ -587,7 +590,8 @@
       "starred": "No hay flujos de trabajo destacados. Destaca uno para tenerlo aquí.",
       "recent": "Los flujos de trabajo que abras aparecen aquí.",
       "failing": "Ningún flujo falló en su última ejecución.",
-      "scheduled": "Ningún flujo tiene una programación activa."
+      "scheduled": "Ningún flujo tiene una programación activa.",
+      "alerts": "Ningún flujo tiene alertas abiertas."
     },
     "runStrip": {
       "label": "Últimas {n} ejecuciones: {failed} fallidas",
@@ -603,6 +607,9 @@
       "failed": "Fallidas · últimos {n} días",
       "failureRate": "Tasa de fallos",
       "averageTime": "Duración media"
+    },
+    "alertBadge": {
+      "explain": "{n} alerta abierta | {n} alertas abiertas"
     }
   },
   "apps": {
@@ -1251,6 +1258,8 @@
       "trueLabel": "Verdadero",
       "secret": "Secreto",
       "secretDescription": "Ocultar este valor de los registros y la interfaz",
+      "required": "Obligatoria",
+      "requiredDescription": "El flujo de trabajo no arranca hasta que tenga un valor. Un texto vacío cuenta como sin valor.",
       "readOnly": "Solo lectura",
       "readOnlyDescription": "Evita que este valor sea sobreescrito en tiempo de ejecución",
       "output": "Salida",
@@ -3016,7 +3025,9 @@
     },
     "resultColumn": "Resultado",
     "savedTo": "→ guardado en {name}",
-    "raisedAlert": "Esta ejecución generó una alerta: | Esta ejecución generó {n} alertas:"
+    "raisedAlert": "Esta ejecución generó una alerta: | Esta ejecución generó {n} alertas:",
+    "alertQuiet": "(descartada antes, así que quedó en silencio)",
+    "alertResolved": "(resuelta después)"
   },
   "agentInstructions": {
     "length": "{count} / {max} caracteres. Se envían con cada petición: mejor cortas."
@@ -3151,7 +3162,8 @@
       "starred": "Destacados",
       "recent": "Abiertos recientemente",
       "failing": "Con fallos",
-      "scheduled": "Programados"
+      "scheduled": "Programados",
+      "alerts": "Con alertas"
     },
     "sort": {
       "label": "Ordenar",
@@ -3626,13 +3638,60 @@
     "notifyManyBody": "Abre Te necesita en el panel para verlas.",
     "open": "Abrir",
     "overviewTitle": "Alertas",
-    "acknowledged": "Descartada: queda en silencio hasta que el flujo la resuelva",
+    "acknowledged": "Descartada: queda en silencio hasta que se genere con un nivel más alto o el flujo la resuelva",
+    "raisedAgainQuietly": "Descartada, generada otra vez después: en silencio",
+    "reopened": "Alerta reabierta",
+    "dismissed": "Alerta descartada",
+    "dismissedHint": "Queda en silencio salvo que empeore o el flujo la resuelva.",
+    "undo": "Deshacer",
+    "reopenedHint": "Vuelve a estar en el panel, en Te necesita.",
     "reopen": "Reabrir",
     "level": {
       "info": "Información",
       "warning": "Aviso",
       "critical": "Crítica"
-    }
+    },
+    "seeAll": "Ver todas las alertas",
+    "dismissedMany": "{n} alerta descartada | {n} alertas descartadas",
+    "reopenedMany": "{n} alerta reabierta | {n} alertas reabiertas",
+    "page": {
+      "title": "Alertas",
+      "alert": "Alerta",
+      "lastRaised": "Última vez",
+      "since": "primera {when}",
+      "closed": "Cerrada",
+      "byYou": "por ti",
+      "byWorkflow": "por el flujo",
+      "stillHappening": "Sigue pasando",
+      "showMessage": "Ver mensaje",
+      "hideMessage": "Ocultar mensaje",
+      "level": "Nivel",
+      "allLevels": "Todos los niveles",
+      "workflow": "Flujo",
+      "allWorkflows": "Todos los flujos",
+      "search": "Buscar alertas",
+      "tabs": {
+        "open": "Abiertas",
+        "dismissed": "Descartadas",
+        "resolved": "Resueltas"
+      },
+      "description": {
+        "open": "Alertas que te necesitan. Descarta una cuando la hayas visto: queda en silencio salvo que empeore.",
+        "dismissed": "Alertas que ya viste. Quedan en silencio mientras el flujo las siga generando con el mismo nivel, y vuelven si empeoran.",
+        "resolved": "Alertas cerradas porque el problema desapareció: por el flujo (alert.resolve) o por alguien con Resolver. Se guardan 30 días."
+      },
+      "empty": {
+        "open": "No hay alertas abiertas: nada te necesita.",
+        "dismissed": "No hay alertas descartadas.",
+        "resolved": "Nada resuelto en los últimos 30 días."
+      },
+      "cameBackOpen": "Volvió: nueva alerta abierta",
+      "cameBackDismissed": "Volvió: nueva alerta, descartada"
+    },
+    "resolve": "Resolver",
+    "resolveHint": "El problema está arreglado: cierra la alerta. Si vuelve a pasar, es una alerta nueva y se te avisa.",
+    "resolvedMany": "{n} alerta resuelta | {n} alertas resueltas",
+    "resolvedHint": "Si el problema vuelve, es una alerta nueva y se te avisará."
   },
   "tray": {
     "open": "Abrir Tipeline",

@@ -18,6 +18,7 @@ import {
   Bot,
   Tags,
   ShieldCheck,
+  BellRing,
 } from 'lucide-vue-next';
 import {
   Sidebar,
@@ -85,6 +86,12 @@ const groups = computed<NavGroup[]>(() => [
         icon: ShieldCheck,
         badge: approvals.count || undefined,
       },
+      {
+        title: t('nav.alerts'),
+        url: '/alerts',
+        icon: BellRing,
+        badge: alerts.count || undefined,
+      },
       { title: t('nav.schedules'), url: '/schedules', icon: CalendarClock },
     ],
   },
@@ -131,11 +138,11 @@ function announce(added: PendingApproval[]) {
 
 // New alerts (or ones that got louder) from workflows. Only loud ones reach here: a warning
 // shows a toast while Tipeline is in front; a critical one also sends a system
-// notification. Both open Needs you on the dashboard.
+// notification. Both open the Alerts page.
 function announceAlerts(added: AlertItem[]) {
   const openPage = () => {
     bringToFront();
-    router.push('/');
+    router.push('/alerts');
   };
   const first = added[0];
   const title = added.length === 1 ? first.title : t('alerts.notifyMany', { count: added.length });

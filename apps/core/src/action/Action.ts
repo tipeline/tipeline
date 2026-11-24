@@ -2,7 +2,12 @@ import { ActionRegistry } from '@action/ActionRegistry';
 import { PluginActionRegistry } from '@/plugin/PluginActionRegistry';
 import { Task } from '@task/Task';
 import { ActionError } from '@utils/ActionError';
-import { ApprovalPendingSignal, ApprovalRejectedSignal, RunCanceledSignal } from '@utils/errors';
+import {
+  ApprovalPendingSignal,
+  ApprovalRejectedSignal,
+  RunCanceledSignal,
+  RunStoppedSignal,
+} from '@utils/errors';
 import { safeClone } from '@utils/safeClone';
 import type { StepCacheConfig } from '@tipeline/schemas';
 import { expandHomeInParams, expandsHomePaths } from '@utils/expandHome';
@@ -95,13 +100,14 @@ export class Action {
       return await action(this.params, task, lastResult, this);
     } catch (error: any) {
       // Not failures: the run stops here until someone decides, or ends because they
-      // rejected it (see approval.request), or someone canceled it.
-      // Passed through unwrapped — also by enclosing flow actions — so Block/Pipeline
-      // can pause the run, and never swallowed by onError: continue.
+      // rejected it (see approval.request), or someone canceled it, or a flow.stop step
+      // ended it early. Passed through unwrapped — also by enclosing flow actions — so
+      // Block/Pipeline can pause or end the run, and never swallowed by onError: continue.
       if (
         error instanceof ApprovalPendingSignal ||
         error instanceof ApprovalRejectedSignal ||
-        error instanceof RunCanceledSignal
+        error instanceof RunCanceledSignal ||
+        error instanceof RunStoppedSignal
       ) {
         throw error;
       }
@@ -132,8 +138,9 @@ export class Action {
   // Recursively keeps plain arrays/objects (e.g. `{= arr =}` params) but replaces
   // non-serializable values (functions, class instances like Knex connections or
   // browser handles) with null, safe for IPC/event serialization (worker
-  // postMessage uses structured clone).
-  private static toPlainValue(value: any): any {
+  // postMessage uses structured clone). Block uses it on the secret-redacted
+  // re-render of a step's params too.
+  static toPlainValue(value: any): any {
     if (value === null || value === undefined || typeof value !== 'object') {
       return typeof value === 'function' ? null : value;
     }
@@ -155,12 +162,17 @@ export class Action {
   }
 
   getParamsPlain() {
-    if (!this.params || typeof this.params !== 'object') {
-      return this.params;
+    return Action.paramsToPlain(this.params);
+  }
+
+  /** Step params made safe to send: each top-level value through toPlainValue. */
+  static paramsToPlain(params: any): any {
+    if (!params || typeof params !== 'object') {
+      return params;
     }
 
     const plain: Record<string, any> = {};
-    for (const [key, value] of Object.entries(this.params)) {
+    for (const [key, value] of Object.entries(params)) {
       plain[key] = Action.toPlainValue(value);
     }
     return plain;

@@ -2,7 +2,8 @@
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
-import { format } from 'date-fns';
+import { useTimestamp } from '@vueuse/core';
+import { format, formatDistanceToNow } from 'date-fns';
 import { TZDate } from '@date-fns/tz';
 import { BellRing, CalendarClockIcon } from 'lucide-vue-next';
 import Dialog from '@/components/Dialog.vue';
@@ -186,6 +187,40 @@ const openAlerts = computed(() =>
 const acknowledged = computed(
   () => alerts.value.filter((a) => a.status === 'dismissed').length
 );
+// Relative times ("1 minute ago") stay current while the page is open.
+const now = useTimestamp({ interval: 30_000 });
+const ago = (iso: string) => {
+  void now.value;
+  return formatDistanceToNow(new Date(iso), { addSuffix: true });
+};
+// The newest open alert: how many times it's been raised, when last and what it says,
+// so another run that raises it again visibly changes the tile.
+const openText = computed(() => {
+  const latest = openAlerts.value[0];
+  if (!latest) return '';
+  const parts = [ago(latest.lastRaisedAt), latest.title];
+  if (latest.count > 1) parts.unshift(`×${latest.count}`);
+  return parts.join(' · ');
+});
+// Only dismissed ones: say whether the problem is still being raised (quietly) since.
+const raisedAgainAt = computed(() => {
+  const times = alerts.value
+    .filter(
+      (a) =>
+        a.status === 'dismissed' &&
+        a.closedAt &&
+        Date.parse(a.lastRaisedAt) > Date.parse(a.closedAt)
+    )
+    .map((a) => Date.parse(a.lastRaisedAt));
+  return times.length ? Math.max(...times) : null;
+});
+const dismissedText = computed(() =>
+  raisedAgainAt.value
+    ? t('tasks.overview.strip.raisedAgain', {
+        when: ago(new Date(raisedAgainAt.value).toISOString()),
+      })
+    : t('tasks.overview.strip.dismissedQuiet')
+);
 
 function openRun(run: any) {
   router.push(`/tasks/${props.taskIdentifier}/pipelines/${run.identifier}`);
@@ -314,17 +349,21 @@ const SUB = 'text-xs text-muted-foreground truncate';
           <span class="truncate">
             {{
               openAlerts.length
-                ? t('tasks.overview.strip.alertsOpen', { n: openAlerts.length })
-                : t('tasks.overview.strip.noAlerts')
+                ? t(
+                    'tasks.overview.strip.alertsOpen',
+                    { n: openAlerts.length },
+                    openAlerts.length
+                  )
+                : t(
+                    'tasks.overview.strip.acknowledged',
+                    { n: acknowledged },
+                    acknowledged
+                  )
             }}
           </span>
         </span>
-        <span :class="SUB">
-          {{
-            openAlerts.length
-              ? openAlerts[0].title
-              : t('tasks.overview.strip.acknowledged', { n: acknowledged })
-          }}
+        <span :class="SUB" :title="openAlerts.length ? openText : dismissedText">
+          {{ openAlerts.length ? openText : dismissedText }}
         </span>
       </button>
       <div v-else :class="TILE" data-testid="strip-alerts">

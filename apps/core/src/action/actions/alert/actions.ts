@@ -58,7 +58,8 @@ export class GroupAlert {
    * is still open instead of adding one: the count goes up (×2, ×3…), the message and
    * level are refreshed and it points to the latest run. Without a `key`, the title is
    * the key. Dismissing an alert acknowledges it: later raises keep it quiet until
-   * `alert.resolve` closes it. Runs that aren't saved still raise it (with no run link);
+   * `alert.resolve` closes it, unless one is louder than before (a dismissed warning
+   * raised as critical), which puts it back in Needs you. Runs that aren't saved still raise it (with no run link);
    * a draft's test run doesn't save one.
    *
    * @param params - The input parameters.

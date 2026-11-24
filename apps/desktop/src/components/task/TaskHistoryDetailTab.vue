@@ -28,6 +28,9 @@ import { applyLiveEvents } from '@/composables/useTimelineUpdater';
 import { runWindow, stepChildren } from '@/utils/runSteps';
 import { SEND } from '@/ipc-channels';
 import { toast } from '@/components/ui/sonner';
+import { invokeCore } from '@/utils/invoke';
+import { useAlertsStore, type AlertItem } from '@/store/alertsStore';
+import { useAlertActions } from '@/composables/useAlertActions';
 import CancelRunButton from '@/components/CancelRunButton.vue';
 
 const route = useRoute();
@@ -62,6 +65,38 @@ const raisedAlerts = computed<{ id: string; title: string; level: string }[]>(()
 function openWorkflowAlerts() {
   if (inWindow) return;
   router.push(`/tasks/${route.params.tid as string}`);
+}
+// What became of them since: one dismissed earlier stayed quiet when this run raised it
+// again, which the note has to say, or it reads as if Needs you lost it.
+const alertsStore = useAlertsStore();
+const alertActions = useAlertActions();
+const alertNow = ref<Record<string, AlertItem>>({});
+async function loadAlertStatus() {
+  const ids = raisedAlerts.value.map((a) => a.id);
+  if (!ids.length) return;
+  try {
+    const list = await invokeCore<AlertItem[]>(SEND.ALERT_LIST, { ids, includeClosed: true });
+    alertNow.value = Object.fromEntries((list ?? []).map((a) => [a.id, a]));
+  } catch {
+    alertNow.value = {};
+  }
+}
+watch(
+  () => [raisedAlerts.value.map((a) => a.id).join(','), alertsStore.items],
+  loadAlertStatus,
+  { immediate: true }
+);
+const reopening = ref<string | null>(null);
+async function reopenAlert(id: string) {
+  reopening.value = id;
+  try {
+    await alertActions.reopen({ id, level: alertNow.value[id]?.level });
+    await loadAlertStatus();
+  } catch (e: any) {
+    toast.error(e?.message ?? String(e));
+  } finally {
+    reopening.value = null;
+  }
 }
 // Opened from a sub-workflow's run: the step that started it is picked.
 const focusStep = typeof route.query.step === 'string' ? route.query.step : null;
@@ -363,6 +398,22 @@ async function exportLog(format: 'json' | 'text') {
                 >
                   {{ alert.title }}
                 </button>
+                <template v-if="alertNow[alert.id]?.status === 'dismissed'">
+                  <span data-testid="run-alert-quiet">{{ t('runDetail.alertQuiet') }}</span>
+                  <button
+                    class="font-medium text-orange-700 hover:underline underline-offset-2 dark:text-orange-400 disabled:opacity-50"
+                    :disabled="reopening === alert.id"
+                    data-testid="run-alert-reopen"
+                    @click="reopenAlert(alert.id)"
+                  >
+                    {{ t('alerts.reopen') }}
+                  </button>
+                </template>
+                <span
+                  v-else-if="alertNow[alert.id]?.status === 'resolved'"
+                  data-testid="run-alert-resolved"
+                  >{{ t('runDetail.alertResolved') }}</span
+                >
               </template>
             </div>
             <div v-if="result && (!cachedRun || !isWide)" class="mb-3 inline-flex self-start rounded-md border p-0.5 text-xs" role="tablist">

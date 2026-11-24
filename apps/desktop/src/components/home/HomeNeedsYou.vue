@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useAlertActions } from '@/composables/useAlertActions';
 import { computed, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
@@ -23,11 +24,12 @@ const props = defineProps<{
 
 const { t } = useI18n();
 const router = useRouter();
-const { approvals, alerts, failing, missed, count, dismiss, dismissMissed, dismissAlert } = useInbox(
+const { approvals, alerts, failing, missed, count, dismiss, dismissMissed } = useInbox(
   toRef(props, 'tasks'),
   toRef(props, 'schedules')
 );
 const { executeTask } = useTaskExecution();
+const alertActions = useAlertActions();
 
 type Kind = 'approval' | 'alert' | 'failed' | 'missed';
 type Row = {
@@ -101,10 +103,10 @@ const rows = computed<Row[]>(() => {
       detail: alertDetail(alert),
       at: alert.lastRaisedAt,
       primary: {
-        label: alert.pipelineIdentifier ? t('dashboard.needs.seeRun') : t('dashboard.needs.openWorkflow'),
+        label: alert.pipelineIdentifier ? t('dashboard.needs.openRun') : t('dashboard.needs.openWorkflow'),
         run: () => openAlert(alert),
       },
-      secondary: { label: t('dashboard.needs.dismiss'), run: () => void dismissAlert(alert) },
+      secondary: { label: t('dashboard.needs.dismiss'), run: () => void alertActions.dismiss(alert) },
     })),
     ...failing.value.map((task) => {
       const times = failedInARow(task);
@@ -168,6 +170,9 @@ function nextLabel(iso: string): string {
           {{ count }}
         </span>
       </h2>
+      <button v-if="alerts.length" type="button" :class="HOME_LINK" data-testid="needs-all-alerts" @click="router.push('/alerts')">
+        {{ t('dashboard.needs.allAlerts') }}
+      </button>
       <button v-if="failing.length" type="button" :class="HOME_LINK" @click="router.push({ path: '/tasks', query: { scope: 'failing' } })">
         {{ t('dashboard.needs.allFailing') }}
       </button>

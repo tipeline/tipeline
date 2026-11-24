@@ -3,6 +3,7 @@ import { SEND } from '@/ipc-channels';
 import { useStreamStore } from '@/store/stream';
 import { useRecentItemsStore } from '@/store/recentItems';
 import { useStarredItemsStore } from '@/store/starredItems';
+import { useAlertsStore } from '@/store/alertsStore';
 
 /**
  * Moves a workflow to the Trash in core and forgets it in the desktop stores. Returns
@@ -14,5 +15,6 @@ export async function deleteWorkflow(identifier: string): Promise<number | undef
   useStreamStore().removeEventsForTask(identifier);
   useRecentItemsStore().forget('task', identifier);
   useStarredItemsStore().unstar('task', identifier);
+  useAlertsStore().forgetTask(identifier);
   return result?.trashId;
 }

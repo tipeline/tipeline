@@ -210,6 +210,11 @@ Each step is { group, name, params, destination?, label? }:
   right after an ifConditional or elseIfConditional at the same level, as steps of their
   own: never as a key of the ifConditional.
 - Steps inside a branch or loop run one after another and see what the steps before them set.
+- To end the run on a condition, put a step inside an ifConditional: fail (params.message)
+  ends it as failed with that message, stop (optional params.message) ends it early as
+  completed. Use these instead of a script that throws, e.g. when a response says it
+  went wrong: ifConditional on '{= response.data.ok =}' compareAs boolean, operator
+  isFalse, with a fail step.
 
 ## Reusing workflows the user already has
 When search_workflows finds an installed workflow that does part of the request, run it as

@@ -151,8 +151,8 @@ export const validations = {
           const isDeferred = (deferredTypes as readonly string[]).includes(obj.type);
           const hasNoValue = obj.value === null || obj.value === undefined;
 
-          // 1) required but missing -> fail
-          if (obj.required && hasNoValue) return false;
+          // Required with no value is fine here: the run's inputs fill it in, and
+          // Task.assertRequiredInputs checks it before the first step.
 
           // 2) missing but allowed for deferred types -> pass
           if (hasNoValue && isDeferred) return true;
@@ -169,7 +169,6 @@ export const validations = {
           const isDeferred = (deferredTypes as readonly string[]).includes(obj.type);
           const hasNoValue = obj.value === null || obj.value === undefined;
 
-          if (obj.required && hasNoValue) return false;
           if (hasNoValue && isDeferred) return true;
           if (!hasNoValue && !isValidTypeValuePair(obj.type, obj.value)) return false;
 

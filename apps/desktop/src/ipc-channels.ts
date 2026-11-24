@@ -65,6 +65,7 @@ export const SEND = {
   ALERT_LIST: 'alertList',
   ALERT_DISMISS: 'alertDismiss',
   ALERT_REOPEN: 'alertReopen',
+  ALERT_RESOLVE: 'alertResolve',
   APP_RUNS_ACTIVE: 'appRunsActive',
   APP_RUNS_LIST: 'appRunsList',
   APP_RUN: 'appRun',           // stream — run an app runnable; end_all carries its outputs

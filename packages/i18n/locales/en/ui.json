@@ -24,7 +24,8 @@
     "back": "Back",
     "forward": "Forward",
     "backTo": "Back to {page}",
-    "forwardTo": "Forward to {page}"
+    "forwardTo": "Forward to {page}",
+    "alerts": "Alerts"
   },
   "common": {
     "save": "Save",
@@ -149,8 +150,8 @@
       "comingUp": "Coming up",
       "tomorrowAt": "Tomorrow {time}",
       "alertRepeated": "×{n} since {time}",
-      "seeRun": "See run",
-      "openWorkflow": "Open workflow"
+      "openWorkflow": "Open workflow",
+      "allAlerts": "All alerts"
     },
     "continue": {
       "title": "Continue",
@@ -490,9 +491,11 @@
         "draft": "Drafts can't be scheduled",
         "schedules": "{n} schedule · {on} on | {n} schedules · {on} on",
         "addSchedule": "Open to add a schedule",
-        "alertsOpen": "{n} open",
+        "alertsOpen": "{n} needs you | {n} need you",
         "noAlerts": "None",
-        "acknowledged": "{n} acknowledged",
+        "acknowledged": "{n} dismissed",
+        "raisedAgain": "Still happening: raised again {when}",
+        "dismissedQuiet": "Quiet until it's raised at a higher level",
         "allClear": "Nothing needs attention"
       }
     },
@@ -587,7 +590,8 @@
       "starred": "No starred workflows. Star one to keep it here.",
       "recent": "Workflows you open show up here.",
       "failing": "No workflow failed its last run.",
-      "scheduled": "No workflow has a schedule turned on."
+      "scheduled": "No workflow has a schedule turned on.",
+      "alerts": "No workflow has an open alert."
     },
     "runStrip": {
       "label": "Last {n} runs: {failed} failed",
@@ -603,6 +607,9 @@
       "failed": "Failed · last {n} days",
       "failureRate": "Failure rate",
       "averageTime": "Average run time"
+    },
+    "alertBadge": {
+      "explain": "{n} open alert | {n} open alerts"
     }
   },
   "apps": {
@@ -1251,6 +1258,8 @@
       "trueLabel": "True",
       "secret": "Secret",
       "secretDescription": "Hide this value from logs and UI",
+      "required": "Required",
+      "requiredDescription": "The workflow won’t start until this has a value. Empty text counts as no value.",
       "readOnly": "Read-only",
       "readOnlyDescription": "Prevent this value from being overwritten at runtime",
       "output": "Output",
@@ -3016,7 +3025,9 @@
     },
     "resultColumn": "Result",
     "savedTo": "→ saved to {name}",
-    "raisedAlert": "This run raised an alert: | This run raised {n} alerts:"
+    "raisedAlert": "This run raised an alert: | This run raised {n} alerts:",
+    "alertQuiet": "(dismissed earlier, so it stayed quiet)",
+    "alertResolved": "(resolved since)"
   },
   "agentInstructions": {
     "length": "{count} / {max} characters. They go with every request: shorter is better."
@@ -3151,7 +3162,8 @@
       "starred": "Starred",
       "recent": "Recently opened",
       "failing": "Failing",
-      "scheduled": "Scheduled"
+      "scheduled": "Scheduled",
+      "alerts": "With alerts"
     },
     "sort": {
       "label": "Sort",
@@ -3626,13 +3638,60 @@
     "notifyManyBody": "Open Needs you on the dashboard to see them.",
     "open": "Open",
     "overviewTitle": "Alerts",
-    "acknowledged": "Dismissed: stays quiet until the workflow resolves it",
+    "acknowledged": "Dismissed: stays quiet until it's raised at a higher level or the workflow resolves it",
+    "raisedAgainQuietly": "Dismissed, raised again since: kept quiet",
+    "reopened": "Alert reopened",
+    "dismissed": "Alert dismissed",
+    "dismissedHint": "It stays quiet unless it gets worse or the workflow resolves it.",
+    "undo": "Undo",
+    "reopenedHint": "It's back on the dashboard, under Needs you.",
     "reopen": "Reopen",
     "level": {
       "info": "Info",
       "warning": "Warning",
       "critical": "Critical"
-    }
+    },
+    "seeAll": "See all alerts",
+    "dismissedMany": "{n} alert dismissed | {n} alerts dismissed",
+    "reopenedMany": "{n} alert reopened | {n} alerts reopened",
+    "page": {
+      "title": "Alerts",
+      "alert": "Alert",
+      "lastRaised": "Last raised",
+      "since": "first {when}",
+      "closed": "Closed",
+      "byYou": "by you",
+      "byWorkflow": "by the workflow",
+      "stillHappening": "Still happening",
+      "showMessage": "Show message",
+      "hideMessage": "Hide message",
+      "level": "Level",
+      "allLevels": "All levels",
+      "workflow": "Workflow",
+      "allWorkflows": "All workflows",
+      "search": "Search alerts",
+      "tabs": {
+        "open": "Open",
+        "dismissed": "Dismissed",
+        "resolved": "Resolved"
+      },
+      "description": {
+        "open": "Alerts that need you. Dismiss one when you've seen it: it stays quiet unless it gets worse.",
+        "dismissed": "Alerts you've seen. They stay quiet while the workflow keeps raising them at the same level, and come back if it gets worse.",
+        "resolved": "Alerts closed because the problem went away: by the workflow (alert.resolve) or by someone with Resolve. Kept for 30 days."
+      },
+      "empty": {
+        "open": "No open alerts: nothing needs you.",
+        "dismissed": "No dismissed alerts.",
+        "resolved": "Nothing resolved in the last 30 days."
+      },
+      "cameBackOpen": "Came back: new alert open",
+      "cameBackDismissed": "Came back: new alert, dismissed"
+    },
+    "resolve": "Resolve",
+    "resolveHint": "The problem is fixed: close the alert. If it happens again, it's a new alert and you're notified.",
+    "resolvedMany": "{n} alert resolved | {n} alerts resolved",
+    "resolvedHint": "If the problem comes back, it's a new alert and you'll be notified."
   },
   "tray": {
     "open": "Open Tipeline",

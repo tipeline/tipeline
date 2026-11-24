@@ -260,4 +260,40 @@ export const validations = {
       },
     }
   ),
+
+  // Ending a run on purpose, usually inside an If: Fail ends it as failed with a
+  // message (like any failing step), Stop ends it early as completed.
+  fail: createValidationPair(
+    {
+      runtime: z.object({ message: z.string().min(1) }),
+      creation: z.object({ message: z.string().min(1) }),
+    },
+    {
+      label: 'Fail', icon: '⛔', category: 'flow', color: 'red',
+      description: 'End the run as failed, with a message.',
+      fieldConfig: {
+        message: {
+          component: 'codemirror-template',
+          description: 'Why the run failed. Shown as the step\'s error and on the run.',
+        },
+      },
+    }
+  ),
+
+  stop: createValidationPair(
+    {
+      runtime: z.object({ message: z.string().optional() }),
+      creation: z.object({ message: z.string().optional() }),
+    },
+    {
+      label: 'Stop', icon: '⏹️', category: 'flow',
+      description: 'End the run early as completed. The steps after it don\'t run.',
+      fieldConfig: {
+        message: {
+          component: 'codemirror-template',
+          description: 'Optional: why the run stopped early. Shown on the run.',
+        },
+      },
+    }
+  ),
 };

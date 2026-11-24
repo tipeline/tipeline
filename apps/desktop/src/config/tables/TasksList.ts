@@ -4,7 +4,7 @@ import type { Router } from 'vue-router';
 import { format, formatDistanceToNow, isToday, isTomorrow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import TaskListActions from '@/components/task/TaskListActions.vue';
-import { Lock, Workflow } from 'lucide-vue-next';
+import { BellRing, Lock, Workflow } from 'lucide-vue-next';
 import { toAssetUrl } from '@/utils/assetUrl';
 import { descriptionSummary } from '@tipeline/utils';
 import type { ProjectTag } from '@/utils/projectAssign';
@@ -34,6 +34,8 @@ export type TaskItem = {
   draftSchedule?: string | null;
   /** Other workflows run it for its data (`helper: true` in its source; SQLite reports 1). */
   helper?: boolean | number | null;
+  /** Its open alerts (from the alerts store, not Core's list): how many and the loudest level. */
+  open_alerts?: { count: number; level: 'info' | 'warning' | 'critical' } | null;
   // Set when connected to a server — false means another user owns this task
   is_owned_by_me?: boolean;
   owned_by_email?: string | null;
@@ -78,9 +80,30 @@ export function statusDot(status: string | null) {
   return h('span', { class: `h-2 w-2 rounded-full shrink-0 ${dotColors[status] ?? 'bg-gray-400'}` });
 }
 
-/** The Draft and Helper labels next to a workflow's name. */
-export function workflowBadges(row: TaskItem, t: (key: string) => string) {
+const ALERT_BADGE: Record<string, string> = {
+  critical: 'border-red-500/40 text-red-700 dark:text-red-400',
+  warning: 'border-orange-500/40 text-orange-700 dark:text-orange-400',
+  info: 'border-blue-500/40 text-blue-700 dark:text-blue-400',
+};
+
+/** The alert, Draft and Helper labels next to a workflow's name. */
+export function workflowBadges(
+  row: TaskItem,
+  t: (key: string, named?: Record<string, unknown>, plural?: number) => string
+) {
+  const alerts = row.open_alerts;
   return [
+    alerts && alerts.count > 0
+      ? h(
+          'span',
+          {
+            class: `inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium border tabular-nums ${ALERT_BADGE[alerts.level] ?? ALERT_BADGE.warning}`,
+            title: t('tasks.alertBadge.explain', { n: alerts.count }, alerts.count),
+            'data-testid': 'workflow-alert-badge',
+          },
+          [h(BellRing, { class: 'size-3' }), alerts.count > 1 ? String(alerts.count) : null]
+        )
+      : null,
     row.draft === true || row.draft === 1
       ? h(
           'span',

@@ -199,14 +199,22 @@ export function updateTimelineWithEvents(
   // Check if pipeline has ended (see useStreamListenerPipeline for why both
   // 'end' and 'end_all' are checked)
   const hasEndEvent = events.some((e) => e.type === 'end' || e.type === 'end_all' || e.type === 'error');
+  // A flow.stop step ended the run early (core flags its event, and those of the steps
+  // around it): the steps after it never run.
+  const stoppedEarly = events.some((e) => e.type === 'action' && e.data?.stopped);
 
   if (!hasEndEvent) {
     // Pipeline is still running, mark only the next pending action as running
-    markNextActionAsRunning(timelineActions);
+    if (!stoppedEarly) markNextActionAsRunning(timelineActions);
   } else {
     // Pipeline has ended, mark any remaining 'running' actions as completed
     function finalizeActions(actions: any[]) {
       actions.forEach((action) => {
+        // Taken as next before the stop's event arrived, but never run.
+        if (stoppedEarly && action.status === 'running' && action._appliedEventTimestamp === undefined) {
+          action.status = 'pending';
+          delete action.started_at;
+        }
         if (action.status === 'running') {
           action.status = 'completed';
           if (!action.finished_at) {

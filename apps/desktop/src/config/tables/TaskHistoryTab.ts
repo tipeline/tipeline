@@ -15,9 +15,10 @@ export type TaskHistoryItem = {
   metadata?: {
     /**
      * approval_rejected: canceled because an approval was rejected (onReject: stop);
-     * user_canceled: someone canceled it (`canceledBy` says who, when known).
+     * user_canceled: someone canceled it (`canceledBy` says who, when known);
+     * stopped: completed early at a flow.stop step (`message` says why, when given).
      */
-    reason?: 'crashed' | 'action_error' | 'approval_rejected' | 'user_canceled';
+    reason?: 'crashed' | 'action_error' | 'approval_rejected' | 'user_canceled' | 'stopped';
     canceledBy?: string;
     message?: string;
     /** Set when an App started the run (see Core.appRun). */
@@ -36,6 +37,7 @@ function failureReasonLabel(metadata: TaskHistoryItem['metadata']): string | nul
   if (metadata.reason === 'action_error') return metadata.message ? `Error: ${metadata.message}` : 'Action error';
   if (metadata.reason === 'approval_rejected') return metadata.message ?? null;
   if (metadata.reason === 'user_canceled') return metadata.message ?? null;
+  if (metadata.reason === 'stopped') return metadata.message ? `Stopped early: ${metadata.message}` : 'Stopped early';
   return null;
 }
 
@@ -139,7 +141,7 @@ export function createColumns(
         );
         const reason = awaiting
           ? (row.metadata?.approval?.title ?? null)
-          : row.status === 'failed' || row.status === 'canceled'
+          : row.status === 'failed' || row.status === 'canceled' || row.metadata?.reason === 'stopped'
             ? failureReasonLabel(row.metadata)
             : null;
         if (!reason) return badge;

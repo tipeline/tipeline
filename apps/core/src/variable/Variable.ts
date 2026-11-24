@@ -21,14 +21,13 @@ export class Variable {
   private output: boolean;
 
   constructor(variableObject: VariableObject) {
-    // Action 1: Set the value or default
+    // Action 1: Set the value or default. A required one stays empty (null) rather than
+    // taking a stand-in like '' or 0: the run's inputs may still fill it (a parent's
+    // props come after the workflow is built), and Task.assertRequiredInputs fails the
+    // run before the first step if nothing did.
     let value: any;
     if (variableObject.value === undefined || variableObject.value === null) {
-      if (variableObject.required) {
-        throw new Error(`Variable "${variableObject.name}" is required but has no value.`);
-      } else {
-        value = this.getDefaultValueForType(variableObject.type);
-      }
+      value = variableObject.required ? null : this.getDefaultValueForType(variableObject.type);
     } else {
       value = variableObject.value;
     }
@@ -174,6 +173,13 @@ export class Variable {
 
   public isRequired() {
     return this.required;
+  }
+
+  /** Required and still empty: no value, or only blank text. */
+  public isMissingRequiredValue(): boolean {
+    if (!this.required) return false;
+    if (this.value === null || this.value === undefined) return true;
+    return typeof this.value === 'string' && this.value.trim() === '';
   }
 
   public getScope(): VariableScope {

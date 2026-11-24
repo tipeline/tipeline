@@ -11,6 +11,8 @@ const PRUNE_EVERY_MS = 60 * 60 * 1000;
 /** Statuses a raise with the same key continues (a dismissed alert is only acknowledged). */
 const CONTINUED: AlertStatus[] = ['open', 'dismissed'];
 
+const LEVEL_RANK: Record<AlertLevel, number> = { info: 0, warning: 1, critical: 2 };
+
 export interface RaiseInput {
   taskIdentifier: string;
   pipelineIdentifier?: string | null;
@@ -69,7 +71,11 @@ const toItem = (row: any): AlertItem => ({
 export class AlertService {
   private static lastPrune = 0;
 
-  /** Creates the alert, or updates this workflow's open or acknowledged one with this key. */
+  /**
+   * Creates the alert, or updates this workflow's open or acknowledged one with this key.
+   * An acknowledged alert stays quiet unless it's raised louder than it was (a warning
+   * now raised as critical): then it's back in Needs you, since that wasn't what was seen.
+   */
   static async raise(input: RaiseInput): Promise<{ alert: AlertItem; isNew: boolean }> {
     const now = new Date().toISOString();
     return await Alert.transaction(async (trx) => {
@@ -80,9 +86,13 @@ export class AlertService {
         .first();
 
       if (existing) {
+        const louder =
+          existing.status === 'dismissed' &&
+          (LEVEL_RANK[input.level] ?? 0) > (LEVEL_RANK[existing.level] ?? 0);
         await Alert.query(trx)
           .findById(existing.id)
           .patch({
+            ...(louder ? { status: 'open', closed_at: null, closed_by: null } : {}),
             title: input.title,
             message: input.message ?? null,
             level: input.level,
@@ -122,6 +132,18 @@ export class AlertService {
       .whereIn('status', CONTINUED)
       .patch({ status: 'resolved', closed_at: new Date().toISOString(), closed_by: by } as any);
     return count > 0;
+  }
+
+  /**
+   * Closes open or acknowledged alerts by id, when a person says the problem is fixed: the
+   * next raise with the same key opens a new alert (and notifies). Returns how many closed.
+   */
+  static async resolveByIds(ids: string[], by: string | null = null): Promise<number> {
+    if (!ids.length) return 0;
+    return await Alert.query()
+      .whereIn('identifier', ids)
+      .whereIn('status', CONTINUED)
+      .patch({ status: 'resolved', closed_at: new Date().toISOString(), closed_by: by } as any);
   }
 
   /** Open alerts, newest raise first (with includeClosed, all that are kept). */

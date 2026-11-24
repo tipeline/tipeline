@@ -376,7 +376,7 @@ const sectionTitle = 'text-[11px] font-semibold uppercase tracking-wide text-mut
                   </template>
                   <template v-else-if="need.kind === 'alert'">
                     <Button size="sm" variant="outline" class="h-[26px] px-2.5 text-xs" @click="open(need.path)">
-                      {{ need.item.pipelineIdentifier ? t('dashboard.needs.seeRun') : t('dashboard.needs.openWorkflow') }}
+                      {{ need.item.pipelineIdentifier ? t('dashboard.needs.openRun') : t('dashboard.needs.openWorkflow') }}
                     </Button>
                     <Button
                       size="sm"

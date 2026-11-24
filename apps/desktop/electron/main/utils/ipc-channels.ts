@@ -74,6 +74,7 @@ export const SEND = {
   ALERT_LIST: 'alertList',
   ALERT_DISMISS: 'alertDismiss',
   ALERT_REOPEN: 'alertReopen',
+  ALERT_RESOLVE: 'alertResolve',
   APP_RUNS_ACTIVE: 'appRunsActive',
   APP_RUNS_LIST: 'appRunsList',
   APP_RUN: 'appRun',
@@ -291,6 +292,7 @@ export const CORE = {
   ALERT_LIST: 'alertList',
   ALERT_DISMISS: 'alertDismiss',
   ALERT_REOPEN: 'alertReopen',
+  ALERT_RESOLVE: 'alertResolve',
   APP_RUNS_ACTIVE: 'appRunsActive',
   APP_RUNS_LIST: 'appRunsList',
   APP_RUN: 'appRun',
@@ -458,6 +460,7 @@ export const CORE_RESP = {
   ALERT_LIST: 'onAlertList',
   ALERT_DISMISS: 'onAlertDismiss',
   ALERT_REOPEN: 'onAlertReopen',
+  ALERT_RESOLVE: 'onAlertResolve',
   APP_RUNS_ACTIVE: 'onAppRunsActive',
   APP_RUNS_LIST: 'onAppRunsList',
   // Variables

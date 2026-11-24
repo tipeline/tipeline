@@ -11,6 +11,7 @@ import { invokeCore } from '@/utils/invoke';
 import { SEND } from '@/ipc-channels';
 import { toast } from '@/components/ui/sonner';
 import { useAlertsStore, type AlertItem } from '@/store/alertsStore';
+import { useAlertActions } from '@/composables/useAlertActions';
 
 // A workflow's alerts on its Overview: open ones, and acknowledged ones (dismissed, still
 // raised quietly until the workflow resolves them), which can be put back in Needs you.
@@ -24,6 +25,7 @@ const props = defineProps<{
 const { t } = useI18n();
 const router = useRouter();
 const store = useAlertsStore();
+const actions = useAlertActions();
 const items = ref<AlertItem[]>([]);
 
 async function load() {
@@ -61,10 +63,16 @@ function seeRun(alert: AlertItem) {
   });
 }
 
+/** Raised again after it was dismissed (quietly, so the row says so). */
+const raisedAgain = (alert: AlertItem) =>
+  alert.status === 'dismissed' &&
+  !!alert.closedAt &&
+  Date.parse(alert.lastRaisedAt) > Date.parse(alert.closedAt);
+
 async function act(alert: AlertItem) {
   try {
-    if (alert.status === 'open') await store.dismiss(alert);
-    else await store.reopen(alert);
+    if (alert.status === 'open') await actions.dismiss(alert, () => void load());
+    else await actions.reopen(alert);
     await load();
   } catch (e: any) {
     toast.error(e?.message ?? String(e));
@@ -73,7 +81,11 @@ async function act(alert: AlertItem) {
 </script>
 
 <template>
-  <component :is="bare ? PlainSection : Card" v-if="shown.length" class="shrink-0 flex flex-col">
+  <component
+    :is="bare ? PlainSection : Card"
+    v-if="shown.length"
+    class="shrink-0 flex flex-col"
+  >
     <template v-if="!bare" #title>
       <span class="inline-flex items-center gap-2">
         <BellRing class="size-4 text-orange-500" aria-hidden="true" />
@@ -85,14 +97,14 @@ async function act(alert: AlertItem) {
         <li
           v-for="alert in shown"
           :key="alert.id"
-          class="flex flex-wrap items-start gap-x-3 gap-y-2 py-2.5 first:pt-0 last:pb-0"
+          class="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0"
         >
           <span
             class="mt-1.5 size-2 rounded-full shrink-0"
             :class="LEVEL_DOT[alert.level]"
             :title="t(`alerts.level.${alert.level}`)"
           />
-          <div class="flex-1 min-w-40">
+          <div class="flex-1 min-w-0 wrap-break-word">
             <p class="text-sm font-semibold m-0">
               {{ alert.title }}
               <span
@@ -113,35 +125,47 @@ async function act(alert: AlertItem) {
                   addSuffix: true,
                 })
               }}
-              <template v-if="alert.status === 'dismissed'"
+              <template v-if="raisedAgain(alert)"
+                >· {{ t('alerts.raisedAgainQuietly') }}</template
+              >
+              <template v-else-if="alert.status === 'dismissed'"
                 >· {{ t('alerts.acknowledged') }}</template
               >
             </p>
-          </div>
-          <div class="flex items-center gap-1.5 shrink-0">
-            <Button
-              v-if="alert.pipelineIdentifier"
-              size="sm"
-              variant="outline"
-              @click="seeRun(alert)"
-            >
-              {{ t('dashboard.needs.seeRun') }}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              :disabled="store.dismissing === alert.id"
-              @click="act(alert)"
-            >
-              {{
-                alert.status === 'open'
-                  ? t('dashboard.needs.dismiss')
-                  : t('alerts.reopen')
-              }}
-            </Button>
+            <div class="flex items-center gap-1.5 mt-3">
+              <Button
+                v-if="alert.pipelineIdentifier"
+                size="sm"
+                variant="outline"
+                @click="seeRun(alert)"
+              >
+                {{ t('dashboard.needs.openRun') }}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                :disabled="store.dismissing === alert.id"
+                @click="act(alert)"
+              >
+                {{
+                  alert.status === 'open'
+                    ? t('dashboard.needs.dismiss')
+                    : t('alerts.reopen')
+                }}
+              </Button>
+
+            </div>
           </div>
         </li>
       </ul>
+      <button
+        type="button"
+        class="mt-3 text-xs font-medium text-muted-foreground hover:text-foreground hover:underline underline-offset-2"
+        data-testid="alerts-see-all"
+        @click="router.push({ path: '/alerts', query: { workflow: taskIdentifier } })"
+      >
+        {{ t('alerts.seeAll') }}
+      </button>
     </template>
   </component>
 </template>

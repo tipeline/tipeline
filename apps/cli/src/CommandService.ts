@@ -898,6 +898,26 @@ export default class CommandService {
     }
   }
 
+  static async alertResolve(ids: string[]) {
+    try {
+      const result = await CommandService.request<{ resolved: number }>(
+        'alertResolve',
+        'onAlertResolve',
+        { ids, resolvedBy: 'cli' }
+      );
+      const n = result?.resolved ?? 0;
+      Printer.printMessage(
+        n === 0
+          ? 'No open or dismissed alert to resolve.'
+          : `Resolved ${n} alert${n === 1 ? '' : 's'}. If the problem comes back, it's a new alert.`
+      );
+      process.exit(0);
+    } catch (error: any) {
+      Printer.printError(error?.message ?? String(error));
+      process.exit(1);
+    }
+  }
+
   static async alertReopen(id: string) {
     try {
       await CommandService.request('alertReopen', 'onAlertReopen', { id });

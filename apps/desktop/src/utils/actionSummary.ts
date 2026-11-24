@@ -180,6 +180,8 @@ const RULES: Record<string, Rule> = {
     return [text(`${ctx.word('each')} `), ...item, text(`${ctx.word('in')} `), ...list];
   },
   'flow.simpleLoop': ({ params }) => fromTo(valueParts(params?.indexValue), valueParts(params?.indexEndValue)),
+  'flow.fail': ({ params }) => valueParts(params?.message),
+  'flow.stop': ({ params }) => valueParts(params?.message),
   'flow.wait': ({ params }) => (params?.timeout != null && params.timeout !== '' ? [text(`${params.timeout} ms`)] : []),
   'api.request': ({ params }) => [
     ...(params?.method ? [text(`${String(params.method).toUpperCase()} `)] : []),

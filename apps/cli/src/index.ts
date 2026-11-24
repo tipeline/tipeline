@@ -227,6 +227,12 @@ alert
   .argument('<id>', 'Alert identifier')
   .action((id) => CommandService.alertReopen(id));
 
+alert
+  .command('resolve')
+  .description('Close alerts because the problem is fixed: the next time one is raised it is a new alert')
+  .argument('<ids...>', 'Alert identifiers')
+  .action((ids) => CommandService.alertResolve(ids));
+
 const cache = program.command('cache').description('Manage cached step results and workflow outputs');
 
 cache

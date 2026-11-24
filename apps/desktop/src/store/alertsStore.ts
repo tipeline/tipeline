@@ -149,8 +149,61 @@ export const useAlertsStore = defineStore('alerts', () => {
     }
   }
 
-  async function reopen(alert: Pick<AlertItem, 'id'>) {
+  /**
+   * A deleted workflow takes its alerts with it (Core deletes them): drop them now
+   * instead of at the next check, so Needs you and the badges don't show them for 30s.
+   */
+  function forgetTask(taskIdentifier: string) {
+    items.value = items.value.filter((a) => a.taskIdentifier !== taskIdentifier);
+    void refresh();
+  }
+
+  /** Acknowledges several open alerts at once (the Alerts page's bulk Dismiss). */
+  async function dismissMany(ids: string[]) {
+    if (!ids.length) return;
+    try {
+      await invokeCore(SEND.ALERT_DISMISS, { ids, dismissedBy: 'desktop' });
+      const gone = new Set(ids);
+      items.value = items.value.filter((a) => !gone.has(a.id));
+    } finally {
+      void refresh();
+    }
+  }
+
+  /**
+   * Closes open or dismissed alerts because the person fixed the problem: the next raise
+   * with the same key is a new alert, announced again.
+   */
+  async function resolveMany(ids: string[]) {
+    if (!ids.length) return;
+    try {
+      await invokeCore(SEND.ALERT_RESOLVE, { ids, resolvedBy: 'desktop' });
+      const gone = new Set(ids);
+      items.value = items.value.filter((a) => !gone.has(a.id));
+    } finally {
+      void refresh();
+    }
+  }
+
+  /** Puts several dismissed alerts back (one call each), without announcing them. */
+  async function reopenMany(alerts: (Pick<AlertItem, 'id'> & Partial<Pick<AlertItem, 'level'>>)[]) {
+    try {
+      for (const alert of alerts) {
+        await invokeCore(SEND.ALERT_REOPEN, { id: alert.id });
+        known?.set(alert.id, alert.level ?? 'critical');
+      }
+    } finally {
+      void refresh();
+    }
+  }
+
+  /**
+   * Puts a dismissed alert back in Needs you. The person did that themselves, so it isn't
+   * announced as a new alert (no toast, no system notification).
+   */
+  async function reopen(alert: Pick<AlertItem, 'id'> & Partial<Pick<AlertItem, 'level'>>) {
     await invokeCore(SEND.ALERT_REOPEN, { id: alert.id });
+    known?.set(alert.id, alert.level ?? 'critical');
     void refresh();
   }
 
@@ -165,6 +218,10 @@ export const useAlertsStore = defineStore('alerts', () => {
     start,
     stop,
     dismiss,
+    dismissMany,
     reopen,
+    reopenMany,
+    resolveMany,
+    forgetTask,
   };
 });

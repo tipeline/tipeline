@@ -102,7 +102,8 @@ describe('TaskStatusStrip', () => {
     await flushPromises();
     const tile = wrapper.get('[data-testid="strip-alerts"]');
     expect(tile.element.tagName).toBe('BUTTON');
-    expect(tile.text()).toContain('2 open');
+    expect(tile.text()).toContain('2 need you');
+    expect(tile.text()).toContain('×2');
     expect(tile.text()).toContain('Slow run');
   });
 
