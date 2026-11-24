@@ -214,7 +214,7 @@ Iterates over an array, binding each element to a task variable before running t
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|:--------:|---------|-------------|
-| `iterable` | string \| any[] | ✓ | — | The array or string variable to iterate over. |
+| `iterable` | string \| any[] | ✓ | — | The list variable to iterate over, e.g. {= myList =}. |
 | `currentItem` | string | ✓ | — | Variable name to bind the current element on each iteration. |
 | `indexVariable` | string |  | — | Optional existing number variable to hold the current position (starting at 0) on each iteration. |
 | `actions` | any[] |  | — | — |
@@ -288,4 +288,62 @@ Pauses execution for the specified duration.
   name: wait
   params:
     timeout: 2000
+```
+
+## Utilities
+
+### `fail`
+
+Ends the run as failed with the given message, like any step that fails. Usually
+placed inside an If, to fail on a condition no step catches by itself — a response
+that came back with status 200 but says it went wrong, say.
+
+**Returns:** Never returns; the step always fails.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|:--------:|---------|-------------|
+| `message` | string | ✓ | — | Why the run failed. Shown as the step's error and on the run. |
+
+```yaml
+# Fail when the API answered but reported an error
+- group: flow
+  name: ifConditional
+  params:
+    firstOperand: '{= response.data.ok =}'
+    compareAs: boolean
+    operator: isFalse
+    actions:
+      - group: flow
+        name: fail
+        params:
+          message: 'Lookup failed: {{ response.data.error }}'
+```
+
+## Ending the run
+
+### `stop`
+
+Ends the run early as completed: the steps after it don't run. Usually placed
+inside an If, when there's nothing left to do. In a sub-workflow it ends only the
+sub-workflow, which hands its outputs back to the parent as usual.
+
+**Returns:** Never returns; the run ends here.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|:--------:|---------|-------------|
+| `message` | string |  | — | Optional: why the run stopped early. Shown on the run. |
+
+```yaml
+# Nothing new to process: end the run here, as completed
+- group: flow
+  name: ifConditional
+  params:
+    firstOperand: '{= newItems =}'
+    compareAs: array
+    operator: empty
+    actions:
+      - group: flow
+        name: stop
+        params:
+          message: No new items
 ```

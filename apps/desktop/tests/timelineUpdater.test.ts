@@ -23,6 +23,56 @@ describe('updateTimelineWithEvents', () => {
     expect(actions[0].error).toBe('boom');
   });
 
+  it('a run ended early by flow.stop: the steps after the stop stay not run', () => {
+    const actions: any[] = [
+      { identifier: 'a1', status: 'pending' },
+      { identifier: 'stop', status: 'pending' },
+      { identifier: 'if', status: 'pending', params: { actions: [{ identifier: 'in', status: 'pending' }] } },
+      { identifier: 'a4', status: 'pending' },
+    ];
+    const events = [ev('start', 1), ev('action', 2, { identifier: 'a1' })];
+    updateTimelineWithEvents(actions, events);
+    expect(actions[1].status).toBe('running');
+
+    // The stop finished: nothing after it is next.
+    events.push(ev('action', 3, { identifier: 'stop', result: 'No new items', stopped: true }));
+    updateTimelineWithEvents(actions, events);
+    expect(actions.map((a) => a.status)).toEqual(['completed', 'completed', 'pending', 'pending']);
+
+    events.push(ev('end', 4, {}));
+    updateTimelineWithEvents(actions, events);
+    expect(actions.map((a) => a.status)).toEqual(['completed', 'completed', 'pending', 'pending']);
+    expect(actions[2].params.actions[0].status).toBe('pending');
+  });
+
+  it('a step taken as next before the stop event arrived goes back to not run when the run ends', () => {
+    const actions: any[] = [
+      { identifier: 'stop', status: 'pending' },
+      { identifier: 'if', status: 'running' },
+    ];
+    updateTimelineWithEvents(actions, [
+      ev('action', 2, { identifier: 'stop', stopped: true }),
+      ev('end', 3, {}),
+    ]);
+    expect(actions.map((a) => a.status)).toEqual(['completed', 'pending']);
+  });
+
+  it('a stop inside an If: the If finishes (its own event), the step after it stays not run', () => {
+    const actions: any[] = [
+      { identifier: 'if', status: 'pending', params: { actions: [{ identifier: 'stop', status: 'pending' }] } },
+      { identifier: 'after', status: 'pending' },
+    ];
+    updateTimelineWithEvents(actions, [
+      ev('start', 1),
+      ev('action', 2, { identifier: 'stop', stopped: true }),
+      ev('action', 3, { identifier: 'if', stopped: true }),
+      ev('end', 4, {}),
+    ]);
+    expect(actions[0].status).toBe('completed');
+    expect(actions[0].params.actions[0].status).toBe('completed');
+    expect(actions[1].status).toBe('pending');
+  });
+
   it('keeps steps that finished before the failure completed', () => {
     const actions: any[] = [
       { identifier: 'a1', status: 'pending' },

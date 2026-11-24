@@ -2,7 +2,7 @@
 import type { ColumnDef, SortingState } from '@tanstack/vue-table';
 import { TZDate } from '@date-fns/tz';
 import { useTimezone } from '@/composables/useTimezone';
-import { h, ref, computed, onBeforeUnmount, onMounted, watch } from 'vue';
+import { h, ref, computed, getCurrentInstance, onBeforeUnmount, onMounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   FlexRender,
@@ -131,6 +131,9 @@ const emit = defineEmits<{
   /** A filter changed — for pages that load rows a page at a time and filter on the server. */
   filtersChange: [filters: { id: string; value: unknown }[]];
 }>();
+
+// Rows only look clickable (hand cursor) when the page listens for `rowClick`.
+const rowsClickable = !!getCurrentInstance()?.vnode.props?.onRowClick;
 
 // Track currently editing cell
 const editingCell = ref<{ rowIndex: number; columnId: string } | null>(null);
@@ -612,8 +615,8 @@ const isEditing = (rowIndex: number, columnId: string) => {
             v-for="row in table.getRowModel().rows"
             :key="row.id"
             :data-state="row.getIsSelected() || isRowSelected?.(row.original) || (selectable && selection.includes(keyOf(row.original))) ? 'selected' : undefined"
-            class="data-row clickable-row"
-            :class="rowClass?.(row.original)"
+            class="data-row"
+            :class="[{ 'clickable-row': rowsClickable }, rowClass?.(row.original)]"
             :style="{ '--row-index': row.index }"
             @click="emit('rowClick', row.original)"
           >
@@ -647,8 +650,8 @@ const isEditing = (rowIndex: number, columnId: string) => {
             <template v-for="row in table.getRowModel().rows" :key="row.id">
             <TableRow
               :data-state="row.getIsSelected() || isRowSelected?.(row.original) || (selectable && selection.includes(keyOf(row.original))) ? 'selected' : undefined"
-              class="data-row clickable-row"
-              :class="rowClass?.(row.original)"
+              class="data-row"
+            :class="[{ 'clickable-row': rowsClickable }, rowClass?.(row.original)]"
               @click="emit('rowClick', row.original)"
             >
               <TableCell

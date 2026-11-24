@@ -27,7 +27,7 @@ import { PipelineRunnerService } from '@database/services/PipelineRunnerService'
 import { PipelineBlockService } from '@database/services/PipelineBlockService';
 import { PipelineService } from '@database/services/PipelineService';
 import { coreEvents } from '@engine/CoreEvents';
-import { RunCanceledSignal } from '@utils/errors';
+import { RunCanceledSignal, RunStoppedSignal } from '@utils/errors';
 import { DebugController } from '@engine/DebugController';
 
 function makeAction(identifier: string, disabled = false): any {
@@ -375,6 +375,59 @@ describe('Pipeline', () => {
         'taskEnd:corr-clean-cancel',
         expect.objectContaining({ status: 'canceled' })
       );
+    });
+  });
+
+  describe('runs ended early by flow.stop', () => {
+    function stopped(correlationId: string, reason: string) {
+      const task = makeTask(true, correlationId);
+      vi.mocked(PipelineRunnerService.startPipeline).mockResolvedValue({ id: 30, identifier: 'pipe-30' } as any);
+      vi.mocked(PipelineBlockService.startBlock).mockResolvedValue({ id: 70 } as any);
+      vi.mocked(PipelineService.updateStatus).mockResolvedValue({} as any);
+      blockRunSpy.mockRejectedValue(new RunStoppedSignal(reason));
+      return task;
+    }
+
+    it('end as completed with the reason, and report no status on taskEnd (completed)', async () => {
+      const task = stopped('corr-stop', 'No new items');
+      const emitSpy = vi.spyOn(coreEvents, 'emit');
+
+      await expect(task.getPipeline().run()).resolves.toBeUndefined();
+
+      expect(PipelineService.updateStatus).toHaveBeenCalledWith(30, 'completed', {
+        finishedAt: expect.any(Date),
+        metadata: { reason: 'stopped', message: 'No new items' },
+      });
+      expect(PipelineService.updateStatus).not.toHaveBeenCalledWith(30, 'failed', expect.anything());
+      const end = emitSpy.mock.calls.find(([event]) => event === 'taskEnd:corr-stop')?.[1] as any;
+      expect(end).not.toHaveProperty('status');
+    });
+
+    it('leave the message out when the stop gave none', async () => {
+      const task = stopped('corr-stop-quiet', '');
+      await task.getPipeline().run();
+      expect(PipelineService.updateStatus).toHaveBeenCalledWith(30, 'completed', {
+        finishedAt: expect.any(Date),
+        metadata: { reason: 'stopped' },
+      });
+    });
+
+    it('in a sub-workflow end only the sub-workflow: the parent is not stopped', async () => {
+      const task = stopped('corr-stop-child', 'done');
+      task.setAwaitedByParent(true);
+      await expect(task.getPipeline().run()).resolves.toBeUndefined();
+    });
+
+    it('end normally in a run that does not persist (runClean)', async () => {
+      const task = makeTask(false, 'corr-stop-clean');
+      blockRunSpy.mockRejectedValue(new RunStoppedSignal(''));
+      const emitSpy = vi.spyOn(coreEvents, 'emit');
+
+      await expect(task.getPipeline().runClean()).resolves.toBeUndefined();
+
+      expect(PipelineService.updateStatus).not.toHaveBeenCalled();
+      const end = emitSpy.mock.calls.find(([event]) => event === 'taskEnd:corr-stop-clean')?.[1] as any;
+      expect(end).not.toHaveProperty('status');
     });
   });
 

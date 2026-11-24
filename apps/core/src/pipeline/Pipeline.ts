@@ -9,7 +9,12 @@ import { coreEvents } from '@engine/CoreEvents';
 import { DebugController } from '@engine/DebugController';
 import { coreInfo } from '@utils/runInfo';
 import { isNonSerializableVariableType } from '@utils/nonSerializableTypes';
-import { ApprovalPendingSignal, ApprovalRejectedSignal, RunCanceledSignal } from '@utils/errors';
+import {
+  ApprovalPendingSignal,
+  ApprovalRejectedSignal,
+  RunCanceledSignal,
+  RunStoppedSignal,
+} from '@utils/errors';
 
 export class Pipeline {
   private actions: Array<Action>;
@@ -212,6 +217,17 @@ export class Pipeline {
     if (this.task.isAwaitedByParent()) throw signal;
   }
 
+  /**
+   * A flow.stop step ended the run early: it completed, with the stop's message. In a
+   * sub-workflow only that sub-workflow ends — the parent goes on with its outputs.
+   */
+  private async completeStopped(pipelineId: number, signal: RunStoppedSignal) {
+    await PipelineService.updateStatus(pipelineId, 'completed', {
+      finishedAt: new Date(),
+      metadata: { reason: 'stopped', ...(signal.reason ? { message: signal.reason } : {}) },
+    });
+  }
+
   async resume(pipelineId: number, pipelineIdentifier: string) {
     this.id = pipelineId;
     this.identifier = pipelineIdentifier;
@@ -240,6 +256,10 @@ export class Pipeline {
       }
       if (error instanceof ApprovalRejectedSignal) {
         await this.cancelForRejection(pipelineId, error);
+        return;
+      }
+      if (error instanceof RunStoppedSignal) {
+        await this.completeStopped(pipelineId, error);
         return;
       }
       if (error instanceof RunCanceledSignal) {
@@ -277,6 +297,7 @@ export class Pipeline {
       // No DB persistence — blockId 0 is a sentinel for shouldSave=false paths
       await this.executeBlock(0);
     } catch (error: any) {
+      if (error instanceof RunStoppedSignal) return;
       if (error instanceof RunCanceledSignal) {
         await this.cancelForRequest(0, error);
         return;
@@ -341,6 +362,10 @@ export class Pipeline {
       }
       if (error instanceof ApprovalRejectedSignal) {
         await this.cancelForRejection(pipelineRecord.id, error);
+        return;
+      }
+      if (error instanceof RunStoppedSignal) {
+        await this.completeStopped(pipelineRecord.id, error);
         return;
       }
       if (error instanceof RunCanceledSignal) {

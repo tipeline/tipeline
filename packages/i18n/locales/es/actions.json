@@ -766,6 +766,26 @@
       "wait": {
         "label": "Esperar",
         "description": "Pausa la ejecución por una duración."
+      },
+      "fail": {
+        "label": "Fallar",
+        "description": "Termina la ejecución como fallida, con un mensaje.",
+        "fields": {
+          "message": {
+            "label": "Mensaje",
+            "description": "Por qué falló la ejecución. Se muestra como el error del paso y en la ejecución."
+          }
+        }
+      },
+      "stop": {
+        "label": "Detener",
+        "description": "Termina la ejecución antes de tiempo como completada. Los pasos siguientes no se ejecutan.",
+        "fields": {
+          "message": {
+            "label": "Mensaje",
+            "description": "Opcional: por qué se detuvo la ejecución. Se muestra en la ejecución."
+          }
+        }
       }
     }
   },

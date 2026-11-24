@@ -182,6 +182,28 @@ describe('useDebugTimeline', () => {
     expect(selected.value).toEqual({ track: 'sub-pipe', identifier: 'fetch' });
   });
 
+  it('a run ended by a stop step: the steps after it stay not run, the run finished', async () => {
+    const { source, events, isRunning, step, progress } = setup();
+    source.value = [
+      { identifier: 'stop', group: 'flow', name: 'stop', params: { message: 'No new items' } },
+      { identifier: 'check', group: 'flow', name: 'ifConditional', params: { actions: [] } },
+      { identifier: 'save', group: 'variable', name: 'set', params: {} },
+    ];
+    await nextTick();
+    events.value.push(event('start'));
+    events.value.push(event('action', { identifier: 'stop', result: 'No new items', stopped: true }));
+    await nextTick();
+    expect(step('check').status).toBe('pending');
+
+    events.value.push(event('end'));
+    isRunning.value = false;
+    await nextTick();
+    expect(step('stop').status).toBe('completed');
+    expect(step('check').status).toBe('pending');
+    expect(step('save').status).toBe('pending');
+    expect(progress.value.state).toBe('finished');
+  });
+
   it('marks the step that runs next while paused, and opens the inspector', async () => {
     const { events, isPaused, step, inspectorOpen } = setup();
     events.value.push(event('start'));

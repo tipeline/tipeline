@@ -73,7 +73,11 @@ async function act(alert: AlertItem) {
 </script>
 
 <template>
-  <component :is="bare ? PlainSection : Card" v-if="shown.length" class="shrink-0 flex flex-col">
+  <component
+    :is="bare ? PlainSection : Card"
+    v-if="shown.length"
+    class="shrink-0 flex flex-col"
+  >
     <template v-if="!bare" #title>
       <span class="inline-flex items-center gap-2">
         <BellRing class="size-4 text-orange-500" aria-hidden="true" />
@@ -85,14 +89,14 @@ async function act(alert: AlertItem) {
         <li
           v-for="alert in shown"
           :key="alert.id"
-          class="flex flex-wrap items-start gap-x-3 gap-y-2 py-2.5 first:pt-0 last:pb-0"
+          class="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0"
         >
           <span
             class="mt-1.5 size-2 rounded-full shrink-0"
             :class="LEVEL_DOT[alert.level]"
             :title="t(`alerts.level.${alert.level}`)"
           />
-          <div class="flex-1 min-w-40">
+          <div class="flex-1 min-w-0 wrap-break-word">
             <p class="text-sm font-semibold m-0">
               {{ alert.title }}
               <span
@@ -117,28 +121,28 @@ async function act(alert: AlertItem) {
                 >· {{ t('alerts.acknowledged') }}</template
               >
             </p>
-          </div>
-          <div class="flex items-center gap-1.5 shrink-0">
-            <Button
-              v-if="alert.pipelineIdentifier"
-              size="sm"
-              variant="outline"
-              @click="seeRun(alert)"
-            >
-              {{ t('dashboard.needs.seeRun') }}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              :disabled="store.dismissing === alert.id"
-              @click="act(alert)"
-            >
-              {{
-                alert.status === 'open'
-                  ? t('dashboard.needs.dismiss')
-                  : t('alerts.reopen')
-              }}
-            </Button>
+            <div class="flex items-center gap-1.5 mt-3">
+              <Button
+                v-if="alert.pipelineIdentifier"
+                size="sm"
+                variant="outline"
+                @click="seeRun(alert)"
+              >
+                {{ t('dashboard.needs.openRun') }}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                :disabled="store.dismissing === alert.id"
+                @click="act(alert)"
+              >
+                {{
+                  alert.status === 'open'
+                    ? t('dashboard.needs.dismiss')
+                    : t('alerts.reopen')
+                }}
+              </Button>
+            </div>
           </div>
         </li>
       </ul>

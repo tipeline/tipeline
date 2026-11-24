@@ -50,3 +50,16 @@ export class RunCanceledSignal extends Error {
     this.name = 'RunCanceledSignal';
   }
 }
+
+/**
+ * Thrown by `flow.stop` to end the run early. Not a failure: the step and the steps
+ * around it complete, the run ends as "completed" with the message (see Block /
+ * Pipeline), and the steps after it never run. In a sub-workflow it ends only that
+ * sub-workflow, whose outputs go back to the parent as usual.
+ */
+export class RunStoppedSignal extends Error {
+  constructor(public readonly reason: string) {
+    super(reason ? `Stopped: ${reason}` : 'Stopped');
+    this.name = 'RunStoppedSignal';
+  }
+}

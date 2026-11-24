@@ -101,7 +101,7 @@ const rows = computed<Row[]>(() => {
       detail: alertDetail(alert),
       at: alert.lastRaisedAt,
       primary: {
-        label: alert.pipelineIdentifier ? t('dashboard.needs.seeRun') : t('dashboard.needs.openWorkflow'),
+        label: alert.pipelineIdentifier ? t('dashboard.needs.openRun') : t('dashboard.needs.openWorkflow'),
         run: () => openAlert(alert),
       },
       secondary: { label: t('dashboard.needs.dismiss'), run: () => void dismissAlert(alert) },

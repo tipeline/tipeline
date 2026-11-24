@@ -1,0 +1,137 @@
+version: 1.0.0
+name: Fail and Stop Example
+description: |
+  Shows the two ways to end a run on purpose: **Fail** ends it as failed with a message, **Stop** ends it early as completed.
+
+  A lookup can come back with status 200 and still say it went wrong (`ok: false`). No step catches that by itself, so an If checks it and a Fail step ends the run with the lookup's error. When there is nothing to process, a Stop step ends the run early, and the steps after it don't run.
+
+  Pick a **Scenario** to try each ending:
+
+  - `ok`: the lookup worked; the run processes the items and completes.
+  - `error`: the lookup reported an error; the run **fails** with "Lookup failed: Quota exceeded".
+  - `empty`: no new items; the run **stops early** as completed, with "No new items" on the run.
+
+  The lookup's answer is made up from the scenario so the example runs without a network. In a real workflow it comes from an `http.request` or `api.request` step.
+author: Jose Daniel Estrada
+tags: [example, flow, fail, stop, error handling]
+
+pipeline:
+  variables:
+    - type: string
+      name: scenario
+      label: Scenario
+      description: 'ok, error or empty'
+      value: error
+      visibility: public
+
+    - type: object
+      name: response
+      label: Lookup response
+      value: {}
+
+    - type: string
+      name: summary
+      label: Summary
+      description: Filled in when the run gets to the end.
+      value: ''
+      visibility: public
+      output: true
+
+  actions:
+    # ------------------------------------------------------------
+    # The lookup (made up from the scenario)
+    # ------------------------------------------------------------
+    - group: flow
+      name: switchConditional
+      label: Pretend to look up new items
+      params:
+        expression: '{{ scenario }}'
+
+    - group: flow
+      name: caseConditional
+      params:
+        match: ok
+        actions:
+          - group: variable
+            name: set
+            params:
+              name: response
+              value: { ok: true, items: [invoice-101, invoice-102] }
+
+    - group: flow
+      name: caseConditional
+      params:
+        match: error
+        actions:
+          - group: variable
+            name: set
+            params:
+              name: response
+              value: { ok: false, error: Quota exceeded, items: [] }
+
+    - group: flow
+      name: caseConditional
+      params:
+        match: empty
+        actions:
+          - group: variable
+            name: set
+            params:
+              name: response
+              value: { ok: true, items: [] }
+
+    - group: flow
+      name: defaultConditional
+      params:
+        actions:
+          - group: flow
+            name: fail
+            params:
+              message: 'Unknown scenario "{{ scenario }}": use ok, error or empty.'
+
+    # ------------------------------------------------------------
+    # Fail: the lookup answered but said it went wrong
+    # ------------------------------------------------------------
+    - group: flow
+      name: ifConditional
+      label: Did the lookup report an error?
+      params:
+        firstOperand: '{= response.ok =}'
+        compareAs: boolean
+        operator: isFalse
+        actions:
+          - group: flow
+            name: fail
+            params:
+              message: 'Lookup failed: {{ response.error }}'
+
+    # ------------------------------------------------------------
+    # Stop: nothing to do, end early as completed
+    # ------------------------------------------------------------
+    - group: flow
+      name: ifConditional
+      label: Anything new?
+      params:
+        firstOperand: '{= response.items =}'
+        compareAs: array
+        operator: empty
+        actions:
+          - group: flow
+            name: stop
+            params:
+              message: No new items
+
+    # ------------------------------------------------------------
+    # Only reached when the lookup worked and found items
+    # ------------------------------------------------------------
+    - group: variable
+      name: set
+      label: Process the items
+      params:
+        name: summary
+        value: 'Processed {{ response.items }}'
+
+    - group: system
+      name: message
+      params:
+        text: '{{ summary }}'

@@ -2,7 +2,12 @@ import { ActionRegistry } from '@action/ActionRegistry';
 import { PluginActionRegistry } from '@/plugin/PluginActionRegistry';
 import { Task } from '@task/Task';
 import { ActionError } from '@utils/ActionError';
-import { ApprovalPendingSignal, ApprovalRejectedSignal, RunCanceledSignal } from '@utils/errors';
+import {
+  ApprovalPendingSignal,
+  ApprovalRejectedSignal,
+  RunCanceledSignal,
+  RunStoppedSignal,
+} from '@utils/errors';
 import { safeClone } from '@utils/safeClone';
 import type { StepCacheConfig } from '@tipeline/schemas';
 import { expandHomeInParams, expandsHomePaths } from '@utils/expandHome';
@@ -95,13 +100,14 @@ export class Action {
       return await action(this.params, task, lastResult, this);
     } catch (error: any) {
       // Not failures: the run stops here until someone decides, or ends because they
-      // rejected it (see approval.request), or someone canceled it.
-      // Passed through unwrapped — also by enclosing flow actions — so Block/Pipeline
-      // can pause the run, and never swallowed by onError: continue.
+      // rejected it (see approval.request), or someone canceled it, or a flow.stop step
+      // ended it early. Passed through unwrapped — also by enclosing flow actions — so
+      // Block/Pipeline can pause or end the run, and never swallowed by onError: continue.
       if (
         error instanceof ApprovalPendingSignal ||
         error instanceof ApprovalRejectedSignal ||
-        error instanceof RunCanceledSignal
+        error instanceof RunCanceledSignal ||
+        error instanceof RunStoppedSignal
       ) {
         throw error;
       }
