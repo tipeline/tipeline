@@ -30,7 +30,7 @@ const CORE_EVENTS = [
   // Approvals
   'onApprovalList', 'onApprovalDecide', 'onAppApprovalList', 'onAppApprovalDecide', 'onApprovalHistory',
   // Alerts
-  'onAlertList', 'onAlertDismiss', 'onAlertReopen',
+  'onAlertList', 'onAlertDismiss', 'onAlertReopen', 'onAlertResolve',
   'onAppRunsActive', 'onAppRunsList',
   // Variables
   'onVariableList', 'onVariableNew', 'onVariableEdit', 'onVariableDuplicate',
