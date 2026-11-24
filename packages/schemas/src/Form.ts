@@ -97,11 +97,10 @@ function createFieldSchema(field: FormFieldConfig): z.ZodTypeAny {
       if (field.value !== undefined && typeof field.value === 'boolean') {
         fieldSchema = fieldSchema.default(field.value)
       }
-      if (field.required) {
-        fieldSchema = fieldSchema.refine(
-          val => val === true,
-          `You must accept ${field.label || field.name}`
-        )
+      // A tick box always gives an answer: unticked is false, and that counts for a
+      // required one too (Core accepts false).
+      if (field.required && field.value === undefined) {
+        fieldSchema = fieldSchema.default(false)
       }
       break
 
@@ -149,6 +148,14 @@ function createFieldSchema(field: FormFieldConfig): z.ZodTypeAny {
       if (field.value !== undefined && typeof field.value === 'string') {
         fieldSchema = fieldSchema.default(field.value)
       }
+  }
+
+  // Blank text doesn't fill a required field, same as in Core (Task.assertRequiredInputs).
+  if (field.required) {
+    fieldSchema = fieldSchema.refine(
+      (val: unknown) => typeof val !== 'string' || val.trim() !== '',
+      `${field.label || field.name} is required`
+    )
   }
 
   // Make field optional if not required (but only if no default value is set)

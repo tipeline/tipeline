@@ -41,6 +41,7 @@ const selectedType = ref<TypeOption>('string');
 const booleanValue = ref(false);
 const isSecret = ref(false);
 const isReadonly = ref(false);
+const isRequired = ref(false);
 const isOutput = ref(false);
 const visibility = ref('private');
 
@@ -106,7 +107,7 @@ const onSubmit = handleSubmit((values) => {
     value = rawValue;
   }
 
-  emit('onSubmit', { name: values.name, type: values.type, label: values.label || undefined, value, description: values.description || undefined, secret: isSecret.value, readonly: isReadonly.value, visibility: visibility.value, output: isOutput.value || undefined });
+  emit('onSubmit', { name: values.name, type: values.type, label: values.label || undefined, value, description: values.description || undefined, secret: isSecret.value, readonly: isReadonly.value, visibility: visibility.value, required: (isRequired.value && !isOutput.value) || undefined, output: isOutput.value || undefined });
 });
 
 function triggerSubmit() {
@@ -210,6 +211,19 @@ defineExpose({ submit: triggerSubmit });
           :checked="isSecret"
           class="h-4 w-4 cursor-pointer"
           @change="(e) => { isSecret = (e.target as HTMLInputElement).checked; }"
+        />
+      </div>
+
+      <div v-if="!isOutput" class="flex items-center justify-between rounded-lg border p-3">
+        <div>
+          <label class="text-sm font-medium">{{ t('variable.form.required') }}</label>
+          <p class="text-xs text-muted-foreground">{{ t('variable.form.requiredDescription') }}</p>
+        </div>
+        <input
+          type="checkbox"
+          :checked="isRequired"
+          class="h-4 w-4 cursor-pointer"
+          @change="(e) => { isRequired = (e.target as HTMLInputElement).checked; }"
         />
       </div>
 

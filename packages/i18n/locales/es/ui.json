@@ -1252,6 +1252,8 @@
       "trueLabel": "Verdadero",
       "secret": "Secreto",
       "secretDescription": "Ocultar este valor de los registros y la interfaz",
+      "required": "Obligatoria",
+      "requiredDescription": "El flujo de trabajo no arranca hasta que tenga un valor. Un texto vacío cuenta como sin valor.",
       "readOnly": "Solo lectura",
       "readOnlyDescription": "Evita que este valor sea sobreescrito en tiempo de ejecución",
       "output": "Salida",
