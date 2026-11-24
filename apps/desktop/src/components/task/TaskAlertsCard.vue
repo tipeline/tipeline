@@ -11,6 +11,7 @@ import { invokeCore } from '@/utils/invoke';
 import { SEND } from '@/ipc-channels';
 import { toast } from '@/components/ui/sonner';
 import { useAlertsStore, type AlertItem } from '@/store/alertsStore';
+import { useAlertActions } from '@/composables/useAlertActions';
 
 // A workflow's alerts on its Overview: open ones, and acknowledged ones (dismissed, still
 // raised quietly until the workflow resolves them), which can be put back in Needs you.
@@ -24,6 +25,7 @@ const props = defineProps<{
 const { t } = useI18n();
 const router = useRouter();
 const store = useAlertsStore();
+const actions = useAlertActions();
 const items = ref<AlertItem[]>([]);
 
 async function load() {
@@ -61,10 +63,16 @@ function seeRun(alert: AlertItem) {
   });
 }
 
+/** Raised again after it was dismissed (quietly, so the row says so). */
+const raisedAgain = (alert: AlertItem) =>
+  alert.status === 'dismissed' &&
+  !!alert.closedAt &&
+  Date.parse(alert.lastRaisedAt) > Date.parse(alert.closedAt);
+
 async function act(alert: AlertItem) {
   try {
-    if (alert.status === 'open') await store.dismiss(alert);
-    else await store.reopen(alert);
+    if (alert.status === 'open') await actions.dismiss(alert, () => void load());
+    else await actions.reopen(alert);
     await load();
   } catch (e: any) {
     toast.error(e?.message ?? String(e));
@@ -117,7 +125,10 @@ async function act(alert: AlertItem) {
                   addSuffix: true,
                 })
               }}
-              <template v-if="alert.status === 'dismissed'"
+              <template v-if="raisedAgain(alert)"
+                >· {{ t('alerts.raisedAgainQuietly') }}</template
+              >
+              <template v-else-if="alert.status === 'dismissed'"
                 >· {{ t('alerts.acknowledged') }}</template
               >
             </p>

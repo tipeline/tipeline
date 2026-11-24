@@ -160,7 +160,7 @@ describe('run detail', () => {
     });
     await flushPromises();
     expect(main.text()).toContain('Open in window');
-    expect(main.text()).toContain('Back');
+    expect(main.find('button[aria-label="Back"]').exists()).toBe(true);
 
     await main
       .findAll('button')
@@ -181,7 +181,7 @@ describe('run detail', () => {
     });
     await flushPromises();
     expect(inWindow.text()).not.toContain('Open in window');
-    expect(inWindow.text()).not.toContain('Back');
+    expect(inWindow.find('button[aria-label="Back"]').exists()).toBe(false);
   });
 });
 

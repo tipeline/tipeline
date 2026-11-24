@@ -149,8 +149,13 @@ export const useAlertsStore = defineStore('alerts', () => {
     }
   }
 
-  async function reopen(alert: Pick<AlertItem, 'id'>) {
+  /**
+   * Puts a dismissed alert back in Needs you. The person did that themselves, so it isn't
+   * announced as a new alert (no toast, no system notification).
+   */
+  async function reopen(alert: Pick<AlertItem, 'id'> & Partial<Pick<AlertItem, 'level'>>) {
     await invokeCore(SEND.ALERT_REOPEN, { id: alert.id });
+    known?.set(alert.id, alert.level ?? 'critical');
     void refresh();
   }
 

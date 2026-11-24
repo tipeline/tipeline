@@ -237,6 +237,32 @@ describe('dismiss (acknowledge)', () => {
     });
   });
 
+  it('a dismissed alert raised louder is back in Needs you', async () => {
+    const { id } = await GroupAlert.raise({ title: 'Spike', key: 'k', level: 'warning' }, run());
+    await AlertService.dismiss({ id: id! }, 'desktop');
+
+    const again = await GroupAlert.raise({ title: 'Spike', key: 'k', level: 'critical' }, run());
+    expect(again).toMatchObject({ id, count: 2, isNew: false });
+    expect((await AlertService.list())[0]).toMatchObject({
+      id,
+      status: 'open',
+      level: 'critical',
+      closedAt: null,
+      closedBy: null,
+    });
+  });
+
+  it('a dismissed alert raised at the same level or quieter stays dismissed', async () => {
+    const { id } = await GroupAlert.raise({ title: 'Spike', key: 'k', level: 'critical' }, run());
+    await AlertService.dismiss({ id: id! });
+    await GroupAlert.raise({ title: 'Spike', key: 'k', level: 'critical' }, run());
+    await GroupAlert.raise({ title: 'Spike', key: 'k', level: 'warning' }, run());
+    expect(await AlertService.list()).toEqual([]);
+    // Quieter is remembered, so the next critical counts as louder again.
+    await GroupAlert.raise({ title: 'Spike', key: 'k', level: 'critical' }, run());
+    expect((await AlertService.list())[0]).toMatchObject({ id, status: 'open', count: 4 });
+  });
+
   it('resolve closes an acknowledged alert, and the next raise is new and open', async () => {
     const { id } = await GroupAlert.raise({ title: 'Spike', key: 'k' }, run());
     await AlertService.dismiss({ id: id! });
