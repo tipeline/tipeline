@@ -9,7 +9,12 @@ import { isNonSerializableVariableType } from '@utils/nonSerializableTypes';
 import { PipelineVariableService } from '@database/services/PipelineVariableService';
 import { PipelineActionService } from '@/database/services/PipelineActionService';
 import { GlobalVariableService } from '@database/services/GlobalVariableService';
-import { ApprovalPendingSignal, ApprovalRejectedSignal, RunCanceledSignal } from '@utils/errors';
+import {
+  ApprovalPendingSignal,
+  ApprovalRejectedSignal,
+  RunCanceledSignal,
+  RunStoppedSignal,
+} from '@utils/errors';
 import { declaredReturnType } from '@action/declaredReturnType';
 import { Pipeline } from '@pipeline/Pipeline';
 import { Task } from '@task/Task';
@@ -190,6 +195,35 @@ export class Block {
     });
   }
 
+  /**
+   * A step that ended the run early (flow.stop), or one around it: recorded and
+   * reported as a finished step. The stop step's result is its message.
+   */
+  private async reportStopped(action: Action, signal: RunStoppedSignal) {
+    const isStopStep = action.group === 'flow' && action.name === 'stop';
+    const result = isStopStep ? signal.reason || null : null;
+    if (this.shouldSave) {
+      await PipelineActionService.updateStatus(this.pipeline.getId(), this.blockId, action.identifier, 'completed', {
+        result,
+        params: action.getParamsPlain(),
+        finishedAt: new Date(),
+      });
+    }
+    coreEvents.emit(`action:${this.task.getCorrelationId()}`, {
+      name: `${action.group}.${action.name}`,
+      params: await this.buildDisplayParams(action).catch(() => null),
+      result: this.redactSecrets(result),
+      destination: action.getDestination() || null,
+      changedVariables: [],
+      // The run ends here: clients must not take the step after it as the next one.
+      stopped: true,
+      pipelineIdentifier: this.pipeline.getIdentifier(),
+      id: action.id,
+      identifier: action.identifier,
+      taskIdentifier: this.task.getIdentifier(),
+    });
+  }
+
   private async loadCompletedIdentifiers(): Promise<Set<string> | null> {
     if (!this.shouldSave || this.blockId === 0) return null;
     const records = await PipelineActionService.getByBlock(this.blockId);
@@ -237,6 +271,12 @@ export class Block {
             params: action.getParamsPlain(),
           });
         }
+        throw error;
+      }
+      // A flow.stop step ended the run early: it — and every step around it (the If it
+      // sits in, say) — completed; the steps after it don't run.
+      if (error instanceof RunStoppedSignal) {
+        await this.reportStopped(action, error);
         throw error;
       }
       if (this.shouldSave) {

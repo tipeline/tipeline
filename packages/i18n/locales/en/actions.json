@@ -2860,6 +2860,26 @@
             "description": "Duration to wait in milliseconds."
           }
         }
+      },
+      "fail": {
+        "label": "Fail",
+        "description": "End the run as failed, with a message.",
+        "fields": {
+          "message": {
+            "label": "Message",
+            "description": "Why the run failed. Shown as the step's error and on the run."
+          }
+        }
+      },
+      "stop": {
+        "label": "Stop",
+        "description": "End the run early as completed. The steps after it don't run.",
+        "fields": {
+          "message": {
+            "label": "Message",
+            "description": "Optional: why the run stopped early. Shown on the run."
+          }
+        }
       }
     }
   },

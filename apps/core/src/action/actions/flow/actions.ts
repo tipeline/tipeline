@@ -7,6 +7,7 @@ import { parseStepParams } from '@utils/parseParams';
 import { safeClone } from '@utils/safeClone';
 import { validations } from '@tipeline/schemas';
 import { evaluateCondition, type Condition } from '@tipeline/utils';
+import { RunStoppedSignal } from '@utils/errors';
 
 type IfConditionalParams = z.infer<typeof validations.flow.ifConditional.runtime.schema>;
 type ElseIfConditionalParams = z.infer<typeof validations.flow.elseIfConditional.runtime.schema>;
@@ -17,6 +18,8 @@ type DefaultConditionalParams = z.infer<typeof validations.flow.defaultCondition
 type SimpleLoopParams = z.infer<typeof validations.flow.simpleLoop.runtime.schema>;
 type ForEachLoopParams = z.infer<typeof validations.flow.forEachLoop.runtime.schema>;
 type WaitParams = z.infer<typeof validations.flow.wait.runtime.schema>;
+type FailParams = z.infer<typeof validations.flow.fail.runtime.schema>;
+type StopParams = z.infer<typeof validations.flow.stop.runtime.schema>;
 
 interface SwitchState {
   __switch: true;
@@ -448,6 +451,66 @@ export class GroupFlow {
     const parsed = validations.flow.wait.runtime.validate(params);
     await new Promise((resolve) => setTimeout(resolve, parsed.timeout ?? 1000));
     return true;
+  }
+
+  // --------------------------------------------------
+  // Ending the run
+  // --------------------------------------------------
+
+  /**
+   * Ends the run as failed with the given message, like any step that fails. Usually
+   * placed inside an If, to fail on a condition no step catches by itself — a response
+   * that came back with status 200 but says it went wrong, say.
+   *
+   * @param params - The input parameters.
+   * @returns Never returns; the step always fails.
+   * @example
+   * ```yaml
+   * # Fail when the API answered but reported an error
+   * - group: flow
+   *   name: ifConditional
+   *   params:
+   *     firstOperand: '{= response.data.ok =}'
+   *     compareAs: boolean
+   *     operator: isFalse
+   *     actions:
+   *       - group: flow
+   *         name: fail
+   *         params:
+   *           message: 'Lookup failed: {{ response.data.error }}'
+   * ```
+   */
+  static async fail(params: FailParams): Promise<never> {
+    const parsed = validations.flow.fail.runtime.validate(params);
+    throw new Error(parsed.message);
+  }
+
+  /**
+   * Ends the run early as completed: the steps after it don't run. Usually placed
+   * inside an If, when there's nothing left to do. In a sub-workflow it ends only the
+   * sub-workflow, which hands its outputs back to the parent as usual.
+   *
+   * @param params - The input parameters.
+   * @returns Never returns; the run ends here.
+   * @example
+   * ```yaml
+   * # Nothing new to process: end the run here, as completed
+   * - group: flow
+   *   name: ifConditional
+   *   params:
+   *     firstOperand: '{= newItems =}'
+   *     compareAs: array
+   *     operator: empty
+   *     actions:
+   *       - group: flow
+   *         name: stop
+   *         params:
+   *           message: No new items
+   * ```
+   */
+  static async stop(params: StopParams): Promise<never> {
+    const parsed = validations.flow.stop.runtime.validate(params);
+    throw new RunStoppedSignal(parsed.message?.trim() ?? '');
   }
 
   // --------------------------------------------------
