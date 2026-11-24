@@ -726,6 +726,38 @@ describe('Block', () => {
       const actionEventCall = emitSpy.mock.calls.find(([event]) => event === 'action:corr-redact-5');
       expect(actionEventCall?.[1].params).toEqual({ msg: 'hello' });
     });
+
+    it('sends a live object passed with {= =} as null when a secret variable forces the re-render, and the event can be structured-cloned', async () => {
+      class FakeConnection {
+        run = () => 'live';
+      }
+      const task = makeTask({ shouldSave: false, correlationId: 'corr-redact-6' });
+      const pipeline = task.getPipeline();
+      const secretVar = new Variable({ type: 'string', name: 'secretVar', value: 'TOPSECRET', secret: true } as any);
+      const connVar = new Variable({ type: 'object', name: 'conn', value: {} } as any);
+      connVar.setValue(new FakeConnection());
+      pipeline.setVariables([secretVar, connVar]);
+      const action = makeFakeAction({
+        identifier: 'a1',
+        rawParams: { connection: '{= conn =}', nested: { conn: '{= conn =}' }, token: '{= secretVar =}' },
+        result: 'ok',
+      });
+      const emitSpy = vi.spyOn(coreEvents, 'emit');
+
+      const block = new Block([action as any], task, 0);
+      await block.run();
+
+      // The step itself still got the live object.
+      expect(action.setParams.mock.calls[0][0].connection).toBeInstanceOf(FakeConnection);
+      const actionEventCall = emitSpy.mock.calls.find(([event]) => event === 'action:corr-redact-6');
+      expect(actionEventCall?.[1].params).toEqual({
+        connection: null,
+        nested: { conn: null },
+        token: '[REDACTED]',
+      });
+      // What a worker run does with the event (TaskWorker → parentPort.postMessage).
+      expect(() => structuredClone(actionEventCall?.[1])).not.toThrow();
+    });
   });
 });
 
