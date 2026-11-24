@@ -542,7 +542,7 @@ export class Block {
   // never enters the broadcast text in the first place. This is identity-based
   // (which variable produced this text) rather than value-based, so a
   // non-secret variable that happens to share a secret's literal value is
-  // never falsely redacted.
+  // never falsely redacted. Like getParamsPlain, it returns plain data only.
   private async buildDisplayParams(action: Action): Promise<any> {
     if (!this.variables.some((variable) => variable.isSecret())) {
       return action.getParamsPlain();
@@ -557,7 +557,10 @@ export class Block {
     );
     const getGlobalVar = await this.buildGlobalVarLookup(fresh);
     parseStepParams(action.group, fresh, displayVariables, getGlobalVar, this.lastResult, this.task.getRunContext());
-    return fresh;
+    // The re-render resolves {= connection =} back to the live object (an SSH or
+    // database connection, a browser): make it plain like getParamsPlain, or the
+    // event can't be posted from a worker run (structured clone).
+    return Action.paramsToPlain(fresh);
   }
 
   // Some actions (e.g. system.message) return one of their own resolved
