@@ -98,19 +98,18 @@ describe('Task', () => {
         expect(variables[0].getValue()).toBeNull();
       });
 
-      it('throws for a required variable when the env value is missing (null fallback correctly fails required checks)', async () => {
+      it('leaves a required variable missing when the env value is missing (the run then fails before the first step)', async () => {
         const task = new Task();
 
-        await expect(
-          task.createVariables([
-            {
-              type: 'string',
-              name: 'myVar',
-              required: true,
-              valueFromEnv: 'TIPELINE_TEST_ENV_KEY_MISSING',
-            },
-          ])
-        ).rejects.toThrow(/is required but has no value/);
+        const variables = await task.createVariables([
+          {
+            type: 'string',
+            name: 'myVar',
+            required: true,
+            valueFromEnv: 'TIPELINE_TEST_ENV_KEY_MISSING',
+          },
+        ]);
+        expect(variables[0].isMissingRequiredValue()).toBe(true);
       });
     });
 
@@ -252,16 +251,15 @@ describe('Task', () => {
         expect(variables[0].getValue()).toBeNull();
       });
 
-      it('propagates the Variable constructor error for a required variable when the global record is missing (null fallback correctly fails required checks)', async () => {
+      it('leaves a required variable missing when the global record is missing (the run then fails before the first step)', async () => {
         vi.mocked(GlobalVariableService.getByName).mockResolvedValue(null as any);
 
         const task = new Task();
 
-        await expect(
-          task.createVariables([
-            { type: 'string', name: 'myVar', required: true, valueFromGlobal: 'missingGlobal' },
-          ])
-        ).rejects.toThrow(/is required but has no value/);
+        const variables = await task.createVariables([
+          { type: 'string', name: 'myVar', required: true, valueFromGlobal: 'missingGlobal' },
+        ]);
+        expect(variables[0].isMissingRequiredValue()).toBe(true);
       });
     });
 
@@ -500,6 +498,38 @@ describe('Task', () => {
       await task.runClean();
 
       expect(runCleanSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('run and runClean fail before the pipeline starts when a required variable is empty', async () => {
+      const task = new Task();
+      await task.loadVariables([
+        { type: 'string', name: 'email', required: true, value: '' },
+        { type: 'number', name: 'count', required: true },
+        { type: 'string', name: 'note', value: '' },
+      ]);
+      const runSpy = vi.spyOn(task.getPipeline(), 'run').mockResolvedValue(undefined as any);
+      const runCleanSpy = vi.spyOn(task.getPipeline(), 'runClean').mockResolvedValue(undefined as any);
+
+      await expect(task.run()).rejects.toThrow(
+        'Required variables "email", "count" have no value. Set them before starting the workflow.'
+      );
+      await expect(task.runClean()).rejects.toThrow(/"email", "count"/);
+      expect(runSpy).not.toHaveBeenCalled();
+      expect(runCleanSpy).not.toHaveBeenCalled();
+    });
+
+    it('a required variable with no default runs once props fill it (sub-workflow inputs)', async () => {
+      const task = new Task();
+      await task.loadVariables([
+        { type: 'string', name: 'email', required: true, visibility: 'public' },
+      ]);
+      const runSpy = vi.spyOn(task.getPipeline(), 'run').mockResolvedValue(undefined as any);
+
+      await expect(task.run()).rejects.toThrow('Required variable "email" has no value.');
+      await task.updateVariablesFromProps({ email: 'a@b.c' } as any);
+      await task.run();
+
+      expect(runSpy).toHaveBeenCalledTimes(1);
     });
 
     it('resume delegates to pipeline.resume(id, identifier)', async () => {

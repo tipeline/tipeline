@@ -46,16 +46,40 @@ function makeFakeBrowser(overrides: Partial<Record<string, any>> = {}) {
 
 describe('Variable', () => {
   describe('constructor — required value', () => {
-    it('throws when required but no value (and no default) is provided', () => {
-      expect(
-        () => new Variable({ type: 'string', name: 'myVar', required: true } as any)
-      ).toThrow('Variable "myVar" is required but has no value.');
+    // The run's inputs may still fill it (a parent's props come after the build), so
+    // building doesn't throw; Task.assertRequiredInputs checks before the first step.
+    it('stays empty (null, no type default) when required but no value is provided', () => {
+      const variable = new Variable({ type: 'string', name: 'myVar', required: true } as any);
+      expect(variable.getValue()).toBeNull();
+      expect(variable.isMissingRequiredValue()).toBe(true);
     });
 
-    it('throws when required and value is explicitly null', () => {
+    it('stays empty when required and value is explicitly null', () => {
+      const variable = new Variable({ type: 'number', name: 'n', required: true, value: null } as any);
+      expect(variable.getValue()).toBeNull();
+      expect(variable.isMissingRequiredValue()).toBe(true);
+    });
+
+    it('counts blank text as missing for a required variable', () => {
       expect(
-        () => new Variable({ type: 'string', name: 'myVar', required: true, value: null } as any)
-      ).toThrow('Variable "myVar" is required but has no value.');
+        new Variable({ type: 'string', name: 's', required: true, value: '  ' } as any).isMissingRequiredValue()
+      ).toBe(true);
+    });
+
+    it('is never missing when not required, and filled once a value is set', () => {
+      expect(new Variable({ type: 'string', name: 's', value: '' } as any).isMissingRequiredValue()).toBe(false);
+      const variable = new Variable({ type: 'string', name: 's', required: true } as any);
+      variable.setValue('hi');
+      expect(variable.isMissingRequiredValue()).toBe(false);
+    });
+
+    it('counts false and 0 as values', () => {
+      expect(
+        new Variable({ type: 'boolean', name: 'b', required: true, value: false } as any).isMissingRequiredValue()
+      ).toBe(false);
+      expect(
+        new Variable({ type: 'number', name: 'n', required: true, value: 0 } as any).isMissingRequiredValue()
+      ).toBe(false);
     });
 
     it('succeeds when required and a value is provided', () => {

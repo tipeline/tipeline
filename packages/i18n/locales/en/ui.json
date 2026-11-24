@@ -1252,6 +1252,8 @@
       "trueLabel": "True",
       "secret": "Secret",
       "secretDescription": "Hide this value from logs and UI",
+      "required": "Required",
+      "requiredDescription": "The workflow won’t start until this has a value. Empty text counts as no value.",
       "readOnly": "Read-only",
       "readOnlyDescription": "Prevent this value from being overwritten at runtime",
       "output": "Output",

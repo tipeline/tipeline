@@ -329,11 +329,31 @@ export class Task {
   }
 
   async run() {
+    this.assertRequiredInputs();
     await this.pipeline.run();
   }
 
   async runClean() {
+    this.assertRequiredInputs();
     await this.pipeline.runClean();
+  }
+
+  /**
+   * Fails before the first step when a required variable is still empty once every input
+   * is in (run form, CLI, schedule, app, parent props, env or global). Not on resume: a
+   * resumed run already passed this when it started.
+   */
+  assertRequiredInputs() {
+    const missing = this.pipeline
+      .getVariables()
+      .filter((v) => v.isMissingRequiredValue())
+      .map((v) => `"${v.getName()}"`);
+    if (missing.length === 0) return;
+    throw new Error(
+      missing.length === 1
+        ? `Required variable ${missing[0]} has no value. Set it before starting the workflow.`
+        : `Required variables ${missing.join(', ')} have no value. Set them before starting the workflow.`
+    );
   }
 
   async resume(pipelineId: number, pipelineIdentifier: string) {
