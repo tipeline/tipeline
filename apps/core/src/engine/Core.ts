@@ -1505,6 +1505,17 @@ export default class Core {
     return { dismissed };
   }
 
+  /**
+   * Closes alerts by hand (`{ id }` or `{ ids }`): the person fixed the problem, so the next
+   * raise with the same key is a new alert that notifies again. Open or dismissed ones.
+   */
+  static async alertResolve(params: { id?: string; ids?: string[]; resolvedBy?: string } = {}) {
+    const ids = [...(params.ids ?? []), ...(params.id ? [params.id] : [])].map(String);
+    if (!ids.length) throw new Error('Say which alert to resolve: id or ids');
+    const resolved = await AlertService.resolveByIds(ids, params.resolvedBy ?? null);
+    return { resolved };
+  }
+
   /** Puts an acknowledged alert back in Needs you. */
   static async alertReopen(params: { id?: string } = {}) {
     if (!params.id) throw new Error('Say which alert to reopen');

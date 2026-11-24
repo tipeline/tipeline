@@ -223,6 +223,7 @@ export const registerAppHandlers = (transport: ITransport, broadcast: BroadcastF
   query('alertList', (p) => Core.alertList(p));
   query('alertDismiss', (p) => Core.alertDismiss(p));
   query('alertReopen', (p) => Core.alertReopen(p));
+  query('alertResolve', (p) => Core.alertResolve(p));
   query('appRunsActive', async (p) =>
     ActiveAppRuns.list({ appIdentifier: String(p.appIdentifier ?? ''), pageId: p.pageId })
   );

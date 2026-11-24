@@ -152,6 +152,7 @@ Core.appApprovalDecide(params: { appIdentifier: string; pipelineIdentifier: stri
 Core.alertList(params?: { includeClosed?: boolean; taskIdentifier?: string; ids?: string[] }): Promise<AlertItem[]>   // open only, unless includeClosed
 Core.alertDismiss(params: { id?: string; ids?: string[]; all?: boolean; dismissedBy?: string }): Promise<{ dismissed: number }>   // acknowledge: quiet until resolved
 Core.alertReopen(params: { id: string }): Promise<{ reopened: true }>
+Core.alertResolve(params: { id?: string; ids?: string[]; resolvedBy?: string }): Promise<{ resolved: number }>   // by hand: the next raise is a new alert
 ```
 
 `approvalDecide` atomically moves the run from `paused` back to `running` (a second

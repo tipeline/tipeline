@@ -59,7 +59,9 @@ class FakeCore {
         ? ALERTS
         : event === 'alertDismiss'
           ? { dismissed: payload.payload.ids.length }
-          : { reopened: true };
+          : event === 'alertResolve'
+            ? { resolved: payload.payload.ids.length }
+            : { reopened: true };
     setTimeout(() => this.handlers.get(resp)?.({ correlationId: payload.correlationId, data }));
   }
 }
@@ -147,6 +149,23 @@ describe('WsGateway alerts', () => {
     expect(reopen.error).toBe('Alert not found');
     expect(core.sent.filter((s) => s.event !== 'alertList')).toEqual([]);
     expect(auditLog).not.toHaveBeenCalled();
+    ws.close();
+  });
+
+  it('resolve by hand is recorded as the signed-in user and audited as alert.resolve', async () => {
+    const { ws, ask } = await client('tok-viewer');
+    const res = await ask('alertResolve', { ids: ['a-traffic', 'a-quiet'], resolvedBy: 'spoof' });
+    expect(res.error).toBeUndefined();
+    expect(core.sent.at(-1)?.payload.payload).toEqual({
+      ids: ['a-traffic', 'a-quiet'],
+      resolvedBy: 'finance@acme.com',
+    });
+    await vi.waitFor(() => expect(auditLog).toHaveBeenCalledTimes(2));
+    expect(auditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'alert.resolve', targetId: 'a-quiet' })
+    );
+    const hidden = await ask('alertResolve', { id: 'a-hidden' });
+    expect(hidden.error).toBe('Alert not found');
     ws.close();
   });
 

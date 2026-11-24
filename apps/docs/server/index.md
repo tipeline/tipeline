@@ -51,7 +51,8 @@ See [Roles & scopes](/server/api#_2-roles-scopes) for the exact permissions, and
 
 Everyone sees the [alerts](/workflows/alerts) of the workflows they can see, so another
 user's private workflow keeps its alerts private too. Dismissing an alert dismisses it for
-everyone, and the audit log records it as `alert.dismiss` (reopening as `alert.reopen`).
+everyone, and the audit log records it as `alert.dismiss` (reopening as `alert.reopen`,
+resolving by hand as `alert.resolve`).
 
 ## The shape of it
 

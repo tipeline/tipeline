@@ -5,6 +5,7 @@ import { trackHistory } from '@/router/navHistory';
 import Dashboard from '@/pages/Dashboard.vue';
 import Activity from '@/pages/Activity.vue';
 import Approvals from '@/pages/Approvals.vue';
+import Alerts from '@/pages/Alerts.vue';
 const Agent = () => import('@/pages/Agent.vue');
 
 import AppsList from '@/pages/apps/AppsList.vue';
@@ -73,6 +74,13 @@ const routes = [
     name: 'Approvals',
     component: Approvals,
     meta: { breadcrumb: 'Approvals', layout: 'DefaultLayout' },
+  },
+  // Alerts — every alert workflows raised: open, dismissed and resolved
+  {
+    path: '/alerts',
+    name: 'Alerts',
+    component: Alerts,
+    meta: { breadcrumb: 'Alerts', layout: 'DefaultLayout' },
   },
   // Agent
   {

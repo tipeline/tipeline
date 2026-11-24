@@ -265,6 +265,10 @@ every one you can see).
 ### `tipeline alert reopen <id>`
 Puts a dismissed alert back in Needs you.
 
+### `tipeline alert resolve <ids...>`
+Closes open or dismissed alerts because the problem is fixed, like `alert.resolve` in a
+workflow. If the problem comes back, the next raise is a new alert and notifies again.
+
 ```bash
 tipeline alert list
 tipeline alert dismiss alr003ggg444hhh555iii

@@ -45,8 +45,8 @@ const VIEWER_ALLOWED = new Set([
   'appList', 'appDetail', 'tableDataFetch', 'appHistoryFetch', 'appRunsActive', 'appRunsList',
   // Deciding is checked per request: a viewer named as an approver may decide.
   'approvalList', 'approvalDecide', 'appApprovalList', 'appApprovalDecide', 'approvalHistory',
-  // Anyone who can see an alert may dismiss it (see alertAuthorization).
-  'alertList', 'alertDismiss', 'alertReopen',
+  // Anyone who can see an alert may dismiss, reopen or resolve it (see alertAuthorization).
+  'alertList', 'alertDismiss', 'alertReopen', 'alertResolve',
   'variableList', 'variableUsage',
   'tagList', 'scheduleList', 'status',
   // Without credentials: see routeHidingSecrets.
@@ -110,7 +110,7 @@ const ALL_CORE_EVENTS = [
   // Approvals
   'onApprovalList', 'onApprovalDecide', 'onAppApprovalList', 'onAppApprovalDecide', 'onApprovalHistory',
   // Alerts
-  'onAlertList', 'onAlertDismiss', 'onAlertReopen',
+  'onAlertList', 'onAlertDismiss', 'onAlertReopen', 'onAlertResolve',
   'onAppRunsActive', 'onAppRunsList',
   // Variables
   'onVariableList', 'onVariableNew', 'onVariableEdit', 'onVariableDuplicate',
@@ -169,7 +169,7 @@ const ALLOWED_COMMANDS = new Set([
   // Approvals
   'approvalList', 'approvalDecide', 'appApprovalList', 'appApprovalDecide', 'approvalHistory',
   // Alerts
-  'alertList', 'alertDismiss', 'alertReopen',
+  'alertList', 'alertDismiss', 'alertReopen', 'alertResolve',
   // Variables
   'variableList', 'variableNew', 'variableEdit', 'variableDuplicate',
   'variableDelete', 'variableUsage', 'variableExportAll',
@@ -225,7 +225,7 @@ interface PendingDecision {
 interface PendingAlertChange {
   user: User;
   ip: string | null;
-  action: 'alert.dismiss' | 'alert.reopen';
+  action: 'alert.dismiss' | 'alert.reopen' | 'alert.resolve';
   items: AlertListItem[];
 }
 
@@ -462,9 +462,10 @@ export class WsGateway {
             }
           }
 
-          if (event === 'alertDismiss' || event === 'alertReopen') {
+          if (event === 'alertDismiss' || event === 'alertReopen' || event === 'alertResolve') {
             const params = payload.payload ?? {};
-            const responseEvent = event === 'alertDismiss' ? 'onAlertDismiss' : 'onAlertReopen';
+            const responseEvent =
+              event === 'alertDismiss' ? 'onAlertDismiss' : event === 'alertReopen' ? 'onAlertReopen' : 'onAlertResolve';
             const deny = (error: string) => {
               if (payload.correlationId) this.correlationMap.delete(payload.correlationId);
               ws.send(JSON.stringify({ event: responseEvent, correlationId: payload.correlationId, error }));
@@ -492,12 +493,15 @@ export class WsGateway {
             payload.payload =
               event === 'alertDismiss'
                 ? { ids: auth.items.map((a) => a.id), dismissedBy: currentUser.email }
-                : { id: auth.items[0].id };
+                : event === 'alertResolve'
+                  ? { ids: auth.items.map((a) => a.id), resolvedBy: currentUser.email }
+                  : { id: auth.items[0].id };
             if (payload.correlationId) {
               this.pendingAlertChanges.set(payload.correlationId, {
                 user: currentUser,
                 ip,
-                action: event === 'alertDismiss' ? 'alert.dismiss' : 'alert.reopen',
+                action:
+                  event === 'alertDismiss' ? 'alert.dismiss' : event === 'alertReopen' ? 'alert.reopen' : 'alert.resolve',
                 items: auth.items,
               });
             }
@@ -854,7 +858,7 @@ export class WsGateway {
   private async handleCoreEventSideEffects(event: string, data: any): Promise<void> {
     const correlationId = data?.correlationId;
 
-    if ((event === 'onAlertDismiss' || event === 'onAlertReopen') && correlationId) {
+    if ((event === 'onAlertDismiss' || event === 'onAlertReopen' || event === 'onAlertResolve') && correlationId) {
       const change = this.pendingAlertChanges.get(correlationId);
       this.pendingAlertChanges.delete(correlationId);
       if (change && !data?.error) {

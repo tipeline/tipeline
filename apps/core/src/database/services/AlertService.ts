@@ -134,6 +134,18 @@ export class AlertService {
     return count > 0;
   }
 
+  /**
+   * Closes open or acknowledged alerts by id, when a person says the problem is fixed: the
+   * next raise with the same key opens a new alert (and notifies). Returns how many closed.
+   */
+  static async resolveByIds(ids: string[], by: string | null = null): Promise<number> {
+    if (!ids.length) return 0;
+    return await Alert.query()
+      .whereIn('identifier', ids)
+      .whereIn('status', CONTINUED)
+      .patch({ status: 'resolved', closed_at: new Date().toISOString(), closed_by: by } as any);
+  }
+
   /** Open alerts, newest raise first (with includeClosed, all that are kept). */
   static async list(query: AlertListQuery = {}): Promise<AlertItem[]> {
     await this.pruneOccasionally();
