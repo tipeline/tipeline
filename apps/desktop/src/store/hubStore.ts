@@ -12,6 +12,8 @@ export interface Hub {
   last_checked_at: string | null;
   /** Whether an access token is saved. Core never sends the token itself. */
   hasToken: boolean;
+  /** The official hub: ships with Tipeline, can be switched off but not edited or removed. */
+  builtIn?: boolean;
 }
 
 export const useHubStore = defineStore('hub', () => {

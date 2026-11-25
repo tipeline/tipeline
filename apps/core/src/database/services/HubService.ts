@@ -33,9 +33,45 @@ function assertValidHubTarget(type: string, target: string) {
   }
 }
 
+/**
+ * The official hub. Every Core has it from the first start, under this fixed id, so items
+ * installed from it keep the same hub link on every machine. Like the Local workspace it
+ * can't be edited or removed — its address ships with Tipeline — but it can be switched off.
+ */
+export const OFFICIAL_HUB = {
+  id: 'tipeline-hub',
+  name: 'Tipeline Hub',
+  type: 'remote' as const,
+  target: 'https://hub.tipeline.com',
+};
+
+export function isBuiltInHub(id: string): boolean {
+  return id === OFFICIAL_HUB.id;
+}
+
+function assertEditableHub(id: string, action: string) {
+  if (isBuiltInHub(id)) throw new Error(`${OFFICIAL_HUB.name} is built in and can't be ${action}. You can switch it off.`);
+}
+
 export class HubService {
+  /**
+   * Adds the official hub on first start. Later starts keep the user's on/off choice and
+   * bring its name and address in line with this release, so a moved hub follows along.
+   */
+  static async ensureOfficialHub(): Promise<void> {
+    const { id, name, type, target } = OFFICIAL_HUB;
+    const current = await Hub.query().findById(id);
+    if (!current) {
+      await Hub.query().insert({ id, name, type, target, token: null, enabled: true });
+    } else if (current.name !== name || current.type !== type || current.target !== target || current.token) {
+      await Hub.query().patch({ name, type, target, token: null }).where({ id });
+    }
+  }
+
+
+  /** The official hub first, then the user's own in the order they were added. */
   static async list(): Promise<Hub[]> {
-    return Hub.query().orderBy('created_at');
+    return Hub.query().orderByRaw('id = ? desc', [OFFICIAL_HUB.id]).orderBy('created_at');
   }
 
   static async listEnabled(): Promise<Hub[]> {
@@ -69,6 +105,7 @@ export class HubService {
     id: string,
     data: Partial<{ name: string; type: 'remote' | 'local_folder'; target: string; token: string | null }>
   ): Promise<Hub> {
+    assertEditableHub(id, 'edited');
     const patch = { ...data };
     if (data.type !== undefined || data.target !== undefined) {
       const current = await Hub.query().findById(id);
@@ -85,6 +122,7 @@ export class HubService {
   }
 
   static async remove(id: string): Promise<void> {
+    assertEditableHub(id, 'removed');
     await Hub.transaction(async (trx) => {
       // Application-level cascade: the link tables declare ON DELETE CASCADE
       // on hub_id, but SQLite only enforces/cascades FKs when
