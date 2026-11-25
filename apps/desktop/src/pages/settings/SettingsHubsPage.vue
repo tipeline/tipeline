@@ -210,6 +210,13 @@ async function confirmRemove() {
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-1.5 font-medium text-sm">
             {{ hub.name }}
+            <span
+              v-if="hub.builtIn"
+              class="rounded bg-muted px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground"
+              :title="t('hub.manage.builtInHint')"
+            >
+              {{ t('hub.manage.builtIn') }}
+            </span>
             <span v-if="hub.hasToken" :title="t('hub.manage.hasToken')">
               <KeyRound class="h-3.5 w-3.5 text-muted-foreground" />
             </span>
@@ -229,14 +236,22 @@ async function confirmRemove() {
         >
           <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': checkingId === hub.id }" />
         </Button>
-        <Button variant="ghost" size="icon" :title="t('hub.manage.edit')" @click="openEdit(hub)">
+        <Button
+          v-if="!hub.builtIn"
+          variant="ghost"
+          size="icon"
+          :title="t('hub.manage.edit')"
+          @click="openEdit(hub)"
+        >
           <Pencil class="h-4 w-4" />
         </Button>
         <SaveStatus v-bind="autoSave.status(`enabled:${hub.id}`)" />
         <Switch :model-value="!!hub.enabled" @update:model-value="(v: boolean) => toggleEnabled(hub, v)" />
-        <Button variant="ghost" size="icon" @click="askRemove(hub)">
+        <Button v-if="!hub.builtIn" variant="ghost" size="icon" @click="askRemove(hub)">
           <Trash2 class="h-4 w-4 text-destructive" />
         </Button>
+        <!-- Keeps the switches lined up with the user's own hubs. -->
+        <span v-else class="w-9 shrink-0" aria-hidden="true" />
       </div>
 
       <p v-if="store.hubs.length === 0" class="text-sm text-muted-foreground py-4 text-center">

@@ -11,6 +11,8 @@ import archiver from 'archiver';
 import { TaskService } from '@database/services/TaskService';
 import { actionGroups, findabilityIssues } from '@engine/WorkflowCatalog';
 import { HubWorkflowCatalog } from '@/hub/HubWorkflowCatalog';
+import { hubItemDetail } from '@/hub/HubItemDetail';
+import type { HubCatalogItemType } from '@/hub/HubProvider';
 import { assertNotDraft, readDraftSchedule, repeatsOnATimer, type DraftSchedule } from '@task/Draft';
 import { resolveScheduleTiming, type ScheduleTimingInput } from '@engine/runner/scheduleTiming';
 import { checkWorkflowYaml, setWorkflowAuthor } from '@engine/WorkflowAuthoring';
@@ -55,7 +57,7 @@ import { getJobRunner } from '@engine/runner/JobRunnerFactory';
 import type { RunTrigger } from '@engine/runner/IJobRunner';
 import { PluginLoader } from '@/plugin/PluginLoader';
 import { AppSettings } from '@engine/AppSettings';
-import { HubService } from '@database/services/HubService';
+import { HubService, isBuiltInHub } from '@database/services/HubService';
 import type { Hub } from '@database/models/Hub';
 import { HubUpdateEventService } from '@database/services/HubUpdateEventService';
 import { HubProviderFactory } from '@/hub/HubProviderFactory';
@@ -82,6 +84,7 @@ export default class Core {
 
   static async init() {
     await PipelineRunnerService.recoverStaleRunningPipelines();
+    await HubService.ensureOfficialHub().catch((err) => console.error('Could not add the official hub:', err));
   }
 
   static async status() {
@@ -2074,7 +2077,7 @@ export default class Core {
   /** A hub as clients see it: the token is swapped for `hasToken`, so it never leaves Core. */
   private static hubView(hub: Hub) {
     const { token, ...rest } = hub;
-    return { ...rest, hasToken: !!token };
+    return { ...rest, hasToken: !!token, builtIn: isBuiltInHub(hub.id) };
   }
 
   static async hubList() {
@@ -2136,6 +2139,11 @@ export default class Core {
   /** What installing a hub workflow would bring: its inputs, and plugins this Core is missing. */
   static async hubPreviewTask(hubId: string, itemIdentifier: string) {
     return await HubWorkflowCatalog.preview(hubId, itemIdentifier);
+  }
+
+  /** What a hub item holds, read from its file without installing it, for the Hub's detail drawer. */
+  static async hubItemDetail(hubId: string, type: HubCatalogItemType, itemIdentifier: string) {
+    return await hubItemDetail(hubId, type, itemIdentifier);
   }
 
   static async hubCatalog(hubId: string) {

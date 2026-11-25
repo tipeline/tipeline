@@ -58,7 +58,7 @@ commit the folder and add the repo's link as the hub (see [A GitHub repo as a hu
 | `name` | ✓ | Shown in the Hub browser |
 | `version` | ✓ | Semver `x.y.z`. **This is what update checks compare** — see below. |
 | `file` | ✓ | Path to the item, relative to the hub |
-| `description`, `author`, `updatedAt` | | Shown in the Hub browser |
+| `description`, `author`, `updatedAt` | | Shown in the Hub browser. Cards show the start of `description`, and the detail drawer shows all of it as Markdown. |
 | `image` | | Thumbnail: a path in the hub, or a URL |
 | `group` | plugins | The action group the plugin provides. Lets the assistant find the plugin a workflow needs. |
 | `checksum` | | `sha256:<hex>` of the item's file. When present, Tipeline checks it before installing — see [Checksums](#checksums). |

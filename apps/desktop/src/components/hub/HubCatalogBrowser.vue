@@ -24,6 +24,7 @@ import { toAssetUrl } from '@/utils/assetUrl';
 import { SEND } from '@/ipc-channels';
 import { descriptionSummary } from '@tipeline/utils';
 import CapabilityList from '@/components/task/CapabilityList.vue';
+import HubItemDrawer from '@/components/hub/HubItemDrawer.vue';
 import type { CapabilityReport } from '@/utils/capabilities';
 
 type HubCatalogItem = {
@@ -33,6 +34,7 @@ type HubCatalogItem = {
   description?: string;
   author?: string;
   version: string;
+  updatedAt?: string;
   image?: string;
 };
 
@@ -87,6 +89,9 @@ let pendingCapabilityItem: HubCatalogItem | null = null;
 // two full sha256 hashes, which a toast would cut off.
 const installError = ref<{ name: string; message: string } | null>(null);
 
+// The card opened in the detail drawer. Its Install button runs the same steps as the card's.
+const detailItem = ref<HubCatalogItem | null>(null);
+
 // Workflows whose plugins aren't installed or are turned off: listed before
 // installing, each with a button that installs and/or turns it on. Once none is
 // missing, the install carries on as usual (capabilities first).
@@ -137,6 +142,7 @@ async function loadInstalled() {
 }
 
 watch(selectedHubId, () => {
+  detailItem.value = null;
   loadCatalog();
   loadInstalled();
 });
@@ -296,22 +302,35 @@ const placeholderIcon = computed(() => PLACEHOLDER_ICON[props.itemType]);
         </div>
         <div v-else class="flex-1 min-h-0 overflow-y-auto scroll-fade">
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
-            <Card v-for="item in catalogItems" :key="item.identifier" class="flex flex-col overflow-hidden">
-              <div class="aspect-video w-full bg-muted flex items-center justify-center overflow-hidden">
-                <img
-                  v-if="imageSrc(item)"
-                  :src="imageSrc(item)!"
-                  :alt="item.name"
-                  class="w-full h-full object-contain p-4"
-                  @error="brokenImages.add(item.identifier)"
-                />
-                <component :is="placeholderIcon" v-else class="size-10 text-muted-foreground/40" />
-              </div>
-              <CardHeader class="pb-2">
-                <CardTitle class="text-base leading-tight">{{ item.name }}</CardTitle>
-                <CardDescription class="line-clamp-2">{{ descriptionSummary(item.description) || '—' }}</CardDescription>
-              </CardHeader>
-              <CardContent class="flex-1" />
+            <Card
+              v-for="item in catalogItems"
+              :key="item.identifier"
+              class="flex flex-col overflow-hidden transition-colors hover:border-foreground/20"
+            >
+              <!-- The image and text open the detail drawer; the footer keeps Install one click away. -->
+              <button
+                type="button"
+                class="flex flex-1 flex-col gap-6 text-left cursor-pointer focus-visible:outline-none focus-visible:bg-accent/50"
+                :aria-label="t('hub.detail.open', { name: item.name })"
+                data-testid="hub-card-open"
+                @click="detailItem = item"
+              >
+                <div class="aspect-video w-full bg-muted flex items-center justify-center overflow-hidden">
+                  <img
+                    v-if="imageSrc(item)"
+                    :src="imageSrc(item)!"
+                    :alt="item.name"
+                    class="w-full h-full object-contain p-4"
+                    @error="brokenImages.add(item.identifier)"
+                  />
+                  <component :is="placeholderIcon" v-else class="size-10 text-muted-foreground/40" />
+                </div>
+                <CardHeader class="pb-2 w-full">
+                  <CardTitle class="text-base leading-tight">{{ item.name }}</CardTitle>
+                  <CardDescription class="line-clamp-2">{{ descriptionSummary(item.description) || '—' }}</CardDescription>
+                </CardHeader>
+                <CardContent class="flex-1" />
+              </button>
               <CardFooter class="flex items-center justify-between gap-2 pt-0">
                 <div class="flex items-center gap-2 min-w-0 text-xs text-muted-foreground">
                   <span class="truncate">{{ item.author ?? '—' }}</span>
@@ -336,6 +355,16 @@ const placeholderIcon = computed(() => PLACEHOLDER_ICON[props.itemType]);
       </template>
     </template>
   </PanelCard>
+
+  <HubItemDrawer
+    :item="detailItem"
+    :hub-id="selectedHubId"
+    :hub-name="selectedHubName"
+    :installed="!!detailItem && installedIdentifiers.has(detailItem.identifier)"
+    :busy="!!detailItem && (installingIdentifier === detailItem.identifier || checkingIdentifier === detailItem.identifier)"
+    @close="detailItem = null"
+    @install="requestInstall"
+  />
 
   <AlertDialog :open="!!confirmItem" @update:open="(v: boolean) => !v && (confirmItem = null)">
     <AlertDialogContent>
