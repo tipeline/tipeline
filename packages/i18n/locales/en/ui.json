@@ -1618,6 +1618,8 @@
       "tokenDescription": "For a private hub, like a private GitHub repo. Sent only to the hub's own address.",
       "tokenSavedPlaceholder": "Token saved — type a new one to replace it",
       "removeToken": "Remove the saved token",
+      "builtIn": "Built in",
+      "builtInHint": "Comes with Tipeline. You can switch it off, but not edit or remove it.",
       "hasToken": "Uses an access token",
       "edit": "Edit hub",
       "editTitle": "Edit hub",

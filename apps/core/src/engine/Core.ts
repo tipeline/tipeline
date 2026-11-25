@@ -55,7 +55,7 @@ import { getJobRunner } from '@engine/runner/JobRunnerFactory';
 import type { RunTrigger } from '@engine/runner/IJobRunner';
 import { PluginLoader } from '@/plugin/PluginLoader';
 import { AppSettings } from '@engine/AppSettings';
-import { HubService } from '@database/services/HubService';
+import { HubService, isBuiltInHub } from '@database/services/HubService';
 import type { Hub } from '@database/models/Hub';
 import { HubUpdateEventService } from '@database/services/HubUpdateEventService';
 import { HubProviderFactory } from '@/hub/HubProviderFactory';
@@ -82,6 +82,7 @@ export default class Core {
 
   static async init() {
     await PipelineRunnerService.recoverStaleRunningPipelines();
+    await HubService.ensureOfficialHub().catch((err) => console.error('Could not add the official hub:', err));
   }
 
   static async status() {
@@ -2074,7 +2075,7 @@ export default class Core {
   /** A hub as clients see it: the token is swapped for `hasToken`, so it never leaves Core. */
   private static hubView(hub: Hub) {
     const { token, ...rest } = hub;
-    return { ...rest, hasToken: !!token };
+    return { ...rest, hasToken: !!token, builtIn: isBuiltInHub(hub.id) };
   }
 
   static async hubList() {

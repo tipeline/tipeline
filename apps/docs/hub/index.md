@@ -4,6 +4,14 @@ A **hub** is a catalog of workflows, apps and plugins you can install with one c
 can be a website, or just a folder — on your computer or a shared drive — so a team can
 share its own workflows without publishing them anywhere.
 
+## The Tipeline Hub
+
+Every Tipeline starts with one hub already set up: **Tipeline Hub**
+(`https://hub.tipeline.com`), the official catalog. It's built in, like the Local workspace:
+you can't edit or remove it, but you can switch it off in **Settings → Hubs** (or
+`tipeline hub disable tipeline-hub`) — say, on a machine that should only install from your
+team's own hub. It stays off until you switch it back on.
+
 ## Adding a hub
 
 **Settings → Hubs → Add Hub**, then pick a type:
