@@ -137,6 +137,7 @@ const QUERY_OPS: Array<{ send: string; core: string; coreResp: string; timeoutMs
   { send: SEND.HUB_CATALOG, core: CORE.HUB_CATALOG, coreResp: CORE_RESP.HUB_CATALOG },
   { send: SEND.HUB_INSTALL_TASK, core: CORE.HUB_INSTALL_TASK, coreResp: CORE_RESP.HUB_INSTALL_TASK },
   { send: SEND.HUB_PREVIEW_TASK, core: CORE.HUB_PREVIEW_TASK, coreResp: CORE_RESP.HUB_PREVIEW_TASK },
+  { send: SEND.HUB_ITEM_DETAIL, core: CORE.HUB_ITEM_DETAIL, coreResp: CORE_RESP.HUB_ITEM_DETAIL },
   { send: SEND.HUB_INSTALL_APP, core: CORE.HUB_INSTALL_APP, coreResp: CORE_RESP.HUB_INSTALL_APP },
   // Plugin install/update runs `npm install`, which can legitimately take well
   // over the default 15s timeout (cold cache, slow registry) — the generic

@@ -1,4 +1,5 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { Readable } from 'stream';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -6,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('axios', () => ({ default: { get: vi.fn() } }));
 
 import axios from 'axios';
-import { RemoteHubProvider, resolveHubBase } from '@/hub/RemoteHubProvider';
+import { RemoteHubProvider, removeHubDownload, resolveHubBase } from '@/hub/RemoteHubProvider';
 
 const get = vi.mocked(axios.get);
 const hubAt = (target: string, token?: string) => ({ id: 'h1', name: 'Hub', type: 'remote', target, token }) as any;
@@ -107,5 +108,34 @@ describe('RemoteHubProvider', () => {
       headers: { Authorization: 'Bearer secret' },
     });
     expect(get).toHaveBeenNthCalledWith(2, 'https://elsewhere.example.com/b.yml', { responseType: 'stream' });
+  });
+});
+
+describe('removeHubDownload', () => {
+  const fileIn = (prefix: string) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+    const file = path.join(dir, 'item.yml');
+    fs.writeFileSync(file, 'name: x');
+    return { dir, file };
+  };
+
+  it("deletes a remote hub's download folder once the file is read", () => {
+    const { dir, file } = fileIn('tipeline-hub-');
+    removeHubDownload(hubAt('https://hub.example.com'), file);
+    expect(fs.existsSync(dir)).toBe(false);
+  });
+
+  it("leaves a local hub's file where it is, even in a folder named like a download", () => {
+    const { dir, file } = fileIn('tipeline-hub-');
+    removeHubDownload({ id: 'h2', name: 'Folder', type: 'local_folder', target: dir } as any, file);
+    expect(fs.existsSync(file)).toBe(true);
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("leaves a remote hub's file alone when it isn't in a download folder", () => {
+    const { dir, file } = fileIn('something-else-');
+    removeHubDownload(hubAt('https://hub.example.com'), file);
+    expect(fs.existsSync(file)).toBe(true);
+    fs.rmSync(dir, { recursive: true, force: true });
   });
 });

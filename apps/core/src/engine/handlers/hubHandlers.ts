@@ -76,6 +76,17 @@ export const registerHubHandlers = (transport: ITransport) => {
     }
   });
 
+  transport.on('hubItemDetail', async (message: any, client: any) => {
+    if (!client) return;
+    try {
+      const { hubId, type, itemIdentifier } = message.payload;
+      const result = await Core.hubItemDetail(hubId, type, itemIdentifier);
+      transport.emit(client, 'onHubItemDetail', IPCMessage.success(result, message.correlationId));
+    } catch (error: any) {
+      transport.emit(client, 'onHubItemDetail', IPCMessage.failure(error.message, message.correlationId));
+    }
+  });
+
   transport.on('hubInstallTask', async (message: any, client: any) => {
     if (!client) return;
     try {

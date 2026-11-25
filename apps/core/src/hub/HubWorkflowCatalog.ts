@@ -3,6 +3,7 @@ import { HubService } from '@database/services/HubService';
 import { TaskService } from '@database/services/TaskService';
 import { PluginService } from '@database/services/PluginService';
 import { HubProviderFactory } from '@/hub/HubProviderFactory';
+import { removeHubDownload } from '@/hub/RemoteHubProvider';
 import { ActionRegistry } from '@action/ActionRegistry';
 import { PluginActionRegistry } from '@/plugin/PluginActionRegistry';
 import { descriptionSummary } from '@tipeline/utils';
@@ -148,7 +149,12 @@ export class HubWorkflowCatalog {
     if (cached) return cached;
 
     const filePath = await HubProviderFactory.getProvider(hub).fetchFile(hub, item);
-    const source = Parser.importFromFile(filePath) as any;
+    let source: any;
+    try {
+      source = Parser.importFromFile(filePath);
+    } finally {
+      removeHubDownload(hub, filePath);
+    }
     const description = descriptionSummary(source?.description ?? item.description ?? '');
     const preview = {
       hubId: hub.id,
@@ -170,11 +176,22 @@ export class HubWorkflowCatalog {
   /** The workflow's inputs, what it can do, and which of its plugins this Core is missing and where to get them. */
   static async preview(hubId: string, itemIdentifier: string): Promise<HubTaskPreview> {
     const { groups, actions, ...preview } = await this.readItem(hubId, itemIdentifier);
-    const missingGroups = groups.filter((group) => !ActionRegistry[group] && !PluginActionRegistry[group]);
-    const missingPlugins = await Promise.all(missingGroups.map((group) => this.describeMissing(group)));
+    const missingPlugins = await this.missingPlugins(groups);
     // Worked out on each preview, not cached: its sub-workflows may be installed since.
     const capabilities = await capabilityReport({ pipeline: { actions } });
     return { ...preview, missingPlugins, capabilities };
+  }
+
+  /** A hub workflow's file as read for its preview: name, steps and the action groups they use. */
+  static async workflowFile(hubId: string, itemIdentifier: string) {
+    const { name, actions, groups } = await this.readItem(hubId, itemIdentifier);
+    return { name, actions, groups };
+  }
+
+  /** The action groups this Core can't run yet, each with where to get its plugin. */
+  static async missingPlugins(groups: string[]): Promise<MissingPlugin[]> {
+    const missing = [...new Set(groups)].filter((group) => !ActionRegistry[group] && !PluginActionRegistry[group]);
+    return await Promise.all(missing.map((group) => this.describeMissing(group)));
   }
 
   private static async describeMissing(group: string): Promise<MissingPlugin> {

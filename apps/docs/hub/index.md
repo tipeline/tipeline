@@ -73,6 +73,18 @@ saved.
 
 Open **Hub** in the sidebar to browse every enabled hub's catalog, and click **Install**.
 
+Click a card to see the item in full before installing it. The drawer shows the whole
+description, and what Tipeline read from the item's file:
+
+- **Workflows**: what they ask for, what they return, how many steps they have, plugins
+  they need, and what they can access.
+- **Apps**: their pages, the workflows they install, and what those workflows can access
+  together.
+- **Plugins**: their action group, license, the npm packages they install and the files in
+  the package. The package is only listed, so none of its code runs.
+
+Reading the file installs nothing. The drawer has its own **Install** button.
+
 - **Workflows** are installed like any other and keep a link to their hub. If a workflow
   uses a plugin that isn't installed or is turned off, Tipeline lists it first, with a
   button: **Install and turn on** (when one of your hubs has it) or **Turn on**. Clicking it
