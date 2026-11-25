@@ -12,6 +12,7 @@ import { AppService } from '@database/services/AppService';
 import { PluginService } from '@database/services/PluginService';
 import { PluginLoader, PLUGINS_DIR, PLUGIN_STAGING_DIR } from '@/plugin/PluginLoader';
 import { HubProviderFactory } from '@/hub/HubProviderFactory';
+import { removeHubDownload } from '@/hub/RemoteHubProvider';
 import { AssetService, type AssetKind } from '@/asset/AssetService';
 import type { Hub } from '@database/models/Hub';
 import type { HubCatalogItem, HubCatalogItemType, HubProvider } from '@/hub/HubProvider';
@@ -141,7 +142,12 @@ export class HubSyncService {
 
   private static async fetchAndValidateTask(hub: Hub, item: HubCatalogItem) {
     const filePath = await HubProviderFactory.getProvider(hub).fetchFile(hub, item);
-    const rawTask = Parser.importFromFile(filePath);
+    let rawTask: unknown;
+    try {
+      rawTask = Parser.importFromFile(filePath);
+    } finally {
+      removeHubDownload(hub, filePath);
+    }
     const validatedTask = TaskValidator.validateFormat(rawTask) as any;
 
     // Every action needs a unique identifier within its block before it's ever
@@ -249,7 +255,12 @@ export class HubSyncService {
 
   private static async fetchApp(hub: Hub, item: HubCatalogItem) {
     const filePath = await HubProviderFactory.getProvider(hub).fetchFile(hub, item);
-    const rawApp = Parser.importFromFile(filePath) as any;
+    let rawApp: any;
+    try {
+      rawApp = Parser.importFromFile(filePath);
+    } finally {
+      removeHubDownload(hub, filePath);
+    }
     if (!rawApp?.name) throw new Error(`App "${item.identifier}" from hub "${hub.name}" must include a name field`);
     return rawApp;
   }
@@ -328,7 +339,11 @@ export class HubSyncService {
     let swapped = false;
     try {
       console.log(`[HubSyncService] Extracting ${archivePath} to ${stagedDir}...`);
-      await decompress(archivePath, stagedDir);
+      try {
+        await decompress(archivePath, stagedDir);
+      } finally {
+        removeHubDownload(hub, archivePath);
+      }
       // Refuse from package.json when it can: nothing from the package has run yet.
       checkVersion?.(packageJsonVersion(stagedDir));
       await runNpmInstall(stagedDir);

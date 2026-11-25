@@ -31,6 +31,21 @@ export function resolveHubBase(target: string): string {
   return `https://raw.githubusercontent.com/${owner}/${repo}/${ref ?? 'HEAD'}${rest ?? ''}`;
 }
 
+const DOWNLOAD_PREFIX = 'tipeline-hub-';
+
+/**
+ * Deletes a file `fetchFile` downloaded, once it has been read. Only a remote hub's
+ * download goes: it lives in a temp folder of its own, while a local hub's file is
+ * the hub's, and stays where it is.
+ */
+export function removeHubDownload(hub: Hub, filePath: string) {
+  if (hub.type !== 'remote') return;
+  const dir = path.dirname(filePath);
+  if (path.dirname(dir) === os.tmpdir() && path.basename(dir).startsWith(DOWNLOAD_PREFIX)) {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 export class RemoteHubProvider implements HubProvider {
   async fetchCatalog(hub: Hub): Promise<HubCatalogItem[]> {
     const base = resolveHubBase(hub.target);
@@ -104,7 +119,7 @@ export class RemoteHubProvider implements HubProvider {
   }
 
   private async download(hub: Hub, url: string, name: string): Promise<string> {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tipeline-hub-'));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), DOWNLOAD_PREFIX));
     const downloadPath = path.join(tmpDir, path.basename(name));
 
     const response = await axios.get(url, { responseType: 'stream', ...this.requestConfig(hub, url) });

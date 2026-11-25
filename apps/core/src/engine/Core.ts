@@ -11,6 +11,8 @@ import archiver from 'archiver';
 import { TaskService } from '@database/services/TaskService';
 import { actionGroups, findabilityIssues } from '@engine/WorkflowCatalog';
 import { HubWorkflowCatalog } from '@/hub/HubWorkflowCatalog';
+import { hubItemDetail } from '@/hub/HubItemDetail';
+import type { HubCatalogItemType } from '@/hub/HubProvider';
 import { assertNotDraft, readDraftSchedule, repeatsOnATimer, type DraftSchedule } from '@task/Draft';
 import { resolveScheduleTiming, type ScheduleTimingInput } from '@engine/runner/scheduleTiming';
 import { checkWorkflowYaml, setWorkflowAuthor } from '@engine/WorkflowAuthoring';
@@ -2137,6 +2139,11 @@ export default class Core {
   /** What installing a hub workflow would bring: its inputs, and plugins this Core is missing. */
   static async hubPreviewTask(hubId: string, itemIdentifier: string) {
     return await HubWorkflowCatalog.preview(hubId, itemIdentifier);
+  }
+
+  /** What a hub item holds, read from its file without installing it, for the Hub's detail drawer. */
+  static async hubItemDetail(hubId: string, type: HubCatalogItemType, itemIdentifier: string) {
+    return await hubItemDetail(hubId, type, itemIdentifier);
   }
 
   static async hubCatalog(hubId: string) {

@@ -206,6 +206,7 @@ export const SEND = {
   HUB_CATALOG: 'hubCatalog',
   HUB_INSTALL_TASK: 'hubInstallTask',
   HUB_PREVIEW_TASK: 'hubPreviewTask',
+  HUB_ITEM_DETAIL: 'hubItemDetail',
   HUB_INSTALL_APP: 'hubInstallApp',
   HUB_INSTALL_PLUGIN: 'hubInstallPlugin',
   HUB_UPDATE_TASK: 'hubUpdateTask',
