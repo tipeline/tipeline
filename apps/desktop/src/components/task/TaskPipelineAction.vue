@@ -18,7 +18,7 @@ import { summarizeAction } from '@/utils/actionSummary';
 
 const { getIconComponent } = useIcon();
 const { t } = useI18n();
-const { tAction } = useActionT();
+const { tAction, groupName } = useActionT();
 const pluginStore = usePluginStore();
 const builtinGroups = new Set(Object.keys(getAllValidations()));
 
@@ -77,6 +77,12 @@ const validator = computed(() => {
     };
   }
 });
+
+const actionLabel = computed(() => tAction(props.item.group, props.item.name) || validator.value.label);
+
+// Which group the step comes from (File, Flow, a plugin's name), shown before its
+// name on every row.
+const groupLabel = computed(() => groupName(props.item.group));
 
 // Provided by TaskEdit.vue: identifier -> name of every installed workflow.
 const workflowNames = inject('workflowNames', null);
@@ -201,7 +207,9 @@ const cardClass = computed(() => {
         />
 
         <span class="item-title flex-1 min-w-0 font-medium text-foreground transition-colors duration-200 ease-in-out">
-          <div class="text-sm">{{ tAction(item.group, item.name) || validator.label }}</div>
+          <div class="text-sm truncate">
+            <span v-if="groupLabel" class="font-normal text-muted-foreground">{{ groupLabel }} · </span>{{ actionLabel }}
+          </div>
           <div
             v-if="summary.length"
             class="text-xs font-normal text-foreground/75 truncate"
