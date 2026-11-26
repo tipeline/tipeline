@@ -1,17 +1,16 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
-import { flushPromises, mount } from '@vue/test-utils';
+import { mount } from '@vue/test-utils';
 import { defineComponent } from 'vue';
 import { createMemoryHistory, createRouter } from 'vue-router';
 
 vi.mock('@/utils/invoke', () => ({ invokeCore: vi.fn() }));
 
 import { invokeCore } from '@/utils/invoke';
-import { SEND } from '@/ipc-channels';
 import { i18n } from '@/i18n';
 import { nextRunText, runStrip, type TaskItem } from '@/config/tables/TasksList';
-import WorkflowStats from '@/components/task/WorkflowStats.vue';
+import RecentItemsRow from '@/components/RecentItemsRow.vue';
 
 const t = i18n.global.t as (key: string, named?: Record<string, unknown>) => string;
 
@@ -61,35 +60,23 @@ describe('nextRunText', () => {
   });
 });
 
-describe('WorkflowStats', () => {
-  it('asks for one seven-day period and shows runs, failures, failure rate and average time', async () => {
-    vi.mocked(invokeCore).mockResolvedValue([{ total: 214, failed: 6, finished: 200, durationMs: 840_000 }]);
-    const wrapper = mount(WorkflowStats, { global: { plugins: [i18n, makeRouter()] } });
-    await flushPromises();
+describe('RecentItemsRow', () => {
+  const items = [{ identifier: 'a', name: 'Alpha', openedAt: new Date().toISOString() }] as any[];
+  const mountRow = (type: 'task' | 'app' = 'task') =>
+    mount(RecentItemsRow, { props: { type, items }, global: { plugins: [i18n, makeRouter()] } });
 
-    const call = vi.mocked(invokeCore).mock.calls.find(([channel]) => channel === SEND.PIPELINE_STATS)!;
-    const [from, to] = (call[1] as any).boundaries as string[];
-    expect((Date.parse(to) - Date.parse(from)) / 86_400_000).toBeCloseTo(7, 0);
-    const text = wrapper.text();
-    expect(text).toContain('Runs · last 7 days214');
-    expect(text).toContain('Failed · last 7 days6');
-    expect(text).toContain('Failure rate2.8%');
-    expect(text).toContain('Average run time4.2 s');
-    wrapper.unmount();
-  });
+  beforeEach(() => localStorage.clear());
 
-  it('shows dashes for a Core without stats, or without run times', async () => {
-    vi.mocked(invokeCore).mockResolvedValue([{ total: 3, failed: 0 }]);
-    const older = mount(WorkflowStats, { global: { plugins: [i18n, makeRouter()] } });
-    await flushPromises();
-    expect(older.text()).toContain('Failure rate0.0%');
-    expect(older.text()).toContain('Average run time—');
-    older.unmount();
+  it('folds to its title line and remembers that per list', async () => {
+    const row = mountRow();
+    expect(row.text()).toContain('Alpha');
+    await row.get('button[aria-expanded]').trigger('click');
+    expect(row.text()).not.toContain('Alpha');
+    expect(row.get('button[aria-expanded]').attributes('aria-expanded')).toBe('false');
+    row.unmount();
 
-    vi.mocked(invokeCore).mockRejectedValue(new Error('unknown command'));
-    const oldest = mount(WorkflowStats, { global: { plugins: [i18n, makeRouter()] } });
-    await flushPromises();
-    expect(oldest.text()).toContain('Runs · last 7 days—');
-    oldest.unmount();
+    // Opening the list again keeps it folded; the Apps list has its own choice.
+    expect(mountRow().text()).not.toContain('Alpha');
+    expect(mountRow('app').text()).toContain('Alpha');
   });
 });
