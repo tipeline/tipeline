@@ -352,6 +352,81 @@ describe('Task', () => {
       expect(created.getValue()).toBe(42);
       expect(created.isRequired()).toBe(true);
     });
+
+    // An empty variable is saved as "null", and so is a live handle (Block nulls them).
+    it('leaves empty sshConnection and oauthToken variables empty, and a later step can set them', async () => {
+      const connection = new Variable({ type: 'sshConnection', name: 'connection' } as any);
+      const token = new Variable({ type: 'oauthToken', name: 'googleToken' } as any);
+      const task = makeTaskWithVariables([connection, token]);
+
+      await expect(
+        task.updateVariablesFromRecords([
+          { name: 'connection', value: 'null' },
+          { name: 'googleToken', value: 'null' },
+        ])
+      ).resolves.toBeUndefined();
+
+      expect(connection.getValue()).toBeNull();
+      expect(token.getValue()).toBeNull();
+      const ssh = { execCommand: () => {}, dispose: () => {}, isConnected: () => true };
+      connection.setValue(ssh);
+      token.setValue({ access_token: 'tok' });
+      expect(connection.getValue()).toBe(ssh);
+      expect(token.getValue()).toEqual({ access_token: 'tok' });
+    });
+
+    it('leaves every live type empty when its saved value is null', async () => {
+      const types = ['dbConnection', 'browser', 'workbook', 'image', 'audio', 'video'];
+      const variables = types.map((type) => new Variable({ type, name: `v_${type}` } as any));
+      const task = makeTaskWithVariables(variables);
+
+      await task.updateVariablesFromRecords(types.map((type) => ({ name: `v_${type}`, value: 'null' })));
+
+      expect(variables.map((v) => v.getValue())).toEqual(types.map(() => null));
+    });
+
+    it('leaves a variable empty when its saved value no longer fits the type (a live handle snapshot)', async () => {
+      const video = new Variable({ type: 'video', name: 'clip' } as any);
+      const task = makeTaskWithVariables([video]);
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await task.updateVariablesFromRecords([{ name: 'clip', value: JSON.stringify({ path: '/x.mp4' }) }]);
+
+      expect(video.getValue()).toBeNull();
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('"clip"'));
+      warn.mockRestore();
+    });
+
+    it('a saved null leaves a non-required plain variable at its usual empty value', async () => {
+      const note = new Variable({ type: 'string', name: 'note', value: 'x' } as any);
+      const task = makeTaskWithVariables([note]);
+
+      await task.updateVariablesFromRecords([{ name: 'note', value: 'null' }]);
+
+      expect(note.getValue()).toBe('');
+    });
+
+    it('puts back a readonly variable (restoring is not a change)', async () => {
+      const limit = new Variable({ type: 'number', name: 'limit', value: 500, readonly: true } as any);
+      const task = makeTaskWithVariables([limit]);
+
+      await task.updateVariablesFromRecords([{ name: 'limit', value: '500' }]);
+
+      expect(limit.getValue()).toBe(500);
+      expect(() => limit.setValue(1)).toThrow('readonly');
+    });
+
+    it('a saved variable the workflow no longer declares comes back empty when its value does not fit', async () => {
+      const task = makeTaskWithVariables([]);
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await task.updateVariablesFromRecords([
+        { name: 'conn', value: JSON.stringify({ host: 'h' }), type: 'sshConnection', scope: 'task' },
+      ]);
+
+      expect(task.getPipeline().getVariableByName('conn')!.getValue()).toBeNull();
+      warn.mockRestore();
+    });
   });
 
   describe('createActions', () => {
