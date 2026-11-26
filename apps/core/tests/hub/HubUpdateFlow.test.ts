@@ -1,4 +1,5 @@
 import fs from 'fs';
+import crypto from 'crypto';
 import path from 'path';
 import { execFileSync } from 'child_process';
 import knexFactory, { type Knex } from 'knex';
@@ -28,6 +29,9 @@ let hubId: string;
 const hubDir = path.join(home, 'hub');
 let items: any[] = [];
 
+// Every hub item needs a checksum: the sha256 of its file as it is on disk now.
+const checksumOf = (file: string) => `sha256:${crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')}`;
+
 const publish = () => fs.writeFileSync(path.join(hubDir, 'hub.json'), JSON.stringify({ items }));
 
 function publishWorkflow(listed: string, served = listed, extraVariables = '[]') {
@@ -36,7 +40,7 @@ function publishWorkflow(listed: string, served = listed, extraVariables = '[]')
     `name: Hello\nversion: ${served}\ndescription: d\npipeline:\n  variables: ${extraVariables}\n  actions:\n    - group: system\n      name: message\n      params: { text: hi }\n`
   );
   items = items.filter((i) => i.type !== 'task');
-  items.push({ type: 'task', identifier: 'hello', name: 'Hello', version: listed, file: 'hello.yml' });
+  items.push({ type: 'task', identifier: 'hello', name: 'Hello', version: listed, file: 'hello.yml', checksum: checksumOf(path.join(hubDir, 'hello.yml')) });
   publish();
 }
 
@@ -44,7 +48,7 @@ function publishApp(listed: string, pages: string[] = ['main']) {
   const list = pages.map((id) => `  - id: ${id}\n    name: ${id}\n`).join('');
   fs.writeFileSync(path.join(hubDir, 'app.yml'), `schemaVersion: 2\nname: Hub App\nversion: ${listed}\npages:\n${list}`);
   items = items.filter((i) => i.type !== 'app');
-  items.push({ type: 'app', identifier: 'hub-app', name: 'Hub App', version: listed, file: 'app.yml' });
+  items.push({ type: 'app', identifier: 'hub-app', name: 'Hub App', version: listed, file: 'app.yml', checksum: checksumOf(path.join(hubDir, 'app.yml')) });
   publish();
 }
 
@@ -56,7 +60,7 @@ function publishPlugin(listed: string, code: string, packageVersion = listed) {
   fs.writeFileSync(path.join(build, 'package.json'), JSON.stringify({ name: 'greeting', version: packageVersion, type: 'module' }));
   execFileSync('tar', ['-czf', path.join(hubDir, 'greeting.tar.gz'), '-C', build, 'index.mjs', 'package.json']);
   items = items.filter((i) => i.type !== 'plugin');
-  items.push({ type: 'plugin', identifier: 'greeting', name: 'Greeting', version: listed, file: 'greeting.tar.gz' });
+  items.push({ type: 'plugin', identifier: 'greeting', name: 'Greeting', version: listed, file: 'greeting.tar.gz', checksum: checksumOf(path.join(hubDir, 'greeting.tar.gz')) });
   publish();
 }
 

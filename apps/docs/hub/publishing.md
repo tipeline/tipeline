@@ -37,6 +37,7 @@ commit the folder and add the repo's link as the hub (see [A GitHub repo as a hu
       "version": "1.0.1",
       "updatedAt": "2026-09-27T00:00:00Z",
       "file": "tasks/hello-world.yml",
+      "checksum": "sha256:3b1f…",
       "image": "images/hello-world.png"
     },
     {
@@ -45,6 +46,7 @@ commit the folder and add the repo's link as the hub (see [A GitHub repo as a hu
       "name": "Hub Greeting Plugin",
       "version": "1.0.0",
       "file": "plugins/hub-greeting.zip",
+      "checksum": "sha256:9f2c…",
       "group": "hubGreeting"
     }
   ]
@@ -58,10 +60,10 @@ commit the folder and add the repo's link as the hub (see [A GitHub repo as a hu
 | `name` | ✓ | Shown in the Hub browser |
 | `version` | ✓ | Semver `x.y.z`. **This is what update checks compare** — see below. |
 | `file` | ✓ | Path to the item, relative to the hub |
+| `checksum` | ✓ | `sha256:<hex>` of the item's file. Tipeline checks it before installing — see [Checksums](#checksums). |
 | `description`, `author`, `updatedAt` | | Shown in the Hub browser. Cards show the start of `description`, and the detail drawer shows all of it as Markdown. |
 | `image` | | Thumbnail: a path in the hub, or a URL |
 | `group` | plugins | The action group the plugin provides. Lets the assistant find the plugin a workflow needs. |
-| `checksum` | | `sha256:<hex>` of the item's file. When present, Tipeline checks it before installing — see [Checksums](#checksums). |
 
 ### Workflows and apps
 
@@ -87,7 +89,8 @@ and a `package.json` if it has dependencies. Tipeline extracts it to
 
 ### Checksums
 
-`checksum` lets Tipeline confirm that the file it fetched is the one you published. It is the
+Every item needs a `checksum`, on every kind of hub: a website, a GitHub repo or a local
+folder. It lets Tipeline confirm that the file it fetched is the one you published. It is the
 SHA-256 of the file's bytes, written as `sha256:` followed by the hex digest:
 
 ```json
@@ -110,8 +113,9 @@ applies to updates as well as first installs, from remote and local folder hubs 
   names the item, the hub, and the expected and actual hashes. On an update, the installed
   copy stays as it was and the item is marked with a sync error.
 - **Not `sha256:<hex>`** — refused with an error. No other algorithm is supported.
-- **Missing** — the item installs without a check, so hubs written before checksums keep
-  working.
+- **Missing or empty** — refused with an error, and nothing is downloaded or installed. The
+  item still shows in the Hub browser, but it can't be installed, updated or opened in the
+  detail drawer until the hub adds a checksum.
 
 ## Versioning
 
@@ -150,13 +154,13 @@ refused, so people who already updated would stay on the bad release.
 
 Update checks compare the installed copy's version with the **catalog entry's**
 `version` in `hub.json`. They never open the file itself — that would mean downloading every
-file on every check. So publishing a change takes two edits:
+file on every check. So publishing a change takes three edits:
 
 1. Bump `version` inside the workflow or app file. This becomes the installed version.
 2. Bump the matching item's `version` in `hub.json` to the same value. This is what makes
    the update visible.
-3. If the item has a `checksum`, recompute it for the new file. A stale checksum makes the
-   update fail its check, and nothing is installed.
+3. Recompute the item's `checksum` for the new file. A stale checksum makes the update fail
+   its check, and nothing is installed.
 
 Forget step 2 and nothing happens: no error, the change just isn't detected. The top-level
 `updatedAt` isn't used for this either.
@@ -194,11 +198,15 @@ requests review changes, and GitHub decides who can read it.
          "identifier": "hello-world",
          "name": "Hello World",
          "version": "1.0.0",
-         "file": "tasks/hello-world.yml"
+         "file": "tasks/hello-world.yml",
+         "checksum": "sha256:<hex>"
        }
      ]
    }
    ```
+
+   Replace `<hex>` with the output of `shasum -a 256 tasks/hello-world.yml` (see
+   [Checksums](#checksums)). Without it, the workflow can't be installed.
 
 3. Add a `.gitattributes` file containing `* -text`. Git then stores every file exactly as
    it is, so line-ending changes on Windows can't break a [checksum](#checksums).

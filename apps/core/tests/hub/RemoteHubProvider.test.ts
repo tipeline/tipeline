@@ -1,4 +1,5 @@
 import fs from 'fs';
+import crypto from 'crypto';
 import os from 'os';
 import path from 'path';
 import { Readable } from 'stream';
@@ -92,14 +93,16 @@ describe('RemoteHubProvider', () => {
   it('downloads item files with the token only from the hub host', async () => {
     get.mockImplementation(async () => ({ data: Readable.from([Buffer.from('x')]) }) as any);
     const hub = hubAt('https://github.com/acme/hub', 'secret');
+    const checksum = `sha256:${crypto.createHash('sha256').update('x').digest('hex')}`;
 
-    const own = await provider.fetchFile(hub, { type: 'task', identifier: 'a', name: 'A', version: '1', file: 'workflows/a.yml' });
+    const own = await provider.fetchFile(hub, { type: 'task', identifier: 'a', name: 'A', version: '1', file: 'workflows/a.yml', checksum });
     const other = await provider.fetchFile(hub, {
       type: 'task',
       identifier: 'b',
       name: 'B',
       version: '1',
       file: 'https://elsewhere.example.com/b.yml',
+      checksum,
     });
     tmpDirs.push(path.dirname(own), path.dirname(other));
 

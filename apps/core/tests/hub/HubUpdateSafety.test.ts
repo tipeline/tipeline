@@ -1,4 +1,5 @@
 import fs from 'fs';
+import crypto from 'crypto';
 import os from 'os';
 import path from 'path';
 import { EventEmitter } from 'events';
@@ -52,6 +53,9 @@ let hubDir: string;
 let catalog: any[];
 const hub = () => ({ id: 'hub-1', name: 'Team Hub', type: 'local_folder', target: hubDir });
 
+// Every hub item needs a checksum: the sha256 of its file as it is on disk now.
+const checksumOf = (file: string) => `sha256:${crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')}`;
+
 const installedTask = (over: Record<string, unknown> = {}) => ({
   identifier: 'wf-1',
   name: 'Hello',
@@ -66,7 +70,7 @@ const installedTask = (over: Record<string, unknown> = {}) => ({
 // One workflow installed from the hub, with the hub listing `listed` and serving `served`.
 function hubListsWorkflow(listed: string, served: string, over: Record<string, unknown> = {}) {
   fs.writeFileSync(path.join(hubDir, 'hello.yml'), workflowFile(served));
-  catalog = [{ type: 'task', identifier: 'hello', name: 'Hello', version: listed, file: 'hello.yml' }];
+  catalog = [{ type: 'task', identifier: 'hello', name: 'Hello', version: listed, file: 'hello.yml', checksum: checksumOf(path.join(hubDir, 'hello.yml')) }];
   fs.writeFileSync(path.join(hubDir, 'hub.json'), JSON.stringify({ items: catalog }));
   const record = installedTask(over);
   vi.mocked(TaskService.getInstalledForHub).mockResolvedValue([record] as any);
@@ -249,7 +253,7 @@ describe('apps', () => {
     fs.writeFileSync(path.join(hubDir, 'app.yml'), appFile(served));
     fs.writeFileSync(
       path.join(hubDir, 'hub.json'),
-      JSON.stringify({ items: [{ type: 'app', identifier: 'hub-app', name: 'Hub App', version: listed, file: 'app.yml' }] })
+      JSON.stringify({ items: [{ type: 'app', identifier: 'hub-app', name: 'Hub App', version: listed, file: 'app.yml', checksum: checksumOf(path.join(hubDir, 'app.yml')) }] })
     );
     const record = {
       identifier: 'app-1',
@@ -287,7 +291,7 @@ describe('plugin updates', () => {
     fs.writeFileSync(path.join(hubDir, 'greeting.zip'), 'zip');
     fs.writeFileSync(
       path.join(hubDir, 'hub.json'),
-      JSON.stringify({ items: [{ type: 'plugin', identifier: 'greeting', name: 'Greeting', version: '1.1.0', file: 'greeting.zip' }] })
+      JSON.stringify({ items: [{ type: 'plugin', identifier: 'greeting', name: 'Greeting', version: '1.1.0', file: 'greeting.zip', checksum: checksumOf(path.join(hubDir, 'greeting.zip')) }] })
     );
     const record = {
       identifier: 'greeting',
