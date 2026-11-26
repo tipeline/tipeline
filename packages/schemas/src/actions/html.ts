@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { createValidationPair } from './../createValidation';
+import { orTemplateString } from './../templateValidation';
 
 // -----------------------------------------------
 // Reusable helpers
@@ -218,7 +219,7 @@ export const validations = {
       }),
       creation: z.object({
         html: z.string(),
-        schema: z.record(z.string(), z.string()),
+        schema: orTemplateString(z.record(z.string(), z.string())),
       }),
     },
     {

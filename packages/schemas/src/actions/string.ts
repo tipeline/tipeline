@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { createValidationPair } from './../createValidation';
+import { orTemplateString } from './../templateValidation';
 
 // Coerce numbers/strings to string; leave others untouched (validation will fail)
 const coerceStrictString = () =>
@@ -554,7 +555,7 @@ export const validations = {
       }),
       creation: z.object({
         template: z.string(),
-        values: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])),
+        values: orTemplateString(z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]))),
       }),
     },
     {
@@ -587,7 +588,7 @@ export const validations = {
 
   stringifyQueryObject: createValidationPair(
     {
-      runtime: z.object({ object: z.record(z.any(), z.any()) }),
+      runtime: z.object({ object: orTemplateString(z.record(z.any(), z.any())) }),
       creation: z.object({ object: z.record(z.any(), z.any()) }),
     },
     {
