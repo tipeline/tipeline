@@ -77,4 +77,4 @@ Pick a version to see it in one of three views:
 
 Click **Restore** to put it back. Restoring saves it as a new version, so the version it replaced stays in the list and you can switch back. A version that uses a plugin which is no longer installed can't be restored until the plugin is back.
 
-Every version from the last 30 days is kept. Older ones are thinned to the last one of each day. Versions are removed when you delete the workflow.
+Every version from the last 30 days is kept. Older ones are thinned to the last one of each day. Deleting the workflow moves its versions to the [Trash](./trash.md) with it. Apps keep versions too: see [App versions](/apps#versions).

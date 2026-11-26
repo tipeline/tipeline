@@ -1,6 +1,7 @@
 import { Model } from 'objection';
+import type { RevisionOrigin } from '@database/services/RevisionHistory';
 
-export type RevisionOrigin = 'edit' | 'created' | 'hub' | 'reload' | 'backup' | 'restore' | 'earlier';
+export type { RevisionOrigin };
 
 export class TaskRevision extends Model {
   id!: number;

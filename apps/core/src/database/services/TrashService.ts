@@ -41,9 +41,9 @@ export interface TrashListItem {
 
 const projectsOf = (data: TrashData): string[] => data.projects ?? (data.project ? [data.project] : []);
 
-const TABLES: Record<TrashKind, { table: string; hubLink: string; fk: string; label: string }> = {
-  task: { table: 'task', hubLink: 'task_hub_link', fk: 'task_id', label: 'Workflow' },
-  app: { table: 'app', hubLink: 'app_hub_link', fk: 'app_id', label: 'App' },
+const TABLES: Record<TrashKind, { table: string; hubLink: string; revisions: string; fk: string; label: string }> = {
+  task: { table: 'task', hubLink: 'task_hub_link', revisions: 'task_revision', fk: 'task_id', label: 'Workflow' },
+  app: { table: 'app', hubLink: 'app_hub_link', revisions: 'app_revision', fk: 'app_id', label: 'App' },
 };
 
 const withoutKeys = (row: Record<string, any>, ...keys: string[]) => {
@@ -77,7 +77,7 @@ export class TrashService {
 
   /** Moves a workflow or app to the Trash. Returns the trash item's id. */
   static async trash(kind: TrashKind, identifier: string): Promise<number> {
-    const { table, hubLink, fk, label } = TABLES[kind];
+    const { table, hubLink, revisions, fk, label } = TABLES[kind];
     return await this.knex().transaction(async (trx) => {
       const row = await trx(table).where({ identifier }).first();
       if (!row) throw new Error(`${label} "${identifier}" not found`);
@@ -87,6 +87,7 @@ export class TrashService {
         row: withoutKeys(row, 'id'),
         projects: await ProjectMembership.projectsOf(kind, row.id, trx),
         hubLink: link ? withoutKeys(link, 'id', fk) : null,
+        revisions: (await trx(revisions).where({ [fk]: row.id }).orderBy('id')).map((r) => withoutKeys(r, fk)),
       };
 
       if (kind === 'task') {
@@ -94,9 +95,6 @@ export class TrashService {
           .join('tag', 'tag.id', 'task_tag.tag_id')
           .where('task_tag.task_id', row.id)
           .pluck('tag.label');
-        data.revisions = (await trx('task_revision').where({ task_id: row.id }).orderBy('id')).map((r) =>
-          withoutKeys(r, 'task_id')
-        );
         data.schedules = (await trx('schedule').where({ task_id: row.id }).orderBy('id')).map((s) =>
           withoutKeys(s, 'id', 'task_id')
         );
@@ -115,12 +113,12 @@ export class TrashService {
       if (kind === 'task') {
         // Without foreign_keys on, the cascades don't run; the snapshot has these.
         await trx('task_tag').where({ task_id: row.id }).delete();
-        await trx('task_revision').where({ task_id: row.id }).delete();
         await trx('schedule').where({ task_id: row.id }).delete();
         // Alerts aren't kept in the snapshot: a restored workflow starts with none.
         await AlertService.deleteForTask(identifier, trx);
       }
       await trx(hubLink).where({ [fk]: row.id }).delete();
+      await trx(revisions).where({ [fk]: row.id }).delete();
       await ProjectMembership.forget(kind, row.id, trx);
       return id;
     });
@@ -161,7 +159,7 @@ export class TrashService {
       const item = await trx('trash_item').where({ id }).first();
       if (!item) throw new Error('This item is no longer in the Trash');
       const kind = item.kind as TrashKind;
-      const { table, hubLink, fk, label } = TABLES[kind];
+      const { table, hubLink, revisions, fk, label } = TABLES[kind];
       const data = parse(item.data) as TrashData;
 
       if (await trx(table).where({ identifier: item.identifier }).first()) {
@@ -185,6 +183,17 @@ export class TrashService {
         await trx(hubLink).insert({ ...data.hubLink, [fk]: rowId });
       }
 
+      const newIds = new Map<number, number>();
+      for (const revision of data.revisions ?? []) {
+        const { id: oldId, ...rest } = revision;
+        const [newId] = await trx(revisions).insert({
+          ...rest,
+          [fk]: rowId,
+          restored_from: rest.restored_from != null ? (newIds.get(rest.restored_from) ?? null) : null,
+        });
+        newIds.set(oldId, newId);
+      }
+
       if (kind === 'task') {
         const tagIds: number[] = [];
         for (const tag of TagService.normalizeLabels(data.tags ?? [])) {
@@ -192,17 +201,6 @@ export class TrashService {
           tagIds.push(existing ? existing.id : (await trx('tag').insert({ label: tag }))[0]);
         }
         if (tagIds.length) await trx('task_tag').insert(tagIds.map((tag_id) => ({ task_id: rowId, tag_id })));
-
-        const newIds = new Map<number, number>();
-        for (const revision of data.revisions ?? []) {
-          const { id: oldId, ...rest } = revision;
-          const [newId] = await trx('task_revision').insert({
-            ...rest,
-            task_id: rowId,
-            restored_from: rest.restored_from != null ? (newIds.get(rest.restored_from) ?? null) : null,
-          });
-          newIds.set(oldId, newId);
-        }
 
         for (const schedule of data.schedules ?? []) {
           // A schedule identifier taken in the meantime gets left out rather than failing the restore.

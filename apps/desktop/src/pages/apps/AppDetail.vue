@@ -33,6 +33,7 @@ import {
   ExternalLink,
   Download,
   EllipsisVertical,
+  History,
 } from 'lucide-vue-next';
 import {
   DropdownMenu,
@@ -260,6 +261,10 @@ useKeyboardShortcuts([
           <DropdownMenuItem class="cursor-pointer" @click="openEdit">
             <Settings2 class="size-4" />
             {{ t('common.edit') }}
+          </DropdownMenuItem>
+          <DropdownMenuItem class="cursor-pointer" @click="router.push({ name: 'AppVersions', params: { aid: identifier } })">
+            <History class="size-4" />
+            {{ t('tasks.versions.title') }}
           </DropdownMenuItem>
           <DropdownMenuItem class="cursor-pointer" :disabled="isExporting" @click="exportApp">
             <Download class="size-4" />

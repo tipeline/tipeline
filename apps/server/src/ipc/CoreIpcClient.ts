@@ -68,8 +68,9 @@ const CORE_EVENTS = [
   'onHubSetTaskAutoUpdate', 'onHubSetAppAutoUpdate', 'onHubSetPluginAutoUpdate',
   // Result cache
   'onCacheList', 'onCacheClear',
-  // Workflow versions + Trash
+  // Workflow + app versions, Trash
   'onTaskRevisionList', 'onTaskRevisionDetail', 'onTaskRevisionRestore',
+  'onAppRevisionList', 'onAppRevisionDetail', 'onAppRevisionRestore',
   'onTrashList', 'onTrashRestore', 'onTrashDelete', 'onTrashEmpty',
 ] as const;
 
