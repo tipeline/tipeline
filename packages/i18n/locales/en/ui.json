@@ -601,13 +601,6 @@
       "today": "Today {time}",
       "tomorrow": "Tomorrow {time}"
     },
-    "stats": {
-      "title": "Last {n} days",
-      "runs": "Runs · last {n} days",
-      "failed": "Failed · last {n} days",
-      "failureRate": "Failure rate",
-      "averageTime": "Average run time"
-    },
     "alertBadge": {
       "explain": "{n} open alert | {n} open alerts"
     }
@@ -3281,6 +3274,8 @@
     }
   },
   "recentRow": {
+    "show": "Show",
+    "hide": "Hide",
     "title": "Recently opened",
     "clear": "Clear",
     "seeAll": "See all",
