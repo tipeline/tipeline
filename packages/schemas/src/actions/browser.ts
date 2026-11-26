@@ -918,7 +918,7 @@ export const validations = {
       }),
       creation: withBrowserCreation({
         script: z.string(),
-        context: z.record(z.string(), z.any()).optional(),
+        context: orTemplateString(z.record(z.string(), z.any())).optional(),
       }),
     },
     {

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { createValidationPair } from './../createValidation';
+import { orTemplateString } from './../templateValidation';
 
 export const meta = {
   label: 'Subtask',
@@ -19,7 +20,7 @@ export const validations = {
       creation: z.object({
         identifier: z.string().optional(),
         path: z.string().optional(),
-        props: z.record(z.unknown()).optional(),
+        props: orTemplateString(z.record(z.unknown())).optional(),
         outputs: z.record(z.string()).optional(),
         async: z.boolean().optional(),
       }),
