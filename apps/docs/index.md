@@ -150,6 +150,32 @@ pipeline:
   </div>
 </section>
 
+<section class="tl-section tl-split">
+  <div class="tl-split-text">
+    <span class="tl-eyebrow">Tipeline Hub</span>
+    <h2 class="tl-h2">Need more?<br />Install it from the Hub.</h2>
+    <p class="tl-section-lead">Tipeline Hub is the official catalog of plugins and ready-made workflows. Plugins add new action groups, such as Drupal, Drush, Gmail, Google Drive and Google Docs. Workflows handle common jobs like site backups and health checks. Every item shows its source, what it needs and what it can access before you install it.</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px 24px">
+      <a class="tl-link" href="https://hub.tipeline.com">Browse Tipeline Hub →</a>
+      <a class="tl-link" href="/hub">How hubs work →</a>
+    </div>
+  </div>
+  <div class="tl-split-code">
+
+```bash
+# Tipeline Hub is set up already
+tipeline hub catalog tipeline-hub
+
+# Add the Drupal plugin, then a workflow that uses it
+tipeline hub install plugin tipeline-hub drupal
+tipeline hub install workflow tipeline-hub drupal-database-backup
+
+# Or open Hub in the Desktop sidebar
+```
+
+  </div>
+</section>
+
 <section class="tl-cta">
   <h2 class="tl-h2">Start automating today.</h2>
   <p class="tl-section-lead">Download the Desktop app to build visually, or install the CLI to work from the terminal.</p>

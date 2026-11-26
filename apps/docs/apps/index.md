@@ -79,7 +79,7 @@ What you can reference:
 
 ## YAML format
 
-Apps can be installed from a YAML file (**Apps → Install App**) or from a hub.
+Apps can be installed from a YAML file (**Apps → Install App**) or from a [hub](/hub).
 
 To move apps to another computer, use **Export** on an app's page (<kbd>⌘E</kbd>) or **Export All** on the Apps list. Either one saves a zip with each app's YAML and a `workflows/` folder holding the workflows the apps use, all named after the app or workflow (`workflows/invoice-report.yml`). Unzip it and install the app's YAML; its workflows are installed with it.
 

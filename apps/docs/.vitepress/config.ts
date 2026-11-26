@@ -81,7 +81,14 @@ export default defineConfig({
           { text: 'Desktop', link: '/desktop/overview' },
           { text: 'Assistant', link: '/assistant' },
           { text: 'CLI', link: '/cli/commands' },
-          { text: 'Hub & Plugins', link: '/hub' },
+        ],
+      },
+      {
+        text: 'Hub',
+        items: [
+          { text: 'Using hubs', link: '/hub' },
+          { text: 'Plugins', link: '/hub/plugins' },
+          { text: 'Browse Tipeline Hub', link: 'https://hub.tipeline.com' },
         ],
       },
       { text: 'Server', link: '/server' },
@@ -231,6 +238,10 @@ export default defineConfig({
             { text: 'Publishing to a Hub', link: '/hub/publishing' },
             { text: 'Plugins', link: '/hub/plugins' },
           ],
+        },
+        {
+          text: 'Tipeline Hub',
+          items: [{ text: 'hub.tipeline.com', link: 'https://hub.tipeline.com' }],
         },
       ],
       '/server': [

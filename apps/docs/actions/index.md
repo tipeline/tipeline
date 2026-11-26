@@ -2,6 +2,12 @@
 
 Tipeline ships with **30 action categories** covering automation, data manipulation, file handling, integrations, and flow control. Each action is identified by a `group` and a `name`.
 
+::: tip Need something that isn't built in?
+[Plugins](/hub/plugins) add more action groups, such as Drupal, Gmail or Google Docs.
+Find them on [Tipeline Hub](https://hub.tipeline.com/browse?type=plugin) and install them
+from **Hub** in the Desktop app.
+:::
+
 ## Action Anatomy
 
 Every action in a workflow YAML has the same structure:
