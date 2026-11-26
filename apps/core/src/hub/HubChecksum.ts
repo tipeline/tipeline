@@ -11,12 +11,17 @@ function describeItem(hub: Hub, item: HubCatalogItem): string {
 }
 
 /**
- * The expected sha256 hex of an item's `file`, or null when the catalog has no
- * checksum (older hubs). Anything other than `sha256:<64 hex>` is refused, so a
- * catalog using an algorithm this build doesn't know is never silently trusted.
+ * The expected sha256 hex of an item's `file`. Every hub item needs one, whatever
+ * the hub's type: an item with no checksum, or with anything other than
+ * `sha256:<64 hex>`, is refused, so a file is never installed unchecked.
  */
-export function expectedSha256(hub: Hub, item: HubCatalogItem): string | null {
-  if (item.checksum === undefined || item.checksum === null || item.checksum === '') return null;
+export function expectedSha256(hub: Hub, item: HubCatalogItem): string {
+  if (item.checksum === undefined || item.checksum === null || String(item.checksum).trim() === '') {
+    throw new Error(
+      `${describeItem(hub, item)} has no checksum, so Tipeline won't use its file. ` +
+        `Every hub item needs "checksum": "sha256:<hex>" in hub.json.`
+    );
+  }
   const match = CHECKSUM_FORMAT.exec(String(item.checksum).trim());
   if (!match) {
     throw new Error(
@@ -33,10 +38,9 @@ export async function sha256File(filePath: string): Promise<string> {
   return hash.digest('hex');
 }
 
-/** Throws when the file's bytes don't match the item's catalog checksum. A missing checksum passes. */
+/** Throws when the item has no usable checksum, or the file's bytes don't match it. */
 export async function verifyHubFile(hub: Hub, item: HubCatalogItem, filePath: string): Promise<void> {
   const expected = expectedSha256(hub, item);
-  if (!expected) return;
   const actual = await sha256File(filePath);
   if (actual !== expected) {
     throw new Error(

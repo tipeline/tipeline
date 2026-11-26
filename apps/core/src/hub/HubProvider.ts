@@ -12,6 +12,10 @@ export interface HubCatalogItem {
   updatedAt?: string;
   /** Path to the item's file, resolved against the hub's `target` (base URL or folder). */
   file: string;
+  /**
+   * `sha256:<hex>` of `file`. Required to install or read the item (see HubChecksum);
+   * optional here only because catalogs are read as published.
+   */
   checksum?: string;
   /**
    * Thumbnail shown in the Hub browser. For a remote hub this is a plain URL

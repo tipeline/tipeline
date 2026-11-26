@@ -57,7 +57,7 @@ export class RemoteHubProvider implements HubProvider {
 
   async fetchFile(hub: Hub, item: HubCatalogItem): Promise<string> {
     const fileUrl = this.resolveUrl(hub, item.file);
-    // An unsupported checksum format is refused before anything is downloaded.
+    // A missing or unsupported checksum is refused before anything is downloaded.
     expectedSha256(hub, item);
     const downloadPath = await this.download(hub, fileUrl, item.file);
     try {

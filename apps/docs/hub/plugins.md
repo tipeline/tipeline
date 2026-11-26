@@ -7,7 +7,9 @@ ones: in the builder, in workflow files, in apps and with the assistant.
 ## Installing a plugin
 
 - **From a hub:** open **Hub → Plugins** and click **Install**, or run
-  `tipeline hub install plugin <hubId> <identifier>`. See [Hubs](/hub).
+  `tipeline hub install plugin <hubId> <identifier>`. See [Hubs](/hub). To see what's
+  available first, browse the [plugins on Tipeline Hub](https://hub.tipeline.com/browse?type=plugin)
+  (Drupal, Drush, Gmail, Google Drive, Google Docs, …).
 - **By hand:** put the plugin's folder in `~/.tipeline/plugins/` (for example
   `~/.tipeline/plugins/drupal/index.mjs`), then open **Plugins**. If it has a `package.json`
   with dependencies, run `npm install` in its folder first.

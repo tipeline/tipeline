@@ -6,11 +6,47 @@ share its own workflows without publishing them anywhere.
 
 ## The Tipeline Hub
 
-Every Tipeline starts with one hub already set up: **Tipeline Hub**
-(`https://hub.tipeline.com`), the official catalog. It's built in, like the Local workspace:
+[**Tipeline Hub**](https://hub.tipeline.com) is the official catalog. Use it to add what
+Tipeline doesn't ship with: plugins that add new action groups, and ready-made workflows
+you can run as they are or change.
+
+Some of what's on it:
+
+| Kind | Examples |
+|------|----------|
+| **Plugins** | [Drupal](https://hub.tipeline.com/plugin/drupal) (JSON:API content), [Drush](https://hub.tipeline.com/plugin/drush), [Gmail](https://hub.tipeline.com/plugin/gmail), Google Drive, Google Docs |
+| **Workflows** | [Drupal database backup](https://hub.tipeline.com/workflow/drupal-database-backup), [files backup](https://hub.tipeline.com/workflow/drupal-files-backup), [restore a backup](https://hub.tipeline.com/workflow/drupal-restore-backup), [daily health summary](https://hub.tipeline.com/workflow/drupal-health-summary), [one-time login link by email](https://hub.tipeline.com/workflow/drupal-login-link) |
+
+[Browse everything](https://hub.tipeline.com/browse), or filter by
+[workflows](https://hub.tipeline.com/browse?type=task) and
+[plugins](https://hub.tipeline.com/browse?type=plugin). Each item's page shows its source,
+what it needs and what it can access, so you can check it before you install.
+
+### Two ways to browse
+
+- **On the web** at [hub.tipeline.com](https://hub.tipeline.com): search, tags and a page for
+  every item. Nothing installs from the website; use it to find what you need.
+- **In Tipeline**: open **Hub** in the Desktop sidebar, or run
+  `tipeline hub catalog tipeline-hub`. This is where you install (see [Installing](#installing)).
+
+### It's already set up
+
+Every Tipeline starts with Tipeline Hub as a hub. It's built in, like the Local workspace:
 you can't edit or remove it, but you can switch it off in **Settings → Hubs** (or
-`tipeline hub disable tipeline-hub`) — say, on a machine that should only install from your
-team's own hub. It stays off until you switch it back on.
+`tipeline hub disable tipeline-hub`), for example on a machine that should only install from
+your team's own hub. It stays off until you switch it back on.
+
+### When to look on the Hub
+
+- **An action you need isn't built in.** Look for a [plugin](/hub/plugins): it adds a new
+  action group (`drupal.createContent`, `gmail.sendEmail`, …) that you use like any other step.
+- **Someone has probably done it already.** Backups, health checks and other common jobs
+  are on the Hub as workflows. Install one, then open it in the builder to see how it works
+  or to change it.
+- **You asked the [assistant](/assistant) for something nothing installed can do.** It
+  searches the Hub too, and offers to install the workflow and the plugin it needs.
+
+Installed items keep a link to the Hub, so you get their [updates](#updates).
 
 ## Adding a hub
 

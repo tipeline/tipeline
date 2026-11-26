@@ -226,14 +226,25 @@ describe('hub checksums: local folder hub', () => {
     expect(TaskService.setHubStatus).toHaveBeenCalledWith('wf-1', 'error');
   });
 
-  it('installs items without a checksum, as older hubs have none', async () => {
+  it('refuses items without a checksum, before extracting or installing anything', async () => {
     for (const i of catalog) delete i.checksum;
 
-    await HubSyncService.installTask('hub-1', 'hello');
-    await HubSyncService.installPlugin('hub-1', 'greeting');
+    await expect(HubSyncService.installTask('hub-1', 'hello')).rejects.toThrow(
+      'Workflow "hello" from hub "Team Hub" has no checksum'
+    );
+    await expect(HubSyncService.installApp('hub-1', 'hub-app')).rejects.toThrow('has no checksum');
+    await expect(HubSyncService.installPlugin('hub-1', 'greeting')).rejects.toThrow('has no checksum');
 
-    expect(TaskService.installFromHub).toHaveBeenCalledOnce();
-    expect(PluginService.markHubInstalled).toHaveBeenCalledOnce();
+    expect(TaskService.installFromHub).not.toHaveBeenCalled();
+    expect(AppService.installFromHub).not.toHaveBeenCalled();
+    expect(decompress).not.toHaveBeenCalled();
+    expect(spawn).not.toHaveBeenCalled();
+    expect(PluginService.markHubInstalled).not.toHaveBeenCalled();
+  });
+
+  it('refuses an empty checksum', async () => {
+    item('hello').checksum = '  ';
+    await expect(HubSyncService.installTask('hub-1', 'hello')).rejects.toThrow('has no checksum');
   });
 
   it('refuses a checksum that is not sha256:<hex>', async () => {
@@ -285,9 +296,12 @@ describe('hub checksums: remote hub', () => {
     expect(fs.readdirSync(tmpRoot)).toEqual([]);
   });
 
-  it('downloads without a check when there is no checksum', async () => {
-    const filePath = await new RemoteHubProvider().fetchFile(remoteHub, remoteItem());
-    expect(fs.readFileSync(filePath)).toEqual(pluginZip);
+  it('refuses an item without a checksum before downloading anything', async () => {
+    await expect(new RemoteHubProvider().fetchFile(remoteHub, remoteItem())).rejects.toThrow(
+      'Plugin "greeting" from hub "Web Hub" has no checksum'
+    );
+    expect(axios.get).not.toHaveBeenCalled();
+    expect(fs.readdirSync(tmpRoot)).toEqual([]);
   });
 
   it('refuses an unsupported checksum before downloading anything', async () => {

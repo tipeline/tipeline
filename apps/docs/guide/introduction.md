@@ -20,7 +20,7 @@ The system is built around three key ideas:
 | **Desktop** | The app: build workflows and apps, watch runs, approve, schedule. Starts Core for you. | [Desktop](/desktop/overview) |
 | **CLI** | `tipeline` in the terminal: run, install and schedule workflows, use hubs, ask the assistant. | [CLI](/cli/commands) |
 | **Assistant** | Ask in plain language; it finds the workflow, fills it in and runs it when you confirm. In the Desktop, the CLI, or any MCP client. | [Assistant](/assistant) |
-| **Hubs & plugins** | Catalogs of workflows, apps and plugins to install — a website or a shared folder. Plugins add new action groups. | [Hub & Plugins](/hub) |
+| **Hubs & plugins** | Catalogs of workflows, apps and plugins to install — a website or a shared folder. Plugins add new action groups. [Tipeline Hub](https://hub.tipeline.com) is the official one, set up for you. | [Hub & Plugins](/hub) |
 | **Server** | Shares one Core with a team: accounts, roles, API tokens, webhooks, audit log. | [Server](/server) |
 
 ## Key Concepts
@@ -45,4 +45,5 @@ An app is a set of pages — tables, forms, charts and more — where every butt
 - [Installation](/guide/installation) — set up Tipeline on your machine
 - [Quick Start](/guide/quick-start) — run your first workflow in minutes
 - [Workflow Files](/workflows/files) — every field of a workflow
+- [Tipeline Hub](/hub#the-tipeline-hub) — install plugins and ready-made workflows
 - [Architecture Overview](/internals/overview) — how the pieces fit together
