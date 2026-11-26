@@ -1427,6 +1427,82 @@
     "autoSave": {
       "note": "Los cambios se guardan automáticamente.",
       "failed": "No se pudo guardar"
+    },
+    "shortcuts": {
+      "title": "Atajos",
+      "description": "Atajos de teclado, agrupados según dónde funcionan. En Windows y Linux usa Ctrl en lugar de ⌘.",
+      "groups": {
+        "general": "En todas partes",
+        "workflowOverview": "Resumen del flujo de trabajo",
+        "workflowBuilder": "Editor de flujos de trabajo",
+        "debugger": "Depurador",
+        "appOverview": "Resumen de la app",
+        "appBuilder": "Editor de apps",
+        "projectMap": "Mapa del proyecto",
+        "fields": "Campos de texto y código"
+      },
+      "items": {
+        "general": {
+          "search": "Buscar",
+          "assistant": "Abrir o cerrar el Asistente",
+          "back": "Atrás",
+          "forward": "Adelante",
+          "sidebar": "Mostrar u ocultar la barra lateral"
+        },
+        "workflowOverview": {
+          "openBuilder": "Abrir el editor",
+          "editDetails": "Editar detalles",
+          "export": "Exportar"
+        },
+        "workflowBuilder": {
+          "save": "Guardar",
+          "undo": "Deshacer",
+          "redo": "Rehacer",
+          "testRun": "Ejecución de prueba",
+          "searchActions": "Buscar acciones",
+          "goToRow": "Ir a la fila",
+          "codeView": "Abrir la vista de código",
+          "codeSave": "Vista de código: guardar",
+          "codeDiscard": "Vista de código: descartar cambios",
+          "stepSave": "Editor de paso: guardar"
+        },
+        "debugger": {
+          "run": "Ejecutar o continuar",
+          "next": "Siguiente paso",
+          "nextPass": "Siguiente pasada",
+          "stepOver": "Saltar paso",
+          "stepOut": "Salir del paso",
+          "pause": "Pausar",
+          "stop": "Detener",
+          "goToRow": "Ir a la fila",
+          "exit": "Salir del depurador"
+        },
+        "appOverview": {
+          "export": "Exportar"
+        },
+        "appBuilder": {
+          "save": "Guardar",
+          "undo": "Deshacer",
+          "redo": "Rehacer",
+          "copy": "Copiar componente",
+          "paste": "Pegar componente",
+          "duplicate": "Duplicar componente",
+          "remove": "Quitar componente",
+          "deselect": "Quitar la selección"
+        },
+        "projectMap": {
+          "undo": "Deshacer",
+          "redo": "Rehacer",
+          "copy": "Copiar",
+          "paste": "Pegar",
+          "duplicate": "Duplicar",
+          "removePlanned": "Quitar un elemento planificado",
+          "deselect": "Quitar la selección"
+        },
+        "fields": {
+          "expand": "Abrir o cerrar el editor ampliado"
+        }
+      }
     }
   },
   "connections": {

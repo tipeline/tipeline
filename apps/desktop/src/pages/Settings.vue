@@ -41,6 +41,7 @@ watch(tab, (newTab) => {
             <TabsTrigger value="SettingsHubs">{{ t('settings.hubs.title') }}</TabsTrigger>
             <TabsTrigger value="SettingsRunHistory">{{ t('runHistory.title') }}</TabsTrigger>
             <TabsTrigger value="SettingsCache">{{ t('cache.settings.title') }}</TabsTrigger>
+            <TabsTrigger value="SettingsShortcuts">{{ t('settings.shortcuts.title') }}</TabsTrigger>
             <TabsTrigger value="SettingsAbout">{{ t('settings.about.title') }}</TabsTrigger>
           </TabsList>
         </Tabs>
