@@ -1427,6 +1427,82 @@
     "autoSave": {
       "note": "Changes are saved automatically.",
       "failed": "Couldn't save"
+    },
+    "shortcuts": {
+      "title": "Shortcuts",
+      "description": "Keyboard shortcuts, grouped by where they work. On Windows and Linux use Ctrl instead of ⌘.",
+      "groups": {
+        "general": "Everywhere",
+        "workflowOverview": "Workflow overview",
+        "workflowBuilder": "Workflow builder",
+        "debugger": "Debugger",
+        "appOverview": "App overview",
+        "appBuilder": "App builder",
+        "projectMap": "Project map",
+        "fields": "Text and code fields"
+      },
+      "items": {
+        "general": {
+          "search": "Search",
+          "assistant": "Open or close the Assistant",
+          "back": "Go back",
+          "forward": "Go forward",
+          "sidebar": "Show or hide the sidebar"
+        },
+        "workflowOverview": {
+          "openBuilder": "Open the builder",
+          "editDetails": "Edit details",
+          "export": "Export"
+        },
+        "workflowBuilder": {
+          "save": "Save",
+          "undo": "Undo",
+          "redo": "Redo",
+          "testRun": "Test run",
+          "searchActions": "Search actions",
+          "goToRow": "Go to row",
+          "codeView": "Open the code view",
+          "codeSave": "Code view: save",
+          "codeDiscard": "Code view: discard changes",
+          "stepSave": "Step editor: save"
+        },
+        "debugger": {
+          "run": "Run or continue",
+          "next": "Next step",
+          "nextPass": "Next pass",
+          "stepOver": "Step over",
+          "stepOut": "Step out",
+          "pause": "Pause",
+          "stop": "Stop",
+          "goToRow": "Go to row",
+          "exit": "Exit the debugger"
+        },
+        "appOverview": {
+          "export": "Export"
+        },
+        "appBuilder": {
+          "save": "Save",
+          "undo": "Undo",
+          "redo": "Redo",
+          "copy": "Copy component",
+          "paste": "Paste component",
+          "duplicate": "Duplicate component",
+          "remove": "Remove component",
+          "deselect": "Clear selection"
+        },
+        "projectMap": {
+          "undo": "Undo",
+          "redo": "Redo",
+          "copy": "Copy",
+          "paste": "Paste",
+          "duplicate": "Duplicate",
+          "removePlanned": "Remove a planned item",
+          "deselect": "Clear selection"
+        },
+        "fields": {
+          "expand": "Open or close the expanded editor"
+        }
+      }
     }
   },
   "connections": {

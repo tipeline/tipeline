@@ -19,6 +19,7 @@ import SettingsAgentPage from '@/pages/settings/SettingsAgentPage.vue';
 import SettingsDefaultsPage from '@/pages/settings/SettingsDefaultsPage.vue';
 import SettingsBackupPage from '@/pages/settings/SettingsBackupPage.vue';
 import SettingsAboutPage from '@/pages/settings/SettingsAboutPage.vue';
+import SettingsShortcutsPage from '@/pages/settings/SettingsShortcutsPage.vue';
 import ConnectionsPage from '@/pages/settings/ConnectionsPage.vue';
 import WorkspaceDetailPage from '@/pages/settings/WorkspaceDetailPage.vue';
 import SettingsHubsPage from '@/pages/settings/SettingsHubsPage.vue';
@@ -357,6 +358,11 @@ const routes = [
         path: 'cache',
         name: 'SettingsCache',
         component: SettingsCachePage,
+      },
+      {
+        path: 'shortcuts',
+        name: 'SettingsShortcuts',
+        component: SettingsShortcutsPage,
       },
       {
         path: 'about',
