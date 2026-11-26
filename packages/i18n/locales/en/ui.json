@@ -1045,6 +1045,23 @@
       "noMatch": "No apps match these filters.",
       "starred": "No starred apps. Star one to keep it here.",
       "recent": "Apps you open show up here."
+    },
+    "versions": {
+      "empty": "No versions yet. One is kept each time this app is saved.",
+      "confirmDescription": "The app goes back to how it was on {when}. Its current version stays in the list, so you can switch back. The workflows it runs aren't changed.",
+      "confirmHub": "This app updates from its hub automatically, so a hub update can replace it again.",
+      "missingWorkflows": "This version uses workflows that are no longer installed ({names}). The parts that run them won't work until those workflows are back.",
+      "pagesAdded": "Added page {pages}",
+      "pagesRemoved": "Removed page {pages}",
+      "added": "Added {steps}",
+      "removed": "Removed {steps}",
+      "changed": "{n} component changed | {n} components changed",
+      "workflows": "Workflows changed",
+      "details": "Settings changed",
+      "noStepChanges": "No component changes",
+      "viewHint": {
+        "yaml": "The whole app as it was saved."
+      }
     }
   },
   "plugins": {

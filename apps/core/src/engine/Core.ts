@@ -19,6 +19,7 @@ import { checkWorkflowYaml, setWorkflowAuthor } from '@engine/WorkflowAuthoring'
 import { GlobalVariableService } from '@database/services/GlobalVariableService';
 import { TagService } from '@database/services/TagService';
 import { TaskRevisionService } from '@database/services/TaskRevisionService';
+import { AppRevisionService } from '@database/services/AppRevisionService';
 import { TrashService } from '@database/services/TrashService';
 import { AppService } from '@database/services/AppService';
 import { ProjectService, type ProjectDeleteContents } from '@database/services/ProjectService';
@@ -480,6 +481,54 @@ export default class Core {
   static async appUpdateSource(identifier: string, source: unknown) {
     const parsed = coreValidations.appObject.parseAppSource(source);
     return await AppService.updateSource(identifier, JSON.stringify(parsed));
+  }
+
+  /** Saved versions of an app, newest first, without their sources. */
+  static async appRevisionList(identifier: string) {
+    const app = await AppService.getByIdentifier(identifier);
+    if (!app) throw new Error(`App not found: ${identifier}`);
+    return await AppRevisionService.list(app.id);
+  }
+
+  /**
+   * One saved version, with its source, for the Versions tab preview. `missingWorkflows`
+   * lists the workflows it uses that are no longer installed: restoring an app version
+   * puts back its pages, not the workflows they run.
+   */
+  static async appRevisionDetail(identifier: string, revisionId: number) {
+    const app = await AppService.getByIdentifier(identifier);
+    if (!app) throw new Error(`App not found: ${identifier}`);
+    const revision = await AppRevisionService.get(app.id, Number(revisionId));
+    if (!revision) throw new Error(`Version not found: ${revisionId}`);
+
+    const declared: Record<string, { identifier?: string }> = JSON.parse(revision.source)?.workflows ?? {};
+    const missingWorkflows: string[] = [];
+    for (const [alias, ref] of Object.entries(declared)) {
+      if (!ref?.identifier || !(await TaskService.getByIdentifier(ref.identifier))) missingWorkflows.push(alias);
+    }
+    return {
+      id: revision.id,
+      origin: revision.origin,
+      createdAt: revision.created_at,
+      source: revision.source,
+      missingWorkflows,
+    };
+  }
+
+  /**
+   * Puts a saved version back, as a new version ('restore'), so the one it replaces
+   * stays in the list. Checked like a builder save.
+   */
+  static async appRevisionRestore(identifier: string, revisionId: number) {
+    const app = await AppService.getByIdentifier(identifier);
+    if (!app) throw new Error(`App not found: ${identifier}`);
+    const revision = await AppRevisionService.get(app.id, Number(revisionId));
+    if (!revision) throw new Error(`Version not found: ${revisionId}`);
+
+    const parsed = coreValidations.appObject.parseAppSource(revision.source);
+    return await AppService.updateSource(identifier, JSON.stringify(parsed), 'restore', {
+      restoredFrom: revision.id,
+    });
   }
 
   static async appUpdateMeta(identifier: string, data: { name?: string; description?: string; author?: string; version?: string; platform?: string }) {

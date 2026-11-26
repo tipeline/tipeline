@@ -9,6 +9,7 @@ import { Task as TaskModel } from '@database/models/Task';
 import { TagService } from '@database/services/TagService';
 import { ProjectMembership } from '@database/services/ProjectMembership';
 import { TaskRevisionService } from '@database/services/TaskRevisionService';
+import { AppRevisionService } from '@database/services/AppRevisionService';
 import { appWorkflowIdentifiers, calledWorkflowIdentifiers } from '@database/services/WorkflowUsageService';
 import { Parser } from '@utils/Parser';
 import { TIPELINE_DIR } from '@/asset/AssetService';
@@ -639,6 +640,7 @@ export class BackupService {
           [id] = await trx('app').insert({ identifier: a.identifier, ...data });
           result.apps.added++;
         }
+        await AppRevisionService.record(existing ?? { id }, data.source, 'backup', { trx });
         await joinProjects('app', id, a);
       }
 

@@ -3,6 +3,8 @@ import { App as AppModel } from '@/database/models/App';
 import { AppHubLink } from '@/database/models/AppHubLink';
 import { generateIdentifier } from '@tipeline/utils';
 import { ProjectMembership, parseProjects, projectsSubquery } from '@/database/services/ProjectMembership';
+import { AppRevisionService } from '@/database/services/AppRevisionService';
+import type { RevisionOrigin } from '@/database/services/RevisionHistory';
 
 // Every query that lists/details an app computes this instead of reading a
 // stored column — 'hub' iff an app_hub_link row exists, fully redundant
@@ -39,7 +41,7 @@ export class AppService {
     metadata?: any;
     source?: string;
   }) {
-    return await AppModel.query().insert({
+    const record = await AppModel.query().insert({
       identifier: generateIdentifier(),
       name,
       description,
@@ -48,6 +50,8 @@ export class AppService {
       metadata,
       source,
     });
+    if (source) await AppRevisionService.record({ id: record.id }, source, 'created');
+    return record;
   }
 
   static async installFromHub(data: HubInstallData) {
@@ -72,6 +76,7 @@ export class AppService {
         auto_update: data.auto_update ?? true,
         last_synced_at: new Date().toISOString(),
       } as any);
+      if (data.source) await AppRevisionService.record({ id: app.id }, data.source, 'hub', { trx });
 
       return app;
     });
@@ -170,9 +175,16 @@ export class AppService {
     return count;
   }
 
-  static async updateSource(identifier: any, source: any) {
-    const count = await AppModel.query().patch({ source }).where({ identifier });
-    if (!count) return null;
+  static async updateSource(
+    identifier: string,
+    source: string,
+    origin: RevisionOrigin = 'edit',
+    options: { restoredFrom?: number } = {}
+  ) {
+    const record = await AppModel.query().findOne({ identifier });
+    if (!record) return null;
+    await AppModel.query().patch({ source }).where({ identifier });
+    await AppRevisionService.record(record, source, origin, options);
     return AppModel.query().findOne({ identifier });
   }
 
@@ -180,7 +192,7 @@ export class AppService {
     identifier: string,
     data: { name?: string; description?: string; author?: string; version?: string; source?: string; hubVersion: string }
   ) {
-    const app = await AppModel.query().findOne({ identifier }).select('id');
+    const app = await AppModel.query().findOne({ identifier });
     if (!app) return null;
 
     await AppModel.query()
@@ -195,6 +207,7 @@ export class AppService {
     await AppHubLink.query()
       .patch({ hub_version: data.hubVersion, last_synced_at: new Date().toISOString() } as any)
       .where({ app_id: app.id });
+    if (data.source) await AppRevisionService.record(app, data.source, 'hub');
 
     return AppService.getByIdentifier(identifier);
   }

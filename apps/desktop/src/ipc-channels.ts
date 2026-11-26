@@ -50,6 +50,9 @@ export const SEND = {
   APP_DETAIL: 'appDetail',
   APP_NEW: 'appNew',
   APP_UPDATE_SOURCE: 'appUpdateSource',
+  APP_REVISION_LIST: 'appRevisionList', // saved versions of an app
+  APP_REVISION_DETAIL: 'appRevisionDetail',
+  APP_REVISION_RESTORE: 'appRevisionRestore',
   APP_UPDATE_META: 'appUpdateMeta',
   APP_UPLOAD_IMAGE: 'appUploadImage',
   APP_INSTALL: 'appInstall',

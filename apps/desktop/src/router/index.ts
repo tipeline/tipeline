@@ -12,6 +12,7 @@ import AppsList from '@/pages/apps/AppsList.vue';
 import AppEdit from '@/pages/apps/AppEdit.vue';
 import AppDetail from '@/pages/apps/AppDetail.vue';
 import AppRun from '@/pages/apps/AppRun.vue';
+import AppVersions from '@/pages/apps/AppVersions.vue';
 
 import Settings from '@/pages/Settings.vue';
 import SettingsAppearancePage from '@/pages/settings/SettingsAppearancePage.vue';
@@ -239,6 +240,12 @@ const routes = [
     name: 'RunWindow',
     component: TaskHistoryDetailTab,
     meta: { layout: 'StandaloneLayout' },
+  },
+  {
+    path: '/apps/:aid/versions',
+    name: 'AppVersions',
+    component: AppVersions,
+    meta: { breadcrumb: 'Versions', underApp: true, layout: 'DefaultLayout', workspaceFallback: { name: 'AppsList' } },
   },
   {
     path: '/apps/:aid',

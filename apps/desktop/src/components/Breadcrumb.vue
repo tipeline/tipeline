@@ -66,6 +66,10 @@ const breadcrumbs = computed(() => {
   }
 
   matchedRoutes.forEach((matchedRoute) => {
+    // A page under an app (its Versions): the app's name links back to it.
+    if (matchedRoute.meta?.underApp && appStore.currentApp.name) {
+      crumbs.push({ label: appStore.currentApp.name, path: `/apps/${route.params.aid}` });
+    }
     if (matchedRoute.meta && matchedRoute.meta.breadcrumb) {
       const breadcrumb = matchedRoute.meta.breadcrumb;
       const path = matchedRoute.name

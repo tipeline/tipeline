@@ -42,7 +42,7 @@ const PROJECT_MEMBERSHIP = new Set(['projectAssignTask', 'projectUnassignTask'])
 // mutation or an execution, which "view only" is not meant to permit.
 const VIEWER_ALLOWED = new Set([
   'taskList', 'taskDetail', 'taskUsage', 'taskCapabilities', 'taskRevisionList', 'taskRevisionDetail', 'pipelineList', 'pipelineDetail', 'pipelineStats',
-  'appList', 'appDetail', 'tableDataFetch', 'appHistoryFetch', 'appRunsActive', 'appRunsList',
+  'appList', 'appDetail', 'appRevisionList', 'appRevisionDetail', 'tableDataFetch', 'appHistoryFetch', 'appRunsActive', 'appRunsList',
   // Deciding is checked per request: a viewer named as an approver may decide.
   'approvalList', 'approvalDecide', 'appApprovalList', 'appApprovalDecide', 'approvalHistory',
   // Anyone who can see an alert may dismiss, reopen or resolve it (see alertAuthorization).
@@ -146,8 +146,9 @@ const ALL_CORE_EVENTS = [
   'onHubSetTaskAutoUpdate', 'onHubSetAppAutoUpdate', 'onHubSetPluginAutoUpdate',
   // Result cache
   'onCacheList', 'onCacheClear',
-  // Workflow versions + Trash
+  // Workflow + app versions, Trash
   'onTaskRevisionList', 'onTaskRevisionDetail', 'onTaskRevisionRestore',
+  'onAppRevisionList', 'onAppRevisionDetail', 'onAppRevisionRestore',
   'onTrashList', 'onTrashRestore', 'onTrashDelete', 'onTrashEmpty',
 ] as const;
 
@@ -164,6 +165,7 @@ const ALLOWED_COMMANDS = new Set([
   'pipelineList', 'pipelineDetail', 'pipelineStats', 'pipelineResume', 'pipelineCancel', 'pipelineClear', 'pipelineClearAll', 'pipelineDelete',
   // Apps
   'appList', 'appDetail', 'appNew', 'appUpdateSource', 'appUpdateMeta',
+  'appRevisionList', 'appRevisionDetail', 'appRevisionRestore',
   'appUploadImage', 'appInstall', 'appExport', 'appUninstall', 'tableDataFetch', 'appRun', 'appHistoryFetch',
   'appRunsActive', 'appRunsList',
   // Approvals
