@@ -37,7 +37,6 @@ import {
 import { useAlertsStore } from '@/store/alertsStore';
 import { createColumns, type TaskItem } from '@/config/tables/TasksList';
 import type { ScheduleItem } from '@/config/tables/SchedulesList';
-import WorkflowStats from '@/components/task/WorkflowStats.vue';
 import { SEND } from '@/ipc-channels';
 import { invokeCore } from '@/utils/invoke';
 import { toast } from '@/components/ui/sonner';
@@ -362,7 +361,6 @@ async function onExportAll() {
       </Button>
     </template>
     <template #content>
-      <WorkflowStats />
       <RecentItemsRow
         v-if="showRecentRow"
         type="task"

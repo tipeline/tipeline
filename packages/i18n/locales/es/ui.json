@@ -601,13 +601,6 @@
       "today": "Hoy {time}",
       "tomorrow": "Mañana {time}"
     },
-    "stats": {
-      "title": "Últimos {n} días",
-      "runs": "Ejecuciones · últimos {n} días",
-      "failed": "Fallidas · últimos {n} días",
-      "failureRate": "Tasa de fallos",
-      "averageTime": "Duración media"
-    },
     "alertBadge": {
       "explain": "{n} alerta abierta | {n} alertas abiertas"
     }
@@ -3281,6 +3274,8 @@
     }
   },
   "recentRow": {
+    "show": "Mostrar",
+    "hide": "Ocultar",
     "title": "Abiertos recientemente",
     "clear": "Borrar",
     "seeAll": "Ver todos",
