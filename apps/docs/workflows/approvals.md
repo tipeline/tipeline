@@ -31,6 +31,18 @@ once someone decides:
           text: 'Refund rejected by {{ decision.decidedBy }}: {{ decision.comment }}'
 ```
 
+## Open connections after the approval
+
+A run waiting for approval keeps its variables, but not live ones: an SSH or database
+connection, a browser, an image, audio or video. These can't be saved, so they come back
+empty when the run continues — the run may even continue after Core has restarted. Put the
+steps that open them (`ssh.connect`, `database.connect`, `browser.launch`…) **after** the
+`approval.request` step. Variables of these types that are still empty when the run waits
+are fine: they stay empty until a step fills them.
+
+If a run can't continue after the decision (for example, its saved copy of the workflow
+can't be read), it ends as **Failed** with the reason, instead of staying **Running**.
+
 ## Deciding
 
 Decide from:

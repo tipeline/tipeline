@@ -67,33 +67,41 @@ export async function executeJob(job: JobPayload): Promise<void> {
       throw new Error(`Pipeline "${job.pipelineIdentifier}" is already completed; nothing to resume`);
     }
 
-    const taskRecord = await TaskService.getById(pipelineRecord.task_id);
-    if (!taskRecord) throw new Error(`Workflow for pipeline "${job.pipelineIdentifier}" not found`);
+    // Whoever resumes (an approval, its timeout, the CLI) may already have marked the run
+    // running: a failure here, before or around Pipeline.resume's own handling, must end
+    // it as failed or nothing ever will.
+    try {
+      const taskRecord = await TaskService.getById(pipelineRecord.task_id);
+      if (!taskRecord) throw new Error(`Workflow for pipeline "${job.pipelineIdentifier}" not found`);
 
-    const source =
-      typeof pipelineRecord.source === 'string'
-        ? JSON.parse(pipelineRecord.source)
-        : pipelineRecord.source;
+      const source =
+        typeof pipelineRecord.source === 'string'
+          ? JSON.parse(pipelineRecord.source)
+          : pipelineRecord.source;
 
-    const task = await TaskFactory.fromSource(source, taskRecord.identifier, job.correlationId);
-    task.setId(taskRecord.id);
-    task.setShouldSave(true);
-    task.setCacheMode(job.cacheMode);
-    // _run reads the same as before the run paused (who started it, when, which app or parent).
-    const metadata = parseMetadata(pipelineRecord.metadata);
-    task.setTrigger((metadata.trigger as Record<string, unknown>) ?? null);
-    task.setParentRun((metadata.parent as any) ?? null);
-    task.setStartedBy(toStartedBy(metadata.startedBy));
-    if (pipelineRecord.started_at) task.setStartedAt(new Date(pipelineRecord.started_at).toISOString());
+      const task = await TaskFactory.fromSource(source, taskRecord.identifier, job.correlationId);
+      task.setId(taskRecord.id);
+      task.setShouldSave(true);
+      task.setCacheMode(job.cacheMode);
+      // _run reads the same as before the run paused (who started it, when, which app or parent).
+      const metadata = parseMetadata(pipelineRecord.metadata);
+      task.setTrigger((metadata.trigger as Record<string, unknown>) ?? null);
+      task.setParentRun((metadata.parent as any) ?? null);
+      task.setStartedBy(toStartedBy(metadata.startedBy));
+      if (pipelineRecord.started_at) task.setStartedAt(new Date(pipelineRecord.started_at).toISOString());
 
-    for (const [name, value] of Object.entries(job.variables ?? {})) {
-      await PipelineVariableService.updateValue(pipelineRecord.id, name, value);
+      for (const [name, value] of Object.entries(job.variables ?? {})) {
+        await PipelineVariableService.updateValue(pipelineRecord.id, name, value);
+      }
+
+      const variablesRecord = await PipelineVariableService.getByPipelineId(pipelineRecord.id);
+      await task.updateVariablesFromRecords(variablesRecord);
+
+      await task.resume(pipelineRecord.id, pipelineRecord.identifier);
+    } catch (error: any) {
+      await PipelineService.failUnfinished(pipelineRecord.id, error?.message ?? String(error));
+      throw error;
     }
-
-    const variablesRecord = await PipelineVariableService.getByPipelineId(pipelineRecord.id);
-    await task.updateVariablesFromRecords(variablesRecord);
-
-    await task.resume(pipelineRecord.id, pipelineRecord.identifier);
   } else {
     throw new Error(`Unknown job type: ${type}`);
   }

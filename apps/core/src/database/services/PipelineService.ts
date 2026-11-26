@@ -185,6 +185,27 @@ export class PipelineService {
     return runs.map((run) => run.identifier);
   }
 
+  /**
+   * A resume that broke before its steps could run (or outside them): the run ends as
+   * failed with the error, like a failing step, instead of staying running. Only a run
+   * that hasn't ended is touched — one the resume already ended keeps its own status.
+   * Its waiting or running steps fail too, and a pending approval is withdrawn.
+   */
+  static async failUnfinished(id: number, message: string): Promise<boolean> {
+    const now = new Date().toISOString();
+    const count = await PipelineModel.query()
+      .where({ id })
+      .whereIn('status', ['pending', 'running', 'paused'])
+      .patch({ status: 'failed', finished_at: now } as any);
+    if (count === 0) return false;
+    await PipelineService.mergeMetadata(id, { reason: 'action_error', message, approval: null });
+    await PipelineActionModel.query()
+      .where({ pipeline_id: id })
+      .whereIn('status', ['paused', 'running'])
+      .patch({ status: 'failed', error: message, finished_at: now } as any);
+    return true;
+  }
+
   static async getById(id: number) {
     return await PipelineModel.query().findById(id);
   }
