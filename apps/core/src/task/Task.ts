@@ -260,9 +260,13 @@ export class Task {
         value = record.value;
       }
 
+      // A value that can't come back (see Variable.restoreValue) leaves the variable
+      // empty rather than failing the resume.
       const variable = this.pipeline.getVariableByName(record.name);
       if (variable) {
-        variable.setValue(value);
+        if (!variable.restoreValue(value)) {
+          console.warn(`[Task] resume: saved value of "${record.name}" no longer fits; left empty`);
+        }
       } else {
         const newVarObject = {
           type: record.type,
@@ -271,7 +275,14 @@ export class Task {
           scope: record.scope,
           required: true,
         };
-        newVariables.push(new Variable(newVarObject as any));
+        let created: Variable;
+        try {
+          created = new Variable(newVarObject as any);
+        } catch {
+          console.warn(`[Task] resume: saved value of "${record.name}" no longer fits; left empty`);
+          created = new Variable({ ...newVarObject, value: null } as any);
+        }
+        newVariables.push(created);
       }
     }
 

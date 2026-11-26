@@ -1,5 +1,6 @@
 import { useI18n } from 'vue-i18n';
 import { getAllValidations } from '@tipeline/schemas';
+import { usePluginStore } from '@/store/pluginStore';
 
 // Plugin action groups (e.g. a "googledocs" plugin) carry their own
 // label/description via the plugin's `docs`, not vue-i18n translation
@@ -17,6 +18,15 @@ export function useActionT() {
     const key = `actions.${group}.label`;
     const result = t(key);
     return result !== key ? result : group;
+  }
+
+  // The group a step comes from, as people read it: the translated name for a
+  // built-in group, the plugin's own name for a plugin group.
+  function groupName(group: string): string {
+    if (!group) return '';
+    if (builtinGroups.has(group)) return tGroup(group);
+    const plugin = usePluginStore().plugins.find((p: any) => p.group === group);
+    return plugin?.name ?? group;
   }
 
   function tAction(group: string, action: string): string {
@@ -54,5 +64,5 @@ export function useActionT() {
     return result;
   }
 
-  return { tGroup, tAction, tActionDescription, tFieldConfig };
+  return { tGroup, groupName, tAction, tActionDescription, tFieldConfig };
 }

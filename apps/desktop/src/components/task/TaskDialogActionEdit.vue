@@ -68,7 +68,7 @@ const pluginStore = usePluginStore();
 const taskStore = useTaskStore();
 const router = useRouter();
 const { t } = useI18n();
-const { tAction, tActionDescription, tFieldConfig } = useActionT();
+const { tAction, tActionDescription, tFieldConfig, groupName } = useActionT();
 
 const navigateToSubtask = inject<(taskIdentifier: string, returnActionId: string) => void>(
   'navigateToSubtask',
@@ -667,6 +667,8 @@ const dialogTitle = computed(() => {
   return translated || props.actionParams.name?.replace(/_/g, ' ');
 });
 
+const dialogGroup = computed(() => (props.actionParams ? groupName(props.actionParams.group) : ''));
+
 const pluginActionDocs = computed(() => {
   if (!props.actionParams || !isPluginAction.value) return undefined;
   return pluginStore.getActionDocs(props.actionParams.group, props.actionParams.name);
@@ -721,7 +723,9 @@ const formDependencies = computed<Dependency<any>[] | undefined>(() =>
       @pointer-down-outside="onPointerDownOutside"
     >
       <DialogHeader class="shrink-0 flex-row items-center justify-between gap-4 space-y-0 pr-8">
-        <DialogTitle>{{ dialogTitle }}</DialogTitle>
+        <DialogTitle>
+          <span v-if="dialogGroup" class="font-normal text-muted-foreground">{{ dialogGroup }} · </span>{{ dialogTitle }}
+        </DialogTitle>
         <Button
           v-if="subtaskTargetIdentifier"
           type="button"

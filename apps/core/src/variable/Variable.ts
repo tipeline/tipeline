@@ -113,6 +113,36 @@ export class Variable {
     }
   }
 
+  /**
+   * Puts back a value saved before a run paused. Not a change made by a step, so it
+   * isn't stopped by `readonly`. A saved null — the variable was still empty, or held
+   * a live handle (an SSH connection, a browser) that can't be saved — or a value that
+   * no longer fits the type leaves the variable empty, the way a fresh run starts it.
+   * Live handles never survive a pause: they must be opened after the approval step.
+   * Returns false when a saved value had to be dropped.
+   */
+  public restoreValue(value: any): boolean {
+    if (value === null || value === undefined) {
+      this.clearValue();
+      return true;
+    }
+    try {
+      this.value = this.shouldCoerceType(this.type)
+        ? coerceVariableValue(value, this.type, this.name)
+        : value;
+      this.validate();
+      return true;
+    } catch {
+      this.clearValue();
+      return false;
+    }
+  }
+
+  /** Empty, as the constructor leaves a variable declared without a value. */
+  private clearValue(): void {
+    this.value = this.required ? null : this.getDefaultValueForType(this.type);
+  }
+
   private shouldCoerceType(type: VariableType): boolean {
     return ['string', 'number', 'boolean', 'date', 'array', 'object'].includes(type);
   }
