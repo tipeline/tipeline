@@ -1448,7 +1448,10 @@
       "autoStartNotice": "Tipeline now keeps running in the background so your schedules can run.",
       "autoStartNoticeAction": "Settings",
       "keepRunning": "Keep running in the menu bar / tray",
-      "keepRunningHint": "Closing the window hides it: Tipeline stays in the menu bar (macOS) or notification area (Windows, Linux) with what needs you and what's running. Off: closing the window quits Tipeline. Core keeps running either way."
+      "keepRunningHint": "Closing the window hides it: Tipeline stays in the menu bar (macOS) or notification area (Windows, Linux) with what needs you and what's running. Off: closing the window quits Tipeline. Core keeps running either way.",
+      "welcome": "Welcome screen",
+      "welcomeHint": "The screen shown the first time Tipeline opens, where you pick a language and your name.",
+      "welcomeShow": "Show it again"
     },
     "hubs": {
       "title": "Hubs"
@@ -2168,6 +2171,18 @@
     "loadingSettings": "Loading settings",
     "coreDown": "Core engine failed to start. Please check your installation and try again.",
     "retry": "Retry"
+  },
+  "welcome": {
+    "title": "Welcome to Tipeline",
+    "subtitle": "Build workflows that do the work for you, then turn them into apps for your team.",
+    "name": "Your name",
+    "nameHint": "Added as the author of the workflows and apps you create.",
+    "namePlaceholder": "Your name",
+    "language": "Language",
+    "start": "Get started",
+    "later": "You can change both later in Settings.",
+    "saveFailed": "Couldn't save your choices. Try again.",
+    "version": "Version {version}"
   },
   "builder": {
     "save": "Save",

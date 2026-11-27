@@ -17,6 +17,7 @@ import {
 } from '@/store/stream';
 import { Toaster } from '@/components/ui/sonner';
 import Loader from '@/components/Loader.vue';
+import Welcome, { WELCOME_DONE_KEY } from '@/components/Welcome.vue';
 import NewTaskDialog from '@/components/NewTaskDialog.vue';
 import NewAppDialog from '@/components/NewAppDialog.vue';
 import { SEND } from '@/ipc-channels';
@@ -39,6 +40,17 @@ const agentStore = useAgentStore();
 const connectionStore = useConnectionStore();
 const { ready, statusKey, errorText, coreUpdateOffer, desktopOutdated, autoStartNotice, init, restartCore, checkHealth, handleCoreDown, handleCoreBack } = useAppInit();
 const appVisible = ref(false);
+
+// The first time this Core is opened, the welcome screen covers the app until Get started.
+// Only when settings really loaded (a failed load would look like a fresh install) and on
+// this computer's Core: a Server's settings aren't this user's to set up.
+const welcomeVisible = computed(
+  () =>
+    appVisible.value &&
+    settingsStore.loaded &&
+    !connectionStore.isRemote &&
+    settingsStore.get(WELCOME_DONE_KEY) !== 'true'
+);
 
 // May arrive before the Toaster is mounted (main process connects to Core
 // concurrently with renderer boot), so queue it until the app is visible. The watcher below runs
@@ -258,16 +270,27 @@ const currentLayout = computed(() => {
 <template>
   <Loader v-if="!appVisible" :status-key="statusKey" :error-text="errorText" :ready="ready" :update-version="pendingAppUpdate" @done="appVisible = true" @retry="init()" @install-update="installAppUpdate" />
   <template v-if="appVisible">
-    <component :is="currentLayout">
+    <!-- inert: Tab and screen readers stay on the welcome screen while it covers the app. -->
+    <component :is="currentLayout" :inert="welcomeVisible || undefined">
       <router-view />
     </component>
     <NewTaskDialog />
     <NewAppDialog />
+    <Transition name="welcome-fade">
+      <Welcome v-if="welcomeVisible" />
+    </Transition>
     <Toaster />
   </template>
 </template>
 
 <style>
+/* Get started: the welcome screen fades away onto Home. */
+.welcome-fade-leave-active {
+  transition: opacity 400ms ease-out;
+}
+.welcome-fade-leave-to {
+  opacity: 0;
+}
 /* Two buttons beside the text would squeeze it into a narrow column, so they get their own row. */
 .core-stop-toast {
   flex-wrap: wrap;

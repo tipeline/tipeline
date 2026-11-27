@@ -5,6 +5,8 @@ export type WorkflowPlatform = 'windows' | 'linux' | 'macos';
 export interface SystemInfo {
   platform: WorkflowPlatform | null;
   username: string;
+  /** The account's display name where the OS keeps one (macOS, Linux), else ''. */
+  fullName: string;
 }
 
 // Settings keys (Settings → Defaults).
@@ -18,9 +20,13 @@ export function getSystemInfo(): Promise<SystemInfo> {
   systemInfo ??= (async () => {
     try {
       const info = await window.ipcRenderer?.invoke('app:system-info');
-      return { platform: info?.platform ?? null, username: info?.username ?? '' };
+      return {
+        platform: info?.platform ?? null,
+        username: info?.username ?? '',
+        fullName: info?.fullName ?? '',
+      };
     } catch {
-      return { platform: null, username: '' };
+      return { platform: null, username: '', fullName: '' };
     }
   })();
   return systemInfo;

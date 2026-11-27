@@ -6,9 +6,20 @@ import { invokeCore } from '@/utils/invoke';
 import { Switch } from '@/components/ui/switch';
 import { useAutoSave } from '@/composables/useAutoSave';
 import SaveStatus from '@/components/SaveStatus.vue';
+import { Button } from '@/components/ui/button';
+import { WELCOME_DONE_KEY } from '@/components/Welcome.vue';
+import { useSettingsStore } from '@/store/settingsStore';
+import { useConnectionStore } from '@/store/connectionStore';
 
 const { t } = useI18n();
 const autoSave = useAutoSave();
+const settingsStore = useSettingsStore();
+const connectionStore = useConnectionStore();
+
+// The app shows the welcome screen whenever this isn't 'true' (see App.vue).
+function showWelcome() {
+  void autoSave.save(WELCOME_DONE_KEY, () => settingsStore.set(WELCOME_DONE_KEY, 'false'));
+}
 
 const desktopVersion = ref('');
 const coreVersion = ref<string | null>(null);
@@ -89,6 +100,19 @@ onMounted(async () => {
       <div class="flex items-center gap-3 shrink-0">
         <SaveStatus v-bind="autoSave.status('keepRunning')" />
         <Switch id="keep-running" :model-value="keepRunning" @update:model-value="setKeepRunning" />
+      </div>
+    </div>
+
+    <div v-if="!connectionStore.isRemote" class="rounded-lg border flex items-center justify-between gap-4 px-4 py-3">
+      <div>
+        <div class="text-sm">{{ t('settings.about.welcome') }}</div>
+        <div class="text-xs text-muted-foreground mt-0.5">{{ t('settings.about.welcomeHint') }}</div>
+      </div>
+      <div class="flex items-center gap-3 shrink-0">
+        <SaveStatus v-bind="autoSave.status(WELCOME_DONE_KEY)" />
+        <Button variant="outline" size="sm" data-testid="show-welcome" @click="showWelcome">
+          {{ t('settings.about.welcomeShow') }}
+        </Button>
       </div>
     </div>
   </section>
