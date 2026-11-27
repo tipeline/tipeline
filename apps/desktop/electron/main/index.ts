@@ -15,6 +15,7 @@ import { isAppTrusted, recordPickedFile, setAppTrusted, wasPicked } from './appF
 import { mediaResponse, playableMediaFile } from './utils/appMedia';
 import { initTray, isAppPath, keepRunning, noteWindowHidden } from './TrayPopover';
 import { isQuitting, markQuitting } from './quitState';
+import { accountFullName } from './utils/accountName';
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -331,7 +332,7 @@ ipcMain.handle('app:file-trust:set', (_event, { appIdentifier, trusted } = {}) =
 });
 // This computer's platform (in workflow terms) and account name, for the defaults a new
 // workflow or app starts with (Settings → Defaults).
-ipcMain.handle('app:system-info', () => {
+ipcMain.handle('app:system-info', async () => {
   const platform = process.platform === 'darwin' ? 'macos' : process.platform === 'win32' ? 'windows' : 'linux';
   let username = '';
   try {
@@ -339,7 +340,7 @@ ipcMain.handle('app:system-info', () => {
   } catch {
     // No passwd entry (some containers): leave it empty.
   }
-  return { platform, username };
+  return { platform, username, fullName: await accountFullName(username) };
 });
 // Sent by the preload itself when it hands a dropped / picked file's path to a page.
 ipcMain.on('app:file-picked', (_event, file: unknown) => recordPickedFile(file));

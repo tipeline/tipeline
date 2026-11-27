@@ -18,8 +18,10 @@ const { t } = useI18n();
 const settingsStore = useSettingsStore();
 const autoSave = useAutoSave();
 
-const systemInfo = ref<SystemInfo>({ platform: null, username: '' });
+const systemInfo = ref<SystemInfo>({ platform: null, username: '', fullName: '' });
 onMounted(async () => (systemInfo.value = await getSystemInfo()));
+// What "Use …" fills in: the full name where the OS keeps one (the welcome screen offers the same).
+const accountName = computed(() => systemInfo.value.fullName || systemInfo.value.username);
 
 const author = ref(settingsStore.get(DEFAULT_AUTHOR_KEY));
 // Settings may still be loading when the page opens. Only a reload fills the field: copying
@@ -45,7 +47,7 @@ function saveAuthor() {
 }
 
 function useAccountName() {
-  author.value = systemInfo.value.username;
+  author.value = accountName.value;
   saveAuthor();
 }
 
@@ -70,12 +72,12 @@ const usePlatform = computed({
         <label for="default-author" class="text-sm font-medium">{{ t('settings.defaults.author') }}</label>
         <div class="text-xs text-muted-foreground mt-0.5">{{ t('settings.defaults.authorHint') }}</div>
         <button
-          v-if="!author && systemInfo.username"
+          v-if="!author && accountName"
           type="button"
           class="text-xs text-primary hover:underline mt-1"
           @click="useAccountName"
         >
-          {{ t('settings.defaults.useAccountName', { name: systemInfo.username }) }}
+          {{ t('settings.defaults.useAccountName', { name: accountName }) }}
         </button>
       </div>
       <div class="flex flex-col items-end gap-1 shrink-0">
@@ -83,7 +85,7 @@ const usePlatform = computed({
           id="default-author"
           v-model="author"
           class="w-55 text-sm"
-          :placeholder="systemInfo.username || t('tasks.form.authorPlaceholder')"
+          :placeholder="accountName || t('tasks.form.authorPlaceholder')"
           @update:model-value="queueAuthor"
           @blur="saveAuthor"
           @keydown.enter="saveAuthor"

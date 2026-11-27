@@ -1448,7 +1448,10 @@
       "autoStartNotice": "Tipeline ahora sigue ejecutándose en segundo plano para que tus programaciones puedan ejecutarse.",
       "autoStartNoticeAction": "Ajustes",
       "keepRunning": "Seguir en la barra de menús / bandeja",
-      "keepRunningHint": "Cerrar la ventana la oculta: Tipeline sigue en la barra de menús (macOS) o el área de notificaciones (Windows, Linux) con lo que te necesita y lo que está en ejecución. Desactivado: cerrar la ventana cierra Tipeline. Core sigue en marcha en ambos casos."
+      "keepRunningHint": "Cerrar la ventana la oculta: Tipeline sigue en la barra de menús (macOS) o el área de notificaciones (Windows, Linux) con lo que te necesita y lo que está en ejecución. Desactivado: cerrar la ventana cierra Tipeline. Core sigue en marcha en ambos casos.",
+      "welcome": "Pantalla de bienvenida",
+      "welcomeHint": "La pantalla que aparece la primera vez que abres Tipeline, donde eliges el idioma y tu nombre.",
+      "welcomeShow": "Mostrarla de nuevo"
     },
     "hubs": {
       "title": "Hubs"
@@ -2168,6 +2171,18 @@
     "loadingSettings": "Cargando configuración",
     "coreDown": "El motor core no pudo iniciarse. Por favor verifica tu instalación e intenta de nuevo.",
     "retry": "Reintentar"
+  },
+  "welcome": {
+    "title": "Te damos la bienvenida a Tipeline",
+    "subtitle": "Crea flujos de trabajo que hacen el trabajo por ti y conviértelos en apps para tu equipo.",
+    "name": "Tu nombre",
+    "nameHint": "Se añade como autor de los flujos de trabajo y apps que crees.",
+    "namePlaceholder": "Tu nombre",
+    "language": "Idioma",
+    "start": "Empezar",
+    "later": "Puedes cambiar ambos más tarde en Ajustes.",
+    "saveFailed": "No se pudieron guardar tus opciones. Inténtalo de nuevo.",
+    "version": "Versión {version}"
   },
   "builder": {
     "save": "Guardar",
