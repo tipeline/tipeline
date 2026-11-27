@@ -2,7 +2,13 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { beautifyObjectName } from '@/components/ui/auto-form/utils';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useAutoSave } from '@/composables/useAutoSave';
@@ -51,13 +57,19 @@ function useAccountName() {
   saveAuthor();
 }
 
-const usePlatform = computed({
-  get: () => settingsStore.get(DEFAULT_PLATFORM_CURRENT_KEY) === 'true',
-  set: (on: boolean) =>
+// Same words as the platform pickers: this computer's platform, or "Any platform".
+const platformChoice = computed({
+  get: () => (settingsStore.get(DEFAULT_PLATFORM_CURRENT_KEY) === 'true' ? 'current' : 'any'),
+  set: (choice: unknown) =>
     void autoSave.save(DEFAULT_PLATFORM_CURRENT_KEY, () =>
-      settingsStore.set(DEFAULT_PLATFORM_CURRENT_KEY, on ? 'true' : 'false')
+      settingsStore.set(DEFAULT_PLATFORM_CURRENT_KEY, choice === 'current' ? 'true' : 'false')
     ),
 });
+const currentPlatformLabel = computed(() =>
+  systemInfo.value.platform
+    ? t('settings.defaults.platformCurrent', { platform: beautifyObjectName(systemInfo.value.platform) })
+    : t('settings.defaults.platformCurrentUnknown')
+);
 </script>
 
 <template>
@@ -98,17 +110,19 @@ const usePlatform = computed({
     <div class="flex items-start justify-between gap-6">
       <div>
         <label for="default-platform" class="text-sm font-medium">{{ t('settings.defaults.platform') }}</label>
-        <div class="text-xs text-muted-foreground mt-0.5">
-          {{
-            systemInfo.platform
-              ? t('settings.defaults.platformHint', { platform: beautifyObjectName(systemInfo.platform) })
-              : t('settings.defaults.platformHintUnknown')
-          }}
-        </div>
+        <div class="text-xs text-muted-foreground mt-0.5">{{ t('settings.defaults.platformHint') }}</div>
       </div>
-      <div class="flex items-center gap-3 shrink-0">
+      <div class="flex flex-col items-end gap-1 shrink-0">
+        <Select v-model="platformChoice">
+          <SelectTrigger id="default-platform" class="w-55 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="current">{{ currentPlatformLabel }}</SelectItem>
+            <SelectItem value="any">{{ t('tasks.form.platformAny') }}</SelectItem>
+          </SelectContent>
+        </Select>
         <SaveStatus v-bind="autoSave.status(DEFAULT_PLATFORM_CURRENT_KEY)" />
-        <Switch id="default-platform" v-model="usePlatform" />
       </div>
     </div>
   </section>

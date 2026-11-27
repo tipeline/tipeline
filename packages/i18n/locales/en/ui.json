@@ -397,7 +397,7 @@
       "versionPlaceholder": "1.0.0",
       "versionHint": "major.minor.patch — bump patch for fixes, minor for new features, major for breaking changes.",
       "versionHubManaged": "This workflow is installed from a hub — its version is managed by hub updates.",
-      "platformPlaceholder": "Select a platform",
+      "platformAny": "Any platform",
       "projectPlaceholder": "No projects",
       "tags": "Tags",
       "tagPlaceholder": "Add tag...",
@@ -1367,9 +1367,10 @@
       "author": "Author",
       "authorHint": "Filled in as the author of every new workflow and app.",
       "useAccountName": "Use \"{name}\"",
-      "platform": "Use this computer's platform",
-      "platformHint": "New workflows start marked as {platform}. Leave off for workflows that run anywhere.",
-      "platformHintUnknown": "New workflows start marked with this computer's platform. Leave off for workflows that run anywhere."
+      "platform": "Platform",
+      "platformHint": "What new workflows start marked with. Pick \"Any platform\" for workflows that run anywhere.",
+      "platformCurrent": "This computer ({platform})",
+      "platformCurrentUnknown": "This computer"
     },
     "agent": {
       "title": "Assistant",

@@ -2,6 +2,21 @@ import { useSettingsStore } from '@/store/settingsStore';
 
 export type WorkflowPlatform = 'windows' | 'linux' | 'macos';
 
+export const PLATFORM_OPTIONS = ['windows', 'linux', 'macos'] as const;
+
+/**
+ * The "Any platform" choice in platform pickers. Select items can't have an empty value, so
+ * this stands in for "no platform" in the UI and is never saved: see {@link platformToSave}.
+ */
+export const PLATFORM_ANY = 'any';
+
+/** What a picker's value saves as: a platform, or null for "Any platform". */
+export function platformToSave(value: string | null | undefined): WorkflowPlatform | null {
+  return (PLATFORM_OPTIONS as readonly string[]).includes(value ?? '')
+    ? (value as WorkflowPlatform)
+    : null;
+}
+
 export interface SystemInfo {
   platform: WorkflowPlatform | null;
   username: string;

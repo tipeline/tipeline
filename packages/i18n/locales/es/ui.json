@@ -397,7 +397,7 @@
       "versionPlaceholder": "1.0.0",
       "versionHint": "mayor.menor.parche — sube parche para correcciones, menor para nuevas funciones, mayor para cambios importantes.",
       "versionHubManaged": "Este flujo de trabajo está instalado desde un hub — su versión se gestiona mediante las actualizaciones del hub.",
-      "platformPlaceholder": "Selecciona una plataforma",
+      "platformAny": "Cualquier plataforma",
       "projectPlaceholder": "Sin proyectos",
       "tags": "Etiquetas",
       "tagPlaceholder": "Agregar etiqueta...",
@@ -1367,9 +1367,10 @@
       "author": "Autor",
       "authorHint": "Se usa como autor de cada nuevo flujo de trabajo y app.",
       "useAccountName": "Usar \"{name}\"",
-      "platform": "Usar la plataforma de este equipo",
-      "platformHint": "Los nuevos flujos de trabajo empiezan marcados como {platform}. Déjalo apagado para flujos que funcionan en cualquier sistema.",
-      "platformHintUnknown": "Los nuevos flujos de trabajo empiezan marcados con la plataforma de este equipo. Déjalo apagado para flujos que funcionan en cualquier sistema."
+      "platform": "Plataforma",
+      "platformHint": "Con qué empiezan marcados los nuevos flujos de trabajo. Elige \"Cualquier plataforma\" para flujos que funcionan en cualquier sistema.",
+      "platformCurrent": "Este equipo ({platform})",
+      "platformCurrentUnknown": "Este equipo"
     },
     "agent": {
       "title": "Asistente",
