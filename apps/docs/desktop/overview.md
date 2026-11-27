@@ -14,7 +14,7 @@ The sidebar groups every part of the app:
 
 | Group | Section | What you'll find there |
 |-------|---------|----------------------|
-| | **Home** | What needs you (approvals, alerts, failed and missed runs), your starred and recent items, today's runs |
+| | **Home** | What needs you (approvals, alerts, failed and missed runs), your starred and recent items, today's runs, suggestions from the Hub |
 | **Build** | **Workflows** | Every installed workflow — run, edit, see its runs ([builder](/desktop/builder)) |
 | | **Apps** | Dashboards and tools built on your workflows ([Apps](/apps)) |
 | | **Projects** | Workflows and apps grouped by project ([Projects](/desktop/projects)) |
@@ -70,6 +70,14 @@ From top to bottom:
   last ran (with a dot for how it went) or when you opened it. Star or unstar with the ☆ on
   a tile, or pick one with **Add to Starred**. Two rows show at first; **Show all** lists
   the rest.
+- **Suggested from the Hub**: four plugins, workflows and apps from your [hubs](/hub), each
+  with a line of its description. The ones the hub features always come first, even once
+  you've installed them (they then say **Installed**); any room left goes to items you
+  haven't installed yet, mixing workflows, plugins and apps. Click a tile to open its
+  details on the Hub page, where you install it. **Browse the Hub** opens the Hub. The
+  **×** hides the row; turn it back on with **Hub suggestions on Home** in
+  **Settings → Appearance**. Not shown when no hub is turned on or there's nothing to
+  suggest.
 
 When Needs you is long, the whole page scrolls.
 

@@ -108,7 +108,10 @@
     "greeting": {
       "morning": "Buenos días",
       "afternoon": "Buenas tardes",
-      "evening": "Buenas noches"
+      "evening": "Buenas noches",
+      "morningName": "Buenos días, {name}",
+      "afternoonName": "Buenas tardes, {name}",
+      "eveningName": "Buenas noches, {name}"
     },
     "quickActions": {
       "newTask": "Nuevo Flujo de Trabajo",
@@ -174,6 +177,20 @@
       "allRuns": "Todas las ejecuciones",
       "tomorrowAt": "mañana a las {time}",
       "onDayAt": "el {day} a las {time}"
+    },
+    "hub": {
+      "title": "Sugerencias del Hub",
+      "browse": "Explorar el Hub",
+      "hide": "Ocultar sugerencias del Hub",
+      "hiddenToast": "Sugerencias del Hub ocultas. Vuelve a activarlas en Configuración → Apariencia.",
+      "undo": "Deshacer",
+      "featured": "Destacado",
+      "installed": "Instalado",
+      "type": {
+        "task": "Flujo de trabajo",
+        "app": "Aplicación",
+        "plugin": "Plugin"
+      }
     }
   },
   "runs": {
@@ -1340,7 +1357,9 @@
       "description": "Personaliza cómo se ve Tipeline en tu dispositivo.",
       "themeHint": "Elige entre claro, oscuro o sigue tu sistema.",
       "languageHint": "Idioma de visualización de la aplicación.",
-      "timezoneHint": "Todas las fechas y horas se mostrarán en esta zona horaria."
+      "timezoneHint": "Todas las fechas y horas se mostrarán en esta zona horaria.",
+      "hubSuggestions": "Sugerencias del Hub en Inicio",
+      "hubSuggestionsHint": "Algunos plugins, flujos de trabajo y aplicaciones de tus hubs, primero los destacados."
     },
     "defaults": {
       "title": "Predeterminados",

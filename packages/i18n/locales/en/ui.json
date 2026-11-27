@@ -108,7 +108,10 @@
     "greeting": {
       "morning": "Good morning",
       "afternoon": "Good afternoon",
-      "evening": "Good evening"
+      "evening": "Good evening",
+      "morningName": "Good morning, {name}",
+      "afternoonName": "Good afternoon, {name}",
+      "eveningName": "Good evening, {name}"
     },
     "quickActions": {
       "newTask": "New Workflow",
@@ -174,6 +177,20 @@
       "allRuns": "All runs",
       "tomorrowAt": "tomorrow at {time}",
       "onDayAt": "on {day} at {time}"
+    },
+    "hub": {
+      "title": "Suggested from the Hub",
+      "browse": "Browse the Hub",
+      "hide": "Hide Hub suggestions",
+      "hiddenToast": "Hub suggestions hidden. Turn them back on in Settings → Appearance.",
+      "undo": "Undo",
+      "featured": "Featured",
+      "installed": "Installed",
+      "type": {
+        "task": "Workflow",
+        "app": "App",
+        "plugin": "Plugin"
+      }
     }
   },
   "runs": {
@@ -1340,7 +1357,9 @@
       "description": "Customize how Tipeline looks on your device.",
       "themeHint": "Choose between light, dark, or follow your system.",
       "languageHint": "Application display language.",
-      "timezoneHint": "All dates and times will be displayed in this timezone."
+      "timezoneHint": "All dates and times will be displayed in this timezone.",
+      "hubSuggestions": "Hub suggestions on Home",
+      "hubSuggestionsHint": "A few plugins, workflows and apps from your hubs, featured ones first."
     },
     "defaults": {
       "title": "Defaults",
