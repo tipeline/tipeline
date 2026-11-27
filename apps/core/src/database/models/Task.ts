@@ -7,7 +7,7 @@ export class Task extends Model {
   description?: string;
   author?: string;
   version?: string;
-  platform?: 'windows' | 'linux' | 'macos';
+  platform?: 'windows' | 'linux' | 'macos' | null;
   metadata?: Record<string, any>;
   source?: string;
   created_at!: Date;

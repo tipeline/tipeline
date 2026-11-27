@@ -432,7 +432,8 @@ export default class Core {
       description?: string;
       author?: string;
       version?: string;
-      platform?: 'windows' | 'linux' | 'macos';
+      // null clears it: the workflow runs on any platform.
+      platform?: 'windows' | 'linux' | 'macos' | null;
       tags?: string[];
       // The workflow cache setting (lives in its source); null turns it off.
       cache?: WorkflowCacheConfig | null;

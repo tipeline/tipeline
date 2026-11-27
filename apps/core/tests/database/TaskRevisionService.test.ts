@@ -95,6 +95,19 @@ describe('TaskRevisionService', () => {
     expect(list[0].summary).toMatchObject({ details: true, variables: false, changed: 0, addedCount: 0 });
   });
 
+  it('clears the platform when updateMeta gets null, and keeps it when it is left out', async () => {
+    const task = await TaskService.install({ name: 'Flow', platform: 'macos', source: source([], { platform: 'macos' }) } as any);
+    await TaskService.updateMeta(task.identifier, { description: 'Kept' });
+    let row = await knex('task').where({ id: task.id }).first();
+    expect(row.platform).toBe('macos');
+    expect(JSON.parse(row.source).platform).toBe('macos');
+
+    await TaskService.updateMeta(task.identifier, { platform: null });
+    row = await knex('task').where({ id: task.id }).first();
+    expect(row.platform).toBeNull();
+    expect(JSON.parse(row.source)).not.toHaveProperty('platform');
+  });
+
   it('summarizes removed and changed steps, matching builder steps by identifier', () => {
     const before = source([
       step('log', 'info', { identifier: 'a', params: { message: 'hi' } }),

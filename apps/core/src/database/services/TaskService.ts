@@ -305,7 +305,8 @@ export class TaskService {
     return TaskService.getByIdentifier(identifier);
   }
 
-  static async updateMeta(identifier: string, data: { name?: string; description?: string; author?: string; version?: string; platform?: 'windows' | 'linux' | 'macos'; tags?: string[] }) {
+  /** `platform: null` clears it ("runs anywhere"); left out, it stays as it was. */
+  static async updateMeta(identifier: string, data: { name?: string; description?: string; author?: string; version?: string; platform?: 'windows' | 'linux' | 'macos' | null; tags?: string[] }) {
     const record = await TaskModel.query().findOne({ identifier });
     if (!record) throw new Error(`Workflow not found: ${identifier}`);
 
@@ -325,6 +326,7 @@ export class TaskService {
     if (record.source) {
       const source = JSON.parse(record.source as string);
       const patchSource: any = { ...source, ...metaData };
+      if (patchSource.platform === null) delete patchSource.platform;
       if (normalizedTags !== undefined) patchSource.tags = normalizedTags;
       const next = JSON.stringify(patchSource);
       await TaskModel.query().findOne({ identifier }).patch({ source: next });
