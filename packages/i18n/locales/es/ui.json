@@ -1045,6 +1045,23 @@
       "noMatch": "Ninguna app coincide con estos filtros.",
       "starred": "No hay apps destacadas. Destaca una para tenerla aquí.",
       "recent": "Las apps que abras aparecen aquí."
+    },
+    "versions": {
+      "empty": "Aún no hay versiones. Se conserva una cada vez que se guarda esta app.",
+      "confirmDescription": "La app vuelve a como estaba el {when}. La versión actual queda en la lista, así que puedes volver a ella. Los flujos de trabajo que ejecuta no cambian.",
+      "confirmHub": "Esta app se actualiza desde su hub automáticamente, así que una actualización del hub puede reemplazarla de nuevo.",
+      "missingWorkflows": "Esta versión usa flujos de trabajo que ya no están instalados ({names}). Las partes que los ejecutan no funcionarán hasta que vuelvan.",
+      "pagesAdded": "Se agregó la página {pages}",
+      "pagesRemoved": "Se quitó la página {pages}",
+      "added": "Se agregó {steps}",
+      "removed": "Se quitó {steps}",
+      "changed": "{n} componente cambió | {n} componentes cambiaron",
+      "workflows": "Cambiaron los flujos de trabajo",
+      "details": "Cambió la configuración",
+      "noStepChanges": "Sin cambios en los componentes",
+      "viewHint": {
+        "yaml": "La app completa como se guardó."
+      }
     }
   },
   "plugins": {

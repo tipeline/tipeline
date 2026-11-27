@@ -49,6 +49,36 @@ export const registerAppHandlers = (transport: ITransport, broadcast: BroadcastF
     }
   });
 
+  transport.on('appRevisionList', async (message: any, client: any) => {
+    if (!client) return;
+    try {
+      const result = await Core.appRevisionList(message.payload.identifier);
+      transport.emit(client, 'onAppRevisionList', IPCMessage.success(result, message.correlationId));
+    } catch (error: any) {
+      transport.emit(client, 'onAppRevisionList', IPCMessage.failure(error.message, message.correlationId));
+    }
+  });
+
+  transport.on('appRevisionDetail', async (message: any, client: any) => {
+    if (!client) return;
+    try {
+      const result = await Core.appRevisionDetail(message.payload.identifier, message.payload.revisionId);
+      transport.emit(client, 'onAppRevisionDetail', IPCMessage.success(result, message.correlationId));
+    } catch (error: any) {
+      transport.emit(client, 'onAppRevisionDetail', IPCMessage.failure(error.message, message.correlationId));
+    }
+  });
+
+  transport.on('appRevisionRestore', async (message: any, client: any) => {
+    if (!client) return;
+    try {
+      const result = await Core.appRevisionRestore(message.payload.identifier, message.payload.revisionId);
+      transport.emit(client, 'onAppRevisionRestore', IPCMessage.success(result, message.correlationId));
+    } catch (error: any) {
+      transport.emit(client, 'onAppRevisionRestore', IPCMessage.failure(error.message, message.correlationId));
+    }
+  });
+
   transport.on('appUpdateMeta', async (message: any, client: any) => {
     if (!client) return;
     try {

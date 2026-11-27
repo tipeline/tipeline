@@ -1,4 +1,5 @@
 import fs from 'fs';
+import crypto from 'crypto';
 import os from 'os';
 import path from 'path';
 import archiver from 'archiver';
@@ -67,6 +68,9 @@ pages:
   - { id: edit }
 `;
 
+// Every hub item needs a checksum: the sha256 of its file as it is on disk now.
+const checksumOf = (file: string) => `sha256:${crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')}`;
+
 async function zip(target: string, files: Record<string, string>) {
   await new Promise<void>((resolve, reject) => {
     const out = fs.createWriteStream(target);
@@ -103,6 +107,7 @@ beforeAll(async () => {
           name: 'Summarize',
           version: '1.2.0',
           file: 'summarize.yml',
+          checksum: checksumOf(path.join(dir, 'summarize.yml')),
         },
         {
           type: 'task',
@@ -110,14 +115,16 @@ beforeAll(async () => {
           name: 'List records',
           version: '1.0.0',
           file: 'list.yml',
+          checksum: checksumOf(path.join(dir, 'list.yml')),
         },
-        { type: 'app', identifier: 'records', name: 'Records', version: '1.0.0', file: 'app.yml' },
+        { type: 'app', identifier: 'records', name: 'Records', version: '1.0.0', file: 'app.yml', checksum: checksumOf(path.join(dir, 'app.yml')) },
         {
           type: 'plugin',
           identifier: 'crm',
           name: 'CRM',
           version: '2.0.0',
           file: 'crm.zip',
+          checksum: checksumOf(path.join(dir, 'crm.zip')),
           group: 'crm',
         },
       ],

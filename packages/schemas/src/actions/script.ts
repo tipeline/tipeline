@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { createValidationPair } from './../createValidation';
+import { orTemplateString } from './../templateValidation';
 
 export const meta = {
   label: 'Script',
@@ -15,7 +16,7 @@ export const validations = {
       }),
       creation: z.object({
         code: z.string().min(1, 'script.code.required'),
-        context: z.record(z.any(), z.any()).optional(),
+        context: orTemplateString(z.record(z.any(), z.any())).optional(),
       }),
     },
     {

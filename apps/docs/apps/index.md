@@ -40,6 +40,14 @@ Apps are a desktop feature: you build them in the App Builder and open them from
 
 Renaming a component or a runnable updates every binding that refers to it.
 
+### Versions
+
+Each save keeps a copy of the app. On the app's page, open **⋯ → Versions** to see them, newest first. Each version shows when it was saved, what saved it (an edit, a hub update, a backup restore) and what changed: pages added or removed, components added, removed or edited, the app's workflows, or other settings such as page names and order. Saves a couple of minutes apart count as one version.
+
+The views and **Restore** work as for [workflow versions](/desktop/builder#versions). Restoring puts back the app's pages and components only, not the workflows it runs. When a version uses a workflow that is no longer installed, the version and the Restore dialog say which one, and the parts that run it won't work until it's back.
+
+Every version from the last 30 days is kept; older ones are thinned to the last one of each day. Deleting an app moves its versions to the [Trash](/desktop/trash) with it.
+
 ## Connecting to a workflow
 
 A workflow decides what an app may touch through **variable visibility**:
@@ -79,7 +87,7 @@ What you can reference:
 
 ## YAML format
 
-Apps can be installed from a YAML file (**Apps → Install App**) or from a hub.
+Apps can be installed from a YAML file (**Apps → Install App**) or from a [hub](/hub).
 
 To move apps to another computer, use **Export** on an app's page (<kbd>⌘E</kbd>) or **Export All** on the Apps list. Either one saves a zip with each app's YAML and a `workflows/` folder holding the workflows the apps use, all named after the app or workflow (`workflows/invoice-report.yml`). Unzip it and install the app's YAML; its workflows are installed with it.
 

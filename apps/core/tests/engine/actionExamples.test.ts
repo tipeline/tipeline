@@ -25,9 +25,7 @@ describe('action examples', () => {
         return !exampleIsUsable(group, name, yaml);
       })
       .map(([key]) => key);
-    // html.extractData: the example passes `schema: '{= extractSchema =}'`, but the
-    // creation schema takes only a literal object — the schema should accept a variable.
-    expect(unusable).toEqual(['html.extractData']);
+    expect(unusable).toEqual([]);
   });
 
   it('leave out examples that use {{ env.X }}', () => {
