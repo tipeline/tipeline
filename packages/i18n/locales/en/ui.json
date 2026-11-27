@@ -1670,6 +1670,13 @@
     "tasksEmpty": "No workflows available on this hub.",
     "appsEmpty": "No apps available on this hub.",
     "pluginsEmpty": "No plugins available on this hub.",
+    "search": {
+      "task": "Search workflows...",
+      "app": "Search apps...",
+      "plugin": "Search plugins...",
+      "noMatches": "Nothing on this hub matches “{query}”.",
+      "clear": "Clear search"
+    },
     "selectHub": "Select a hub",
     "noHubs": "No hubs configured yet.",
     "noHubsHint": "Add a hub from the \"Manage Hubs\" tab to browse and install content.",

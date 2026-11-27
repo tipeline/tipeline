@@ -1670,6 +1670,13 @@
     "tasksEmpty": "No hay flujos de trabajo disponibles en este hub.",
     "appsEmpty": "No hay aplicaciones disponibles en este hub.",
     "pluginsEmpty": "No hay plugins disponibles en este hub.",
+    "search": {
+      "task": "Buscar flujos de trabajo...",
+      "app": "Buscar aplicaciones...",
+      "plugin": "Buscar plugins...",
+      "noMatches": "Nada en este hub coincide con “{query}”.",
+      "clear": "Borrar búsqueda"
+    },
     "selectHub": "Selecciona un hub",
     "noHubs": "Aún no hay hubs configurados.",
     "noHubsHint": "Añade un hub desde la pestaña \"Gestionar Hubs\" para explorar e instalar contenido.",

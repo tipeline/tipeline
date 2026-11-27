@@ -6,6 +6,7 @@ import PanelCard from '@/components/Card.vue';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   AlertDialog,
@@ -17,7 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { AppWindow, Workflow, Boxes, Loader2, Puzzle } from 'lucide-vue-next';
+import { AppWindow, Workflow, Boxes, Loader2, Puzzle, Search, X } from 'lucide-vue-next';
 import { storeToRefs } from 'pinia';
 import { useHubStore } from '@/store/hubStore';
 import { invokeCore } from '@/utils/invoke';
@@ -284,6 +285,28 @@ function imageSrc(item: HubCatalogItem): string | null {
 }
 
 const placeholderIcon = computed(() => PLACEHOLDER_ICON[props.itemType]);
+
+// Search: every typed word must appear in the name, description, author or identifier.
+// Case and accents don't matter ("camara" finds "Cámara").
+const search = ref('');
+const fold = (text: string) => text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+const searchIndex = computed(
+  () =>
+    new Map(
+      catalogItems.value.map((item) => [
+        item.identifier,
+        fold([item.name, item.description, item.author, item.identifier].filter(Boolean).join(' ')),
+      ])
+    )
+);
+const visibleItems = computed(() => {
+  const words = fold(search.value).split(/\s+/).filter(Boolean);
+  if (words.length === 0) return catalogItems.value;
+  return catalogItems.value.filter((item) => {
+    const text = searchIndex.value.get(item.identifier) ?? '';
+    return words.every((word) => text.includes(word));
+  });
+});
 </script>
 
 <template>
@@ -294,7 +317,7 @@ const placeholderIcon = computed(() => PLACEHOLDER_ICON[props.itemType]);
         <p class="text-xs">{{ t('hub.noHubsHint') }}</p>
       </div>
       <template v-else>
-        <div class="p-4 border-b">
+        <div class="p-4 border-b flex flex-wrap items-center gap-2">
           <Select v-model="selectedHubId">
             <SelectTrigger class="w-64">
               <SelectValue :placeholder="t('hub.selectHub')" />
@@ -305,6 +328,26 @@ const placeholderIcon = computed(() => PLACEHOLDER_ICON[props.itemType]);
               </SelectItem>
             </SelectContent>
           </Select>
+          <div v-if="catalogItems.length > 0" class="relative w-64">
+            <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+            <Input
+              v-model="search"
+              class="pl-8 pr-8"
+              :placeholder="t(`hub.search.${itemType}`)"
+              :aria-label="t(`hub.search.${itemType}`)"
+              data-testid="hub-search"
+              @keydown.esc="search = ''"
+            />
+            <button
+              v-if="search"
+              type="button"
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              :aria-label="t('hub.search.clear')"
+              @click="search = ''"
+            >
+              <X class="size-4" />
+            </button>
+          </div>
         </div>
 
         <div v-if="catalogLoading" class="flex items-center justify-center py-20 text-muted-foreground text-sm">
@@ -313,10 +356,18 @@ const placeholderIcon = computed(() => PLACEHOLDER_ICON[props.itemType]);
         <div v-else-if="catalogItems.length === 0" class="flex items-center justify-center py-20 text-muted-foreground text-sm">
           {{ t(emptyTextKey) }}
         </div>
+        <div
+          v-else-if="visibleItems.length === 0"
+          class="flex flex-col items-center justify-center gap-2 py-20 text-muted-foreground text-sm"
+          data-testid="hub-search-empty"
+        >
+          <p>{{ t('hub.search.noMatches', { query: search.trim() }) }}</p>
+          <Button variant="outline" size="sm" @click="search = ''">{{ t('hub.search.clear') }}</Button>
+        </div>
         <div v-else class="flex-1 min-h-0 overflow-y-auto scroll-fade">
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
             <Card
-              v-for="item in catalogItems"
+              v-for="item in visibleItems"
               :key="item.identifier"
               class="flex flex-col overflow-hidden transition-colors hover:border-foreground/20"
             >
