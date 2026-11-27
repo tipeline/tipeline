@@ -4,7 +4,7 @@ Open **Settings** at the bottom of the sidebar.
 
 | Page | What it sets |
 |------|--------------|
-| **Appearance** | Light, dark or system theme; language (English, Spanish); the time zone dates are shown in |
+| **Appearance** | Light, dark or system theme; language (English, Spanish); the time zone dates are shown in; whether Home shows suggestions from the Hub |
 | **Defaults** | What new workflows and apps start with: the author, and whether a new workflow is marked for this computer's platform. You can still change both in the **New** dialog. |
 | **Assistant** | The AI provider, API key and model the [assistant](/assistant#setting-it-up) uses, and its global [instructions](/assistant/instructions) |
 | **Backup** | [Full backup and restore](/desktop/backup) |

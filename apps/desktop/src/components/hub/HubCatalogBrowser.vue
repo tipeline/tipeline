@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute } from 'vue-router';
 import PanelCard from '@/components/Card.vue';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +27,7 @@ import { descriptionSummary } from '@tipeline/utils';
 import CapabilityList from '@/components/task/CapabilityList.vue';
 import HubItemDrawer from '@/components/hub/HubItemDrawer.vue';
 import type { CapabilityReport } from '@/utils/capabilities';
+import { isFeatured } from '@/utils/hubSuggestions';
 
 type HubCatalogItem = {
   type: 'task' | 'app' | 'plugin';
@@ -36,6 +38,7 @@ type HubCatalogItem = {
   version: string;
   updatedAt?: string;
   image?: string;
+  featured?: boolean | number;
 };
 
 // A plugin a hub workflow needs that this Core can't run yet (Core's HubWorkflowCatalog).
@@ -58,6 +61,7 @@ const props = defineProps<{
 }>();
 
 const { t } = useI18n();
+const route = useRoute();
 const hubStore = useHubStore();
 
 const PLACEHOLDER_ICON = { task: Workflow, app: AppWindow, plugin: Boxes } as const;
@@ -91,6 +95,10 @@ const installError = ref<{ name: string; message: string } | null>(null);
 
 // The card opened in the detail drawer. Its Install button runs the same steps as the card's.
 const detailItem = ref<HubCatalogItem | null>(null);
+// A link here (Home's Hub suggestions) can name a hub and an item: that item's drawer opens
+// once its catalog has loaded.
+const queryText = (value: unknown) => (typeof value === 'string' && value ? value : null);
+let pendingOpen = queryText(route?.query.item);
 
 // Workflows whose plugins aren't installed or are turned off: listed before
 // installing, each with a button that installs and/or turns it on. Once none is
@@ -102,8 +110,9 @@ const selectedHubName = computed(() => hubStore.enabledHubs.find((h) => h.id ===
 
 onMounted(async () => {
   await hubStore.load();
-  // Keep the hub picked on another tab, unless it was removed or turned off.
-  const current = hubStore.enabledHubs.find((h) => h.id === selectedHubId.value);
+  // A link's hub first; else keep the hub picked on another tab, unless it was removed or turned off.
+  const requested = hubStore.enabledHubs.find((h) => h.id === queryText(route?.query.hub));
+  const current = requested ?? hubStore.enabledHubs.find((h) => h.id === selectedHubId.value);
   const next = current?.id ?? hubStore.enabledHubs[0]?.id ?? null;
   if (next === selectedHubId.value) {
     // Same hub as before: the watch won't fire, so load this tab's list here.
@@ -124,6 +133,10 @@ async function loadCatalog() {
     const all = await invokeCore<HubCatalogItem[]>(SEND.HUB_CATALOG, { hubId: selectedHubId.value });
     catalogItems.value = all.filter((item) => item.type === props.itemType);
     brokenImages.value = new Set();
+    if (pendingOpen) {
+      detailItem.value = catalogItems.value.find((item) => item.identifier === pendingOpen) ?? null;
+      pendingOpen = null;
+    }
   } finally {
     catalogLoading.value = false;
   }
@@ -315,7 +328,14 @@ const placeholderIcon = computed(() => PLACEHOLDER_ICON[props.itemType]);
                 data-testid="hub-card-open"
                 @click="detailItem = item"
               >
-                <div class="aspect-video w-full bg-muted flex items-center justify-center overflow-hidden">
+                <!-- Featured sits on the image so every card's title starts on the same line. -->
+                <div class="relative aspect-video w-full bg-muted flex items-center justify-center overflow-hidden">
+                  <span
+                    v-if="isFeatured(item)"
+                    class="absolute top-2 left-2 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-background/90 text-blue-700 dark:text-blue-300 shadow-sm"
+                  >
+                    {{ t('dashboard.hub.featured') }}
+                  </span>
                   <img
                     v-if="imageSrc(item)"
                     :src="imageSrc(item)!"

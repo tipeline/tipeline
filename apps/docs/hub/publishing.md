@@ -64,6 +64,7 @@ commit the folder and add the repo's link as the hub (see [A GitHub repo as a hu
 | `description`, `author`, `updatedAt` | | Shown in the Hub browser. Cards show the start of `description`, and the detail drawer shows all of it as Markdown. |
 | `image` | | Thumbnail: a path in the hub, or a URL |
 | `group` | plugins | The action group the plugin provides. Lets the assistant find the plugin a workflow needs. |
+| `featured` | | A position number (`1` first) or `true` to promote the item. Numbered items come in that order, then the `true` ones in catalog order. Promoted items come first in **Suggested from the Hub** on Home, even when the user already has them, and get a **Featured** label in the Hub browser. Home shows four, so the first four are what a new user sees. |
 
 ### Workflows and apps
 

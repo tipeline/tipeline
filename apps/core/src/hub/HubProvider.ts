@@ -29,6 +29,11 @@ export interface HubCatalogItem {
    * exports). Lets a workflow that needs that group point at this plugin.
    */
   group?: string;
+  /**
+   * Promoted by the hub: shown first in Home's Hub suggestions, with a Featured label.
+   * A number is the position (1 first); `true` comes after the numbered ones.
+   */
+  featured?: boolean | number;
 }
 
 export interface HubProvider {

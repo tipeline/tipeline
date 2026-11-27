@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useColorMode } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
 import { Sun, Moon, Monitor } from 'lucide-vue-next';
@@ -13,6 +14,9 @@ import { useLocale, SUPPORTED_LANGUAGES, type SupportedLocale } from '@/composab
 import { useTimezone } from '@/composables/useTimezone';
 import { useAutoSave } from '@/composables/useAutoSave';
 import SaveStatus from '@/components/SaveStatus.vue';
+import { Switch } from '@/components/ui/switch';
+import { useSettingsStore } from '@/store/settingsStore';
+import { HOME_HUB_SUGGESTIONS_KEY } from '@/utils/hubSuggestions';
 
 const mode = useColorMode();
 // mode.value is the resolved theme (light/dark); the user's choice, including 'auto', is in the store.
@@ -21,6 +25,16 @@ const { t } = useI18n();
 const { currentLocale, setLocale } = useLocale();
 const { appTimezone, setTimezone } = useTimezone();
 const autoSave = useAutoSave();
+const settingsStore = useSettingsStore();
+
+// On unless turned off, here or with the card's ×.
+const hubSuggestions = computed({
+  get: () => settingsStore.get(HOME_HUB_SUGGESTIONS_KEY) !== 'false',
+  set: (on: boolean) =>
+    void autoSave.save(HOME_HUB_SUGGESTIONS_KEY, () =>
+      settingsStore.set(HOME_HUB_SUGGESTIONS_KEY, on ? 'true' : 'false')
+    ),
+});
 
 function setTheme(value: (typeof THEMES)[number]['value']) {
   void autoSave.save('theme', () => (mode.value = value));
@@ -107,6 +121,18 @@ const THEMES = [
             <SelectItem v-for="tz in TIMEZONES" :key="tz" :value="tz">{{ tz }}</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+    </div>
+
+    <!-- Hub suggestions on Home -->
+    <div class="flex items-center justify-between">
+      <div>
+        <label for="home-hub-suggestions" class="text-sm font-medium">{{ t('settings.appearance.hubSuggestions') }}</label>
+        <div class="text-xs text-muted-foreground mt-0.5">{{ t('settings.appearance.hubSuggestionsHint') }}</div>
+      </div>
+      <div class="flex items-center gap-3">
+        <SaveStatus v-bind="autoSave.status(HOME_HUB_SUGGESTIONS_KEY)" />
+        <Switch id="home-hub-suggestions" v-model="hubSuggestions" />
       </div>
     </div>
   </section>
