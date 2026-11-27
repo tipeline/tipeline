@@ -371,7 +371,7 @@ async function onExportAll() {
       <Card classContent="p-0 flex flex-col min-h-0" class="flex-1 min-h-0">
         <template #content>
           <!-- One row: scope (a dropdown), search and filters on the left; selection, sort and view on the right. -->
-          <div class="flex flex-wrap items-center gap-2 pt-3 pb-3 mb-2 shrink-0">
+          <div class="flex flex-wrap items-center gap-2 px-6 py-3 shrink-0">
             <ScopeSelect v-model="scope" :options="scopeOptions" :label="t('listViews.scope.label')" />
             <Input v-model="search" class="w-56 bg-card" :placeholder="t('tasks.searchPlaceholder')" />
             <Select v-model="source">
@@ -500,7 +500,7 @@ async function onExportAll() {
             :row-key="(task: TaskItem) => task.identifier"
             v-model:selection="selection"
           />
-          <div v-else class="flex-1 min-h-0 overflow-y-auto scroll-fade pb-2">
+          <div v-else class="flex-1 min-h-0 overflow-y-auto scroll-fade px-6 pb-6">
             <WorkflowCardGrid
               v-if="view === 'cards'"
               v-model:selection="selection"
