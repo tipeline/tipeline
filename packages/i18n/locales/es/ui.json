@@ -416,6 +416,8 @@
         "emptyTitle": "Aún no hay acciones",
         "emptyDescription": "Arrastra una acción desde el panel izquierdo para comenzar.",
         "dropHere": "Suelta las acciones aquí",
+        "orderIfChain": "Debe ir justo después de un paso If o Else if. Muévelo de vuelta a su cadena o quita el paso intermedio.",
+        "orderSwitchChain": "Debe ir justo después de un paso Switch o Case. Muévelo de vuelta a su switch o quita el paso intermedio.",
         "dropAtEnd": "Suelta para añadir al final",
         "actionDeleted": "Acción eliminada",
         "undo": "Deshacer",

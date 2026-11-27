@@ -416,6 +416,8 @@
         "emptyTitle": "No actions yet",
         "emptyDescription": "Drag an action from the left panel to get started.",
         "dropHere": "Drop actions here",
+        "orderIfChain": "Must come right after an If or Else if step. Move it back under its chain, or remove the step in between.",
+        "orderSwitchChain": "Must come right after a Switch or Case step. Move it back under its switch, or remove the step in between.",
         "dropAtEnd": "Drop to add at the end",
         "actionDeleted": "Action deleted",
         "undo": "Undo",
