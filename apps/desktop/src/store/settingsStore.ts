@@ -6,12 +6,16 @@ import { invokeCore } from '@/utils/invoke';
 export const useSettingsStore = defineStore('settings', () => {
   const settings = ref<Record<string, string>>({});
   const loading = ref(false);
+  // True once a load came back from Core: an empty list then means "nothing saved yet",
+  // not "couldn't ask".
+  const loaded = ref(false);
 
   async function load() {
     loading.value = true;
     try {
       const result = await invokeCore<Record<string, string>>(SEND.SETTINGS_LIST);
       settings.value = result ?? {};
+      loaded.value = true;
     } finally {
       loading.value = false;
     }
@@ -30,5 +34,5 @@ export const useSettingsStore = defineStore('settings', () => {
     return (await invokeCore<string>(SEND.SETTINGS_GET_API_TOKEN)) ?? '';
   }
 
-  return { settings, loading, load, set, get, getApiToken };
+  return { settings, loading, loaded, load, set, get, getApiToken };
 });

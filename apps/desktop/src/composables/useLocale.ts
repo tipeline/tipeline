@@ -31,6 +31,22 @@ export function useLocale() {
   return { currentLocale, setLocale, SUPPORTED_LANGUAGES };
 }
 
+/** The first of the system's preferred languages that Tipeline has, else English. */
+export function detectSystemLocale(
+  languages: readonly string[] = typeof navigator === 'undefined' ? [] : navigator.languages
+): SupportedLocale {
+  for (const tag of languages) {
+    const base = tag.toLowerCase().split('-')[0];
+    if (isSupported(base)) return base;
+  }
+  return 'en';
+}
+
+/** Shows the app in a language without saving it (the welcome screen saves on Get started). */
+export function previewLocale(lang: SupportedLocale): void {
+  (i18n.global.locale as { value: string }).value = lang;
+}
+
 // Reads the locale from localStorage and applies it immediately.
 // Safe to call before the settings store is loaded.
 export function applyLocaleFromStorage(): void {

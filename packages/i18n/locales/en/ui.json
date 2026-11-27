@@ -108,7 +108,10 @@
     "greeting": {
       "morning": "Good morning",
       "afternoon": "Good afternoon",
-      "evening": "Good evening"
+      "evening": "Good evening",
+      "morningName": "Good morning, {name}",
+      "afternoonName": "Good afternoon, {name}",
+      "eveningName": "Good evening, {name}"
     },
     "quickActions": {
       "newTask": "New Workflow",
@@ -174,6 +177,20 @@
       "allRuns": "All runs",
       "tomorrowAt": "tomorrow at {time}",
       "onDayAt": "on {day} at {time}"
+    },
+    "hub": {
+      "title": "Suggested from the Hub",
+      "browse": "Browse the Hub",
+      "hide": "Hide Hub suggestions",
+      "hiddenToast": "Hub suggestions hidden. Turn them back on in Settings → Appearance.",
+      "undo": "Undo",
+      "featured": "Featured",
+      "installed": "Installed",
+      "type": {
+        "task": "Workflow",
+        "app": "App",
+        "plugin": "Plugin"
+      }
     }
   },
   "runs": {
@@ -380,7 +397,7 @@
       "versionPlaceholder": "1.0.0",
       "versionHint": "major.minor.patch — bump patch for fixes, minor for new features, major for breaking changes.",
       "versionHubManaged": "This workflow is installed from a hub — its version is managed by hub updates.",
-      "platformPlaceholder": "Select a platform",
+      "platformAny": "Any platform",
       "projectPlaceholder": "No projects",
       "tags": "Tags",
       "tagPlaceholder": "Add tag...",
@@ -1340,7 +1357,9 @@
       "description": "Customize how Tipeline looks on your device.",
       "themeHint": "Choose between light, dark, or follow your system.",
       "languageHint": "Application display language.",
-      "timezoneHint": "All dates and times will be displayed in this timezone."
+      "timezoneHint": "All dates and times will be displayed in this timezone.",
+      "hubSuggestions": "Hub suggestions on Home",
+      "hubSuggestionsHint": "A few plugins, workflows and apps from your hubs, featured ones first."
     },
     "defaults": {
       "title": "Defaults",
@@ -1348,9 +1367,10 @@
       "author": "Author",
       "authorHint": "Filled in as the author of every new workflow and app.",
       "useAccountName": "Use \"{name}\"",
-      "platform": "Use this computer's platform",
-      "platformHint": "New workflows start marked as {platform}. Leave off for workflows that run anywhere.",
-      "platformHintUnknown": "New workflows start marked with this computer's platform. Leave off for workflows that run anywhere."
+      "platform": "Platform",
+      "platformHint": "What new workflows start marked with. Pick \"Any platform\" for workflows that run anywhere.",
+      "platformCurrent": "This computer ({platform})",
+      "platformCurrentUnknown": "This computer"
     },
     "agent": {
       "title": "Assistant",
@@ -1429,7 +1449,10 @@
       "autoStartNotice": "Tipeline now keeps running in the background so your schedules can run.",
       "autoStartNoticeAction": "Settings",
       "keepRunning": "Keep running in the menu bar / tray",
-      "keepRunningHint": "Closing the window hides it: Tipeline stays in the menu bar (macOS) or notification area (Windows, Linux) with what needs you and what's running. Off: closing the window quits Tipeline. Core keeps running either way."
+      "keepRunningHint": "Closing the window hides it: Tipeline stays in the menu bar (macOS) or notification area (Windows, Linux) with what needs you and what's running. Off: closing the window quits Tipeline. Core keeps running either way.",
+      "welcome": "Welcome screen",
+      "welcomeHint": "The screen shown the first time Tipeline opens, where you pick a language and your name.",
+      "welcomeShow": "Show it again"
     },
     "hubs": {
       "title": "Hubs"
@@ -1648,6 +1671,13 @@
     "tasksEmpty": "No workflows available on this hub.",
     "appsEmpty": "No apps available on this hub.",
     "pluginsEmpty": "No plugins available on this hub.",
+    "search": {
+      "task": "Search workflows...",
+      "app": "Search apps...",
+      "plugin": "Search plugins...",
+      "noMatches": "Nothing on this hub matches “{query}”.",
+      "clear": "Clear search"
+    },
     "selectHub": "Select a hub",
     "noHubs": "No hubs configured yet.",
     "noHubsHint": "Add a hub from the \"Manage Hubs\" tab to browse and install content.",
@@ -2149,6 +2179,18 @@
     "loadingSettings": "Loading settings",
     "coreDown": "Core engine failed to start. Please check your installation and try again.",
     "retry": "Retry"
+  },
+  "welcome": {
+    "title": "Welcome to Tipeline",
+    "subtitle": "Build workflows that do the work for you, then turn them into apps for your team.",
+    "name": "Your name",
+    "nameHint": "Added as the author of the workflows and apps you create.",
+    "namePlaceholder": "Your name",
+    "language": "Language",
+    "start": "Get started",
+    "later": "You can change both later in Settings.",
+    "saveFailed": "Couldn't save your choices. Try again.",
+    "version": "Version {version}"
   },
   "builder": {
     "save": "Save",

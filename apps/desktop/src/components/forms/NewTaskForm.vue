@@ -11,7 +11,12 @@ import { beautifyObjectName } from '@/components/ui/auto-form/utils';
 import { Input } from '@/components/ui/input';
 import MarkdownTextarea from '@/components/forms/MarkdownTextarea.vue';
 import ProjectSelect from '@/components/project/ProjectSelect.vue';
-import { useNewItemDefaults } from '@/composables/useNewItemDefaults';
+import {
+  PLATFORM_ANY,
+  PLATFORM_OPTIONS,
+  platformToSave,
+  useNewItemDefaults,
+} from '@/composables/useNewItemDefaults';
 import {
   FormControl,
   FormField,
@@ -39,8 +44,6 @@ const props = withDefaults(
 );
 const emit = defineEmits<{ created: [identifier: string] }>();
 
-const PLATFORM_OPTIONS = ['windows', 'linux', 'macos'] as const;
-
 const router = useRouter();
 const { t } = useI18n();
 const isWaiting = ref(false);
@@ -61,7 +64,7 @@ const { handleSubmit, setFieldValue, values: formValues } = useForm({
         .string({ required_error: 'task.description.required' })
         .min(1, 'task.description.required'),
       author: z.string().optional(),
-      platform: z.enum(PLATFORM_OPTIONS).optional(),
+      platform: z.enum([...PLATFORM_OPTIONS, PLATFORM_ANY]).optional(),
     })
   ),
   initialValues: { name: '', description: '', author: defaults.author() },
@@ -81,7 +84,7 @@ const onSubmit = handleSubmit(async (values) => {
       name: values.name,
       description: values.description,
       author: values.author || undefined,
-      platform: values.platform || undefined,
+      platform: platformToSave(values.platform) ?? undefined,
       tags: tags.value.length ? [...tags.value] : undefined,
       version: '1.0.0',
     };
@@ -165,10 +168,11 @@ defineExpose({ submit: triggerSubmit, isWaiting });
           <Select v-bind="componentField">
             <FormControl>
               <SelectTrigger class="w-full">
-                <SelectValue :placeholder="t('tasks.form.platformPlaceholder')" />
+                <SelectValue :placeholder="t('tasks.form.platformAny')" />
               </SelectTrigger>
             </FormControl>
             <SelectContent>
+              <SelectItem :value="PLATFORM_ANY">{{ t('tasks.form.platformAny') }}</SelectItem>
               <SelectItem v-for="option in PLATFORM_OPTIONS" :key="option" :value="option">
                 {{ beautifyObjectName(option) }}
               </SelectItem>

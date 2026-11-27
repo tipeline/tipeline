@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute } from 'vue-router';
 import PanelCard from '@/components/Card.vue';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   AlertDialog,
@@ -16,7 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { AppWindow, Workflow, Boxes, Loader2, Puzzle } from 'lucide-vue-next';
+import { AppWindow, Workflow, Boxes, Loader2, Puzzle, Search, X } from 'lucide-vue-next';
 import { storeToRefs } from 'pinia';
 import { useHubStore } from '@/store/hubStore';
 import { invokeCore } from '@/utils/invoke';
@@ -26,6 +28,7 @@ import { descriptionSummary } from '@tipeline/utils';
 import CapabilityList from '@/components/task/CapabilityList.vue';
 import HubItemDrawer from '@/components/hub/HubItemDrawer.vue';
 import type { CapabilityReport } from '@/utils/capabilities';
+import { isFeatured } from '@/utils/hubSuggestions';
 
 type HubCatalogItem = {
   type: 'task' | 'app' | 'plugin';
@@ -36,6 +39,7 @@ type HubCatalogItem = {
   version: string;
   updatedAt?: string;
   image?: string;
+  featured?: boolean | number;
 };
 
 // A plugin a hub workflow needs that this Core can't run yet (Core's HubWorkflowCatalog).
@@ -58,6 +62,7 @@ const props = defineProps<{
 }>();
 
 const { t } = useI18n();
+const route = useRoute();
 const hubStore = useHubStore();
 
 const PLACEHOLDER_ICON = { task: Workflow, app: AppWindow, plugin: Boxes } as const;
@@ -91,6 +96,10 @@ const installError = ref<{ name: string; message: string } | null>(null);
 
 // The card opened in the detail drawer. Its Install button runs the same steps as the card's.
 const detailItem = ref<HubCatalogItem | null>(null);
+// A link here (Home's Hub suggestions) can name a hub and an item: that item's drawer opens
+// once its catalog has loaded.
+const queryText = (value: unknown) => (typeof value === 'string' && value ? value : null);
+let pendingOpen = queryText(route?.query.item);
 
 // Workflows whose plugins aren't installed or are turned off: listed before
 // installing, each with a button that installs and/or turns it on. Once none is
@@ -102,8 +111,9 @@ const selectedHubName = computed(() => hubStore.enabledHubs.find((h) => h.id ===
 
 onMounted(async () => {
   await hubStore.load();
-  // Keep the hub picked on another tab, unless it was removed or turned off.
-  const current = hubStore.enabledHubs.find((h) => h.id === selectedHubId.value);
+  // A link's hub first; else keep the hub picked on another tab, unless it was removed or turned off.
+  const requested = hubStore.enabledHubs.find((h) => h.id === queryText(route?.query.hub));
+  const current = requested ?? hubStore.enabledHubs.find((h) => h.id === selectedHubId.value);
   const next = current?.id ?? hubStore.enabledHubs[0]?.id ?? null;
   if (next === selectedHubId.value) {
     // Same hub as before: the watch won't fire, so load this tab's list here.
@@ -124,6 +134,10 @@ async function loadCatalog() {
     const all = await invokeCore<HubCatalogItem[]>(SEND.HUB_CATALOG, { hubId: selectedHubId.value });
     catalogItems.value = all.filter((item) => item.type === props.itemType);
     brokenImages.value = new Set();
+    if (pendingOpen) {
+      detailItem.value = catalogItems.value.find((item) => item.identifier === pendingOpen) ?? null;
+      pendingOpen = null;
+    }
   } finally {
     catalogLoading.value = false;
   }
@@ -271,6 +285,28 @@ function imageSrc(item: HubCatalogItem): string | null {
 }
 
 const placeholderIcon = computed(() => PLACEHOLDER_ICON[props.itemType]);
+
+// Search: every typed word must appear in the name, description, author or identifier.
+// Case and accents don't matter ("camara" finds "Cámara").
+const search = ref('');
+const fold = (text: string) => text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+const searchIndex = computed(
+  () =>
+    new Map(
+      catalogItems.value.map((item) => [
+        item.identifier,
+        fold([item.name, item.description, item.author, item.identifier].filter(Boolean).join(' ')),
+      ])
+    )
+);
+const visibleItems = computed(() => {
+  const words = fold(search.value).split(/\s+/).filter(Boolean);
+  if (words.length === 0) return catalogItems.value;
+  return catalogItems.value.filter((item) => {
+    const text = searchIndex.value.get(item.identifier) ?? '';
+    return words.every((word) => text.includes(word));
+  });
+});
 </script>
 
 <template>
@@ -281,7 +317,7 @@ const placeholderIcon = computed(() => PLACEHOLDER_ICON[props.itemType]);
         <p class="text-xs">{{ t('hub.noHubsHint') }}</p>
       </div>
       <template v-else>
-        <div class="p-4 border-b">
+        <div class="p-4 border-b flex flex-wrap items-center gap-2">
           <Select v-model="selectedHubId">
             <SelectTrigger class="w-64">
               <SelectValue :placeholder="t('hub.selectHub')" />
@@ -292,6 +328,26 @@ const placeholderIcon = computed(() => PLACEHOLDER_ICON[props.itemType]);
               </SelectItem>
             </SelectContent>
           </Select>
+          <div v-if="catalogItems.length > 0" class="relative w-64">
+            <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+            <Input
+              v-model="search"
+              class="pl-8 pr-8"
+              :placeholder="t(`hub.search.${itemType}`)"
+              :aria-label="t(`hub.search.${itemType}`)"
+              data-testid="hub-search"
+              @keydown.esc="search = ''"
+            />
+            <button
+              v-if="search"
+              type="button"
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              :aria-label="t('hub.search.clear')"
+              @click="search = ''"
+            >
+              <X class="size-4" />
+            </button>
+          </div>
         </div>
 
         <div v-if="catalogLoading" class="flex items-center justify-center py-20 text-muted-foreground text-sm">
@@ -300,10 +356,18 @@ const placeholderIcon = computed(() => PLACEHOLDER_ICON[props.itemType]);
         <div v-else-if="catalogItems.length === 0" class="flex items-center justify-center py-20 text-muted-foreground text-sm">
           {{ t(emptyTextKey) }}
         </div>
+        <div
+          v-else-if="visibleItems.length === 0"
+          class="flex flex-col items-center justify-center gap-2 py-20 text-muted-foreground text-sm"
+          data-testid="hub-search-empty"
+        >
+          <p>{{ t('hub.search.noMatches', { query: search.trim() }) }}</p>
+          <Button variant="outline" size="sm" @click="search = ''">{{ t('hub.search.clear') }}</Button>
+        </div>
         <div v-else class="flex-1 min-h-0 overflow-y-auto scroll-fade">
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
             <Card
-              v-for="item in catalogItems"
+              v-for="item in visibleItems"
               :key="item.identifier"
               class="flex flex-col overflow-hidden transition-colors hover:border-foreground/20"
             >
@@ -315,7 +379,14 @@ const placeholderIcon = computed(() => PLACEHOLDER_ICON[props.itemType]);
                 data-testid="hub-card-open"
                 @click="detailItem = item"
               >
-                <div class="aspect-video w-full bg-muted flex items-center justify-center overflow-hidden">
+                <!-- Featured sits on the image so every card's title starts on the same line. -->
+                <div class="relative aspect-video w-full bg-muted flex items-center justify-center overflow-hidden">
+                  <span
+                    v-if="isFeatured(item)"
+                    class="absolute top-2 left-2 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-background/90 text-blue-700 dark:text-blue-300 shadow-sm"
+                  >
+                    {{ t('dashboard.hub.featured') }}
+                  </span>
                   <img
                     v-if="imageSrc(item)"
                     :src="imageSrc(item)!"

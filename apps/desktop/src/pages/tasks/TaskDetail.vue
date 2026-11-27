@@ -78,12 +78,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { beautifyObjectName } from '@/components/ui/auto-form/utils';
+import { PLATFORM_ANY, PLATFORM_OPTIONS, platformToSave } from '@/composables/useNewItemDefaults';
 import { dump } from 'js-yaml';
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts';
 import { projectIdsOf, setProjects } from '@/utils/projectAssign';
 import ProjectSelect from '@/components/project/ProjectSelect.vue';
 
-const PLATFORM_OPTIONS = ['windows', 'linux', 'macos'] as const;
 
 const route = useRoute();
 const router = useRouter();
@@ -171,7 +171,7 @@ const { handleSubmit: handleMetaSubmit, setValues: setMetaValues } = useForm({
         .string()
         .refine((v) => !v || /^\d+\.\d+\.\d+$/.test(v), 'task.version.format')
         .optional(),
-      platform: z.enum(PLATFORM_OPTIONS).optional(),
+      platform: z.enum([...PLATFORM_OPTIONS, PLATFORM_ANY]).optional(),
     })
   ),
 });
@@ -183,7 +183,7 @@ function handleOpenEditMeta() {
     description: task.value.description ?? '',
     author: task.value.author ?? '',
     version: task.value.version ?? '',
-    platform: task.value.platform ?? undefined,
+    platform: platformToSave(task.value.platform) ?? PLATFORM_ANY,
   });
   editProjects.value = projectIdsOf(task.value);
   editImage.value = task.value.metadata?.image ?? null;
@@ -219,7 +219,7 @@ const saveEditMeta = handleMetaSubmit(
         description: values.description || undefined,
         author: values.author || undefined,
         version: values.version || undefined,
-        platform: values.platform || undefined,
+        platform: platformToSave(values.platform),
         tags: [...editTags.value],
         ...cacheChange(),
         helper: editHelper.value,
@@ -394,10 +394,11 @@ useKeyboardShortcuts([
           <Select v-bind="componentField">
             <FormControl>
               <SelectTrigger class="w-full">
-                <SelectValue :placeholder="t('tasks.form.platformPlaceholder')" />
+                <SelectValue :placeholder="t('tasks.form.platformAny')" />
               </SelectTrigger>
             </FormControl>
             <SelectContent>
+              <SelectItem :value="PLATFORM_ANY">{{ t('tasks.form.platformAny') }}</SelectItem>
               <SelectItem v-for="option in PLATFORM_OPTIONS" :key="option" :value="option">
                 {{ beautifyObjectName(option) }}
               </SelectItem>

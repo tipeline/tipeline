@@ -2,9 +2,26 @@ import { useSettingsStore } from '@/store/settingsStore';
 
 export type WorkflowPlatform = 'windows' | 'linux' | 'macos';
 
+export const PLATFORM_OPTIONS = ['windows', 'linux', 'macos'] as const;
+
+/**
+ * The "Any platform" choice in platform pickers. Select items can't have an empty value, so
+ * this stands in for "no platform" in the UI and is never saved: see {@link platformToSave}.
+ */
+export const PLATFORM_ANY = 'any';
+
+/** What a picker's value saves as: a platform, or null for "Any platform". */
+export function platformToSave(value: string | null | undefined): WorkflowPlatform | null {
+  return (PLATFORM_OPTIONS as readonly string[]).includes(value ?? '')
+    ? (value as WorkflowPlatform)
+    : null;
+}
+
 export interface SystemInfo {
   platform: WorkflowPlatform | null;
   username: string;
+  /** The account's display name where the OS keeps one (macOS, Linux), else ''. */
+  fullName: string;
 }
 
 // Settings keys (Settings → Defaults).
@@ -18,9 +35,13 @@ export function getSystemInfo(): Promise<SystemInfo> {
   systemInfo ??= (async () => {
     try {
       const info = await window.ipcRenderer?.invoke('app:system-info');
-      return { platform: info?.platform ?? null, username: info?.username ?? '' };
+      return {
+        platform: info?.platform ?? null,
+        username: info?.username ?? '',
+        fullName: info?.fullName ?? '',
+      };
     } catch {
-      return { platform: null, username: '' };
+      return { platform: null, username: '', fullName: '' };
     }
   })();
   return systemInfo;

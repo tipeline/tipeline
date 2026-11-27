@@ -108,7 +108,10 @@
     "greeting": {
       "morning": "Buenos días",
       "afternoon": "Buenas tardes",
-      "evening": "Buenas noches"
+      "evening": "Buenas noches",
+      "morningName": "Buenos días, {name}",
+      "afternoonName": "Buenas tardes, {name}",
+      "eveningName": "Buenas noches, {name}"
     },
     "quickActions": {
       "newTask": "Nuevo Flujo de Trabajo",
@@ -174,6 +177,20 @@
       "allRuns": "Todas las ejecuciones",
       "tomorrowAt": "mañana a las {time}",
       "onDayAt": "el {day} a las {time}"
+    },
+    "hub": {
+      "title": "Sugerencias del Hub",
+      "browse": "Explorar el Hub",
+      "hide": "Ocultar sugerencias del Hub",
+      "hiddenToast": "Sugerencias del Hub ocultas. Vuelve a activarlas en Configuración → Apariencia.",
+      "undo": "Deshacer",
+      "featured": "Destacado",
+      "installed": "Instalado",
+      "type": {
+        "task": "Flujo de trabajo",
+        "app": "Aplicación",
+        "plugin": "Plugin"
+      }
     }
   },
   "runs": {
@@ -380,7 +397,7 @@
       "versionPlaceholder": "1.0.0",
       "versionHint": "mayor.menor.parche — sube parche para correcciones, menor para nuevas funciones, mayor para cambios importantes.",
       "versionHubManaged": "Este flujo de trabajo está instalado desde un hub — su versión se gestiona mediante las actualizaciones del hub.",
-      "platformPlaceholder": "Selecciona una plataforma",
+      "platformAny": "Cualquier plataforma",
       "projectPlaceholder": "Sin proyectos",
       "tags": "Etiquetas",
       "tagPlaceholder": "Agregar etiqueta...",
@@ -1340,7 +1357,9 @@
       "description": "Personaliza cómo se ve Tipeline en tu dispositivo.",
       "themeHint": "Elige entre claro, oscuro o sigue tu sistema.",
       "languageHint": "Idioma de visualización de la aplicación.",
-      "timezoneHint": "Todas las fechas y horas se mostrarán en esta zona horaria."
+      "timezoneHint": "Todas las fechas y horas se mostrarán en esta zona horaria.",
+      "hubSuggestions": "Sugerencias del Hub en Inicio",
+      "hubSuggestionsHint": "Algunos plugins, flujos de trabajo y aplicaciones de tus hubs, primero los destacados."
     },
     "defaults": {
       "title": "Predeterminados",
@@ -1348,9 +1367,10 @@
       "author": "Autor",
       "authorHint": "Se usa como autor de cada nuevo flujo de trabajo y app.",
       "useAccountName": "Usar \"{name}\"",
-      "platform": "Usar la plataforma de este equipo",
-      "platformHint": "Los nuevos flujos de trabajo empiezan marcados como {platform}. Déjalo apagado para flujos que funcionan en cualquier sistema.",
-      "platformHintUnknown": "Los nuevos flujos de trabajo empiezan marcados con la plataforma de este equipo. Déjalo apagado para flujos que funcionan en cualquier sistema."
+      "platform": "Plataforma",
+      "platformHint": "Con qué empiezan marcados los nuevos flujos de trabajo. Elige \"Cualquier plataforma\" para flujos que funcionan en cualquier sistema.",
+      "platformCurrent": "Este equipo ({platform})",
+      "platformCurrentUnknown": "Este equipo"
     },
     "agent": {
       "title": "Asistente",
@@ -1429,7 +1449,10 @@
       "autoStartNotice": "Tipeline ahora sigue ejecutándose en segundo plano para que tus programaciones puedan ejecutarse.",
       "autoStartNoticeAction": "Ajustes",
       "keepRunning": "Seguir en la barra de menús / bandeja",
-      "keepRunningHint": "Cerrar la ventana la oculta: Tipeline sigue en la barra de menús (macOS) o el área de notificaciones (Windows, Linux) con lo que te necesita y lo que está en ejecución. Desactivado: cerrar la ventana cierra Tipeline. Core sigue en marcha en ambos casos."
+      "keepRunningHint": "Cerrar la ventana la oculta: Tipeline sigue en la barra de menús (macOS) o el área de notificaciones (Windows, Linux) con lo que te necesita y lo que está en ejecución. Desactivado: cerrar la ventana cierra Tipeline. Core sigue en marcha en ambos casos.",
+      "welcome": "Pantalla de bienvenida",
+      "welcomeHint": "La pantalla que aparece la primera vez que abres Tipeline, donde eliges el idioma y tu nombre.",
+      "welcomeShow": "Mostrarla de nuevo"
     },
     "hubs": {
       "title": "Hubs"
@@ -1648,6 +1671,13 @@
     "tasksEmpty": "No hay flujos de trabajo disponibles en este hub.",
     "appsEmpty": "No hay aplicaciones disponibles en este hub.",
     "pluginsEmpty": "No hay plugins disponibles en este hub.",
+    "search": {
+      "task": "Buscar flujos de trabajo...",
+      "app": "Buscar aplicaciones...",
+      "plugin": "Buscar plugins...",
+      "noMatches": "Nada en este hub coincide con “{query}”.",
+      "clear": "Borrar búsqueda"
+    },
     "selectHub": "Selecciona un hub",
     "noHubs": "Aún no hay hubs configurados.",
     "noHubsHint": "Añade un hub desde la pestaña \"Gestionar Hubs\" para explorar e instalar contenido.",
@@ -2149,6 +2179,18 @@
     "loadingSettings": "Cargando configuración",
     "coreDown": "El motor core no pudo iniciarse. Por favor verifica tu instalación e intenta de nuevo.",
     "retry": "Reintentar"
+  },
+  "welcome": {
+    "title": "Te damos la bienvenida a Tipeline",
+    "subtitle": "Crea flujos de trabajo que hacen el trabajo por ti y conviértelos en apps para tu equipo.",
+    "name": "Tu nombre",
+    "nameHint": "Se añade como autor de los flujos de trabajo y apps que crees.",
+    "namePlaceholder": "Tu nombre",
+    "language": "Idioma",
+    "start": "Empezar",
+    "later": "Puedes cambiar ambos más tarde en Ajustes.",
+    "saveFailed": "No se pudieron guardar tus opciones. Inténtalo de nuevo.",
+    "version": "Versión {version}"
   },
   "builder": {
     "save": "Guardar",

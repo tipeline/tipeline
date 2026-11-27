@@ -36,10 +36,10 @@ import { useQuery } from '@/composables/useQuery';
 import { toast } from '@/components/ui/sonner';
 import { useErrorT } from '@/composables/useErrorT';
 import { beautifyObjectName } from '@/components/ui/auto-form/utils';
+import { PLATFORM_ANY, PLATFORM_OPTIONS, platformToSave } from '@/composables/useNewItemDefaults';
 import { projectIdsOf, setProjects, type ProjectTag } from '@/utils/projectAssign';
 import ProjectSelect from '@/components/project/ProjectSelect.vue';
 
-const PLATFORM_OPTIONS = ['windows', 'linux', 'macos'] as const;
 
 const props = defineProps<{
   item: {
@@ -80,7 +80,7 @@ function openEdit() {
     description: props.item.description ?? '',
     author: props.item.author ?? '',
     version: props.item.version ?? '',
-    platform: props.item.platform ?? '',
+    platform: platformToSave(props.item.platform) ?? PLATFORM_ANY,
   };
   editImage.value = props.item.image ?? null;
   selectedProjects.value = projectIdsOf(props.item);
@@ -92,7 +92,7 @@ function openEdit() {
 async function saveEdit() {
   isSaving.value = true;
   try {
-    await invokeCore(SEND.TASK_UPDATE_META, { identifier: props.item.identifier, ...editForm.value, tags: [...editTags.value] });
+    await invokeCore(SEND.TASK_UPDATE_META, { identifier: props.item.identifier, ...editForm.value, platform: platformToSave(editForm.value.platform), tags: [...editTags.value] });
 
     await setProjects('task', props.item.identifier, projectIdsOf(props.item), selectedProjects.value);
 
@@ -183,9 +183,10 @@ async function confirmDuplicate() {
         <label class="text-sm font-medium">{{ t('common.platform') }} <span class="text-muted-foreground font-normal">{{ t('common.optional') }}</span></label>
         <Select v-model="editForm.platform">
           <SelectTrigger>
-            <SelectValue :placeholder="t('tasks.form.platformPlaceholder')" />
+            <SelectValue :placeholder="t('tasks.form.platformAny')" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem :value="PLATFORM_ANY">{{ t('tasks.form.platformAny') }}</SelectItem>
             <SelectItem v-for="option in PLATFORM_OPTIONS" :key="option" :value="option">
               {{ beautifyObjectName(option) }}
             </SelectItem>
