@@ -57,4 +57,20 @@ describe('hub targets', () => {
     const hub = await HubService.add({ name: 'Web', type: 'remote', target: ' https://example.com/~/hub.json ' });
     expect(hub.target).toBe('https://example.com/~/hub.json');
   });
+
+  it('refuses a token on a local folder hub, which has nothing to send it to', async () => {
+    const folder = path.join(home, 'Tipeline', 'hub');
+    await expect(
+      HubService.add({ name: 'Tok', type: 'local_folder', target: folder, token: 'abc' })
+    ).rejects.toThrow(/takes no token/);
+    const hub = await HubService.add({ name: 'Folder', type: 'local_folder', target: folder });
+    await expect(HubService.update(hub.id, { token: 'abc' })).rejects.toThrow(/takes no token/);
+    expect((await HubService.update(hub.id, { token: null })).token).toBeNull();
+  });
+
+  it('drops the token of a remote hub turned into a folder', async () => {
+    const hub = await HubService.add({ name: 'Was web', type: 'remote', target: 'https://example.com', token: 't' });
+    const updated = await HubService.update(hub.id, { type: 'local_folder', target: path.join(home, 'other-hub') });
+    expect(updated.token).toBeNull();
+  });
 });

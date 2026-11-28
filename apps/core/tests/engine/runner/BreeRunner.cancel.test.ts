@@ -3,11 +3,15 @@ import { EventEmitter } from 'events';
 
 vi.mock('@database/services/ScheduleService', () => ({ ScheduleService: {} }));
 vi.mock('@database/services/PipelineService', () => ({
-  PipelineService: { failAbandoned: vi.fn(async () => []) },
+  PipelineService: {
+    failAbandoned: vi.fn(async () => []),
+    cancelAbandoned: vi.fn(async () => []),
+  },
 }));
 
 import { BreeRunner } from '@engine/runner/BreeRunner';
 import { PipelineService } from '@database/services/PipelineService';
+import { coreEvents } from '@engine/CoreEvents';
 
 /** A runner with one worker thread "created" for job `job-<correlationId>`. */
 function withWorker(correlationId: string) {
@@ -80,6 +84,55 @@ describe('BreeRunner cancel', () => {
     bree.emit('worker deleted', 'job-c-3');
 
     await expect(settled).resolves.toBeUndefined();
+  });
+
+  describe('a run that ignores the cancel', () => {
+    it('has its worker ended after a moment, and ends as canceled', async () => {
+      vi.useFakeTimers();
+      const { runner, bree, worker } = withWorker('c-4');
+      worker.terminate.mockImplementation(() => bree.emit('worker deleted', 'job-c-4'));
+      const settled = new Promise((resolve, reject) =>
+        (runner as any).pending.set('job-c-4', { resolve, reject })
+      );
+      const ends: any[] = [];
+      const onEnd = (data: any) => ends.push(data);
+      coreEvents.on('taskEnd:c-4', onEnd);
+      worker.emit('message', {
+        type: 'taskStart',
+        data: { name: 'Slow', pipelineIdentifier: 'p-4', taskIdentifier: 't-4' },
+      });
+      worker.emit('message', { type: 'taskStart', data: { pipelineIdentifier: 'p-4-child' } });
+
+      runner.cancel('c-4', 'ana');
+      runner.cancel('c-4', 'ana');
+      await vi.advanceTimersByTimeAsync(2999);
+      expect(worker.terminate).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(worker.terminate).toHaveBeenCalledOnce();
+
+      await expect(settled).resolves.toBeUndefined();
+      expect(PipelineService.cancelAbandoned).toHaveBeenCalledWith(['p-4', 'p-4-child'], 'ana');
+      expect(PipelineService.failAbandoned).not.toHaveBeenCalledWith(['p-4', 'p-4-child'], expect.anything());
+      expect(ends).toEqual([
+        { name: 'Slow', pipelineIdentifier: 'p-4', taskIdentifier: 't-4', status: 'canceled' },
+      ]);
+      coreEvents.off('taskEnd:c-4', onEnd);
+      vi.useRealTimers();
+    });
+
+    it('is left alone when it stops by itself', async () => {
+      vi.useFakeTimers();
+      const { runner, bree, worker } = withWorker('c-5');
+      worker.emit('message', { type: 'taskStart', data: { pipelineIdentifier: 'p-5' } });
+      runner.cancel('c-5', '');
+      worker.emit('message', { type: 'taskEnd', data: { pipelineIdentifier: 'p-5', status: 'canceled' } });
+      bree.emit('worker deleted', 'job-c-5');
+
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(worker.terminate).not.toHaveBeenCalled();
+      expect(PipelineService.cancelAbandoned).not.toHaveBeenCalledWith(['p-5'], expect.anything());
+      vi.useRealTimers();
+    });
   });
 
   describe('stop', () => {

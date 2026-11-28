@@ -88,3 +88,33 @@ describe('PipelineService.failAbandoned', () => {
     expect(await PipelineService.failAbandoned([], 'x')).toEqual([]);
   });
 });
+
+describe('PipelineService.cancelAbandoned', () => {
+  it('cancels a run still marked running, with its running step, saying who asked', async () => {
+    const ended = await PipelineService.cancelAbandoned(['p-crashed', 'p-done', 'p-waiting'], 'ana');
+    expect(ended).toEqual(['p-crashed']);
+
+    const runs = await knex('pipeline').orderBy('id').select('identifier', 'status', 'metadata');
+    expect(runs.map((r) => [r.identifier, r.status])).toEqual([
+      ['p-crashed', 'canceled'],
+      ['p-done', 'completed'],
+      ['p-waiting', 'paused'],
+    ]);
+    expect(JSON.parse(runs[0].metadata)).toEqual({
+      trigger: { type: 'manual' },
+      reason: 'user_canceled',
+      message: 'Canceled by ana',
+      canceledBy: 'ana',
+    });
+
+    const steps = await knex('pipeline_action')
+      .orderBy(['pipeline_id', 'position'])
+      .select('identifier', 'status', 'error');
+    expect(steps.map((s) => [s.identifier, s.status, s.error])).toEqual([
+      ['a1', 'completed', null],
+      ['auth', 'canceled', null],
+      ['a3', 'pending', null],
+      ['ask', 'paused', null],
+    ]);
+  });
+});

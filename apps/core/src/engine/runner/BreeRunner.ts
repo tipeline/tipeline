@@ -30,6 +30,9 @@ type PendingJob = { resolve: () => void; reject: (err: Error) => void };
 
 // How long running jobs get to end after being canceled, before they're ended for them.
 const STOP_GRACE_MS = 5000;
+// How long a canceled run gets to end by itself. A step that keeps the worker thread busy
+// (a CPU-bound script) never reads the cancel message, so after this its worker is ended.
+const CANCEL_GRACE_MS = 3000;
 
 export class BreeRunner implements IJobRunner {
   private bree: Bree;
@@ -42,6 +45,13 @@ export class BreeRunner implements IJobRunner {
   // Jobs running now (correlationId → the runs they started: the workflow's, then any
   // sync sub-workflow's), so a run can be canceled by its pipelineIdentifier.
   private running = new Map<string, Set<string>>();
+  // The worker thread of each running job, and the start of its top-level run (what a
+  // taskEnd for it needs, if its worker has to be ended for it).
+  private workers = new Map<string, { terminate(): unknown }>();
+  private topRuns = new Map<string, { start: any; ended: boolean }>();
+  // Canceled jobs: the timer that ends the worker if it doesn't stop by itself, and whether
+  // that happened (then its runs end as canceled, not as a crash).
+  private cancels = new Map<string, { canceledBy: string; timer: NodeJS.Timeout; ended: boolean }>();
   // Bree job names of one-time schedules: removed from Bree once their run ends.
   private onceJobs = new Set<string>();
 
@@ -64,6 +74,7 @@ export class BreeRunner implements IJobRunner {
       const correlationId = name.replace(/^job-/, '');
       const runs = new Set<string>();
       this.running.set(correlationId, runs);
+      this.workers.set(correlationId, worker);
 
       // For cron jobs: wire a TaskStreamListener so events reach IPC/WS clients.
       if (name.startsWith('cron-') && this.broadcastFn) {
@@ -89,8 +100,15 @@ export class BreeRunner implements IJobRunner {
           coreEvents.emit(`action:${correlationId}`, msg.data);
         } else if (msg.type === 'taskStart') {
           if (msg.data?.pipelineIdentifier) runs.add(msg.data.pipelineIdentifier);
+          if (!this.topRuns.has(correlationId)) {
+            this.topRuns.set(correlationId, { start: msg.data ?? {}, ended: false });
+          }
           coreEvents.emit(`taskStart:${correlationId}`, msg.data);
         } else if (msg.type === 'taskEnd') {
+          const top = this.topRuns.get(correlationId);
+          if (top && (msg.data?.pipelineIdentifier ?? '') === (top.start.pipelineIdentifier ?? '')) {
+            top.ended = true;
+          }
           coreEvents.emit(`taskEnd:${correlationId}`, msg.data);
         } else if (msg.type === 'paused') {
           coreEvents.emit(`paused:${correlationId}`, msg.data);
@@ -148,6 +166,12 @@ export class BreeRunner implements IJobRunner {
       const correlationId = name.replace(/^job-/, '');
       const runs = [...(this.running.get(correlationId) ?? [])];
       this.running.delete(correlationId);
+      this.workers.delete(correlationId);
+      const top = this.topRuns.get(correlationId);
+      this.topRuns.delete(correlationId);
+      const cancel = this.cancels.get(correlationId);
+      if (cancel) clearTimeout(cancel.timer);
+      this.cancels.delete(correlationId);
       debugCleanups.get(correlationId)?.();
       debugCleanups.delete(correlationId);
 
@@ -165,6 +189,29 @@ export class BreeRunner implements IJobRunner {
 
       const err = workerErrors.get(name);
       workerErrors.delete(name);
+
+      // Ended for a cancel it couldn't take in: its runs end as canceled, and the job
+      // finishes the way a canceled run's job does — normally, with a canceled taskEnd.
+      if (cancel?.ended) {
+        const ended = PipelineService.cancelAbandoned(runs, cancel.canceledBy).catch((error: Error) => {
+          console.error(`[BreeRunner] Failed to end the runs of ${name}:`, error);
+        });
+        void ended.then(() => {
+          if (top && !top.ended) {
+            coreEvents.emit(`taskEnd:${correlationId}`, {
+              name: top.start.name,
+              pipelineIdentifier: top.start.pipelineIdentifier ?? '',
+              taskIdentifier: top.start.taskIdentifier,
+              status: 'canceled',
+            });
+          }
+          const pending = this.pending.get(name);
+          if (!pending) return;
+          this.pending.delete(name);
+          pending.resolve();
+        });
+        return;
+      }
 
       // A run that ended normally already says so; one still running lost its worker
       // (a crash) and would otherwise show as running forever, with nothing to cancel.
@@ -268,6 +315,18 @@ export class BreeRunner implements IJobRunner {
   cancel(correlationId: string, canceledBy: string): boolean {
     if (!this.running.has(correlationId)) return false;
     coreEvents.emit(`run:cancel:${correlationId}`, { canceledBy });
+    // A step that keeps the worker busy never reads the cancel: end the worker for it.
+    if (!this.cancels.has(correlationId)) {
+      const timer = setTimeout(() => {
+        const entry = this.cancels.get(correlationId);
+        const worker = this.workers.get(correlationId);
+        if (!entry || !worker) return;
+        entry.ended = true;
+        worker.terminate();
+      }, CANCEL_GRACE_MS);
+      timer.unref?.();
+      this.cancels.set(correlationId, { canceledBy, timer, ended: false });
+    }
     return true;
   }
 
