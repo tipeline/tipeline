@@ -1,6 +1,6 @@
 {
   "name": "@tipeline/server",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Tipeline Server — auth gateway for remote Core connections",
   "license": "Apache-2.0",
   "type": "module",
@@ -36,7 +36,7 @@
     "prepack": "rm -rf dist && npm run build"
   },
   "dependencies": {
-    "@tipeline/agent": "0.0.0",
+    "@tipeline/agent": "0.1.0",
     "knex": "^3.1.0",
     "objection": "^3.1.5",
     "otplib": "^12.0.1",

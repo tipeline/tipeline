@@ -1,6 +1,6 @@
 {
   "name": "@tipeline/utils",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Tipeline utils",
   "license": "Apache-2.0",
   "author": "José Daniel Estrada Guzmán",
@@ -53,7 +53,7 @@
     "NOTICE"
   ],
   "dependencies": {
-    "@tipeline/types": "0.0.0",
+    "@tipeline/types": "0.1.0",
     "chrono-node": "^2.10.3",
     "cron-parser": "^4.9.0",
     "cronstrue": "^3.38.0",

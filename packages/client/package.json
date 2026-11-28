@@ -1,6 +1,6 @@
 {
   "name": "@tipeline/client",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Browser client for a Tipeline Server: sign-in, requests and live runs over WebSocket",
   "license": "Apache-2.0",
   "author": "José Daniel Estrada Guzmán",
