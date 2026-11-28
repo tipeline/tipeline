@@ -26,19 +26,22 @@ Most actions work right away. Two groups use tools from your system, so install 
 
 ## CLI
 
-> **Coming soon** — the `tipeline` CLI package will be published to npm shortly.
->
-> Once available, install it globally with:
-> ```bash
-> npm install -g @tipeline/cli
-> ```
-> Then start the Core engine and run workflows from your terminal:
-> ```bash
-> tipeline start
-> tipeline workflow run my-workflow.yaml
-> ```
+Install it with npm. It needs Node 24 or later and includes the Core engine:
 
-In the meantime, see the [Developer Setup](/internals/setup) guide to run Tipeline from source.
+```bash
+npm i -g @tipeline/cli --allow-scripts=better-sqlite3
+```
+
+Then start Core and run workflows from your terminal:
+
+```bash
+tipeline start
+tipeline workflow run my-workflow.yaml
+```
+
+To keep Core running on a server, as a system service or in Docker, see
+[Run on a Server](/cli/server). To run Tipeline from source, see
+[Developer Setup](/internals/setup).
 
 ---
 

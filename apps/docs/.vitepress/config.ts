@@ -227,7 +227,10 @@ export default defineConfig({
       '/cli/': [
         {
           text: 'CLI Reference',
-          items: [{ text: 'Commands', link: '/cli/commands' }],
+          items: [
+            { text: 'Commands', link: '/cli/commands' },
+            { text: 'Run on a Server', link: '/cli/server' },
+          ],
         },
       ],
       '/hub': [

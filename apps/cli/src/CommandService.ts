@@ -272,8 +272,11 @@ export default class CommandService {
     }
   }
 
-  static async start() {
+  static async start(options: { foreground?: boolean } = {}) {
     try {
+      if (options.foreground) {
+        process.exit(await new Core().startForeground());
+      }
       const message = await new Core().start();
       Printer.printMessage(message);
     } catch (err: any) {

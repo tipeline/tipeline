@@ -262,6 +262,26 @@ export function installCoreService(command: CoreServiceCommand): void {
   }
 }
 
+/**
+ * A systemd user service only runs while its user is logged in, so on a server it would stop
+ * at logout and not come back after a reboot. Lingering keeps the user's services running.
+ * 'needs-admin' means the system didn't let this user turn it on themselves.
+ */
+export function ensureLinger(): 'not-needed' | 'on' | 'turned-on' | 'needs-admin' {
+  if (process.platform !== 'linux') return 'not-needed';
+  const user = process.env.USER || process.env.LOGNAME || String(process.getuid!());
+  const lingering = () => {
+    try {
+      return run('loginctl', ['show-user', user, '--property=Linger']).trim() === 'Linger=yes';
+    } catch {
+      return false;
+    }
+  };
+  if (lingering()) return 'on';
+  tryRun('loginctl', ['enable-linger', user]);
+  return lingering() ? 'turned-on' : 'needs-admin';
+}
+
 /** Starts Core through the service. Only for when no Core is running. */
 export function startCoreService(): void {
   if (process.platform === 'darwin') {

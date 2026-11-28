@@ -3,8 +3,9 @@
  *
  * Rebuilding a table on SQLite (dropColumn, alter) fires ON DELETE CASCADE on its
  * children unless the migration runs with `transaction: false`: `task` is the parent of
- * `pipeline`, `schedule`, `task_revision`, `task_tag` and `task_hub_link`. A later
- * migration that changes `task` (or `app`, `plugin`, `pipeline`) must export
+ * `pipeline`, `schedule`, `task_revision`, `task_tag`, `task_hub_link` and `project_task`;
+ * `app` of `app_revision`, `app_hub_link` and `project_app`. A later migration that
+ * changes `task` (or `app`, `plugin`, `pipeline`, `project`) must export
  * `config = { transaction: false }`.
  *
  * @param { import("knex").Knex } knex
@@ -47,13 +48,6 @@ export async function up(knex) {
       table.text('source');
       table.timestamp('created_at').defaultTo(knex.fn.now());
       table.timestamp('updated_at').defaultTo(knex.fn.now());
-      table
-        .integer('project_id')
-        .unsigned()
-        .nullable()
-        .references('id')
-        .inTable('project')
-        .onDelete('SET NULL');
     })
     .createTable('task', (table) => {
       table.increments('id').primary();
@@ -66,13 +60,6 @@ export async function up(knex) {
       table.text('source');
       table.timestamp('created_at').defaultTo(knex.fn.now());
       table.timestamp('updated_at').defaultTo(knex.fn.now());
-      table
-        .integer('project_id')
-        .unsigned()
-        .nullable()
-        .references('id')
-        .inTable('project')
-        .onDelete('SET NULL');
       table.text('platform');
     })
     .createTable('plugin', (table) => {
@@ -90,6 +77,66 @@ export async function up(knex) {
       table.timestamps(true, true);
       // definition.image: a remote URL or an absolute path inside the plugin's folder.
       table.text('image').nullable();
+    });
+
+  // A workflow or app can be in any number of projects. A project is a label for
+  // organising; who may see or edit a workflow is decided per workflow, never by its
+  // projects. Foreign keys are never switched on, so deleting a workflow, app or project
+  // clears its rows in these tables by hand (see ProjectMembership).
+  await knex.schema
+    .createTable('project_task', (table) => {
+      table
+        .integer('project_id')
+        .unsigned()
+        .notNullable()
+        .references('id')
+        .inTable('project')
+        .onDelete('CASCADE');
+      table
+        .integer('task_id')
+        .unsigned()
+        .notNullable()
+        .references('id')
+        .inTable('task')
+        .onDelete('CASCADE');
+      table.timestamp('created_at').defaultTo(knex.fn.now());
+      table.primary(['project_id', 'task_id']);
+      table.index(['task_id']);
+    })
+    .createTable('project_app', (table) => {
+      table
+        .integer('project_id')
+        .unsigned()
+        .notNullable()
+        .references('id')
+        .inTable('project')
+        .onDelete('CASCADE');
+      table
+        .integer('app_id')
+        .unsigned()
+        .notNullable()
+        .references('id')
+        .inTable('app')
+        .onDelete('CASCADE');
+      table.timestamp('created_at').defaultTo(knex.fn.now());
+      table.primary(['project_id', 'app_id']);
+      table.index(['app_id']);
+    })
+    // The project map's plan: planned nodes, lines drawn by hand, node notes and positions,
+    // as one JSON document per project. The live part of the map is read from the
+    // definitions every time and never stored.
+    .createTable('project_map', (table) => {
+      table.increments('id').primary();
+      table
+        .integer('project_id')
+        .unsigned()
+        .notNullable()
+        .unique()
+        .references('id')
+        .inTable('project')
+        .onDelete('CASCADE');
+      table.text('data').notNullable();
+      table.timestamp('updated_at').defaultTo(knex.fn.now());
     });
 
   // Hub provenance lives in 1:1 side tables rather than on task/app/plugin: "installed
@@ -136,6 +183,20 @@ export async function up(knex) {
       table.integer('restored_from').nullable();
       table.datetime('created_at').notNullable();
       table.index(['task_id', 'created_at'], 'task_revision_task_created_idx');
+    })
+    .createTable('app_revision', (table) => {
+      table.increments('id').primary();
+      table.integer('app_id').notNullable().references('id').inTable('app').onDelete('CASCADE');
+      table.text('source').notNullable();
+      // What saved it: 'edit' | 'created' | 'hub' | 'backup' | 'restore' |
+      // 'earlier' (what an app held before its first recorded save).
+      table.string('origin', 16).notNullable();
+      // JSON: what changed from the version before it (see AppRevisionService.summarize).
+      table.text('summary').nullable();
+      // For 'restore': the revision it put back.
+      table.integer('restored_from').nullable();
+      table.datetime('created_at').notNullable();
+      table.index(['app_id', 'created_at'], 'app_revision_app_created_idx');
     })
     .createTable('schedule', (table) => {
       table.increments('id').primary();
@@ -337,6 +398,33 @@ export async function up(knex) {
       table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
       table.index(['item_type', 'item_identifier']);
     })
+    // Alerts raised by workflows (alert.raise / alert.resolve). Their own table, not a run's
+    // metadata, because one alert continues across runs: the same key from the same workflow
+    // updates the open alert (count, message, latest run) until it's resolved.
+    //  - open: shown in Needs you.
+    //  - dismissed: acknowledged by the user. Raising the same key still updates it, quietly,
+    //    until alert.resolve closes it (or it isn't raised for 30 days and is pruned).
+    //  - resolved: closed by alert.resolve. The next raise opens a new alert.
+    // Keyed by the workflow's identifier (not its id) so runs from files and Trash restores
+    // keep working; deleting a workflow deletes its alerts by hand (see AlertService).
+    .createTable('alert', (table) => {
+      table.increments('id').primary();
+      table.string('identifier').notNullable().unique();
+      table.string('task_identifier').notNullable();
+      table.string('pipeline_identifier').nullable();
+      table.string('key').notNullable();
+      table.string('title').notNullable();
+      table.text('message').nullable();
+      table.string('level').notNullable().defaultTo('warning');
+      table.string('status').notNullable().defaultTo('open');
+      table.integer('count').notNullable().defaultTo(1);
+      table.timestamp('first_raised_at').notNullable();
+      table.timestamp('last_raised_at').notNullable();
+      table.timestamp('closed_at').nullable();
+      table.string('closed_by').nullable();
+      table.index(['task_identifier', 'key', 'status']);
+      table.index(['status']);
+    })
     .createTable('settings', (table) => {
       table.string('key').primary();
       table.text('value').notNullable();
@@ -381,6 +469,7 @@ export async function down(knex) {
   for (const table of [
     'connections',
     'settings',
+    'alert',
     'hub_update_event',
     'trash_item',
     'cache_entries',
@@ -391,12 +480,16 @@ export async function down(knex) {
     'pipeline_block',
     'pipeline',
     'schedule',
+    'app_revision',
     'task_revision',
     'task_tag',
     'tag',
     'plugin_hub_link',
     'app_hub_link',
     'task_hub_link',
+    'project_map',
+    'project_app',
+    'project_task',
     'plugin',
     'task',
     'app',

@@ -98,6 +98,46 @@ export async function up(knex) {
       table.string('created_at').notNullable();
       table.index(['created_at'], 'idx_audit_log_created_at');
       table.index(['action'], 'idx_audit_log_action');
+    })
+    // The assistant's requests, one row per request with who asked. Core's agent_run table
+    // has no user, so the Server keeps its own.
+    .createTable('assistant_requests', (table) => {
+      table.string('id').primary();
+      table.string('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
+      table.text('prompt').notNullable();
+      // thinking | answered | proposed | running | completed | failed
+      table.string('status').notNullable();
+      table.string('task_identifier');
+      table.string('task_name');
+      table.string('pipeline_identifier');
+      table.text('answer');
+      table.text('error');
+      table.string('created_at').notNullable();
+      table.string('updated_at').notNullable();
+      table.index(['user_id', 'created_at'], 'idx_assistant_requests_user');
+      table.index(['created_at'], 'idx_assistant_requests_created');
+    })
+    // Each user's remembered "which workflow did you mean" picks.
+    .createTable('assistant_choices', (table) => {
+      table.string('user_id').primary().references('id').inTable('users').onDelete('CASCADE');
+      table.text('choices').notNullable();
+      table.string('updated_at').notNullable();
+    })
+    // Phones that receive push notifications: one row per device token, owned by the user who
+    // signed in on it, with that device's own choices. Only used when the Server has push set
+    // up (TIPELINE_PUSH_*).
+    .createTable('push_devices', (table) => {
+      table.string('id').primary();
+      table.string('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');
+      // ios (APNs) | android (FCM)
+      table.string('platform').notNullable();
+      table.text('token').notNullable().unique();
+      table.string('locale');
+      // JSON: { approvals, failures, finished, details }
+      table.text('preferences').notNullable();
+      table.string('created_at').notNullable();
+      table.string('last_seen_at').notNullable();
+      table.index(['user_id'], 'idx_push_devices_user');
     });
 }
 
@@ -107,6 +147,9 @@ export async function up(knex) {
  */
 export async function down(knex) {
   await knex.schema
+    .dropTableIfExists('push_devices')
+    .dropTableIfExists('assistant_choices')
+    .dropTableIfExists('assistant_requests')
     .dropTableIfExists('audit_log')
     .dropTableIfExists('mfa_challenges')
     .dropTableIfExists('pipeline_audit')
