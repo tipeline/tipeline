@@ -16,7 +16,7 @@ import { isAppTrusted, recordPickedFile, setAppTrusted, wasPicked } from './appF
 import { mediaResponse, playableMediaFile } from './utils/appMedia';
 import { initTray, isAppPath, keepRunning, noteWindowHidden } from './TrayPopover';
 import { isQuitting, markQuitting } from './quitState';
-import { accountFullName } from './utils/accountName';
+import { accountFullName } from '@tipeline/utils/accountName';
 import { ensureEnvFile, makeEnvFilePrivate, readEnvFileInfo } from './utils/envFile';
 
 const require = createRequire(import.meta.url);

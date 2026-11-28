@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useForm } from 'vee-validate';
@@ -46,9 +46,17 @@ const formSchema = toTypedSchema(
     .extend({ author: z.string().optional() })
 );
 
-const { handleSubmit } = useForm({
+const defaults = useNewItemDefaults();
+const { handleSubmit, setFieldValue, values: formValues } = useForm({
   validationSchema: formSchema,
-  initialValues: { name: '', description: '', author: useNewItemDefaults().author() },
+  initialValues: { name: '', description: '', author: defaults.author() },
+});
+
+// With no author saved yet, the OS account's name stands in. It comes from the main process,
+// so it lands just after the form opens (unless something was typed by then).
+onMounted(async () => {
+  const author = await defaults.suggestedAuthor();
+  if (author && !formValues.author) setFieldValue('author', author);
 });
 
 // Core creates the initial source (one empty page) and stamps version 1.0.0.
@@ -69,6 +77,7 @@ const onSubmit = handleSubmit(async (values) => {
     for (const projectIdentifier of selectedProjects.value) {
       await invokeCore(SEND.PROJECT_ASSIGN_APP, { projectIdentifier, appIdentifier: response.identifier });
     }
+    await defaults.rememberAuthor(values.author);
     emit('created');
     // Overview first, then the builder, so the builder's back arrow lands on the new
     // app's overview instead of wherever the dialog was opened from.

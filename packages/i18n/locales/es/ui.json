@@ -1367,7 +1367,7 @@
       "title": "Predeterminados",
       "description": "Con qué empiezan los nuevos flujos de trabajo y apps. Puedes cambiarlo en el diálogo Nuevo.",
       "author": "Autor",
-      "authorHint": "Se usa como autor de cada nuevo flujo de trabajo y app.",
+      "authorHint": "Se usa como autor de cada nuevo flujo de trabajo y app. Mientras no se defina, se usa el nombre de tu cuenta del equipo, y tu primer flujo de trabajo o app guarda el nombre con el que se creó.",
       "useAccountName": "Usar \"{name}\"",
       "platform": "Plataforma",
       "platformHint": "Con qué empiezan marcados los nuevos flujos de trabajo. Elige \"Cualquier plataforma\" para flujos que funcionan en cualquier sistema.",
@@ -2206,12 +2206,9 @@
   "welcome": {
     "title": "Te damos la bienvenida a Tipeline",
     "subtitle": "Crea flujos de trabajo que hacen el trabajo por ti y conviértelos en apps para tu equipo.",
-    "name": "Tu nombre",
-    "nameHint": "Se añade como autor de los flujos de trabajo y apps que crees.",
-    "namePlaceholder": "Tu nombre",
     "language": "Idioma",
     "start": "Empezar",
-    "later": "Puedes cambiar ambos más tarde en Ajustes.",
+    "later": "Puedes cambiarlo más tarde en Ajustes.",
     "saveFailed": "No se pudieron guardar tus opciones. Inténtalo de nuevo.",
     "version": "Versión {version}"
   },

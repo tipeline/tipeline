@@ -47,12 +47,40 @@ export function getSystemInfo(): Promise<SystemInfo> {
   return systemInfo;
 }
 
+/** The name the OS knows this account by: its full name, else its username. */
+export async function accountName(): Promise<string> {
+  const info = await getSystemInfo();
+  return info.fullName || info.username;
+}
+
 /** What the New Workflow / New App dialogs start with. */
 export function useNewItemDefaults() {
   const settingsStore = useSettingsStore();
 
+  /** The author saved in Settings → Defaults, or '' when none is yet. */
   function author(): string {
     return settingsStore.get(DEFAULT_AUTHOR_KEY).trim();
+  }
+
+  /** The saved author, or the OS account's name until one is saved. */
+  async function suggestedAuthor(): Promise<string> {
+    return author() || (await accountName());
+  }
+
+  /**
+   * After the first create, the name it was signed with becomes the default. Later creates
+   * leave it alone, so one workflow made under someone else's name doesn't change it
+   * (Settings → Defaults does). Best effort: the item is already made.
+   */
+  async function rememberAuthor(name: string | undefined): Promise<void> {
+    const value = name?.trim();
+    // Before settings come back from Core, "none saved" can't be told from "not loaded yet".
+    if (!value || !settingsStore.loaded || author()) return;
+    try {
+      await settingsStore.set(DEFAULT_AUTHOR_KEY, value);
+    } catch {
+      // Asked again on the next create.
+    }
   }
 
   /** This computer's platform when Settings asks for it, otherwise none ("works anywhere"). */
@@ -61,5 +89,5 @@ export function useNewItemDefaults() {
     return (await getSystemInfo()).platform ?? undefined;
   }
 
-  return { author, platform };
+  return { author, suggestedAuthor, rememberAuthor, platform };
 }

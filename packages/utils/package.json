@@ -19,6 +19,10 @@
     "./coreService": {
       "types": "./dist/coreService.d.ts",
       "default": "./dist/coreService.js"
+    },
+    "./accountName": {
+      "types": "./dist/accountName.d.ts",
+      "default": "./dist/accountName.js"
     }
   },
   "typesVersions": {
@@ -28,6 +32,9 @@
       ],
       "coreService": [
         "dist/coreService.d.ts"
+      ],
+      "accountName": [
+        "dist/accountName.d.ts"
       ]
     }
   },

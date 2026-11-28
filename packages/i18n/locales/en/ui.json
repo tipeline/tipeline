@@ -1367,7 +1367,7 @@
       "title": "Defaults",
       "description": "What new workflows and apps start with. You can still change it in the New dialog.",
       "author": "Author",
-      "authorHint": "Filled in as the author of every new workflow and app.",
+      "authorHint": "Filled in as the author of every new workflow and app. Until it's set, your computer's account name is used, and your first workflow or app saves the name it was made with.",
       "useAccountName": "Use \"{name}\"",
       "platform": "Platform",
       "platformHint": "What new workflows start marked with. Pick \"Any platform\" for workflows that run anywhere.",
@@ -2206,12 +2206,9 @@
   "welcome": {
     "title": "Welcome to Tipeline",
     "subtitle": "Build workflows that do the work for you, then turn them into apps for your team.",
-    "name": "Your name",
-    "nameHint": "Added as the author of the workflows and apps you create.",
-    "namePlaceholder": "Your name",
     "language": "Language",
     "start": "Get started",
-    "later": "You can change both later in Settings.",
+    "later": "You can change this later in Settings.",
     "saveFailed": "Couldn't save your choices. Try again.",
     "version": "Version {version}"
   },

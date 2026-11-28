@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { format } from 'date-fns';
 import Page from '@/components/Page.vue';
@@ -16,7 +16,7 @@ import { SEND } from '@/ipc-channels';
 import type { TaskItem } from '@/config/tables/TasksList';
 import type { ScheduleItem } from '@/config/tables/SchedulesList';
 import { openNewAppDialog, openNewTaskDialog } from '@/composables/useNewItemDialogs';
-import { useNewItemDefaults } from '@/composables/useNewItemDefaults';
+import { accountName, useNewItemDefaults } from '@/composables/useNewItemDefaults';
 
 // Home answers two questions at a glance: does anything need me, and how do I get back to
 // what I was doing. A card at the bottom suggests things from the Hub until it's hidden.
@@ -29,9 +29,12 @@ const { data: schedules } = useQuery<ScheduleItem[]>(SEND.SCHEDULE_LIST, {});
 const connectionStore = useConnectionStore();
 const assistantAvailable = computed(() => connectionStore.assistantAvailable);
 
-// The greeting uses the first name of the default author (Settings → Defaults) when one is set.
+// The greeting uses the first name of the default author (Settings → Defaults), or of the OS
+// account's name until one is saved.
 const { author } = useNewItemDefaults();
-const firstName = computed(() => author().split(/\s+/)[0] ?? '');
+const systemName = ref('');
+accountName().then((name) => (systemName.value = name));
+const firstName = computed(() => (author() || systemName.value).split(/\s+/)[0] ?? '');
 
 const now = new Date();
 const greeting = computed(() => {
