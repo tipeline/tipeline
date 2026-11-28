@@ -11,11 +11,10 @@ Core for you.
 ## 1. Start the Core Engine
 
 ```bash
-tipeline install   # first time only
 tipeline start
 ```
 
-`tipeline install` creates the `~/.tipeline` folders and configuration. Core then starts its IPC socket, its WebSocket server (port 4000) and its MCP server (port 4002). It keeps running in the background — you can close the terminal and it will continue.
+The first start creates the `~/.tipeline` folder, the database and Core's keys. Core then starts its IPC socket, its WebSocket server (port 4000) and its MCP server (port 4002). It keeps running in the background — you can close the terminal and it will continue.
 
 ## 2. Write a Workflow File
 

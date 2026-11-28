@@ -1,6 +1,8 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { describe, expect, it, vi } from 'vitest';
+import { flushPromises, mount } from '@vue/test-utils';
+import { createPinia, setActivePinia } from 'pinia';
+import { useConnectionStore } from '@/store/connectionStore';
 import { computed, nextTick, ref } from 'vue';
 import type { AppSource } from '@tipeline/schemas';
 import { i18n } from '@/i18n';
@@ -138,6 +140,43 @@ describe('TemplateField (workflow action params)', () => {
   it('knows _run and _core are not unknown variables', () => {
     const w = mountText('string', '{{ _run.id }} on {{ _core.host }}');
     expect(spans(w).every((s) => !s.issue)).toBe(true);
+  });
+
+  // Last in this block: the names are read once and shared by every field after that.
+  it('says where _env names come from while the environment file has none', () => {
+    const suggestions = mountText('string').findComponent({ name: 'ExpressionInput' }).props('suggestions') as any[];
+    expect(suggestions.at(-1)).toEqual({
+      path: '_env',
+      detail: 'No names yet: add them in Settings → Environment',
+      disabled: true,
+    });
+  });
+
+  it('lists the names in the environment file under _env, never their values', async () => {
+    (window as any).ipcRenderer = {
+      invoke: vi.fn(async (channel: string) =>
+        channel === 'app:env-file:info' ? { names: ['API_KEY', 'SMTP_HOST'] } : undefined
+      ),
+    };
+    mountText('string');
+    await flushPromises();
+    const suggestions = mountText('string').findComponent({ name: 'ExpressionInput' }).props('suggestions') as any[];
+    expect(suggestions.filter((s) => s.path.startsWith('_env'))).toEqual([
+      { path: '_env', detail: 'The environment file', container: true },
+      { path: '_env.API_KEY', parent: '_env', detail: 'from ~/.tipeline/.env' },
+      { path: '_env.SMTP_HOST', parent: '_env', detail: 'from ~/.tipeline/.env' },
+    ]);
+    expect(mountText('array').findComponent({ name: 'ExpressionInput' }).props('suggestions')).not.toContainEqual(
+      expect.objectContaining({ path: '_env' })
+    );
+  });
+
+  it('leaves _env out on a Tipeline Server, whose environment this computer cannot see', () => {
+    setActivePinia(createPinia());
+    (useConnectionStore() as any).activeId = 'server-1';
+    const suggestions = mountText('string').findComponent({ name: 'ExpressionInput' }).props('suggestions') as any[];
+    expect(suggestions.some((s) => s.path.startsWith('_env'))).toBe(false);
+    setActivePinia(undefined as any);
   });
 });
 

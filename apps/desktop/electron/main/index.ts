@@ -4,6 +4,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
+import { execFile, spawn } from 'node:child_process';
 import { MessageManager } from './MessageManager';
 import { AgentService } from './AgentService';
 import { installAppUpdate, pendingUpdateVersion, startAppUpdater } from './utils/AppUpdater';
@@ -16,6 +17,7 @@ import { mediaResponse, playableMediaFile } from './utils/appMedia';
 import { initTray, isAppPath, keepRunning, noteWindowHidden } from './TrayPopover';
 import { isQuitting, markQuitting } from './quitState';
 import { accountFullName } from './utils/accountName';
+import { ensureEnvFile, makeEnvFilePrivate, readEnvFileInfo } from './utils/envFile';
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -341,6 +343,33 @@ ipcMain.handle('app:system-info', async () => {
     // No passwd entry (some containers): leave it empty.
   }
   return { platform, username, fullName: await accountFullName(username) };
+});
+// The environment file runs read (Settings → Environment). Names only: values stay here.
+ipcMain.handle('app:env-file:info', () => readEnvFileInfo(os.homedir()));
+ipcMain.handle('app:env-file:private', () => {
+  makeEnvFilePrivate(os.homedir());
+  return readEnvFileInfo(os.homedir());
+});
+// Made when it's not there yet. `.env` has no app of its own, so it opens as text.
+ipcMain.handle('app:env-file:open', async (_event, { mode } = {}) => {
+  const file = ensureEnvFile(os.homedir());
+  if (mode === 'reveal') {
+    shell.showItemInFolder(file);
+    return { ok: true };
+  }
+  if (process.platform === 'darwin') {
+    return await new Promise((resolve) =>
+      execFile('open', ['-t', file], (error) =>
+        resolve(error ? { ok: false, error: 'openFailed', detail: error.message } : { ok: true })
+      )
+    );
+  }
+  if (process.platform === 'win32') {
+    spawn('notepad.exe', [file], { detached: true, stdio: 'ignore' }).unref();
+    return { ok: true };
+  }
+  const failure = await shell.openPath(file);
+  return failure ? { ok: false, error: 'openFailed', detail: failure } : { ok: true };
 });
 // Sent by the preload itself when it hands a dropped / picked file's path to a page.
 ipcMain.on('app:file-picked', (_event, file: unknown) => recordPickedFile(file));

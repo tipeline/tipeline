@@ -6,6 +6,7 @@ Open **Settings** at the bottom of the sidebar.
 |------|--------------|
 | **Appearance** | Light, dark or system theme; language (English, Spanish); the time zone dates are shown in; whether Home shows suggestions from the Hub |
 | **Defaults** | What new workflows and apps start with: the author, and whether a new workflow is marked for this computer's platform. You can still change both in the **New** dialog. |
+| **Environment** | The [environment file](/workflows/variables#environment-files) (`~/.tipeline/.env`) workflows read with `{{ _env.NAME }}`: open it in your text editor, show it in Finder or Explorer, see the names it sets, and make it private if other accounts on the computer can read it |
 | **Assistant** | The AI provider, API key and model the [assistant](/assistant#setting-it-up) uses, and its global [instructions](/assistant/instructions) |
 | **Backup** | [Full backup and restore](/desktop/backup) |
 | **Hubs** | The [hubs](/hub) Tipeline installs from and checks for updates |

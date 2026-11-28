@@ -117,12 +117,10 @@ export default class Core {
     if (runningCorePid() === null) throw Core.startFailure(logFile, logStart);
   }
 
+  // No `tipeline install` needed first: Core makes its folders, database and key on its own
+  // and uses the default settings when ~/.tipeline/database.json isn't there, as it does when
+  // Desktop starts it. `install` only writes those settings out to edit.
   public async start(): Promise<string> {
-    const configFile = path.join(homedir(), '.tipeline', 'database.json');
-    if (!fs.existsSync(configFile)) {
-      throw new Error("Tipeline is not configured. Run 'tipeline install' first.");
-    }
-
     const runningPid = runningCorePid();
     if (runningPid !== null) {
       return `Tipeline service is already running (PID: ${runningPid})`;

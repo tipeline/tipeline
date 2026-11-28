@@ -6,6 +6,7 @@ import { parseTtl, type CacheMode, type WorkflowCacheConfig } from '@tipeline/sc
 import { workflowCacheKey } from '@/cache/CacheKey';
 import { CacheService, type CacheHit } from '@database/services/CacheService';
 import { GlobalVariableService } from '@database/services/GlobalVariableService';
+import { globalEnvFile } from '@utils/globalEnvFile';
 
 export interface PreparedWorkflowCache {
   key: string;
@@ -55,6 +56,11 @@ export class WorkflowCache {
         outsideValues[variable.name] = resolveEnvValue(variable.valueFromEnv, variable.valueFromEnvFile) ?? null;
       }
     }
+    // `{{ _env.KEY }}` in a step reads the environment too. The key can't hold a dot, so
+    // `_env.KEY` can't clash with a variable name.
+    for (const key of envReferences(call.source?.pipeline)) {
+      outsideValues[`_env.${key}`] = resolveEnvValue(key) ?? null;
+    }
 
     const key = workflowCacheKey({
       identifier: call.identifier,
@@ -95,10 +101,18 @@ export class WorkflowCache {
   }
 }
 
+/** The `_env.KEY` names a workflow's steps use, with the pattern parseParams resolves. */
+function envReferences(pipeline: unknown): string[] {
+  if (!pipeline) return [];
+  const text = JSON.stringify(pipeline);
+  return [...new Set([...text.matchAll(/_env\.(\w+)/g)].map((match) => match[1]))].sort();
+}
+
 /**
- * Where a `valueFromEnv` variable gets its value, in the order a run looks: the
- * variable's own env file, the process environment, then ~/Tipeline/.env (which a
- * run loads into its environment before starting — see TaskFactory.loadEnvFiles).
+ * Where an environment value comes from, in the order a run looks: the variable's own
+ * env file, the process environment, then ~/.tipeline/.env (which a run loads into its
+ * environment before starting — see TaskFactory.loadEnvFiles). The cache runs in Core's
+ * main process, which never loads that file, so it's read here.
  */
 export function resolveEnvValue(key: string, filePath?: string): string | undefined {
   const readFrom = (file: string) => {
@@ -116,5 +130,5 @@ export function resolveEnvValue(key: string, filePath?: string): string | undefi
     const value = readFrom(resolved);
     if (value !== undefined) return value;
   }
-  return process.env[key] ?? readFrom(path.join(os.homedir(), 'Tipeline', '.env'));
+  return process.env[key] ?? readFrom(globalEnvFile());
 }

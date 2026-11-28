@@ -32,7 +32,7 @@ can't be global.
 | Scope | Where defined | Lifetime |
 |-------|--------------|---------|
 | `task` | Task YAML `variables` section | For the duration of the pipeline run |
-| `env` (read as `_env.KEY`) | `.env` files (task dir or `~/.tipeline/.env`) | Process lifetime |
+| `env` (read as `_env.KEY`) | Core's environment, then `.env` files (task dir, then `~/.tipeline/.env`) | Read again at the start of each run (each run is a fresh worker) |
 | `global` (read and written as `_global.name`) | Database `global_variable` table | Persistent across runs |
 | `core` | Set internally by the engine | Pipeline run |
 

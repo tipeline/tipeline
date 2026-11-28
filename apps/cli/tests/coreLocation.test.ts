@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
-const { spawn, spawnSync, installCoreService, startCoreService, uninstallCoreService, serviceState, connect, logText } = vi.hoisted(() => ({
+const { spawn, spawnSync, installCoreService, startCoreService, uninstallCoreService, serviceState, connect, logText, configFile } = vi.hoisted(() => ({
   spawn: vi.fn(),
   spawnSync: vi.fn(),
   installCoreService: vi.fn(),
@@ -11,13 +11,14 @@ const { spawn, spawnSync, installCoreService, startCoreService, uninstallCoreSer
   serviceState: { installed: false, desktop: false },
   connect: vi.fn(),
   logText: { value: '' },
+  configFile: { exists: true },
 }));
 
 vi.mock('node:child_process', () => ({ spawn, spawnSync }));
 vi.mock('node:net', () => ({ default: { connect } }));
 vi.mock('fs-extra', () => ({
   default: {
-    existsSync: () => true,
+    existsSync: (file: string) => !String(file).endsWith('database.json') || configFile.exists,
     statSync: () => ({ size: 0 }),
     readFileSync: () => Buffer.from(logText.value),
   },
@@ -64,6 +65,7 @@ describe('Core location', () => {
     logText.value = '';
     serviceState.installed = false;
     serviceState.desktop = false;
+    configFile.exists = true;
   });
 
   it('runs the installer from the resolved core package with the current Node', () => {
@@ -82,6 +84,23 @@ describe('Core location', () => {
     await new Core().start();
 
     expect(spawn).toHaveBeenCalledWith(process.execPath, [serverPath], expect.anything());
+  });
+
+  // Desktop never runs `tipeline install`, so a CLI added later must start without its files.
+  it('starts without the configuration files tipeline install writes', async () => {
+    vi.spyOn(coreProcess, 'runningCorePid').mockReturnValue(null);
+    configFile.exists = false;
+
+    await expect(new Core().start()).resolves.toMatch(/started/);
+    expect(spawn).toHaveBeenCalledWith(process.execPath, [serverPath], expect.anything());
+  });
+
+  it('says Core is already running instead of asking for tipeline install', async () => {
+    vi.spyOn(coreProcess, 'runningCorePid').mockReturnValue(1234);
+    configFile.exists = false;
+
+    await expect(new Core().start()).resolves.toBe('Tipeline service is already running (PID: 1234)');
+    expect(spawn).not.toHaveBeenCalled();
   });
 
   it('points the auto-start service at the resolved core package', () => {

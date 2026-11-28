@@ -101,7 +101,7 @@ Running the workflow yourself from the Desktop or the CLI always runs it: those 
 What decides whether two calls are "the same":
 
 - the inputs (all of them, or the ones in `inputs`),
-- the values it reads from global variables and the environment,
+- the values it reads from global variables and the environment (`valueFromEnv` and `{{ _env.KEY }}`), so editing `~/.tipeline/.env` starts fresh too,
 - which outputs were asked for, and
 - the workflow itself: **editing the workflow starts fresh**.
 

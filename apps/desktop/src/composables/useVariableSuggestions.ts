@@ -4,6 +4,9 @@ import { useI18n } from 'vue-i18n';
 import { matchesVariableType } from '@/components/ui/auto-form/utils';
 import { valuePaths, type ExpressionSuggestion } from '@/utils/expressionField';
 import { RUN_BUILT_INS } from '@/utils/templateReferences';
+import { useEnvFileNames } from '@/composables/useEnvFileNames';
+import { getActivePinia } from 'pinia';
+import { useConnectionStore } from '@/store/connectionStore';
 
 /**
  * What a workflow action field can reference, for its `{}` menu and `{{` autocomplete:
@@ -29,6 +32,9 @@ export function useVariableSuggestions(
   const taskVariables = inject<Ref<{ name: string; type: string }[]> | null>('taskVariables', null);
   // Object and list variables' known values (last run, else declared), by variable name.
   const taskVariableValues = inject<Ref<Record<string, unknown>> | null>('taskVariableValues', null);
+  const envNames = useEnvFileNames();
+  // On a Tipeline Server, runs read the server's environment, which this computer can't see.
+  const connection = getActivePinia() ? useConnectionStore() : null;
 
   return computed<ExpressionSuggestion[] | undefined>(() => {
     if (!taskVariables) return undefined;
@@ -92,6 +98,16 @@ export function useVariableSuggestions(
         out.push({ path: root, detail: t(`expressionInput.builtIn${root}`), container: true });
         for (const field of fields)
           out.push({ path: `${root}.${field}`, parent: root, detail: t(`expressionInput.builtInField.${root}.${field}`) });
+      }
+      // The names in ~/.tipeline/.env. Empty: still listed, dimmed, to say where they come from.
+      if (!connection?.isRemote) {
+        if (envNames.value.length) {
+          out.push({ path: '_env', detail: t('expressionInput.builtIn_env'), container: true });
+          for (const name of envNames.value)
+            out.push({ path: `_env.${name}`, parent: '_env', detail: t('expressionInput.envValue') });
+        } else {
+          out.push({ path: '_env', detail: t('expressionInput.envEmpty'), disabled: true });
+        }
       }
     }
     return out;

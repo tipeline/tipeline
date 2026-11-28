@@ -13,7 +13,14 @@ npm link   # installs `tipeline` globally
 ## Service Control
 
 ### `tipeline install`
-Create the `~/.tipeline` folders and configuration. `--force` overwrites an existing configuration.
+Optional. Writes the default configuration files, `~/.tipeline/database.json` (where the database
+is) and `~/.tipeline/config.json` (the job runner), so you can edit them, and creates the
+`~/.tipeline` folders. `tipeline start` works without them and uses the same defaults. The
+database and keys are created by Core the next time it starts, with the settings in the files.
+See [Configuration files](/guide/installation#configuration-files-optional).
+
+If the files are already there, nothing changes. `--force` puts back the defaults. It only
+rewrites those two files, never your workflows, runs or keys.
 
 ```bash
 tipeline install

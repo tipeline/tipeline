@@ -14,8 +14,8 @@ program.name('tipeline').version(version).description('Tipeline CLI');
 // Core Commands
 program
   .command('install')
-  .description('Initialize Tipeline folders and configuration')
-  .option('--force', 'Overwrite existing configuration')
+  .description('Write the default configuration files to edit (optional: start works without it)')
+  .option('--force', 'Overwrite the configuration files with the defaults (your data is kept)')
   .action((options) => CommandService.install(options));
 
 program

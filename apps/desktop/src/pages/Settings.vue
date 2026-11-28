@@ -36,6 +36,7 @@ watch(tab, (newTab) => {
           <TabsList>
             <TabsTrigger value="SettingsAppearance">{{ t('settings.appearance.title') }}</TabsTrigger>
             <TabsTrigger value="SettingsDefaults">{{ t('settings.defaults.title') }}</TabsTrigger>
+            <TabsTrigger value="SettingsEnvironment">{{ t('settings.environment.title') }}</TabsTrigger>
             <TabsTrigger value="SettingsAgent">{{ t('settings.agent.title') }}</TabsTrigger>
             <TabsTrigger value="SettingsBackup">{{ t('settings.backup.title') }}</TabsTrigger>
             <TabsTrigger value="SettingsHubs">{{ t('settings.hubs.title') }}</TabsTrigger>
