@@ -357,7 +357,7 @@ hub
   .command('update')
   .description('Install the version a hub offers, such as a major version waiting for approval')
   .argument('<type>', '"workflow", "app", or "plugin" ("task" also accepted)')
-  .argument('<identifier>', 'Identifier of the installed item')
+  .argument('<identifier>', 'Identifier of the installed item (a plugin also by its group or name)')
   .option(
     '--accept-breaking',
     'Plugins: install even though saved workflow steps would stop working with the new version'
@@ -379,13 +379,13 @@ plugin
 plugin
   .command('enable')
   .description('Turn a plugin on. It runs its own code on this machine, so enable only ones you trust')
-  .argument('<plugin>', 'Plugin identifier, group, or its name in the hub catalog')
+  .argument('<plugin>', 'Plugin identifier, group or name')
   .action((identifier) => CommandService.pluginSetEnabled(identifier, true));
 
 plugin
   .command('disable')
   .description('Turn a plugin off. Workflows that use it fail until it is on again')
-  .argument('<plugin>', 'Plugin identifier, group, or its name in the hub catalog')
+  .argument('<plugin>', 'Plugin identifier, group or name')
   .action((identifier) => CommandService.pluginSetEnabled(identifier, false));
 
 // Schedule Commands

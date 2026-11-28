@@ -163,6 +163,30 @@ export class PipelineService {
    * Returns the identifiers it ended.
    */
   static async failAbandoned(identifiers: string[], message: string): Promise<string[]> {
+    return PipelineService.endAbandoned(identifiers, 'failed', { reason: 'worker_exit', message }, message);
+  }
+
+  /**
+   * Runs whose job was ended for them after a cancel they couldn't take in (a step busy
+   * on the CPU, say): they and their running steps end as canceled, saying who asked.
+   * Returns the identifiers it ended.
+   */
+  static async cancelAbandoned(identifiers: string[], canceledBy: string): Promise<string[]> {
+    const message = canceledBy ? `Canceled by ${canceledBy}` : 'Canceled';
+    return PipelineService.endAbandoned(identifiers, 'canceled', {
+      reason: 'user_canceled',
+      message,
+      canceledBy,
+    });
+  }
+
+  /** Ends the given runs that still say running, and their running steps, with `status`. */
+  private static async endAbandoned(
+    identifiers: string[],
+    status: 'failed' | 'canceled',
+    metadata: Record<string, unknown>,
+    stepError?: string
+  ): Promise<string[]> {
     if (identifiers.length === 0) return [];
     const runs = await PipelineModel.query()
       .select('id', 'identifier')
@@ -174,14 +198,18 @@ export class PipelineService {
     await PipelineModel.query()
       .whereIn('id', ids)
       .where('status', 'running')
-      .patch({ status: 'failed', finished_at: now } as any);
+      .patch({ status, finished_at: now } as any);
     for (const id of ids) {
-      await PipelineService.mergeMetadata(id, { reason: 'worker_exit', message });
+      await PipelineService.mergeMetadata(id, metadata);
     }
     await PipelineActionModel.query()
       .whereIn('pipeline_id', ids)
       .where('status', 'running')
-      .patch({ status: 'failed', error: message, finished_at: now } as any);
+      .patch({
+        status,
+        ...(stepError ? { error: stepError } : {}),
+        finished_at: now,
+      } as any);
     return runs.map((run) => run.identifier);
   }
 

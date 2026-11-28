@@ -94,7 +94,7 @@ describe('sealExistingSecrets', () => {
       { key: 'timezone', value: 'UTC' },
     ]);
     await knex('hub').insert({ id: 'h-1', name: 'Team', type: 'remote', target: 'https://x.test', token: 'hub-plain', enabled: true });
-    await knex('hub').insert({ id: 'h-2', name: 'Open', type: 'local_folder', target: '/tmp', token: null, enabled: true });
+    await knex('hub').insert({ id: 'h-2', name: 'Open', type: 'remote', target: 'https://open.test', token: null, enabled: true });
     await knex('connections').insert({ id: 'c-1', name: 'Prod', host: 'ws://x.test', token: 'remote-plain' });
     fs.mkdirSync(path.join(home, '.tipeline', 'logs'), { recursive: true });
     fs.writeFileSync(path.join(home, '.tipeline', 'logs', 'start.log'), 'x Tipeline Core API token: abc123\nother line\n');

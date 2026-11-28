@@ -10,7 +10,7 @@ import { stopCoreServiceNow } from '@tipeline/utils/coreService';
 import Printer from './Printer';
 import IpcMessageService from './IpcMessageService';
 import { WsCommandService, type RemoteConnection } from './WsCommandService';
-import { generateIdentifier, parseSchedule, defaultDeleteSelection, inOtherProjects, outsideUsers } from '@tipeline/utils';
+import { checkCron, generateIdentifier, parseSchedule, defaultDeleteSelection, inOtherProjects, outsideUsers } from '@tipeline/utils';
 import type { ActionErrorData } from '@tipeline/types';
 import readline from 'node:readline/promises';
 import { coreVersionWarning } from './coreVersionWarning';
@@ -302,10 +302,31 @@ export default class CommandService {
   }
 
   /** Like `start` and `service`, stop means this machine's Core unless told otherwise. */
-  static stop(options: { force?: boolean; remote?: boolean } = {}) {
+  static async stop(options: { force?: boolean; remote?: boolean } = {}) {
     if (options.force) {
       CommandService.forceKill();
       return;
+    }
+
+    // --remote means the active remote: with none, stopping this machine's Core instead
+    // would be a surprise. (Which remote is active is kept by the Core on this machine.)
+    if (options.remote) {
+      try {
+        const active = await CommandService.localRequest<{ connection: unknown } | null>(
+          'connectionGetActive',
+          'onConnectionGetActive',
+          null
+        );
+        if (!active?.connection) {
+          Printer.printError(
+            "No remote is in use, so nothing was stopped. Pick one with: tipeline remote use <name>, or stop this machine's Core with: tipeline stop"
+          );
+          return process.exit(1);
+        }
+      } catch (error: any) {
+        Printer.printError(error?.message ?? String(error));
+        return process.exit(1);
+      }
     }
 
     const connect = options.remote
@@ -561,9 +582,19 @@ export default class CommandService {
     if (count) Printer.printMessage(`${plural(count, 'secret value')} left out. Add --include-secrets to write them in plain text.`);
   }
 
+  /**
+   * An --output path made absolute. One ending in a slash names a folder: it's created when
+   * missing, so the file goes inside it rather than being written under the folder's name.
+   */
+  private static outputPath(output: string): string {
+    const resolved = nodePath.resolve(process.cwd(), output);
+    if (/[\\/]$/.test(output)) fs.mkdirSync(resolved, { recursive: true });
+    return resolved;
+  }
+
   static async taskExport(identifier: string, options: { output?: string; includeSecrets?: boolean }) {
     // Without --output, Core names the file after the workflow in the current folder.
-    const targetPath = nodePath.resolve(process.cwd(), options.output ?? '.');
+    const targetPath = CommandService.outputPath(options.output ?? '.');
     const correlationId = generateIdentifier();
     const payload = await IpcMessageService.generatePayload(correlationId, {
       identifier,
@@ -600,7 +631,12 @@ export default class CommandService {
   }
 
   static async taskExportAll(options: { output?: string; includeSecrets?: boolean }) {
-    const targetPath = nodePath.resolve(process.cwd(), options.output ?? `tipeline-workflows-export-${Date.now()}.zip`);
+    const defaultName = `tipeline-workflows-export-${Date.now()}.zip`;
+    const outputPath = CommandService.outputPath(options.output ?? defaultName);
+    const targetPath =
+      fs.existsSync(outputPath) && fs.statSync(outputPath).isDirectory()
+        ? nodePath.join(outputPath, defaultName)
+        : outputPath;
     const correlationId = generateIdentifier();
     const payload = await IpcMessageService.generatePayload(correlationId, {
       targetPath,
@@ -1010,7 +1046,9 @@ export default class CommandService {
       process.exit(1);
     }
     // Read here too, so a mistake shows before connecting and a good one shows what it means.
-    const parsed = parseSchedule(when ?? cron!);
+    // --cron takes only a cron expression, so its mistakes are explained as cron ones.
+    const cronCheck = cron ? checkCron(cron) : null;
+    const parsed = cronCheck && !cronCheck.ok ? cronCheck : parseSchedule(when ?? cron!);
     if (!parsed.ok) {
       Printer.printError(parsed.message);
       process.exit(1);
@@ -1086,7 +1124,8 @@ export default class CommandService {
 
       const named = (users: any[]) =>
         users.map((u) => (u.projects?.length ? `${u.name} (${u.projects.map((p: any) => p.name).join(', ')})` : u.name)).join(', ');
-      const lines: string[] = [`Delete project "${project.name}"?`];
+      // With --yes nothing is asked: only what happens to its contents is worth showing.
+      const lines: string[] = [options.yes ? `Deleting project "${project.name}".` : `Delete project "${project.name}"?`];
       if (!withContents) {
         if (workflows.length + apps.length > 0) {
           lines.push(`  Its ${plural(workflows.length, 'workflow')} and ${plural(apps.length, 'app')} stay, out of the project.`);
@@ -1121,7 +1160,7 @@ export default class CommandService {
           }
         }
       }
-      Printer.printMessage(lines.join('\n'));
+      if (!options.yes || lines.length > 1) Printer.printMessage(lines.join('\n'));
 
       if (!options.yes) {
         if (!(process.stdin.isTTY && process.stdout.isTTY)) {
@@ -1177,11 +1216,16 @@ export default class CommandService {
         'onConnectionGetActive',
         null
       );
-      Printer.printMessage(`Commands go to: ${connections.find((c) => c.id === active?.activeId)?.name ?? 'this machine'}`);
-      if (connections.length === 0) Printer.printMessage('No remote connections configured.');
-      connections.forEach((c) =>
-        Printer.printMessage(`${c.id === active?.activeId ? '* ' : '  '}${c.id}  ${c.name}  ${c.host}`)
-      );
+      const goesTo = `Commands go to: ${connections.find((c) => c.id === active?.activeId)?.name ?? 'this machine'}`;
+      if (connections.length === 0) {
+        Printer.printMessage(`${goesTo}\nNo remote connections configured.`);
+      } else {
+        Printer.printTable(
+          ['', 'ID', 'Name', 'Address'],
+          connections.map((c) => [c.id === active?.activeId ? '*' : '', c.id, c.name, c.host]),
+          goesTo
+        );
+      }
       process.exit(0);
     } catch (error: any) {
       Printer.printError(error?.message ?? String(error));
@@ -1259,10 +1303,15 @@ export default class CommandService {
           if (hubs.length === 0) {
             Printer.printMessage('No hubs configured.');
           } else {
-            hubs.forEach((h) =>
-              Printer.printMessage(
-                `  ${h.id}  ${h.name}  [${h.type}]  ${h.target}  ${h.enabled ? 'enabled' : 'disabled'}${h.hasToken ? '  (token)' : ''}`
-              )
+            Printer.printTable(
+              ['ID', 'Name', 'Type', 'Address', 'Status'],
+              hubs.map((h) => [
+                h.id,
+                h.name,
+                h.type,
+                h.target,
+                `${h.enabled ? 'enabled' : 'disabled'}${h.hasToken ? ', token' : ''}`,
+              ])
             );
           }
         } else {
@@ -1343,7 +1392,11 @@ export default class CommandService {
           if (items.length === 0) {
             Printer.printMessage('No items in this hub catalog.');
           } else {
-            items.forEach((i) => Printer.printMessage(`  [${i.type === 'task' ? 'workflow' : i.type}]  ${i.identifier}  ${i.name}  v${i.version}`));
+            Printer.printTable(
+              ['Type', 'Identifier', 'Name', 'Version'],
+              items.map((i) => [i.type === 'task' ? 'workflow' : i.type, i.identifier, i.name, i.version ?? ''])
+            );
+            console.log(`  ${items.length} item(s). Install one with: tipeline hub install <type> ${id} <identifier>\n`);
           }
         } else {
           Printer.printError(response.error ?? 'Unknown error');
@@ -1409,28 +1462,29 @@ export default class CommandService {
         if (response?.success) {
           const events: any[] = response.data ?? [];
           if (events.length === 0) Printer.printMessage('No hub updates yet.');
-          events.forEach((e) => {
-            const type = e.item_type === 'task' ? 'workflow' : e.item_type;
-            const versions = [e.from_version, e.to_version].filter(Boolean).join(' -> ');
-            const detail = e.message && e.kind !== 'breaks_workflows' ? `  ${e.message}` : '';
-            Printer.printMessage(`  ${e.kind}  [${type}]  ${e.item_identifier}  ${e.item_name ?? ''}  ${versions}${detail}`);
-            if (e.kind === 'breaks_workflows') {
-              let problems: any[] = [];
-              try {
-                problems = JSON.parse(e.message ?? '[]');
-              } catch {
-                problems = [];
-              }
-              problems.forEach((p) =>
-                Printer.printMessage(
-                  `      ${p.workflow?.name}, step ${p.position} (${p.action}): ${p.kind}${p.detail ? ` — ${p.detail}` : ''}`
-                )
-              );
-              Printer.printMessage(
-                `      Fix those steps, or install anyway: tipeline hub update plugin ${e.item_identifier} --accept-breaking`
-              );
-            }
-          });
+          else
+            Printer.printTable(
+              ['What happened', 'Type', 'Identifier', 'Name'],
+              events.map((e) => {
+                const type = e.item_type === 'task' ? 'workflow' : e.item_type;
+                const lines = [Printer.hubUpdateKind(e.kind, e.from_version, e.to_version)];
+                if (e.kind === 'breaks_workflows') {
+                  let problems: any[] = [];
+                  try {
+                    problems = JSON.parse(e.message ?? '[]');
+                  } catch {
+                    problems = [];
+                  }
+                  problems.forEach((p) =>
+                    lines.push(`• ${p.workflow?.name}, step ${p.position} (${p.action}): ${p.kind}${p.detail ? ` — ${p.detail}` : ''}`)
+                  );
+                  lines.push(`Fix those steps, or install anyway: tipeline hub update plugin ${e.item_identifier} --accept-breaking`);
+                } else if (e.kind === 'failed' && e.message) {
+                  lines.push(e.message);
+                }
+                return [lines.join('\n'), type, e.item_identifier, e.item_name ?? ''];
+              })
+            );
         } else {
           Printer.printError(response.error ?? 'Unknown error');
         }
@@ -1452,6 +1506,13 @@ export default class CommandService {
       Printer.printError(`Unknown type "${rawType}". Use workflow, app or plugin.`);
       process.exit(1);
     }
+    // Plugins go by the same names as in `plugin enable`: identifier, group or hub name.
+    let label = identifier;
+    if (type === 'plugin') {
+      const plugin = await CommandService.findPlugin(identifier);
+      identifier = plugin.identifier;
+      label = plugin.name ?? identifier;
+    }
     const correlationId = generateIdentifier();
     const payload = await IpcMessageService.generatePayload(
       correlationId,
@@ -1460,7 +1521,7 @@ export default class CommandService {
     CommandService.connectAndHandle(channel, payload, {
       [responseEvent]: (response: IpcResponse) => {
         if (response?.success) {
-          Printer.printMessage(`${rawType} "${identifier}" updated to ${response.data?.version ?? 'the hub version'}.`);
+          Printer.printMessage(`${rawType} "${label}" updated to ${response.data?.version ?? 'the hub version'}.`);
         } else {
           Printer.printError(response.error ?? 'Unknown error');
         }
@@ -1499,11 +1560,11 @@ export default class CommandService {
     try {
       const plugins = (await CommandService.request<any[]>('pluginList', 'onPluginList', null)) ?? [];
       if (plugins.length === 0) Printer.printMessage('No plugins installed.');
-      plugins.forEach((p) =>
-        Printer.printMessage(
-          `  ${p.identifier}  ${p.group}  ${p.name}${p.version ? `  v${p.version}` : ''}  ${p.enabled ? 'enabled' : 'disabled'}`
-        )
-      );
+      else
+        Printer.printTable(
+          ['Identifier', 'Group', 'Name', 'Version', 'Status'],
+          plugins.map((p) => [p.identifier, p.group, p.name, p.version ?? '', p.enabled ? 'enabled' : 'disabled'])
+        );
       process.exit(0);
     } catch (error: any) {
       Printer.printError(error?.message ?? String(error));
@@ -1511,16 +1572,34 @@ export default class CommandService {
     }
   }
 
+  /**
+   * An installed plugin by its identifier, group or identifier in the hub catalog (any
+   * case). Exits with an error when there's none.
+   */
+  private static async findPlugin(name: string): Promise<any> {
+    let plugins: any[] = [];
+    try {
+      plugins = (await CommandService.request<any[]>('pluginList', 'onPluginList', null)) ?? [];
+    } catch (error: any) {
+      Printer.printError(error?.message ?? String(error));
+      process.exit(1);
+    }
+    const wanted = name.trim().toLowerCase();
+    const plugin =
+      plugins.find((p) => [p.identifier, p.group, p.hub_plugin_identifier].includes(name)) ??
+      plugins.find((p) =>
+        [p.group, p.hub_plugin_identifier, p.name].some((v) => typeof v === 'string' && v.toLowerCase() === wanted)
+      );
+    if (!plugin) {
+      Printer.printError(`No plugin "${name}". See the installed ones with: tipeline plugin list`);
+      process.exit(1);
+    }
+    return plugin;
+  }
+
   static async pluginSetEnabled(identifierOrGroup: string, enabled: boolean) {
     try {
-      const plugins = (await CommandService.request<any[]>('pluginList', 'onPluginList', null)) ?? [];
-      const plugin = plugins.find((p) =>
-        [p.identifier, p.group, p.hub_plugin_identifier].includes(identifierOrGroup)
-      );
-      if (!plugin) {
-        Printer.printError(`No plugin "${identifierOrGroup}". See the installed ones with: tipeline plugin list`);
-        return process.exit(1);
-      }
+      const plugin = await CommandService.findPlugin(identifierOrGroup);
       await CommandService.request('pluginSetEnabled', 'onPluginSetEnabled', {
         identifier: plugin.identifier,
         enabled,

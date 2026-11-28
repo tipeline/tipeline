@@ -15,7 +15,9 @@ import {
 
 const require = createRequire(import.meta.url);
 const validationMessages: Record<string, string> = require('@tipeline/i18n/locales/en/validation.json');
-const capabilityLabels: Record<string, string> = require('@tipeline/i18n/locales/en/ui.json').capabilities.label;
+const uiStrings = require('@tipeline/i18n/locales/en/ui.json');
+const capabilityLabels: Record<string, string> = uiStrings.capabilities.label;
+const hubUpdateKinds: Record<string, string> = uiStrings.hub.updates.kind;
 
 // "files.write" → "Changes or deletes files", the words Desktop uses.
 const capabilityLabel = (capability: string) =>
@@ -87,19 +89,21 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function formatDate(value: string | Date | null | undefined): string {
+/** A time in this machine's time zone, like the schedule times: "YYYY-MM-DD HH:MM:SS". */
+export function formatDate(value: string | Date | null | undefined): string {
   if (!value) return '';
-  if (value instanceof Date) {
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return (
-      `${value.getUTCFullYear()}-${pad(value.getUTCMonth() + 1)}-${pad(value.getUTCDate())} ` +
-      `${pad(value.getUTCHours())}:${pad(value.getUTCMinutes())}:${pad(value.getUTCSeconds())}`
-    );
+  let date = value;
+  if (typeof value === 'string') {
+    // SQLite's "YYYY-MM-DD HH:MM:SS" has no zone but is UTC, like ISO strings ending in Z.
+    const sqlite = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?$/.test(value);
+    date = new Date(sqlite ? `${value.replace(' ', 'T')}Z` : value);
   }
-  // Both SQLite's "YYYY-MM-DD HH:MM:SS" and ISO strings already represent UTC wall-clock time,
-  // so just normalize the separator/strip millis+offset rather than re-parsing as local time.
-  const match = value.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2})/);
-  return match ? `${match[1]} ${match[2]}` : value;
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return String(value);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
+    `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+  );
 }
 
 function flattenActionDefs(actions: any[], map: Record<string, string> = {}): Record<string, string> {
@@ -156,16 +160,40 @@ function failureReasonTag(metadata: any): string | null {
 
 const explainsStatus = (status: string) => status === 'failed' || status === 'canceled';
 
-function wrapText(text: string, maxLen: number): string[] {
+/**
+ * Breaks text into lines of at most `maxLen`, between words. Only a word longer than a whole
+ * line (a long path or URL) is cut. A line's leading spaces are kept.
+ */
+export function wrapText(text: string, maxLen: number): string[] {
   const lines: string[] = [];
   text.split('\n').forEach((line) => {
     if (line.length <= maxLen) {
       lines.push(line);
-    } else {
-      for (let i = 0; i < line.length; i += maxLen) {
-        lines.push(line.slice(i, i + maxLen));
-      }
+      return;
     }
+    const indent = line.match(/^\s*/)![0];
+    let current = indent;
+    const flush = () => {
+      if (current.trim()) lines.push(current.trimEnd());
+      current = indent;
+    };
+    for (const word of line.slice(indent.length).split(/ +/)) {
+      if (!word) continue;
+      const sep = current.trim() ? ' ' : '';
+      if (current.length + sep.length + word.length <= maxLen) {
+        current += sep + word;
+        continue;
+      }
+      flush();
+      let rest = word;
+      while (indent.length + rest.length > maxLen) {
+        const room = Math.max(1, maxLen - indent.length);
+        lines.push(indent + rest.slice(0, room));
+        rest = rest.slice(room);
+      }
+      current = indent + rest;
+    }
+    flush();
   });
   return lines.length ? lines : [''];
 }
@@ -773,7 +801,7 @@ export default class Printer {
     };
     for (const alert of alerts) {
       const times = alert.count > 1 ? chalk.dim(` ×${alert.count}`) : '';
-      const status = alert.status !== 'open' ? chalk.dim(` (${alert.status === 'dismissed' ? 'acknowledged' : 'resolved'})`) : '';
+      const status = alert.status !== 'open' ? chalk.dim(` (${alert.status === 'dismissed' ? 'dismissed' : 'resolved'})`) : '';
       console.log(
         `\n  ${levelMark[alert.level] ?? '●'} ${chalk.bold(alert.title)}${times}${status}  ${chalk.dim(alert.workflowName ?? alert.taskIdentifier ?? '')}`
       );
@@ -787,7 +815,30 @@ export default class Printer {
       if (alert.pipelineIdentifier) console.log(chalk.dim(`    run       ${alert.pipelineIdentifier}`));
       if (alert.message) console.log(`    ${truncate(String(alert.message), MAX_WIDTH - 4)}`);
     }
-    console.log(chalk.dim('\n  Dismiss with: tipeline alert dismiss <id> (or --all).\n'));
+    if (alerts.some((alert) => alert.status === 'open')) {
+      console.log(chalk.dim('\n  Dismiss with: tipeline alert dismiss <id> (or --all).\n'));
+    } else {
+      console.log('');
+    }
+  }
+
+  /** What a hub update event says happened, in the words Desktop uses. */
+  static hubUpdateKind(kind: string, from?: string | null, to?: string | null): string {
+    const text = hubUpdateKinds[kind];
+    if (!text) return [kind, [from, to].filter(Boolean).join(' -> ')].filter(Boolean).join(' ');
+    return text.replace('{from}', from ?? '?').replace('{to}', to ?? '?');
+  }
+
+  /** A plain list as a table, like the other lists. An optional title line goes above it. */
+  static printTable(head: string[], rows: string[][], title?: string) {
+    const table = new Table({
+      head: head.map((h) => chalk.bold(h)),
+      style: { head: [], border: ['dim'] },
+      wordWrap: true,
+    });
+    rows.forEach((row) => table.push(row));
+    if (title) console.log(`\n  ${title}`);
+    console.log(table.toString());
   }
 
   static printScheduleList(data: any) {

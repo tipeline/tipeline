@@ -33,6 +33,13 @@ function assertValidHubTarget(type: string, target: string) {
   }
 }
 
+/** A token is only sent to a remote hub's own host: on a folder it would do nothing. */
+function assertTokenFits(type: string, token: string | null | undefined) {
+  if (type === 'local_folder' && token?.trim()) {
+    throw new Error('A local_folder hub is read from disk, so it takes no token. Tokens are for remote hubs.');
+  }
+}
+
 /**
  * The official hub. Every Core has it from the first start, under this fixed id, so items
  * installed from it keep the same hub link on every machine. Like the Local workspace it
@@ -90,6 +97,7 @@ export class HubService {
   }): Promise<Hub> {
     const target = normalizeHubTarget(data.type, data.target);
     assertValidHubTarget(data.type, target);
+    assertTokenFits(data.type, data.token);
     return Hub.query().insertAndFetch({
       id: generateIdentifier(),
       name: data.name,
@@ -107,13 +115,16 @@ export class HubService {
   ): Promise<Hub> {
     assertEditableHub(id, 'edited');
     const patch = { ...data };
-    if (data.type !== undefined || data.target !== undefined) {
+    if (data.type !== undefined || data.target !== undefined || data.token) {
       const current = await Hub.query().findById(id);
       if (!current) throw new Error(`Hub "${id}" not found`);
       const type = data.type ?? current.type;
       const target = normalizeHubTarget(type, data.target ?? current.target);
       assertValidHubTarget(type, target);
+      assertTokenFits(type, data.token);
       if (data.target !== undefined) patch.target = target;
+      // A hub turned into a folder has nothing to send its old token to.
+      if (type === 'local_folder' && !('token' in patch)) patch.token = null;
     }
     if ('token' in patch) patch.token = patch.token?.trim() || null;
     const record = await Hub.query().patchAndFetchById(id, patch);
