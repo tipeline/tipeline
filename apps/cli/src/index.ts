@@ -21,7 +21,11 @@ program
 program
   .command('start')
   .description('Start Tipeline service')
-  .action(() => CommandService.start());
+  .option(
+    '--foreground',
+    'Run in this terminal with the log on stdout, until stopped (for Docker or a system service)'
+  )
+  .action((options) => CommandService.start(options));
 
 program
   .command('stop')

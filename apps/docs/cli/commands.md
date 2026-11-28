@@ -1,8 +1,17 @@
 # CLI Commands
 
-The Tipeline CLI (`apps/cli`) is built with **Commander.js** and communicates with the Core engine via IPC. Once linked, all commands are available as `tipeline <command>`.
+The Tipeline CLI (`apps/cli`) is built with **Commander.js** and communicates with the Core engine via IPC. Once installed, all commands are available as `tipeline <command>`.
 
 ## Installation
+
+The package includes Core. It needs Node 24 or later:
+
+```bash
+npm i -g @tipeline/cli --allow-scripts=better-sqlite3
+```
+
+To run it on a server, see [Run on a Server](/cli/server). From a clone of the repository,
+build it and link it instead:
 
 ```bash
 cd apps/cli
@@ -30,8 +39,13 @@ tipeline install
 Start the Core engine as a background service. Only one Core runs at a time: if one is already
 running, this says so and leaves it alone.
 
+`--foreground` runs Core in the terminal instead, until it's stopped, with its log on stdout too.
+Stop signals go to Core, and the command exits with Core's exit code. Use it as the command of a
+Docker container or a systemd system service (see [Run on a Server](/cli/server)).
+
 ```bash
 tipeline start
+tipeline start --foreground
 ```
 
 ### `tipeline stop`
@@ -59,8 +73,9 @@ Auto-start belongs to whichever of the CLI and Desktop set it up. `tipeline serv
 takes it over from Desktop, and Desktop leaves it that way. If Desktop set it up, `tipeline start`
 still runs the Core installed with the CLI.
 
-On Linux it uses a systemd user service, which runs from login to logout. To keep Core running
-without a login session, run `loginctl enable-linger`. After uninstalling the Desktop app on macOS,
+On Linux it uses a systemd user service, which only runs while you're logged in. So `install`
+also turns on linger, which keeps Core running after logout and starts it after a reboot. If the
+system needs an administrator for that, it prints the `sudo loginctl enable-linger` line to run. After uninstalling the Desktop app on macOS,
 delete `~/Library/LaunchAgents/com.tipeline.core.plist`, or run `tipeline service uninstall` first.
 
 ### `tipeline status`
