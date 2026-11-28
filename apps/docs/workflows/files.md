@@ -334,7 +334,8 @@ variables:
 - **`valueFromGlobal`** reads a global variable (set on the Variables page).
   If that global is secret, the workflow variable is treated as secret too. Use this for
   passwords and API keys.
-- **`valueFromEnv`** reads an environment value. Put shared values in `~/.tipeline/.env`:
+- **`valueFromEnv`** reads an environment value. Put shared values in `~/.tipeline/.env`
+  (in the Desktop, **Settings → Environment** opens it):
 
   ```ini
   SMTP_HOST=smtp.gmail.com

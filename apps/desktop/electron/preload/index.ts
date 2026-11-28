@@ -17,6 +17,9 @@ const INVOKE_CHANNELS = new Set<string>([
   'app:file-trust:get',
   'app:file-trust:set',
   'app:system-info',
+  'app:env-file:info',
+  'app:env-file:open',
+  'app:env-file:private',
 ])
 
 // Channels the main process pushes to the renderer via webContents.send().

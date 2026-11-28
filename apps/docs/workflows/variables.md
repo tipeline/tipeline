@@ -121,6 +121,19 @@ SMTP_HOST=smtp.gmail.com
 API_KEY=your-key-here
 ```
 
+- In the Desktop, **Settings → Environment** creates `~/.tipeline/.env`, opens it in your text
+  editor and lists the names it sets. It never shows the values. The same names are under
+  `_env` in a step field's insert menu (`{}`) and when you type `{{ _env.`. On a Tipeline Server
+  workspace they're left out, since runs there read the server's environment.
+- The files are read again for every run, so an edit applies from the next run on. You don't
+  need to restart Core.
+- The file is **plain text** and `_env` values aren't hidden in run output. Keep it readable by
+  your account only (`chmod 600 ~/.tipeline/.env`, or **Make private** in Settings →
+  Environment). For passwords and API keys, prefer a secret global variable with
+  `valueFromGlobal` (below).
+- `_env` reads the whole environment Core runs with, not only these files, so `{{ _env.HOME }}`
+  works too.
+
 A variable can also take its default from the environment or a global variable:
 
 ```yaml

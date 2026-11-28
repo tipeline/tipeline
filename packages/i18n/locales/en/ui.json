@@ -1374,6 +1374,24 @@
       "platformCurrent": "This computer ({platform})",
       "platformCurrentUnknown": "This computer"
     },
+    "environment": {
+      "title": "Environment",
+      "description": "A file of NAME=value lines that every workflow on this computer can read, with {example}. Changes apply to the next run, without restarting Tipeline.",
+      "notCreated": "Not created yet",
+      "create": "Create and open",
+      "open": "Open file",
+      "revealMac": "Show in Finder",
+      "openHint": "Opens in your text editor. Save the file there, then come back.",
+      "shared": "Other accounts on this computer can read this file.",
+      "makePrivate": "Make private",
+      "madePrivate": "Only your account can read the file now.",
+      "privateFailed": "Couldn't change who can read the file",
+      "openFailed": "Couldn't open the file",
+      "names": "Names in the file",
+      "noNames": "No values yet. Add a line such as API_KEY=your-key.",
+      "secretsHint": "Values in this file are plain text. For passwords and API keys, use a secret global variable instead: Tipeline keeps those encrypted.",
+      "secretsLink": "Open Variables"
+    },
     "agent": {
       "title": "Assistant",
       "description": "Find and run your workflows from a request in plain language.",
@@ -2087,6 +2105,9 @@
     "unknownVariable": "Unknown variable “{name}” — it will silently resolve to an empty value",
     "builtIn_run": "This run",
     "builtIn_core": "The Core running it",
+    "builtIn_env": "The environment file",
+    "envValue": "from ~/.tipeline/.env",
+    "envEmpty": "No names yet: add them in Settings → Environment",
     "builtInField": {
       "_run": {
         "id": "run identifier",

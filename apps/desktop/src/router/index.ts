@@ -18,6 +18,7 @@ import Settings from '@/pages/Settings.vue';
 import SettingsAppearancePage from '@/pages/settings/SettingsAppearancePage.vue';
 import SettingsAgentPage from '@/pages/settings/SettingsAgentPage.vue';
 import SettingsDefaultsPage from '@/pages/settings/SettingsDefaultsPage.vue';
+import SettingsEnvironmentPage from '@/pages/settings/SettingsEnvironmentPage.vue';
 import SettingsBackupPage from '@/pages/settings/SettingsBackupPage.vue';
 import SettingsAboutPage from '@/pages/settings/SettingsAboutPage.vue';
 import SettingsShortcutsPage from '@/pages/settings/SettingsShortcutsPage.vue';
@@ -340,6 +341,11 @@ const routes = [
         path: 'defaults',
         name: 'SettingsDefaults',
         component: SettingsDefaultsPage,
+      },
+      {
+        path: 'environment',
+        name: 'SettingsEnvironment',
+        component: SettingsEnvironmentPage,
       },
       {
         path: 'agent',

@@ -12,8 +12,8 @@ const configFilePath = path.join(tipelineDir, 'database.json');
 const runnerConfigPath = path.join(tipelineDir, 'config.json');
 
 if (fs.existsSync(configFilePath) && !force) {
-  console.log(`Tipeline is already installed at ${tipelineDir}`);
-  console.log(`Use --force to overwrite the existing configuration.`);
+  console.log(`Tipeline's configuration is already in ${tipelineDir}. Nothing was changed.`);
+  console.log(`Use --force to put back the default configuration (your workflows and runs are kept).`);
   process.exit(0);
 }
 
@@ -40,4 +40,4 @@ if (!fs.existsSync(runnerConfigPath) || force) {
   console.log(`Configuration written to: ${runnerConfigPath}`);
 }
 
-console.log(`\nEdit if needed, then run: tipeline start`);
+console.log(`\nEdit if needed, then run: tipeline start (it works without this step too).`);

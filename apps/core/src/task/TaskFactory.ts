@@ -4,8 +4,8 @@ import { Parser } from '@utils/Parser';
 import { TaskValidator } from '@validation/TaskValidation';
 import { coerceVariableValue } from '@utils/coerceVariableValue';
 import dotenv from 'dotenv';
+import { globalEnvFile } from '@utils/globalEnvFile';
 import * as path from 'path';
-import * as os from 'os';
 
 export class TaskFactory {
   static async fromFile(
@@ -60,12 +60,14 @@ export class TaskFactory {
   }
 
   // Loads .env from the task's directory first (higher precedence), then ~/.tipeline/.env.
-  // dotenv.config skips keys already set in process.env, so local always wins.
+  // dotenv.config skips keys already set in process.env, so local always wins. Runs happen
+  // in worker threads, each starting from a copy of Core's own environment, so an edited
+  // file is read again on the next run.
   private static loadEnvFiles(taskDir?: string): void {
     if (taskDir) {
       dotenv.config({ path: path.join(taskDir, '.env') });
     }
-    dotenv.config({ path: path.join(os.homedir(), '.tipeline', '.env') });
+    dotenv.config({ path: globalEnvFile() });
   }
 
   private static async createTask(parsedTask: any, identifier: string, correlationId: string) {

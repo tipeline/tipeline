@@ -96,13 +96,15 @@ cd apps/cli
 npm link
 ```
 
-This installs the `tipeline` command globally, pointing at the locally built version. The first
-time you use it, create the `~/.tipeline` folders and configuration, then start Core:
+This installs the `tipeline` command globally, pointing at the locally built version. Then start
+Core (the first start creates `~/.tipeline`):
 
 ```bash
-tipeline install
 tipeline start
 ```
+
+`tipeline install` is optional: it writes the default configuration files
+(`~/.tipeline/database.json`, `~/.tipeline/config.json`) so you can edit them.
 
 ## Running Tests
 

@@ -1374,6 +1374,24 @@
       "platformCurrent": "Este equipo ({platform})",
       "platformCurrentUnknown": "Este equipo"
     },
+    "environment": {
+      "title": "Entorno",
+      "description": "Un archivo de líneas NOMBRE=valor que cualquier workflow de este equipo puede leer con {example}. Los cambios se aplican en la siguiente ejecución, sin reiniciar Tipeline.",
+      "notCreated": "Aún no creado",
+      "create": "Crear y abrir",
+      "open": "Abrir archivo",
+      "revealMac": "Mostrar en Finder",
+      "openHint": "Se abre en tu editor de texto. Guarda el archivo ahí y luego vuelve.",
+      "shared": "Otras cuentas de este equipo pueden leer este archivo.",
+      "makePrivate": "Hacer privado",
+      "madePrivate": "Ahora solo tu cuenta puede leer el archivo.",
+      "privateFailed": "No se pudo cambiar quién puede leer el archivo",
+      "openFailed": "No se pudo abrir el archivo",
+      "names": "Nombres en el archivo",
+      "noNames": "Aún no hay valores. Agrega una línea como API_KEY=tu-clave.",
+      "secretsHint": "Los valores de este archivo son texto plano. Para contraseñas y claves de API, usa mejor una variable global secreta: Tipeline las guarda cifradas.",
+      "secretsLink": "Abrir Variables"
+    },
     "agent": {
       "title": "Asistente",
       "description": "Busca y ejecuta tus flujos de trabajo con una solicitud en lenguaje natural.",
@@ -2087,6 +2105,9 @@
     "unknownVariable": "Variable desconocida “{name}”: se resolverá en silencio como un valor vacío",
     "builtIn_run": "Esta ejecución",
     "builtIn_core": "El Core que la ejecuta",
+    "builtIn_env": "El archivo de entorno",
+    "envValue": "de ~/.tipeline/.env",
+    "envEmpty": "Aún no hay nombres: agrégalos en Configuración → Entorno",
     "builtInField": {
       "_run": {
         "id": "identificador de la ejecución",
