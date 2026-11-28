@@ -14,14 +14,18 @@ program.name('tipeline').version(version).description('Tipeline CLI');
 // Core Commands
 program
   .command('install')
-  .description('Initialize Tipeline folders and configuration')
-  .option('--force', 'Overwrite existing configuration')
+  .description('Write the default configuration files to edit (optional: start works without it)')
+  .option('--force', 'Overwrite the configuration files with the defaults (your data is kept)')
   .action((options) => CommandService.install(options));
 
 program
   .command('start')
   .description('Start Tipeline service')
-  .action(() => CommandService.start());
+  .option(
+    '--foreground',
+    'Run in this terminal with the log on stdout, until stopped (for Docker or a system service)'
+  )
+  .action((options) => CommandService.start(options));
 
 program
   .command('stop')
@@ -119,7 +123,9 @@ task
   .command('install')
   .description('Install workflow into the database')
   .argument('<path-to-yaml>', 'Path to YAML file')
-  .action((path) => CommandService.taskInstall(path));
+  .option('--copy', 'Install it even if it looks already installed')
+  .option('--replace <workflow-identifier>', 'Put the file in place of this installed workflow (like reload)')
+  .action((path, options) => CommandService.taskInstall(path, options));
 
 task
   .command('uninstall')

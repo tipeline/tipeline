@@ -8,7 +8,6 @@ import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Globe } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -26,15 +25,12 @@ import {
   useLocale,
   type SupportedLocale,
 } from '@/composables/useLocale';
-import {
-  DEFAULT_AUTHOR_KEY,
-  DEFAULT_PLATFORM_CURRENT_KEY,
-  getSystemInfo,
-} from '@/composables/useNewItemDefaults';
+import { DEFAULT_PLATFORM_CURRENT_KEY } from '@/composables/useNewItemDefaults';
 
-// Shown once, over the app, the first time Tipeline opens: a language and the name that goes
-// on new workflows and apps. Everything else has a default (the platform is this computer's,
-// the theme follows the system) and lives in Settings.
+// Shown once, over the app, the first time Tipeline opens: the one thing to choose is the
+// language. Everything else has a default and lives in Settings: the platform is this
+// computer's, the theme follows the system, and the author is the OS account's name until the
+// first workflow or app saves the name it was made with (useNewItemDefaults).
 const { t } = useI18n({ useScope: 'global' });
 const { setLocale } = useLocale();
 const settingsStore = useSettingsStore();
@@ -49,23 +45,17 @@ function startingLocale(): SupportedLocale {
 const language = ref<SupportedLocale>(startingLocale());
 previewLocale(language.value);
 
-const name = ref(settingsStore.get(DEFAULT_AUTHOR_KEY));
 const saving = ref(false);
 const failed = ref(false);
 
 // The Desktop app's version, as Settings → About shows it.
 const version = ref('');
 
-onMounted(async () => {
+onMounted(() => {
   window.ipcRenderer
     ?.invoke(SEND.APP_VERSION)
     .then((v: unknown) => (version.value = typeof v === 'string' ? v : ''))
     .catch(() => {});
-  if (!name.value) {
-    const info = await getSystemInfo();
-    // Typed while the lookup was on its way: keep what was typed.
-    if (!name.value) name.value = info.fullName || info.username;
-  }
 });
 
 function pickLanguage(value: unknown) {
@@ -81,10 +71,6 @@ async function start() {
   failed.value = false;
   try {
     await setLocale(language.value);
-    const author = name.value.trim();
-    if (author !== settingsStore.get(DEFAULT_AUTHOR_KEY)) {
-      await settingsStore.set(DEFAULT_AUTHOR_KEY, author);
-    }
     // New workflows get this computer's platform unless that was turned off in Settings before.
     if (!settingsStore.get(DEFAULT_PLATFORM_CURRENT_KEY)) {
       await settingsStore.set(DEFAULT_PLATFORM_CURRENT_KEY, 'true');
@@ -133,20 +119,31 @@ async function start() {
       </div>
 
       <div class="welcome-in w-full max-w-sm flex flex-col gap-2" style="--delay: 240ms">
-        <label for="welcome-name" class="text-sm font-medium">{{ t('welcome.name') }}</label>
-        <Input
-          id="welcome-name"
-          v-model="name"
-          autocomplete="name"
-          class="h-11 text-[15px]"
-          :placeholder="t('welcome.namePlaceholder')"
-          autofocus
-        />
-        <p class="m-0 text-[13px] text-muted-foreground">{{ t('welcome.nameHint') }}</p>
+        <label id="welcome-language-label" for="welcome-language" class="text-sm font-medium">
+          {{ t('welcome.language') }}
+        </label>
+        <Select :model-value="language" @update:model-value="pickLanguage">
+          <SelectTrigger
+            id="welcome-language"
+            class="h-11 w-full text-[15px]"
+            aria-labelledby="welcome-language-label"
+            data-testid="welcome-language"
+          >
+            <span class="flex items-center gap-2">
+              <Globe class="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+              <SelectValue />
+            </span>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="lang in SUPPORTED_LANGUAGES" :key="lang.value" :value="lang.value">
+              {{ lang.label }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div class="welcome-in w-full max-w-sm flex flex-col gap-2" style="--delay: 360ms">
-        <Button type="submit" class="h-11 w-full text-[15px]" :disabled="saving">
+        <Button type="submit" class="h-11 w-full text-[15px]" :disabled="saving" autofocus>
           {{ t('welcome.start') }}
         </Button>
         <p v-if="failed" class="m-0 text-[13px] text-destructive" role="alert">
@@ -156,26 +153,7 @@ async function start() {
       </div>
     </form>
 
-    <div class="welcome-in flex flex-wrap items-center justify-between gap-3 px-7 py-5" style="--delay: 480ms">
-      <div class="flex items-center gap-2 text-[13px] text-muted-foreground">
-        <Globe class="w-4 h-4" aria-hidden="true" />
-        <label id="welcome-language-label" for="welcome-language">{{ t('welcome.language') }}</label>
-        <Select :model-value="language" @update:model-value="pickLanguage">
-          <SelectTrigger
-            id="welcome-language"
-            class="h-8 w-32 text-[13px]"
-            aria-labelledby="welcome-language-label"
-            data-testid="welcome-language"
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem v-for="lang in SUPPORTED_LANGUAGES" :key="lang.value" :value="lang.value">
-              {{ lang.label }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+    <div class="welcome-in flex justify-end px-7 py-5" style="--delay: 480ms">
       <span v-if="version" class="text-[13px] text-muted-foreground tabular-nums" data-testid="welcome-version">
         {{ t('welcome.version', { version }) }}
       </span>

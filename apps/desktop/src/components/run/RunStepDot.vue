@@ -9,7 +9,7 @@ const status = computed(() => stepStatus(props.action));
 
 <template>
   <span
-    class="grid shrink-0 place-items-center rounded-full"
+    class="grid shrink-0 place-items-center rounded-full transition-colors duration-200 ease-out"
     :class="[
       small ? 'size-4' : 'size-5',
       {

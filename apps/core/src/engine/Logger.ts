@@ -25,13 +25,20 @@ function format(level: string, args: unknown[]): string {
   return `[${new Date().toISOString()}] [${level}] ${message}\n`;
 }
 
+// `tipeline start --foreground` sets this, so Docker and systemd see the log too.
+const toStdout = process.env.TIPELINE_LOG_STDOUT === '1';
+
 /** For the last words before process.exit: the stream would lose them. */
 export function logSync(level: string, ...args: unknown[]): void {
-  fs.appendFileSync(path.join(logsDir, 'start.log'), format(level, args));
+  const line = format(level, args);
+  fs.appendFileSync(path.join(logsDir, 'start.log'), line);
+  if (toStdout) fs.writeSync(1, line);
 }
 
 (['log', 'info', 'warn', 'error', 'debug'] as const).forEach((level) => {
   console[level] = (...args: unknown[]) => {
-    stream.write(format(level.toUpperCase(), args));
+    const line = format(level.toUpperCase(), args);
+    stream.write(line);
+    if (toStdout) process.stdout.write(line);
   };
 });

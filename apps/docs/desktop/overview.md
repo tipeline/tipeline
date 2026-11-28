@@ -145,6 +145,27 @@ Both lists work the same way:
 
 Each list remembers its view and sort.
 
+### Installing a workflow file
+
+**Install Workflow** on the Workflows list installs a YAML or JSON workflow file. If you may
+already have it (a workflow installed from the same file contents, or one with the same name),
+nothing is installed yet. Instead, **Already installed?** lists those workflows and says how each
+one matches:
+
+- **Installed from this same file, not changed since.** Installing it again changes nothing, so
+  the button is **Open it**.
+- **Installed from this same file, edited since.** Replacing it loses those edits. The button
+  turns red, but the current version stays in [Versions](/desktop/builder#versions).
+- **Same name**, installed from a different file or made in Tipeline.
+
+Pick one and choose:
+
+- **Replace** puts the file in its place. It keeps its runs, schedules and the apps that use it.
+- **Install as a copy** adds the file as another workflow.
+- **Cancel** installs nothing.
+
+The CLI asks the same way: see [`tipeline workflow install`](/cli/commands#tipeline-workflow-install-path).
+
 The Workflows list also shows how they're doing. Above it, four numbers for the last 7 days:
 **Runs**, **Failed** (click either to open the Runs page), the **Failure rate** and the
 **Average run time**. In the table, each workflow has:

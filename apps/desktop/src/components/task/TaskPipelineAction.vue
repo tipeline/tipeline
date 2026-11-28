@@ -117,6 +117,14 @@ const accentColorMap = {
   emerald: 'border-emerald-400',
 };
 
+// Spelled out on the row: the icon's tooltip alone was easy to miss, and it
+// didn't say what to do.
+const orderingMessage = computed(() =>
+  ['caseConditional', 'defaultConditional'].includes(props.item.name)
+    ? t('tasks.builder.canvas.orderSwitchChain')
+    : t('tasks.builder.canvas.orderIfChain')
+);
+
 const cardClass = computed(() => {
   const color = validator.value?.color;
   // Always reserve the same 4px on the left, so every row's content starts at
@@ -220,6 +228,13 @@ const cardClass = computed(() => {
               <span v-else-if="part.kind === 'name'" class="font-medium text-violet-700 dark:text-violet-400">{{ part.text }}</span>
               <span v-else>{{ part.text }}</span>
             </template>
+          </div>
+          <div
+            v-if="hasOrderingError"
+            class="flex items-start gap-1 text-xs font-normal text-red-600 dark:text-red-400 mt-0.5"
+          >
+            <component :is="getIconComponent('TriangleAlert')" class="size-3 mt-0.5 shrink-0" />
+            <span>{{ orderingMessage }}</span>
           </div>
           <div v-if="item.comment" class="flex items-start gap-1 text-xs text-foreground/80 mt-0.5">
             <component :is="getIconComponent('MessageSquareText')" class="size-3 mt-0.5 shrink-0 text-foreground/60" />

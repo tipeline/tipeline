@@ -1,8 +1,17 @@
 # CLI Commands
 
-The Tipeline CLI (`apps/cli`) is built with **Commander.js** and communicates with the Core engine via IPC. Once linked, all commands are available as `tipeline <command>`.
+The Tipeline CLI (`apps/cli`) is built with **Commander.js** and communicates with the Core engine via IPC. Once installed, all commands are available as `tipeline <command>`.
 
 ## Installation
+
+The package includes Core. It needs Node 24 or later:
+
+```bash
+npm i -g @tipeline/cli --allow-scripts=better-sqlite3
+```
+
+To run it on a server, see [Run on a Server](/cli/server). From a clone of the repository,
+build it and link it instead:
 
 ```bash
 cd apps/cli
@@ -13,7 +22,14 @@ npm link   # installs `tipeline` globally
 ## Service Control
 
 ### `tipeline install`
-Create the `~/.tipeline` folders and configuration. `--force` overwrites an existing configuration.
+Optional. Writes the default configuration files, `~/.tipeline/database.json` (where the database
+is) and `~/.tipeline/config.json` (the job runner), so you can edit them, and creates the
+`~/.tipeline` folders. `tipeline start` works without them and uses the same defaults. The
+database and keys are created by Core the next time it starts, with the settings in the files.
+See [Configuration files](/guide/installation#configuration-files-optional).
+
+If the files are already there, nothing changes. `--force` puts back the defaults. It only
+rewrites those two files, never your workflows, runs or keys.
 
 ```bash
 tipeline install
@@ -23,8 +39,13 @@ tipeline install
 Start the Core engine as a background service. Only one Core runs at a time: if one is already
 running, this says so and leaves it alone.
 
+`--foreground` runs Core in the terminal instead, until it's stopped, with its log on stdout too.
+Stop signals go to Core, and the command exits with Core's exit code. Use it as the command of a
+Docker container or a systemd system service (see [Run on a Server](/cli/server)).
+
 ```bash
 tipeline start
+tipeline start --foreground
 ```
 
 ### `tipeline stop`
@@ -52,8 +73,9 @@ Auto-start belongs to whichever of the CLI and Desktop set it up. `tipeline serv
 takes it over from Desktop, and Desktop leaves it that way. If Desktop set it up, `tipeline start`
 still runs the Core installed with the CLI.
 
-On Linux it uses a systemd user service, which runs from login to logout. To keep Core running
-without a login session, run `loginctl enable-linger`. After uninstalling the Desktop app on macOS,
+On Linux it uses a systemd user service, which only runs while you're logged in. So `install`
+also turns on linger, which keeps Core running after logout and starts it after a reboot. If the
+system needs an administrator for that, it prints the `sudo loginctl enable-linger` line to run. After uninstalling the Desktop app on macOS,
 delete `~/Library/LaunchAgents/com.tipeline.core.plist`, or run `tipeline service uninstall` first.
 
 ### `tipeline status`
@@ -135,6 +157,31 @@ Import a YAML/JSON workflow file into the database.
 tipeline workflow install ./workflows/my-workflow.yaml
 ```
 
+Before installing, it checks whether you already have the workflow: one installed from the same file
+contents, or one with the same name.
+
+- **The same file, not changed since:** nothing is installed. It prints
+  `Already installed, not changed since: <name> (<identifier>)` and exits 0, so a script can run
+  the install again safely.
+- **Anything else that matches:** nothing is installed. It lists each match and why it matched
+  (same file but edited since, or same name), then exits 1.
+
+```bash
+tipeline workflow install ./workflows/my-workflow.yaml
+# ✖ Nothing installed: this file may already be installed as
+#   abc123def456ghi7890xy  Daily Report v1.0.0  (same file, edited since)
+# Use --replace <identifier> to put the file in its place, or --copy to install another workflow.
+```
+
+| Option | What it does |
+|---|---|
+| `--replace <identifier>` | Puts the file in place of that workflow, like [`workflow reload`](#tipeline-workflow-reload-identifier-path). Its identifier, runs and schedules, and the apps that use it, stay. Its current version stays in Versions. |
+| `--copy` | Installs the file as another workflow, even if it matches one. |
+
+Sub-workflow files a workflow names with `path` are handled the same way as an app's bundled
+workflows: one installed earlier from the same contents, and not edited since, is reused. Otherwise
+a new one is installed.
+
 ### `tipeline workflow uninstall <identifier>`
 Move a workflow to the Trash, with its schedules. It can be restored from the Desktop app for 30 days.
 
@@ -174,7 +221,8 @@ workflow; two workflows with the same name get the start of their identifier add
 (`invoice-report-a1b2c3.yml`).
 
 ### `tipeline workflow reload <identifier> <path>`
-Update an installed workflow's source from a file.
+Update an installed workflow's source from a file: its steps, variables, details and tags. It keeps
+its identifier, runs and schedules, and the change is saved as a version you can go back from.
 
 ```bash
 tipeline workflow reload abc123def456ghi7890xy ./workflows/my-task-v2.yaml

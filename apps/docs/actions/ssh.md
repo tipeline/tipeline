@@ -15,18 +15,19 @@ Store the result in a variable with `destination` and inject it into subsequent 
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|:--------:|---------|-------------|
-| `config` | object | ✓ | — | SSH connection configuration object or reference (host, port, user, private key, etc.). |
+| `config` | object | ✓ | — | SSH connection settings (host, port, username, password or privateKeyPath, passphrase) as fields, JSON, or an object variable. |
 
 ```yaml
-# Open an SSH connection using a private key and store it for later use
+# Open an SSH connection using a private key and store it for later use. The host and
+# user come from global variables, the passphrase from a secret one.
 - group: ssh
   name: connect
   params:
     config:
-      host: '{{ _env.SSH_HOST }}'
-      username: '{{ _env.SSH_USER }}'
-      privateKeyPath: '{{ _env.SSH_KEY_PATH }}'
-      passphrase: '{{ _env.SSH_PASSPHRASE }}'
+      host: '{{ _global.sshHost }}'
+      username: '{{ _global.sshUser }}'
+      privateKeyPath: '{{ _global.sshKeyPath }}'
+      passphrase: '{{ _global.sshPassphrase }}'
   destination: connection
 ```
 

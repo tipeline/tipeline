@@ -70,11 +70,13 @@ const { handleSubmit, setFieldValue, values: formValues } = useForm({
   initialValues: { name: '', description: '', author: defaults.author() },
 });
 
-// Settings → Defaults may ask for this computer's platform; that answer comes from the
-// main process, so it lands just after the form opens (unless one was already picked).
+// Settings → Defaults may ask for this computer's platform, and with no author saved yet
+// the OS account's name stands in. Both come from the main process, so they land just after
+// the form opens (unless something was already picked or typed).
 onMounted(async () => {
-  const platform = await defaults.platform();
+  const [platform, author] = await Promise.all([defaults.platform(), defaults.suggestedAuthor()]);
   if (platform && !formValues.platform) setFieldValue('platform', platform);
+  if (author && !formValues.author) setFieldValue('author', author);
 });
 
 const onSubmit = handleSubmit(async (values) => {
@@ -95,6 +97,7 @@ const onSubmit = handleSubmit(async (values) => {
     for (const projectIdentifier of selectedProjects.value) {
       await invokeCore(SEND.PROJECT_ASSIGN_TASK, { projectIdentifier, taskIdentifier: response.identifier });
     }
+    await defaults.rememberAuthor(values.author);
     emit('created', response.identifier);
     if (!props.navigate) return;
     // Overview first, then the builder, so the builder's back arrow lands on the new

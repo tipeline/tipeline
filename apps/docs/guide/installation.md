@@ -26,41 +26,83 @@ Most actions work right away. Two groups use tools from your system, so install 
 
 ## CLI
 
-> **Coming soon** — the `tipeline` CLI package will be published to npm shortly.
->
-> Once available, install it globally with:
-> ```bash
-> npm install -g @tipeline/cli
-> ```
-> Then start the Core engine and run workflows from your terminal:
-> ```bash
-> tipeline install   # first time only
-> tipeline start
-> tipeline workflow run my-workflow.yaml
-> ```
+Install it with npm. It needs Node 24 or later and includes the Core engine:
 
-In the meantime, see the [Developer Setup](/internals/setup) guide to run Tipeline from source.
+```bash
+npm i -g @tipeline/cli --allow-scripts=better-sqlite3
+```
+
+Then start Core and run workflows from your terminal:
+
+```bash
+tipeline start
+tipeline workflow run my-workflow.yaml
+```
+
+To keep Core running on a server, as a system service or in Docker, see
+[Run on a Server](/cli/server). To run Tipeline from source, see
+[Developer Setup](/internals/setup).
 
 ---
 
 ## First Launch
 
-The first time Tipeline starts, it automatically:
+The first time Core starts, from the Desktop or with `tipeline start`, it sets everything up
+by itself:
 
-1. Creates the data directory at `~/.tipeline/`
-2. Sets up the SQLite database (`~/.tipeline/.database/tipeline.db`)
-3. Runs all database migrations
-4. Creates Core's API token, used by remote clients and AI tools (saved in `~/.tipeline/.database/core.token`)
+| Created | What it is |
+|---|---|
+| `~/.tipeline/` | Tipeline's data folder |
+| `.database/tipeline.db` | The database (SQLite), with every migration run |
+| `.database/secret.key` | The key that encrypts secret values and stored credentials |
+| `.database/core.token` | Core's API token, used by remote clients and AI tools |
+| `logs/`, `plugins/` | Core's logs and installed plugins |
 
-No manual database setup is needed.
+No setup step and no manual database setup is needed.
 
-### Optional: Global Environment File
+If `~/.tipeline` is already there, from an earlier install or from the Desktop and the CLI on
+the same computer, Tipeline uses it as it is. Your workflows, runs and keys are kept. A database
+from an older version is upgraded when Core starts. A database from a newer version isn't
+opened: Core asks you to update Tipeline instead.
 
-Create a `.env` file at `~/.tipeline/.env` to define environment variables available across all workflows:
+### Configuration files (optional)
+
+Two more files can change Core's settings. Core doesn't need them: when a file isn't there,
+Core uses its built-in defaults.
+
+| File | What it sets | Default when it's missing |
+|---|---|---|
+| `~/.tipeline/database.json` | Where the database is | `~/.tipeline/.database/tipeline.db` |
+| `~/.tipeline/config.json` | The [job runner](/internals/job-runners) | Worker threads, up to 10 runs at once |
+
+Only create them to change something, such as keeping the database somewhere else or sharing
+runs across machines with Redis. `tipeline install` writes both with the default values, ready
+to edit, and creates the `~/.tipeline` folders. It doesn't create the database or the keys:
+Core creates those the next time it starts, using the files you edited.
+
+Core starts with neither file written on purpose. A written file keeps the defaults of the day
+it was written, so if a later version of Tipeline changes a default, you'd keep the old value
+without ever having chosen it. Without the files you always get the current defaults.
+
+Core reads these files when it starts: restart it (`tipeline stop`, then `tipeline start`)
+after editing them.
+
+### Optional: Environment File
+
+Most shared values belong in [global variables](/desktop/variables), which you set on the
+**Variables** page. Use `~/.tipeline/.env` for values that belong to this computer, such as a
+folder path or which server to use. It holds `NAME=value` lines that every workflow on the
+computer can read:
 
 ```ini
-SMTP_HOST=smtp.gmail.com
-API_KEY=your-key-here
+REPORTS_DIR=/Volumes/Shared/reports
+API_URL=https://staging.example.com
 ```
 
-Reference them in any workflow with `{{ _env.SMTP_HOST }}`. See [Variables & Templates](/workflows/variables#environment-files).
+Reference them in any workflow with `{{ _env.API_URL }}`. In the Desktop, **Settings →
+Environment** creates the file and opens it in your text editor. From a terminal, create it
+yourself and keep it private with `chmod 600 ~/.tipeline/.env`.
+
+The file is plain text. For passwords and API keys, a secret
+[global variable](/workflows/variables#where-secret-values-are-kept) is safer, because Tipeline
+keeps it encrypted. See [Global variables or the environment?](/workflows/variables#global-variables-or-the-environment).

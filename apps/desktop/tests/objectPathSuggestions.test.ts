@@ -111,10 +111,10 @@ describe('TemplateField object fields', () => {
         provide: { taskVariables: variables, taskVariableValues: ref(values) },
       },
     });
-  // The workflow's own variables; `_run` / `_core` come after them (tests/expressionInputs).
+  // The workflow's own variables; `_run` / `_core` / `_env` come after them (tests/expressionInputs).
   const suggestionsOf = (w: ReturnType<typeof mount>) =>
     (w.findComponent({ name: 'ExpressionInput' }).props('suggestions') as ExpressionSuggestion[]).filter(
-      (x) => !x.path.startsWith('_run') && !x.path.startsWith('_core')
+      (x) => !/^_(run|core|env)\b/.test(x.path)
     );
 
   it('adds the known fields of object variables under their parent', () => {

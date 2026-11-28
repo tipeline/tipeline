@@ -28,9 +28,9 @@ pipeline:                       # required
       output: boolean           # filled in by the workflow and returned, never asked for — see Outputs
       secret: boolean           # masked in logs, run details and the UI
       readonly: boolean         # actions can't change it
+      valueFromGlobal: name     # optional — default from a global variable
       valueFromEnv: KEY         # optional — default from an environment variable
       valueFromEnvFile: path    # optional — the .env file to read valueFromEnv from
-      valueFromGlobal: name     # optional — default from a global variable
 
   actions:                      # required
     - group: string             # action category (e.g. browser, string)
@@ -165,11 +165,11 @@ pipeline:
 
     - name: smtpHost
       type: string
-      valueFromEnv: SMTP_HOST
+      valueFromGlobal: smtpHost
 
     - name: smtpUser
       type: string
-      valueFromEnv: SMTP_USER
+      valueFromGlobal: smtpUser
 
     - name: smtpPassword
       type: string
@@ -316,29 +316,31 @@ tipeline workflow run monitor.yaml \
 
 ## Environment Variables
 
-Keep credentials out of the workflow itself. A variable can take its default value from the
-environment or from a global variable:
+Keep credentials out of the workflow itself. A variable can take its default value from a
+global variable or from the environment:
 
 ```yaml
 variables:
-  - name: smtpHost
-    type: string
-    valueFromEnv: SMTP_HOST          # read from the environment
-
   - name: smtpPassword
     type: string
     secret: true
     valueFromGlobal: smtpPassword    # read from a global variable
+
+  - name: apiUrl
+    type: string
+    valueFromEnv: API_URL            # read from the environment
 ```
 
-- **`valueFromGlobal`** reads a global variable (set on the Variables page).
-  If that global is secret, the workflow variable is treated as secret too. Use this for
-  passwords and API keys.
-- **`valueFromEnv`** reads an environment value. Put shared values in `~/.tipeline/.env`:
+- **`valueFromGlobal`** reads a global variable (set on the Variables page). This is the usual
+  choice. If that global is secret, the workflow variable is treated as secret too, so use it
+  for passwords and API keys.
+- **`valueFromEnv`** reads an environment value. Use it for settings that change from one
+  computer or server to another
+  ([which one to use](/workflows/variables#global-variables-or-the-environment)). On your own
+  computer, put them in `~/.tipeline/.env` (in the Desktop, **Settings → Environment** opens it):
 
   ```ini
-  SMTP_HOST=smtp.gmail.com
-  SMTP_USER=user@gmail.com
+  API_URL=https://staging.example.com
   ```
 
   Add `valueFromEnvFile: ~/path/to/.env` to read the key from a file of your own first.
@@ -350,16 +352,16 @@ A value passed in when the run starts (`--var`, a run form, an app) wins over bo
 A step can also read an environment value directly, without declaring a variable:
 
 ```yaml
-- group: email
-  name: send
+- group: http
+  name: request
   params:
-    host: "{{ _env.SMTP_HOST }}"
+    url: "{{ _env.API_URL }}/health"
 ```
 
 At the start of each run, Core looks for each key in this order and uses the first value it
 finds:
 
-1. the environment Core itself was started with (for example `SMTP_HOST=... tipeline start`);
+1. the environment Core itself was started with (for example `API_URL=... tipeline start`);
 2. a `.env` file in the same folder as the workflow file. This is only read when you run the
    file itself (`tipeline workflow run monitor.yaml`), not for workflows saved in Desktop;
 3. `~/.tipeline/.env`.

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
-const { spawn, spawnSync, installCoreService, startCoreService, uninstallCoreService, serviceState, connect, logText } = vi.hoisted(() => ({
+const { spawn, spawnSync, installCoreService, startCoreService, uninstallCoreService, serviceState, connect, logText, configFile, linger } = vi.hoisted(() => ({
   spawn: vi.fn(),
   spawnSync: vi.fn(),
   installCoreService: vi.fn(),
@@ -11,13 +11,15 @@ const { spawn, spawnSync, installCoreService, startCoreService, uninstallCoreSer
   serviceState: { installed: false, desktop: false },
   connect: vi.fn(),
   logText: { value: '' },
+  configFile: { exists: true },
+  linger: { value: 'not-needed' as string },
 }));
 
 vi.mock('node:child_process', () => ({ spawn, spawnSync }));
 vi.mock('node:net', () => ({ default: { connect } }));
 vi.mock('fs-extra', () => ({
   default: {
-    existsSync: () => true,
+    existsSync: (file: string) => !String(file).endsWith('database.json') || configFile.exists,
     statSync: () => ({ size: 0 }),
     readFileSync: () => Buffer.from(logText.value),
   },
@@ -28,6 +30,7 @@ vi.mock('@tipeline/utils/coreProcess', () => ({
 }));
 vi.mock('@tipeline/utils/coreService', () => ({
   coreServiceSupport: () => ({ available: true, restartsOnCrash: true }),
+  ensureLinger: () => linger.value,
   installCoreService,
   coreServiceIsDesktop: () => serviceState.desktop,
   isCoreServiceInstalled: () => serviceState.installed,
@@ -64,6 +67,8 @@ describe('Core location', () => {
     logText.value = '';
     serviceState.installed = false;
     serviceState.desktop = false;
+    configFile.exists = true;
+    linger.value = 'not-needed';
   });
 
   it('runs the installer from the resolved core package with the current Node', () => {
@@ -82,6 +87,23 @@ describe('Core location', () => {
     await new Core().start();
 
     expect(spawn).toHaveBeenCalledWith(process.execPath, [serverPath], expect.anything());
+  });
+
+  // Desktop never runs `tipeline install`, so a CLI added later must start without its files.
+  it('starts without the configuration files tipeline install writes', async () => {
+    vi.spyOn(coreProcess, 'runningCorePid').mockReturnValue(null);
+    configFile.exists = false;
+
+    await expect(new Core().start()).resolves.toMatch(/started/);
+    expect(spawn).toHaveBeenCalledWith(process.execPath, [serverPath], expect.anything());
+  });
+
+  it('says Core is already running instead of asking for tipeline install', async () => {
+    vi.spyOn(coreProcess, 'runningCorePid').mockReturnValue(1234);
+    configFile.exists = false;
+
+    await expect(new Core().start()).resolves.toBe('Tipeline service is already running (PID: 1234)');
+    expect(spawn).not.toHaveBeenCalled();
   });
 
   it('points the auto-start service at the resolved core package', () => {
@@ -168,5 +190,43 @@ describe('Core location', () => {
     vi.spyOn(coreProcess, 'runningCorePid').mockReturnValue(null);
     expect(new Core().serviceUninstall()).toBe('Auto-start is off.');
     expect(uninstallCoreService).toHaveBeenLastCalledWith(false);
+  });
+
+  // A systemd user service stops at logout unless the user lingers: servers need to know.
+  it('says how to keep Core running after logout when lingering needs an administrator', () => {
+    linger.value = 'needs-admin';
+    expect(new Core().serviceInstall()).toContain('sudo loginctl enable-linger');
+
+    linger.value = 'turned-on';
+    expect(new Core().serviceInstall()).toContain('after a reboot');
+
+    linger.value = 'on';
+    expect(new Core().serviceInstall()).not.toContain('loginctl');
+  });
+
+  it('runs Core in the foreground with the log on stdout and returns its exit code', async () => {
+    vi.spyOn(coreProcess, 'runningCorePid').mockReturnValue(null);
+    spawn.mockReturnValue({
+      once: (name: string, listener: (code: number | null, signal: string | null) => void) => {
+        if (name === 'exit') queueMicrotask(() => listener(3, null));
+      },
+      kill: vi.fn(),
+    });
+
+    await expect(new Core().startForeground()).resolves.toBe(3);
+    expect(spawn).toHaveBeenCalledWith(
+      process.execPath,
+      [serverPath],
+      expect.objectContaining({
+        stdio: ['ignore', 'inherit', 'inherit'],
+        env: expect.objectContaining({ TIPELINE_LOG_STDOUT: '1' }),
+      })
+    );
+  });
+
+  it('does not start a second Core in the foreground', () => {
+    vi.spyOn(coreProcess, 'runningCorePid').mockReturnValue(1234);
+    expect(() => new Core().startForeground()).toThrow('already running (PID: 1234)');
+    expect(spawn).not.toHaveBeenCalled();
   });
 });

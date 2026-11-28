@@ -197,7 +197,7 @@ const COLUMNS = '14px 24px 18px minmax(0, 1fr) auto 72px';
         </span>
         <span
           v-if="result(row.action)"
-          class="pointer-events-none max-w-64 truncate rounded px-2 py-0.5 font-mono text-[11px]"
+          class="pointer-events-none max-w-64 truncate rounded px-2 py-0.5 font-mono text-[11px] leading-[15px]"
           :class="{
             'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300': result(row.action)!.tone === 'done',
             'bg-blue-500/10 text-blue-700 dark:text-blue-300': result(row.action)!.tone === 'active',

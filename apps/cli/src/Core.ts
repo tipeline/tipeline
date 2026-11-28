@@ -3,12 +3,13 @@ import { createRequire } from 'node:module';
 import net from 'node:net';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
-import { homedir } from 'os';
+import { constants as osConstants, homedir } from 'os';
 import fs from 'fs-extra';
 import { corePidFile, runningCorePid } from '@tipeline/utils/coreProcess';
 import {
   coreServiceIsDesktop,
   coreServiceSupport,
+  ensureLinger,
   installCoreService,
   isCoreServiceInstalled,
   startCoreService,
@@ -117,12 +118,10 @@ export default class Core {
     if (runningCorePid() === null) throw Core.startFailure(logFile, logStart);
   }
 
+  // No `tipeline install` needed first: Core makes its folders, database and key on its own
+  // and uses the default settings when ~/.tipeline/database.json isn't there, as it does when
+  // Desktop starts it. `install` only writes those settings out to edit.
   public async start(): Promise<string> {
-    const configFile = path.join(homedir(), '.tipeline', 'database.json');
-    if (!fs.existsSync(configFile)) {
-      throw new Error("Tipeline is not configured. Run 'tipeline install' first.");
-    }
-
     const runningPid = runningCorePid();
     if (runningPid !== null) {
       return `Tipeline service is already running (PID: ${runningPid})`;
@@ -167,6 +166,36 @@ export default class Core {
     return `Tipeline service started (PID: ${child.pid})`;
   }
 
+  /**
+   * Runs Core in this process's place, for Docker or a system service that supervises it: the
+   * log goes to stdout too, stop signals pass through, and the exit code is Core's.
+   */
+  public startForeground(): Promise<number> {
+    const runningPid = runningCorePid();
+    if (runningPid !== null) {
+      throw new Error(`Tipeline service is already running (PID: ${runningPid})`);
+    }
+
+    Core.ensureSqlite();
+
+    // Its own process group, so Ctrl+C reaches Core once, through the forwarding below.
+    const child = spawn(process.execPath, [Core.serverPath()], {
+      cwd: __dirname,
+      detached: process.platform !== 'win32',
+      stdio: ['ignore', 'inherit', 'inherit'],
+      env: { ...process.env, TIPELINE_LOG_STDOUT: '1' },
+    });
+    for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
+      process.on(signal, () => child.kill(signal));
+    }
+    return new Promise((resolve, reject) => {
+      child.once('error', (e) => reject(new Error(`Failed to start Tipeline core: ${e.message}`)));
+      child.once('exit', (code, signal) =>
+        resolve(code ?? 128 + (signal ? (osConstants.signals[signal] ?? 0) : 1))
+      );
+    });
+  }
+
   public stop(): string {
     const pidFile = corePidFile();
 
@@ -190,13 +219,23 @@ export default class Core {
       throw new Error('Auto-start needs launchd, a systemd user session, or Windows.');
     }
     installCoreService({ program: process.execPath, args: [Core.serverPath()] });
+    const linger = ensureLinger();
+    const lingerNote =
+      linger === 'needs-admin'
+        ? '\nOn Linux it stops when you log out and stays off after a reboot. To keep it ' +
+          `running, have an administrator run: sudo loginctl enable-linger ${process.env.USER ?? '<user>'}`
+        : linger === 'turned-on'
+          ? '\nIt keeps running after you log out and starts again after a reboot.'
+          : '';
     if (runningCorePid() === null) {
       startCoreService();
-      return 'Auto-start is on. Tipeline service started.';
+      return `Auto-start is on. Tipeline service started.${lingerNote}`;
     }
-    return support.restartsOnCrash
-      ? "Auto-start is on. To restart after a crash too, run 'tipeline stop' and 'tipeline start'."
-      : 'Auto-start is on.';
+    return (
+      (support.restartsOnCrash
+        ? "Auto-start is on. To restart after a crash too, run 'tipeline stop' and 'tipeline start'."
+        : 'Auto-start is on.') + lingerNote
+    );
   }
 
   public serviceUninstall(): string {

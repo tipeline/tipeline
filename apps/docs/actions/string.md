@@ -674,7 +674,7 @@ Serializes a key-value object into a URL query string.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|:--------:|---------|-------------|
-| `object` | Record&lt;string, any&gt; | ✓ | — | Object of key-value pairs to serialize as a query string. |
+| `object` | Record&lt;string, any&gt; \| string | ✓ | — | Object of key-value pairs to serialize as a query string. |
 
 ```yaml
 # Serialize pipeline filter options into a query string for an HTTP request

@@ -633,7 +633,8 @@ export class WsGateway {
     void this.handleCoreEventSideEffects(event, data);
     if (this.push) void this.push.onCoreEvent(event, data);
 
-    if (event === 'onTaskList' || event === 'onTaskUsage') {
+    // onTaskInstall: an install that asked first lists the workflows the file may duplicate.
+    if (event === 'onTaskList' || event === 'onTaskUsage' || (event === 'onTaskInstall' && Array.isArray(data?.data?.existing))) {
       void this.routeTaskListFiltered(event, data);
       return;
     }
@@ -767,8 +768,9 @@ export class WsGateway {
     const correlationId = data?.correlationId;
     let outData = data;
 
-    // A task list, or a usage report's list of calling workflows.
-    const tasks = event === 'onTaskUsage' ? data?.data?.workflows : data?.data;
+    // A task list, a usage report's list of calling workflows, or an install's possible duplicates.
+    const nested = event === 'onTaskUsage' ? 'workflows' : event === 'onTaskInstall' ? 'existing' : null;
+    const tasks = nested ? data?.data?.[nested] : data?.data;
     if (correlationId && Array.isArray(tasks)) {
       const ws = this.correlationMap.get(correlationId);
       const user = ws ? this.clientUser.get(ws) : undefined;
@@ -778,7 +780,7 @@ export class WsGateway {
           const visible = tasks.filter((t: any) => !hidden.has(t.identifier));
           outData = {
             ...data,
-            data: event === 'onTaskUsage' ? { ...data.data, workflows: visible } : visible,
+            data: nested ? { ...data.data, [nested]: visible } : visible,
           };
         }
       }

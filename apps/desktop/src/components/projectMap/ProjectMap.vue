@@ -858,10 +858,11 @@ async function confirmRemoveFromProject() {
   }
 }
 
-/** Signs a node off as ready (with today's time and the default author), or takes it back. */
-function markReady(node: MapNode, on: boolean) {
+/** Signs a node off as ready (with today's time and the default author, else the OS account's name), or takes it back. */
+async function markReady(node: MapNode, on: boolean) {
   if (on) {
-    update(node, { readyAt: new Date().toISOString(), readyBy: newItemDefaults.author() || undefined });
+    const readyBy = (await newItemDefaults.suggestedAuthor()) || undefined;
+    update(node, { readyAt: new Date().toISOString(), readyBy });
   } else update(node, { readyAt: undefined, readyBy: undefined });
 }
 
@@ -885,7 +886,7 @@ async function create(node: MapNode, options: { type?: string; when?: string }) 
         data: {
           name: planNode.name,
           description: planNode.description || planNode.name,
-          author: newItemDefaults.author() || undefined,
+          author: (await newItemDefaults.suggestedAuthor()) || undefined,
           metadata: {},
           source: appSourceFromPlan(planNode),
         },

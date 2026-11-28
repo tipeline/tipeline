@@ -44,6 +44,7 @@ import { useConnectionStore } from '@/store/connectionStore';
 import { useErrorT } from '@/composables/useErrorT';
 import { openNewTaskDialog } from '@/composables/useNewItemDialogs';
 import BulkDeleteWorkflowsDialog from '@/components/task/BulkDeleteWorkflowsDialog.vue';
+import InstallExistingDialog, { type InstallMatch } from '@/components/task/InstallExistingDialog.vue';
 import SelectionBar from '@/components/SelectionBar.vue';
 import { CAPABILITIES, type Capability } from '@tipeline/schemas';
 import { CAPABILITY_ICON, capabilityKey } from '@/utils/capabilities';
@@ -305,12 +306,21 @@ function onNewTask() {
   openNewTaskDialog();
 }
 
-async function onInstallTask() {
-  const filePath = await window.ipcRenderer.invoke('dialog:open-file');
-  if (!filePath) return;
+// Installing a file that looks already installed asks first (InstallExistingDialog).
+const pendingInstall = ref<{ filePath: string; matches: InstallMatch[] } | null>(null);
+const installExistingOpen = ref(false);
+
+async function installFile(payload: { filePath: string; ask?: boolean; replace?: string }) {
   isInstalling.value = true;
   try {
-    await invokeCore(SEND.TASK_INSTALL, filePath);
+    const result = await invokeCore(SEND.TASK_INSTALL, payload);
+    if (payload.ask && Array.isArray(result?.existing) && result.existing.length) {
+      pendingInstall.value = { filePath: payload.filePath, matches: result.existing };
+      installExistingOpen.value = true;
+      return;
+    }
+    installExistingOpen.value = false;
+    if (payload.replace) toast.success(t('tasks.installExisting.replaced'));
     await refetch();
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -319,6 +329,19 @@ async function onInstallTask() {
     isInstalling.value = false;
   }
 }
+
+async function onInstallTask() {
+  const filePath = await window.ipcRenderer.invoke('dialog:open-file');
+  if (!filePath) return;
+  await installFile({ filePath, ask: true });
+}
+
+function openExisting(identifier: string) {
+  installExistingOpen.value = false;
+  router.push(`/tasks/${identifier}`);
+}
+
+const pendingFileName = computed(() => pendingInstall.value?.filePath.split(/[\\/]/).pop() ?? '');
 
 async function onExportAll() {
   const dialogResult = await window.ipcRenderer.invoke('dialog:save-file', {
@@ -371,7 +394,7 @@ async function onExportAll() {
       <Card classContent="p-0 flex flex-col min-h-0" class="flex-1 min-h-0">
         <template #content>
           <!-- One row: scope (a dropdown), search and filters on the left; selection, sort and view on the right. -->
-          <div class="flex flex-wrap items-center gap-2 pt-3 pb-3 mb-2 shrink-0">
+          <div class="flex flex-wrap items-center gap-2 px-6 py-3 shrink-0">
             <ScopeSelect v-model="scope" :options="scopeOptions" :label="t('listViews.scope.label')" />
             <Input v-model="search" class="w-56 bg-card" :placeholder="t('tasks.searchPlaceholder')" />
             <Select v-model="source">
@@ -500,7 +523,7 @@ async function onExportAll() {
             :row-key="(task: TaskItem) => task.identifier"
             v-model:selection="selection"
           />
-          <div v-else class="flex-1 min-h-0 overflow-y-auto scroll-fade pb-2">
+          <div v-else class="flex-1 min-h-0 overflow-y-auto scroll-fade px-6 pb-6">
             <WorkflowCardGrid
               v-if="view === 'cards'"
               v-model:selection="selection"
@@ -524,6 +547,16 @@ async function onExportAll() {
         v-model:open="bulkDeleteOpen"
         :items="selectedItems"
         @deleted="refetch()"
+      />
+      <InstallExistingDialog
+        v-if="pendingInstall"
+        v-model:open="installExistingOpen"
+        :file-name="pendingFileName"
+        :matches="pendingInstall.matches"
+        :busy="isInstalling"
+        @copy="installFile({ filePath: pendingInstall.filePath })"
+        @replace="installFile({ filePath: pendingInstall.filePath, replace: $event })"
+        @open-existing="openExisting"
       />
     </template>
   </Page>

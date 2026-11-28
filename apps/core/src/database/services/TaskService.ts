@@ -7,6 +7,7 @@ import type { RevisionOrigin } from '@/database/models/TaskRevision';
 import { generateIdentifier } from '@tipeline/utils';
 import { ProjectMembership, parseProjects, projectsSubquery } from '@/database/services/ProjectMembership';
 import { AlertService } from '@/database/services/AlertService';
+import { sourceHash } from '@utils/workflowFingerprint';
 
 const TASK_TAGS_SUBQUERY = `(
   SELECT COALESCE(json_group_array(tag.label), '[]')
@@ -61,16 +62,53 @@ export class TaskService {
   }
 
   /**
-   * The workflow previously installed from a given bundled workflow file — an app's
-   * `workflows: { alias: { file } }` entry — matched by the fingerprint of the file's
-   * contents (see Core.appInstall). Lets installing a second app that ships the same
-   * workflow reuse it instead of installing a duplicate.
+   * Workflows on this machine installed from a file, not from a hub. A file install stores
+   * `fileFingerprint` (the file's checked contents, see Core.workflowFingerprint) and
+   * `installedSourceHash` (what it saved). Any later change to the saved workflow (builder,
+   * code view, reload, restore) makes the two hashes differ, so `edited` needs no bookkeeping
+   * on the edit paths.
    */
-  static async getByBundleFingerprint(fingerprint: string) {
-    return await TaskModel.query()
-      .whereRaw(`json_extract(metadata, '$.bundleFingerprint') = ?`, [fingerprint])
-      .orderBy('id')
-      .first();
+  private static async fileInstalls() {
+    const rows = await TaskModel.knex()('task')
+      .leftJoin('task_hub_link as thl', 'thl.task_id', 'task.id')
+      .whereNull('thl.id')
+      .select('task.id', 'task.identifier', 'task.name', 'task.version', 'task.source', 'task.metadata', 'task.created_at')
+      .orderBy('task.id');
+    return rows.map((row: any) => {
+      const metadata = row.metadata ? JSON.parse(row.metadata) : {};
+      const installedSourceHash: string | undefined = metadata?.installedSourceHash;
+      return {
+        identifier: row.identifier as string,
+        name: row.name as string,
+        version: (row.version ?? null) as string | null,
+        createdAt: row.created_at as string,
+        fileFingerprint: metadata?.fileFingerprint as string | undefined,
+        // null: not installed from a file (made in the builder, by the assistant, a copy, ...).
+        edited: installedSourceHash ? sourceHash(row.source ?? '') !== installedSourceHash : null,
+      };
+    });
+  }
+
+  /**
+   * The workflow installed earlier from a file with these exact contents and not changed
+   * since. Apps and sub-workflow steps that ship the same file reuse it instead of
+   * installing a duplicate; one that was edited is left alone and a fresh copy installed.
+   */
+  static async getUnchangedFileInstall(fingerprint: string) {
+    const all = await TaskService.fileInstalls();
+    return all.find((t) => t.fileFingerprint === fingerprint && t.edited === false) ?? null;
+  }
+
+  /**
+   * Workflows a file about to be installed may duplicate: installed from the same file
+   * contents, or with the same name. Asked before an install from Desktop or the CLI.
+   */
+  static async getInstallMatches(fingerprint: string, name: string) {
+    const wanted = name.trim().toLowerCase();
+    const all = await TaskService.fileInstalls();
+    return all
+      .filter((t) => t.fileFingerprint === fingerprint || (t.name ?? '').trim().toLowerCase() === wanted)
+      .map(({ fileFingerprint, ...t }) => ({ ...t, sameFile: fileFingerprint === fingerprint }));
   }
 
   static async installFromHub(data: HubInstallData) {
@@ -398,22 +436,45 @@ export class TaskService {
     return TaskService.getByIdentifier(identifier);
   }
 
+  /**
+   * Replaces a workflow with a file's contents, keeping its identifier, runs and schedules.
+   * The workflow then counts as installed from that file: `fileInstall` is the
+   * fingerprint + saved-source hash pair a file install stores (see fileInstalls).
+   */
   static async reload(
     identifier: string,
-    data: { name: string; description?: string; author?: string; version?: string; source: string }
+    data: {
+      name: string;
+      description?: string;
+      author?: string;
+      version?: string;
+      platform?: 'windows' | 'linux' | 'macos';
+      tags?: string[];
+      source: string;
+      fileFingerprint?: string;
+    }
   ) {
     const before = await TaskModel.query().findOne({ identifier });
-    const count = await TaskModel.query()
+    if (!before) return null;
+    const metadata = data.fileFingerprint
+      ? { ...((before.metadata as any) ?? {}), fileFingerprint: data.fileFingerprint, installedSourceHash: sourceHash(data.source) }
+      : before.metadata;
+    await TaskModel.query()
       .patch({
         name: data.name,
         description: data.description,
         author: data.author,
         version: data.version,
+        platform: data.platform,
         source: data.source,
-      })
+        metadata,
+      } as any)
       .where({ identifier });
-    if (!count) return null;
-    if (before) await TaskRevisionService.record(before, data.source, 'reload');
+    await TaskRevisionService.record(before, data.source, 'reload');
+    if (data.tags !== undefined) {
+      const normalizedTags = TagService.normalizeLabels(data.tags);
+      await TagService.setTaskTags(before.id, await TagService.findOrCreateIds(normalizedTags));
+    }
     return TaskModel.query().findOne({ identifier });
   }
 }
