@@ -1,4 +1,8 @@
 import { execFile } from 'node:child_process';
+import os from 'node:os';
+
+// Node-only, so it has its own entry point (@tipeline/utils/accountName): the main
+// barrel also runs in Desktop's renderer.
 
 /** Runs a command and resolves its output, or '' when it fails or takes too long. */
 function run(command: string, args: string[]): Promise<string> {
@@ -24,4 +28,18 @@ export async function accountFullName(username: string): Promise<string> {
     return nameFromPasswd((await run('getent', ['passwd', username])).trim());
   }
   return '';
+}
+
+/**
+ * The name new workflows and apps are signed with when none is set: the account's full name,
+ * else its username. '' when the OS has neither (some containers).
+ */
+export async function accountDisplayName(): Promise<string> {
+  let username = '';
+  try {
+    username = os.userInfo().username;
+  } catch {
+    // No passwd entry: leave it empty.
+  }
+  return (await accountFullName(username)) || username;
 }

@@ -69,6 +69,7 @@ import { splitAppDocument } from '@utils/appDocument';
 import { runScriptPreview, type ScriptPreviewParams } from '@action/actions/script/preview';
 import { CORE_VERSION } from '@utils/coreVersion';
 import { toStartedBy, type StartedBy } from '@utils/runInfo';
+import { accountDisplayName } from '@tipeline/utils/accountName';
 import { AlertService, type AlertListQuery } from '@database/services/AlertService';
 
 export default class Core {
@@ -1073,11 +1074,8 @@ export default class Core {
   private static async draftAuthor(): Promise<string | null> {
     const configured = (await SettingsService.get('defaultAuthor'))?.trim();
     if (configured) return configured;
-    try {
-      return os.userInfo().username || null;
-    } catch {
-      return null;
-    }
+    // Same fallback as Desktop's New Workflow dialog: the account's full name, else its username.
+    return (await accountDisplayName()) || null;
   }
 
   static async taskInstall(path: string, metadata?: Record<string, unknown>) {

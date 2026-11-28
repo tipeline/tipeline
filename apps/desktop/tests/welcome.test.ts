@@ -20,8 +20,8 @@ vi.mock('@/utils/invoke', () => ({
 import Welcome, { WELCOME_DONE_KEY } from '@/components/Welcome.vue';
 import { useSettingsStore } from '@/store/settingsStore';
 import { detectSystemLocale, LOCALE_STORAGE_KEY } from '@/composables/useLocale';
-import { DEFAULT_AUTHOR_KEY, DEFAULT_PLATFORM_CURRENT_KEY } from '@/composables/useNewItemDefaults';
-import { nameFromPasswd } from '../electron/main/utils/accountName';
+import { DEFAULT_PLATFORM_CURRENT_KEY } from '@/composables/useNewItemDefaults';
+import { nameFromPasswd } from '@tipeline/utils/accountName';
 
 // getSystemInfo asks once per session, so every test sees the same computer.
 vi.stubGlobal('ipcRenderer', {
@@ -40,7 +40,6 @@ async function mountWelcome(settings: Record<string, string> = {}) {
   return wrapper;
 }
 
-const nameField = () => wrapper!.find<HTMLInputElement>('#welcome-name');
 const submit = async () => {
   await wrapper!.find('form').trigger('submit');
   await flushPromises();
@@ -60,9 +59,10 @@ describe('Welcome screen', () => {
     wrapper = null;
   });
 
-  it("fills the name from the computer's account", async () => {
+  it('asks for no name: the language is the only field', async () => {
     await mountWelcome();
-    expect(nameField().element.value).toBe('Jane Doe');
+    expect(wrapper!.findAll('input:not([type="hidden"])')).toHaveLength(0);
+    expect(wrapper!.find('[data-testid="welcome-language"]').exists()).toBe(true);
   });
 
   it("shows the Desktop app's version", async () => {
@@ -70,19 +70,12 @@ describe('Welcome screen', () => {
     expect(wrapper!.find('[data-testid="welcome-version"]').text()).toBe('Version 1.2.3');
   });
 
-  it('keeps an author that was already set', async () => {
-    await mountWelcome({ [DEFAULT_AUTHOR_KEY]: 'Already Set' });
-    expect(nameField().element.value).toBe('Already Set');
-  });
-
-  it('Get started saves the language, author and platform, then marks the welcome done last', async () => {
+  it('Get started saves the language and platform, then marks the welcome done last', async () => {
     await mountWelcome();
-    await nameField().setValue('  Ana López  ');
     await submit();
 
     expect(saved).toEqual([
       { key: 'language', value: 'en' },
-      { key: DEFAULT_AUTHOR_KEY, value: 'Ana López' },
       { key: DEFAULT_PLATFORM_CURRENT_KEY, value: 'true' },
       { key: WELCOME_DONE_KEY, value: 'true' },
     ]);
@@ -90,7 +83,7 @@ describe('Welcome screen', () => {
   });
 
   it('leaves a platform choice made in Settings alone', async () => {
-    await mountWelcome({ [DEFAULT_PLATFORM_CURRENT_KEY]: 'false', [DEFAULT_AUTHOR_KEY]: 'Jane Doe' });
+    await mountWelcome({ [DEFAULT_PLATFORM_CURRENT_KEY]: 'false' });
     await submit();
     expect(saved.map((s) => s.key)).toEqual(['language', WELCOME_DONE_KEY]);
   });
