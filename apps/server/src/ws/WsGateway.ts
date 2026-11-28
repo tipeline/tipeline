@@ -671,12 +671,12 @@ export class WsGateway {
     const correlationId = data?.correlationId;
 
     if (correlationId) {
+      // An answer or run event is for whoever asked. With nobody here to take it (the asker
+      // left, one of the gateway's own requests timed out, or the run was started elsewhere:
+      // a webhook, a schedule, Desktop) it goes to nobody. Sending it to everyone would hand
+      // it, unfiltered, to every user: another user's workflow source or run data, say.
       const ws = this.correlationMap.get(correlationId);
-      if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(msg);
-      } else if (!ws) {
-        this.broadcast(msg);
-      }
+      if (ws?.readyState === WebSocket.OPEN) ws.send(msg);
       if (!STREAM_EVENTS.has(event)) {
         this.correlationMap.delete(correlationId);
       }
