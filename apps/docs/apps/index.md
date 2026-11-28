@@ -91,6 +91,11 @@ Apps can be installed from a YAML file (**Apps → Install App**) or from a [hub
 
 To move apps to another computer, use **Export** on an app's page (<kbd>⌘E</kbd>) or **Export All** on the Apps list. Either one saves a zip with each app's YAML and a `workflows/` folder holding the workflows the apps use, all named after the app or workflow (`workflows/invoice-report.yml`). Unzip it and install the app's YAML; its workflows are installed with it.
 
+A workflow shipped as a file (`{ file: ... }`) is installed only once. Another app that ships the
+same file, or installing the app again, reuses it. That holds only while nobody has edited the
+installed workflow: once someone has, the next install adds a fresh copy from the file. The edited
+one stays as it is, for the apps already using it.
+
 ```yaml
 schemaVersion: 4
 name: Invoice Desk

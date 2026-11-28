@@ -4,7 +4,8 @@ import path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@database/services/TaskService', () => ({
-  TaskService: { install: vi.fn() },
+  // Nothing installed earlier to reuse: every sub-workflow file is a fresh install.
+  TaskService: { install: vi.fn(), getUnchangedFileInstall: vi.fn(async () => null) },
 }));
 
 import Core from '@engine/Core';

@@ -4,7 +4,7 @@ import path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@database/services/TaskService', () => ({
-  TaskService: { install: vi.fn(), getByBundleFingerprint: vi.fn() },
+  TaskService: { install: vi.fn(), getUnchangedFileInstall: vi.fn() },
 }));
 vi.mock('@database/services/AppService', () => ({ AppService: { install: vi.fn() } }));
 
@@ -36,11 +36,11 @@ beforeEach(() => {
       installedWorkflows.push(row);
       return row as any;
     });
-  vi.mocked(TaskService.getByBundleFingerprint)
+  vi.mocked(TaskService.getUnchangedFileInstall)
     .mockReset()
     .mockImplementation(
       async (fp: string) =>
-        installedWorkflows.find((w) => w.metadata?.bundleFingerprint === fp) as any
+        (installedWorkflows.find((w) => w.metadata?.fileFingerprint === fp) as any) ?? null
     );
   vi.mocked(AppService.install)
     .mockReset()
@@ -219,7 +219,7 @@ describe('examples/apps', () => {
     expect(JSON.parse(second.source).workflows).toEqual(JSON.parse(first.source).workflows);
     expect(JSON.parse(third.source).workflows).toEqual(JSON.parse(first.source).workflows);
     expect(
-      installedWorkflows.every((w) => /^[0-9a-f]{64}$/.test(w.metadata.bundleFingerprint))
+      installedWorkflows.every((w) => /^[0-9a-f]{64}$/.test(w.metadata.fileFingerprint))
     ).toBe(true);
   });
 

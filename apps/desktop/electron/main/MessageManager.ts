@@ -361,17 +361,28 @@ export class MessageManager {
     }
 
     ipcMain.removeHandler(SEND.TASK_INSTALL);
-    ipcMain.handle(SEND.TASK_INSTALL, async (event, { correlationId, payload: filePath }) => {
+    // The renderer can't read files, so main does. `ask` checks first for workflows the file
+    // may duplicate (the answer is `{ existing }` and nothing is installed); `replace`
+    // overwrites that workflow with the file instead of installing a copy.
+    ipcMain.handle(SEND.TASK_INSTALL, async (event, { correlationId, payload }) => {
+      const { filePath, ask, replace } =
+        typeof payload === 'string' ? { filePath: payload, ask: false, replace: undefined } : payload;
       let content: string;
       try {
         content = fs.readFileSync(filePath as string, 'utf8');
       } catch {
         throw new Error('Could not read the selected file. It may have been moved or deleted.');
       }
-      const result = await CoreService.request(CORE.TASK_INSTALL, {
-        correlationId,
-        payload: { content, baseDir: path.dirname(path.resolve(filePath as string)) },
-      });
+      const baseDir = path.dirname(path.resolve(filePath as string));
+      const result = replace
+        ? await CoreService.request(CORE.TASK_RELOAD, {
+            correlationId,
+            payload: { identifier: replace, content, baseDir },
+          })
+        : await CoreService.request(CORE.TASK_INSTALL, {
+            correlationId,
+            payload: { content, baseDir, ...(ask ? { ask: true } : {}) },
+          });
       announceChange(event.sender, SEND.TASK_INSTALL);
       return result;
     });

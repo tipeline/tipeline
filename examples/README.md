@@ -48,7 +48,9 @@ so no global variable is required, and the parent task can be installed, not jus
 
 Installing the parent auto-installs the child too, since `task install` resolves relative `path`
 subtask references into an `identifier` at install time (`Core.resolveSubtaskPaths`); a templated
-path can't be resolved that early, since variable interpolation only happens at run time.
+path can't be resolved that early, since variable interpolation only happens at run time. A child
+installed earlier from the same file and not edited since is reused rather than installed again.
+Installing the parent a second time asks first; add `--copy` to install another one anyway.
 
 ```bash
 tipeline task install examples/workflows/async-subtask/test-async-subtask.yml
