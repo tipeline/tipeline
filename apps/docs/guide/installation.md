@@ -86,17 +86,20 @@ after editing them.
 
 ### Optional: Environment File
 
-`~/.tipeline/.env` holds `NAME=value` lines that every workflow on the computer can read:
+Most shared values belong in [global variables](/desktop/variables), which you set on the
+**Variables** page. Use `~/.tipeline/.env` for values that belong to this computer, such as a
+folder path or which server to use. It holds `NAME=value` lines that every workflow on the
+computer can read:
 
 ```ini
-SMTP_HOST=smtp.gmail.com
-API_KEY=your-key-here
+REPORTS_DIR=/Volumes/Shared/reports
+API_URL=https://staging.example.com
 ```
 
-Reference them in any workflow with `{{ _env.SMTP_HOST }}`. In the Desktop, **Settings →
+Reference them in any workflow with `{{ _env.API_URL }}`. In the Desktop, **Settings →
 Environment** creates the file and opens it in your text editor. From a terminal, create it
 yourself and keep it private with `chmod 600 ~/.tipeline/.env`.
 
 The file is plain text. For passwords and API keys, a secret
 [global variable](/workflows/variables#where-secret-values-are-kept) is safer, because Tipeline
-keeps it encrypted. See [Environment files](/workflows/variables#environment-files).
+keeps it encrypted. See [Global variables or the environment?](/workflows/variables#global-variables-or-the-environment).

@@ -1376,7 +1376,7 @@
     },
     "environment": {
       "title": "Entorno",
-      "description": "Un archivo de líneas NOMBRE=valor que cualquier workflow de este equipo puede leer con {example}. Los cambios se aplican en la siguiente ejecución, sin reiniciar Tipeline.",
+      "description": "Un archivo de líneas NOMBRE=valor que cualquier workflow de este equipo puede leer con {example}. Úsalo para valores propios de este equipo, como la ruta de una carpeta o qué servidor usar. Para valores que comparten varios workflows, las variables globales son más fáciles de manejar. Los cambios se aplican en la siguiente ejecución, sin reiniciar Tipeline.",
       "notCreated": "Aún no creado",
       "create": "Crear y abrir",
       "open": "Abrir archivo",
@@ -1388,7 +1388,7 @@
       "privateFailed": "No se pudo cambiar quién puede leer el archivo",
       "openFailed": "No se pudo abrir el archivo",
       "names": "Nombres en el archivo",
-      "noNames": "Aún no hay valores. Agrega una línea como API_KEY=tu-clave.",
+      "noNames": "Aún no hay valores. Agrega una línea como API_URL=https://staging.example.com.",
       "secretsHint": "Los valores de este archivo son texto plano. Para contraseñas y claves de API, usa mejor una variable global secreta: Tipeline las guarda cifradas.",
       "secretsLink": "Abrir Variables"
     },

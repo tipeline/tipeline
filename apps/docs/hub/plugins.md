@@ -122,13 +122,14 @@ Every field except `variable` also accepts a `{{ }}` or `{= =}` template.
 ### Credentials
 
 Don't put keys or passwords in the plugin. Take them as parameters, so workflows can pass
-them from [global variables](/desktop/variables) or `_env`:
+them from [global variables](/desktop/variables) (or `_env` for a setting that changes from one
+machine to another):
 
 ```yaml
 - group: drupal
   name: getContent
   params:
-    baseUrl: "{{ _env.DRUPAL_BASE_URL }}"
+    baseUrl: "{{ _global.drupalBaseUrl }}"
     auth: "Basic {{ _global.drupalAuth }}"
     contentType: article
     uuid: "{{ uuid }}"

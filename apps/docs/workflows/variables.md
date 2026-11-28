@@ -25,8 +25,8 @@ Both take dot and bracket paths: `{{ order.items[0].sku }}`, `{= response.data.u
 | Reference | Resolves to |
 |-----------|-------------|
 | `name` | A variable of this workflow |
-| `_env.KEY` | An environment value — see [Environment files](#environment-files) |
 | `_global.name` | A [global variable](/desktop/variables) |
+| `_env.KEY` | An environment value — see [Environment files](#environment-files) |
 | `_previous` | The result of the step right before this one |
 | `_run.field` | This run — see [`_run` and `_core`](#run-and-core) |
 | `_core.field` | The Core running it — see [`_run` and `_core`](#run-and-core) |
@@ -106,6 +106,25 @@ When workers share a queue, `_core` is the worker that runs the step, not the Co
 queued it. Set `TIPELINE_CORE_NAME` on each worker so the names stay the same when a
 machine is replaced.
 
+## Global variables or the environment?
+
+Start with **global variables**. You set them on the Variables page, they can hold numbers,
+lists and objects as well as text, secret ones are encrypted and hidden in run output, and
+backups include them.
+
+Use the **environment** (`_env`, `valueFromEnv`) when the value comes from where Core runs, not
+from the workflow:
+
+- **A Tipeline Server, a container or CI.** Deploy tools and secret managers pass settings as
+  environment variables, so the same workflow can read a different `API_URL` on each machine.
+- **Values the machine already has**, such as `{{ _env.HOME }}`.
+- **Workflow files run from a folder.** A `.env` next to `report.yaml` goes with that folder,
+  so a staging copy and a production copy can sit side by side.
+
+Environment values are plain text and aren't hidden in run output, so passwords and API keys
+still belong in a secret global variable, unless the environment is the only way to get them to
+a server.
+
 ## Environment files
 
 `{{ _env.KEY }}` reads `KEY` from, in this order:
@@ -117,8 +136,8 @@ machine is replaced.
 
 ```ini
 # ~/.tipeline/.env
-SMTP_HOST=smtp.gmail.com
-API_KEY=your-key-here
+REPORTS_DIR=/Volumes/Shared/reports
+API_URL=https://staging.example.com
 ```
 
 - In the Desktop, **Settings → Environment** creates `~/.tipeline/.env`, opens it in your text
@@ -142,7 +161,7 @@ pipeline:
     - name: apiKey
       type: string
       secret: true
-      valueFromEnv: API_KEY          # or valueFromGlobal: apiKey
+      valueFromGlobal: apiKey        # or valueFromEnv: API_KEY
 ```
 
 A value passed in when the run starts (a run form, `--var`, an app) wins over these defaults.

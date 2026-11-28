@@ -149,7 +149,7 @@ Raw injection supports the same namespaces:
 
 ```yaml
 params:
-  key: "{= _env.SECRET_KEY =}"
+  port: "{= _env.PORT =}"
   token: "{= _global.authToken =}"
 ```
 
@@ -218,17 +218,19 @@ Load a `.env` file next to your task YAML for per-task secrets, or use `~/.tipel
 
 ```ini
 # ~/.tipeline/.env
-API_KEY=secret123
-DB_PASSWORD=hunter2
+API_URL=https://staging.example.com
+REPORTS_DIR=/Volumes/Shared/reports
 ```
 
 Then reference them in any template:
 
 ```yaml
 params:
-  headers:
-    Authorization: "Bearer {{ _env.API_KEY }}"
+  url: "{{ _env.API_URL }}/orders"
 ```
+
+`_env` values are plain strings with no secret masking; credentials belong in secret globals
+(`_global.*`), which are encrypted and masked.
 
 ## Variable Class Internals
 

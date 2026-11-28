@@ -54,8 +54,8 @@ titleTemplate: Workflow Automation & Orchestration
     <ul class="tl-list">
       <li><code v-pre>{{ name }}</code><span>inserts a value as text</span></li>
       <li><code v-pre>{= name =}</code><span>passes objects and handles as they are</span></li>
-      <li><code v-pre>{{ _env.KEY }}</code><span>reads environment files</span></li>
       <li><code v-pre>{{ _global.name }}</code><span>reads global variables</span></li>
+      <li><code v-pre>{{ _env.KEY }}</code><span>reads the environment</span></li>
     </ul>
     <a class="tl-link" href="/workflows/files">Read about workflow files →</a>
   </div>

@@ -1376,7 +1376,7 @@
     },
     "environment": {
       "title": "Environment",
-      "description": "A file of NAME=value lines that every workflow on this computer can read, with {example}. Changes apply to the next run, without restarting Tipeline.",
+      "description": "A file of NAME=value lines that every workflow on this computer can read, with {example}. Use it for values that belong to this computer, such as a folder path or which server to use. For values shared between workflows, global variables are easier to manage. Changes apply to the next run, without restarting Tipeline.",
       "notCreated": "Not created yet",
       "create": "Create and open",
       "open": "Open file",
@@ -1388,7 +1388,7 @@
       "privateFailed": "Couldn't change who can read the file",
       "openFailed": "Couldn't open the file",
       "names": "Names in the file",
-      "noNames": "No values yet. Add a line such as API_KEY=your-key.",
+      "noNames": "No values yet. Add a line such as API_URL=https://staging.example.com.",
       "secretsHint": "Values in this file are plain text. For passwords and API keys, use a secret global variable instead: Tipeline keeps those encrypted.",
       "secretsLink": "Open Variables"
     },
