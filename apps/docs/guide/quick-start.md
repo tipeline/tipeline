@@ -106,8 +106,8 @@ tipeline workflow run my-first-workflow.yaml --var url=https://github.com
 |--------|-------------|
 | `{{ varName }}` | String interpolation (LiquidJS template) |
 | `{= varName =}` | Raw injection — keeps the original type (object, array, browser handle, …) |
-| `{{ _env.KEY }}` | A value from a `.env` file next to the workflow, `~/.tipeline/.env`, or the environment |
-| `{{ _global.name }}` | A global variable |
+| `{{ _global.name }}` | A global variable, set on the Variables page. The usual place for shared values and secrets |
+| `{{ _env.KEY }}` | An environment value: Core's environment, a `.env` file next to the workflow, or `~/.tipeline/.env`. For values that change from one computer or server to another |
 | `{{ _previous }}` | The previous step's result |
 
 See [Variables & Templates](/workflows/variables) for the details.

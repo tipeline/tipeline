@@ -21,15 +21,16 @@ export class GroupSSH {
    * @returns A connected `NodeSSH` instance to pass to `exec` and `close`.
    * @example
    * ```yaml
-   * # Open an SSH connection using a private key and store it for later use
+   * # Open an SSH connection using a private key and store it for later use. The host and
+   * # user come from global variables, the passphrase from a secret one.
    * - group: ssh
    *   name: connect
    *   params:
    *     config:
-   *       host: '{{ _env.SSH_HOST }}'
-   *       username: '{{ _env.SSH_USER }}'
-   *       privateKeyPath: '{{ _env.SSH_KEY_PATH }}'
-   *       passphrase: '{{ _env.SSH_PASSPHRASE }}'
+   *       host: '{{ _global.sshHost }}'
+   *       username: '{{ _global.sshUser }}'
+   *       privateKeyPath: '{{ _global.sshKeyPath }}'
+   *       passphrase: '{{ _global.sshPassphrase }}'
    *   destination: connection
    * ```
    */

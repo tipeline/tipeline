@@ -118,13 +118,14 @@ already exist) to persist the token across separate task runs with no extra step
 
 ```yaml
 # Authenticate with Google OAuth2, reusing/refreshing the token stored in a global
-# variable (create "googleGmailToken" once via the Variables page before first use)
+# variable. Create the secret globals googleClientId, googleClientSecret and
+# googleGmailToken once on the Variables page before first use.
 - group: api
   name: auth
   params:
     type: oauth2
-    clientId: '{{ _env.GOOGLE_CLIENT_ID }}'
-    clientSecret: '{{ _env.GOOGLE_CLIENT_SECRET }}'
+    clientId: '{{ _global.googleClientId }}'
+    clientSecret: '{{ _global.googleClientSecret }}'
     scopes:
       - 'https://www.googleapis.com/auth/gmail.readonly'
       - 'https://www.googleapis.com/auth/calendar.readonly'
@@ -152,11 +153,12 @@ result the same way an OAuth2 token is used, just with the "Basic" scheme instea
 | `password` | string | ✓ | — | Password for HTTP Basic Auth. |
 
 ```yaml
-# Build a Basic Auth header value and persist it for reuse across every call to the site
+# Build a Basic Auth header value from secret globals and persist it for reuse across
+# every call to the site
 - group: api
   name: basicAuth
   params:
-    username: '{{ _env.DRUPAL_USER }}'
-    password: '{{ _env.DRUPAL_PASS }}'
+    username: '{{ _global.drupalUser }}'
+    password: '{{ _global.drupalPassword }}'
   destination: _global.drupalBasicAuth
 ```
