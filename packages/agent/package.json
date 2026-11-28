@@ -1,6 +1,6 @@
 {
   "name": "@tipeline/agent",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Tipeline agent — MCP client + LLM provider adapters that drive Tipeline from a natural-language prompt",
   "license": "Apache-2.0",
   "author": "José Daniel Estrada Guzmán",

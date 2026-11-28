@@ -1,6 +1,6 @@
 {
   "name": "@tipeline/schemas",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Tipeline shared zod schemas for core, desktop, cli",
   "license": "Apache-2.0",
   "author": "José Daniel Estrada Guzmán",
@@ -22,8 +22,8 @@
     "NOTICE"
   ],
   "dependencies": {
-    "@tipeline/types": "0.0.0",
-    "@tipeline/utils": "0.0.0",
+    "@tipeline/types": "0.1.0",
+    "@tipeline/utils": "0.1.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
