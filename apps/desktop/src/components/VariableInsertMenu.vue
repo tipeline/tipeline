@@ -183,12 +183,18 @@ watch(open, (isOpen) => {
               class="min-w-0 flex-1 cursor-pointer gap-3 text-xs"
               @select="(e: Event) => onMenuRowSelect(e, row.suggestion.path, row.opens)"
             >
-              <span class="flex-1 truncate font-mono">{{
+              <!-- The key always keeps room; a long description truncates (full text on hover). -->
+              <span class="min-w-[35%] flex-1 truncate font-mono">{{
                 menuPath !== null && !menuSearch.trim()
                   ? row.suggestion.path.slice(menuPath.length).replace(/^\./, '')
                   : row.suggestion.path
               }}</span>
-              <span v-if="row.suggestion.detail" class="shrink-0 text-muted-foreground">{{ row.suggestion.detail }}</span>
+              <span
+                v-if="row.suggestion.detail"
+                class="min-w-0 truncate text-muted-foreground"
+                :title="row.suggestion.detail"
+                >{{ row.suggestion.detail }}</span
+              >
               <ChevronRight v-if="row.opens" :size="12" />
             </DropdownMenuItem>
             <DropdownMenuItem
