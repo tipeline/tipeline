@@ -648,7 +648,13 @@ export default class CommandService {
     );
   }
 
-  static async taskInstall(filePath: string) {
+  /**
+   * Asks Core first: a file that looks already installed (same contents or same name) is
+   * not installed again unless `copy` is set. The same unchanged file counts as done.
+   * `replace` puts the file in place of that workflow instead (as `workflow reload` does).
+   */
+  static async taskInstall(filePath: string, options: { copy?: boolean; replace?: string } = {}) {
+    if (options.replace) return CommandService.taskReload(options.replace, filePath);
     let content: string;
     try {
       content = fs.readFileSync(filePath, 'utf8');
@@ -658,15 +664,40 @@ export default class CommandService {
     }
     const baseDir = nodePath.dirname(nodePath.resolve(filePath));
     const correlationId = generateIdentifier();
-    const payload = await IpcMessageService.generatePayload(correlationId, { content, baseDir });
+    const payload = await IpcMessageService.generatePayload(correlationId, {
+      content,
+      baseDir,
+      ...(options.copy ? {} : { ask: true }),
+    });
     CommandService.connectAndHandle('taskInstall', payload, {
       onTaskInstall: (response: IpcResponse) => {
-        if (response?.success) {
-          Printer.printMessage(response.data);
-        } else {
+        if (!response?.success) {
           Printer.printError(response.error);
+          process.exit(1);
         }
-        process.exit(response?.success ? 0 : 1);
+        const existing = (response.data as any)?.existing;
+        if (!Array.isArray(existing)) {
+          Printer.printMessage(response.data);
+          process.exit(0);
+        }
+        const same = existing.find((m: any) => m.sameFile && m.edited === false);
+        if (same) {
+          Printer.printMessage(`Already installed, not changed since: ${same.name} (${same.identifier})`);
+          process.exit(0);
+        }
+        Printer.printError('Nothing installed: this file may already be installed as');
+        for (const m of existing) {
+          const how = m.sameFile
+            ? 'same file, edited since'
+            : m.edited === null
+              ? 'same name, made in Tipeline'
+              : m.edited
+                ? 'same name, different file, edited since'
+                : 'same name, different file';
+          Printer.printMessage(`  ${m.identifier}  ${m.name}${m.version ? ` v${m.version}` : ''}  (${how})`);
+        }
+        Printer.printMessage('Use --replace <identifier> to put the file in its place, or --copy to install another workflow.');
+        process.exit(1);
       },
     }, undefined, (message) => {
       // Nothing beside the file can be found from there, so the remote refuses what needs it.

@@ -5,7 +5,7 @@ import decompress from 'decompress';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@database/services/TaskService', () => ({
-  TaskService: { install: vi.fn(), getByBundleFingerprint: vi.fn(), getByIdentifier: vi.fn() },
+  TaskService: { install: vi.fn(), getUnchangedFileInstall: vi.fn(), getByIdentifier: vi.fn() },
 }));
 vi.mock('@database/services/AppService', () => ({
   AppService: { install: vi.fn(), getAll: vi.fn(), getByIdentifier: vi.fn() },
@@ -34,9 +34,9 @@ beforeEach(() => {
       workflows.push(row);
       return row;
     });
-  vi.mocked(TaskService.getByBundleFingerprint)
+  vi.mocked(TaskService.getUnchangedFileInstall)
     .mockReset()
-    .mockImplementation(async (fp: string) => workflows.find((w) => w.metadata?.bundleFingerprint === fp) as any);
+    .mockImplementation(async (fp: string) => (workflows.find((w) => w.metadata?.fileFingerprint === fp) as any) ?? null);
   vi.mocked(TaskService.getByIdentifier)
     .mockReset()
     .mockImplementation(async (id: string) => workflows.find((w) => w.identifier === id) as any);

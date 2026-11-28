@@ -150,6 +150,16 @@ export const registerTaskHandlers = (transport: ITransport, broadcast: Broadcast
     if (!client) return;
     try {
       const payload = message.payload;
+      // Desktop and the CLI ask first: when the file may duplicate a workflow, nothing is
+      // installed and the answer lists those workflows, so the person can Replace one
+      // (taskReload) or install it again as a copy (without `ask`).
+      if (payload && typeof payload === 'object' && 'content' in payload && payload.ask) {
+        const existing = await Core.taskInstallMatches(payload.content);
+        if (existing.length) {
+          transport.emit(client, 'onTaskInstall', IPCMessage.success({ existing }, message.correlationId));
+          return;
+        }
+      }
       const result =
         payload && typeof payload === 'object' && 'content' in payload
           ? payload.fromElsewhere
@@ -171,7 +181,7 @@ export const registerTaskHandlers = (transport: ITransport, broadcast: Broadcast
     if (!client) return;
     try {
       const result = message.payload.content
-        ? await Core.taskReloadContent(message.payload.identifier, message.payload.content)
+        ? await Core.taskReloadContent(message.payload.identifier, message.payload.content, message.payload.baseDir)
         : await Core.taskReload(message.payload.identifier, message.payload.path);
       transport.emit(
         client,

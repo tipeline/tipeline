@@ -142,6 +142,31 @@ Import a YAML/JSON workflow file into the database.
 tipeline workflow install ./workflows/my-workflow.yaml
 ```
 
+Before installing, it checks whether you already have the workflow: one installed from the same file
+contents, or one with the same name.
+
+- **The same file, not changed since:** nothing is installed. It prints
+  `Already installed, not changed since: <name> (<identifier>)` and exits 0, so a script can run
+  the install again safely.
+- **Anything else that matches:** nothing is installed. It lists each match and why it matched
+  (same file but edited since, or same name), then exits 1.
+
+```bash
+tipeline workflow install ./workflows/my-workflow.yaml
+# ✖ Nothing installed: this file may already be installed as
+#   abc123def456ghi7890xy  Daily Report v1.0.0  (same file, edited since)
+# Use --replace <identifier> to put the file in its place, or --copy to install another workflow.
+```
+
+| Option | What it does |
+|---|---|
+| `--replace <identifier>` | Puts the file in place of that workflow, like [`workflow reload`](#tipeline-workflow-reload-identifier-path). Its identifier, runs and schedules, and the apps that use it, stay. Its current version stays in Versions. |
+| `--copy` | Installs the file as another workflow, even if it matches one. |
+
+Sub-workflow files a workflow names with `path` are handled the same way as an app's bundled
+workflows: one installed earlier from the same contents, and not edited since, is reused. Otherwise
+a new one is installed.
+
 ### `tipeline workflow uninstall <identifier>`
 Move a workflow to the Trash, with its schedules. It can be restored from the Desktop app for 30 days.
 
@@ -181,7 +206,8 @@ workflow; two workflows with the same name get the start of their identifier add
 (`invoice-report-a1b2c3.yml`).
 
 ### `tipeline workflow reload <identifier> <path>`
-Update an installed workflow's source from a file.
+Update an installed workflow's source from a file: its steps, variables, details and tags. It keeps
+its identifier, runs and schedules, and the change is saved as a version you can go back from.
 
 ```bash
 tipeline workflow reload abc123def456ghi7890xy ./workflows/my-task-v2.yaml

@@ -9,6 +9,7 @@ import fs from 'fs';
 import { createHash } from 'crypto';
 import archiver from 'archiver';
 import { TaskService } from '@database/services/TaskService';
+import { sourceHash, workflowFingerprint } from '@utils/workflowFingerprint';
 import { actionGroups, findabilityIssues } from '@engine/WorkflowCatalog';
 import { HubWorkflowCatalog } from '@/hub/HubWorkflowCatalog';
 import { hubItemDetail } from '@/hub/HubItemDetail';
@@ -598,22 +599,18 @@ export default class Core {
       throw new Error(`Workflow "${hubRef[0]}" comes from a hub — install this app from the hub instead.`);
     }
     splitAppDocument(withIdentifiers(Object.fromEntries(fileRefs.map(([alias]) => [alias, 'pending']))));
-    const fingerprints: Record<string, string> = {};
     for (const [alias, file] of fileRefs) {
       if (!fs.existsSync(file)) throw new Error(`Workflow file for "${alias}" not found: ${file}`);
-      const workflow = TaskValidator.validateFormat(Parser.importFromFile(file));
-      fingerprints[alias] = createHash('sha256').update(JSON.stringify(workflow)).digest('hex');
+      TaskValidator.validateFormat(Parser.importFromFile(file));
     }
 
-    // A bundled workflow already installed from identical file contents (by this or
-    // another app) is reused, so apps sharing workflows don't install duplicates.
-    // Changing the file produces a new fingerprint and installs it as a new workflow.
+    // A bundled workflow already installed from identical file contents (by this or another
+    // app, or on its own) and not edited since is reused, so apps sharing workflows don't
+    // install duplicates. A changed file, or an edited install, gets a new workflow.
     const installed: Record<string, string> = {};
+    const sameInstall = new Map<string, string>();
     for (const [alias, file] of fileRefs) {
-      const existing = await TaskService.getByBundleFingerprint(fingerprints[alias]);
-      installed[alias] = existing
-        ? existing.identifier
-        : (await Core.taskInstall(file, { bundleFingerprint: fingerprints[alias] })).identifier;
+      installed[alias] = (await Core.installOrReuseFile(file, sameInstall)).identifier;
     }
 
     const { name, description, author, version, source } = splitAppDocument(withIdentifiers(installed));
@@ -995,7 +992,30 @@ export default class Core {
   ) {
     const rawTask = Parser.importFromString(content);
     if (fromElsewhere) assertNoLocalFiles(rawTask);
-    const validatedTask = TaskValidator.validateFormat(rawTask);
+    return await Core.installValidated(TaskValidator.validateFormat(rawTask), baseDir ?? process.cwd(), metadata);
+  }
+
+  /**
+   * Workflows the file in `content` may duplicate: installed from the same contents, or
+   * with the same name. Desktop and the CLI ask before installing, to offer Replace.
+   */
+  static async taskInstallMatches(content: string) {
+    const validatedTask = TaskValidator.validateFormat(Parser.importFromString(content));
+    return await TaskService.getInstallMatches(workflowFingerprint(validatedTask), validatedTask.name);
+  }
+
+  /**
+   * Saves a checked workflow file as a new workflow, installing (or reusing) the files its
+   * sub-workflow steps name. Remembers which file contents it came from and what it saved,
+   * so a later install can tell an identical, unedited copy apart (see TaskService.fileInstalls).
+   */
+  private static async installValidated(
+    validatedTask: any,
+    baseDir: string,
+    metadata?: Record<string, unknown>,
+    installed?: Map<string, string>
+  ) {
+    const fileFingerprint = workflowFingerprint(validatedTask);
 
     // Before sub-workflows are installed, so a refused workflow leaves nothing behind.
     await Core.assertActionsInstallable(validatedTask.pipeline?.actions ?? []);
@@ -1003,21 +1023,19 @@ export default class Core {
     const { name, version, description, author, tags } = validatedTask;
 
     if (validatedTask.pipeline?.actions) {
-      validatedTask.pipeline.actions = await this.resolveSubtaskPaths(
-        validatedTask.pipeline.actions,
-        baseDir ?? process.cwd()
-      );
+      validatedTask.pipeline.actions = await this.resolveSubtaskPaths(validatedTask.pipeline.actions, baseDir, installed);
       validatedTask.pipeline.actions = this.addActionsIdentifiers(validatedTask.pipeline.actions);
     }
 
+    const source = JSON.stringify(validatedTask);
     return await TaskService.install({
       name,
       version,
       description,
       author,
       tags: Array.isArray(tags) ? tags : [],
-      source: JSON.stringify(validatedTask),
-      ...(metadata ? { metadata } : {}),
+      metadata: { ...(metadata ?? {}), fileFingerprint, installedSourceHash: sourceHash(source) },
+      source,
     });
   }
 
@@ -1079,41 +1097,19 @@ export default class Core {
   }
 
   static async taskInstall(path: string, metadata?: Record<string, unknown>) {
-    return Core.installFile(path, metadata);
+    const validatedTask = TaskValidator.validateFormat(Parser.importFromFile(path));
+    return await Core.installValidated(validatedTask, nodePath.dirname(path), metadata);
   }
 
-  /** `installed` maps sub-workflow files already installed by this install to their identifiers. */
-  private static async installFile(
-    path: string,
-    metadata?: Record<string, unknown>,
-    installed?: Map<string, string>
-  ) {
-    const rawTask = Parser.importFromFile(path);
-    const validatedTask = TaskValidator.validateFormat(rawTask);
-
-    // Before sub-workflows are installed, so a refused workflow leaves nothing behind.
-    await Core.assertActionsInstallable(validatedTask.pipeline?.actions ?? []);
-
-    const { name, version, description, author, tags } = validatedTask;
-
-    if (validatedTask.pipeline?.actions) {
-      validatedTask.pipeline.actions = await this.resolveSubtaskPaths(
-        validatedTask.pipeline.actions,
-        nodePath.dirname(path),
-        installed
-      );
-      validatedTask.pipeline.actions = this.addActionsIdentifiers(validatedTask.pipeline.actions);
-    }
-
-    return await TaskService.install({
-      name,
-      version,
-      description,
-      author,
-      tags: Array.isArray(tags) ? tags : [],
-      ...(metadata ? { metadata } : {}),
-      source: JSON.stringify(validatedTask),
-    });
+  /**
+   * For a file another workflow or an app ships: the workflow installed earlier from the
+   * same contents and not edited since, else a new install of it.
+   */
+  private static async installOrReuseFile(path: string, installed: Map<string, string>) {
+    const validatedTask = TaskValidator.validateFormat(Parser.importFromFile(path));
+    const existing = await TaskService.getUnchangedFileInstall(workflowFingerprint(validatedTask));
+    if (existing) return existing;
+    return await Core.installValidated(validatedTask, nodePath.dirname(path), undefined, installed);
   }
 
   /**
@@ -1161,7 +1157,7 @@ export default class Core {
 
         let identifier = installed.get(subtaskPath);
         if (!identifier) {
-          identifier = (await Core.installFile(subtaskPath, undefined, installed)).identifier;
+          identifier = (await Core.installOrReuseFile(subtaskPath, installed)).identifier;
           installed.set(subtaskPath, identifier);
         }
         const { path: _path, ...restParams } = action.params;
@@ -1211,10 +1207,11 @@ export default class Core {
   }
 
   /** For a file on the sender's machine: `tipeline workflow reload` with a remote active. */
-  static async taskReloadContent(identifier: string, content: string) {
+  static async taskReloadContent(identifier: string, content: string, baseDir?: string) {
     const rawTask = Parser.importFromString(content);
-    assertNoLocalFiles(rawTask);
-    return Core.reloadFrom(identifier, rawTask, process.cwd());
+    // Desktop's Replace sends the file's folder, like an install; from elsewhere there is none.
+    if (!baseDir) assertNoLocalFiles(rawTask);
+    return Core.reloadFrom(identifier, rawTask, baseDir ?? process.cwd());
   }
 
   private static async reloadFrom(identifier: string, rawTask: unknown, baseDir: string) {
@@ -1222,8 +1219,12 @@ export default class Core {
     if (!existing) throw new Error(`Workflow "${identifier}" not found`);
 
     const validatedTask = TaskValidator.validateFormat(rawTask);
+    const fileFingerprint = workflowFingerprint(validatedTask);
 
-    const { name, version, description, author } = validatedTask;
+    const { name, version, description, author, platform, tags } = validatedTask as any;
+
+    // Before sub-workflows are installed, so a refused workflow leaves nothing behind.
+    await Core.assertActionsInstallable(validatedTask.pipeline?.actions ?? []);
 
     if (validatedTask.pipeline?.actions) {
       validatedTask.pipeline.actions = await this.resolveSubtaskPaths(
@@ -1235,14 +1236,15 @@ export default class Core {
       );
     }
 
-    await Core.assertActionsInstallable(validatedTask.pipeline?.actions ?? []);
-
     return await TaskService.reload(identifier, {
       name,
       version,
       description,
       author,
+      platform,
+      tags: Array.isArray(tags) ? tags : undefined,
       source: JSON.stringify(validatedTask),
+      fileFingerprint,
     });
   }
 

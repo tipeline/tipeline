@@ -119,7 +119,9 @@ task
   .command('install')
   .description('Install workflow into the database')
   .argument('<path-to-yaml>', 'Path to YAML file')
-  .action((path) => CommandService.taskInstall(path));
+  .option('--copy', 'Install it even if it looks already installed')
+  .option('--replace <workflow-identifier>', 'Put the file in place of this installed workflow (like reload)')
+  .action((path, options) => CommandService.taskInstall(path, options));
 
 task
   .command('uninstall')

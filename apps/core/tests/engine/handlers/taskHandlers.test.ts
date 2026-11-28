@@ -10,7 +10,9 @@ vi.mock('@engine/Core', () => ({
     scriptPreview: vi.fn(),
     taskInstall: vi.fn(),
     taskInstallFromContent: vi.fn(),
+    taskInstallMatches: vi.fn(),
     taskReload: vi.fn(),
+    taskReloadContent: vi.fn(),
     taskUpdateMeta: vi.fn(),
     taskUninstall: vi.fn(),
     exec: vi.fn(),
@@ -70,6 +72,8 @@ describe('taskHandlers', () => {
     vi.mocked(Core.taskValidate).mockReset();
     vi.mocked(Core.taskInstall).mockReset();
     vi.mocked(Core.taskInstallFromContent).mockReset();
+    vi.mocked(Core.taskInstallMatches).mockReset();
+    vi.mocked(Core.taskReloadContent).mockReset();
     vi.mocked(Core.taskReload).mockReset();
     vi.mocked(Core.taskUpdateMeta).mockReset();
     vi.mocked(Core.taskUninstall).mockReset();
@@ -350,6 +354,32 @@ describe('taskHandlers', () => {
       );
     });
 
+    it('with ask, answers the possible duplicates and installs nothing', async () => {
+      const existing = [{ identifier: 'old', name: 'Flow', sameFile: true, edited: true }];
+      vi.mocked(Core.taskInstallMatches).mockResolvedValue(existing as any);
+      const message = { payload: { content: 'name: Flow', baseDir: '/d', ask: true }, correlationId: 'corr-a' };
+
+      await transport.handlers.get('taskInstall')!(message, client);
+
+      expect(Core.taskInstallMatches).toHaveBeenCalledWith('name: Flow');
+      expect(Core.taskInstallFromContent).not.toHaveBeenCalled();
+      expect(transport.emit).toHaveBeenCalledWith(client, 'onTaskInstall', IPCMessage.success({ existing }, 'corr-a'));
+    });
+
+    it('with ask and no duplicates, installs as usual', async () => {
+      vi.mocked(Core.taskInstallMatches).mockResolvedValue([]);
+      vi.mocked(Core.taskInstallFromContent).mockResolvedValue({ identifier: 'new' } as any);
+      const message = { payload: { content: 'name: Flow', baseDir: '/d', ask: true }, correlationId: 'corr-b' };
+
+      await transport.handlers.get('taskInstall')!(message, client);
+
+      expect(Core.taskInstallFromContent).toHaveBeenCalledWith('name: Flow', '/d');
+      expect(transport.emit).toHaveBeenCalledWith(client, 'onTaskInstall', {
+        ...IPCMessage.success('Workflow installed successfully: new', 'corr-b'),
+        identifier: 'new',
+      });
+    });
+
     it('emits a failure message when Core.taskInstallFromContent rejects', async () => {
       vi.mocked(Core.taskInstallFromContent).mockRejectedValue(new Error('bad content'));
       const message = { payload: { content: 'garbage' }, correlationId: 'corr-7' };
@@ -416,6 +446,15 @@ describe('taskHandlers', () => {
         'onTaskReload',
         IPCMessage.success('Workflow reloaded successfully: t1', 'corr-7')
       );
+    });
+
+    it("passes a file's contents and folder through to Core.taskReloadContent (Desktop's Replace)", async () => {
+      vi.mocked(Core.taskReloadContent).mockResolvedValue({ identifier: 't1' } as any);
+      const message = { payload: { identifier: 't1', content: 'name: Flow', baseDir: '/d' }, correlationId: 'corr-r' };
+
+      await transport.handlers.get('taskReload')!(message, client);
+
+      expect(Core.taskReloadContent).toHaveBeenCalledWith('t1', 'name: Flow', '/d');
     });
 
     it('formats the message with "undefined" when Core.taskReload resolves nothing', async () => {
