@@ -327,7 +327,7 @@ useKeyboardShortcuts([
 
 <template>
   <Dialog v-model="openEditMeta" :title="t('tasks.editDialog.title')" :description="t('tasks.editDialog.description')">
-    <form class="space-y-4" @submit.prevent="saveEditMeta">
+    <form id="edit-meta-form" class="space-y-4" @submit.prevent="saveEditMeta">
       <div class="space-y-1.5">
         <label class="text-sm font-medium">{{ t('tasks.form.image') }}</label>
         <ImageUploadField
@@ -435,13 +435,13 @@ useKeyboardShortcuts([
         </div>
         <Switch id="edit-helper" v-model="editHelper" class="mt-0.5 shrink-0" />
       </div>
-
-      <div class="pt-2">
-        <Button type="submit" :disabled="isSavingMeta">
-          {{ isSavingMeta ? t('common.saving') : t('common.save') }}
-        </Button>
-      </div>
     </form>
+
+    <template #footer>
+      <Button type="submit" form="edit-meta-form" :disabled="isSavingMeta">
+        {{ isSavingMeta ? t('common.saving') : t('common.save') }}
+      </Button>
+    </template>
   </Dialog>
 
   <Dialog
